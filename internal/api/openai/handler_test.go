@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -159,8 +160,11 @@ func TestHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	cfg := config.DefaultConfig()
+	cfgMgr := config.NewManager()
+	_, _ = cfgMgr.Load() // 加载默认配置，忽略错误
 	procMgr := process.NewManager()
-	modelMgr := model.NewManager(cfg, nil, procMgr)
+	portAllocator := port.NewPortAllocator(8000, 9000)
+	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	handler := NewHandler(modelMgr)
 
@@ -215,8 +219,11 @@ func TestHandler(t *testing.T) {
 
 func TestFindModel(t *testing.T) {
 	cfg := config.DefaultConfig()
+	cfgMgr := config.NewManager()
+	_, _ = cfgMgr.Load() // 加载默认配置，忽略错误
 	procMgr := process.NewManager()
-	modelMgr := model.NewManager(cfg, nil, procMgr)
+	portAllocator := port.NewPortAllocator(8000, 9000)
+	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	handler := NewHandler(modelMgr)
 

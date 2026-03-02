@@ -23,7 +23,7 @@ func setupTestHandler(t *testing.T) (*Handler, *config.Manager, func()) {
 	cfg.Llamacpp.Paths = []config.LlamacppPath{}
 	cfg.Model.PathConfigs = []config.ModelPath{}
 
-	cfgMgr := config.NewManager(configPath)
+	cfgMgr := config.NewManager()
 	require.NotNil(t, cfgMgr)
 
 	handler := NewHandler(cfgMgr)
@@ -483,9 +483,9 @@ func TestHandler_UpdateModelPath(t *testing.T) {
 			name: "update existing path",
 			reqBody: map[string]interface{}{
 				"originalPath": tempOldPath, // Now we include originalPath
-				"path":        tempOldPath,
-				"name":        "UpdatedPath",
-				"description": "Updated description",
+				"path":         tempOldPath,
+				"name":         "UpdatedPath",
+				"description":  "Updated description",
 			},
 			wantStatus:  http.StatusOK,
 			wantSuccess: true,

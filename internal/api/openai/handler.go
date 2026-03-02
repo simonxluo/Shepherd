@@ -9,26 +9,110 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
 )
 
+// ModelIndex 加速模型查找的索引结构
+type ModelIndex struct {
+	byID     map[string]*model.Model  // 按 ID 索引
+	byAlias  map[string]*model.Model  // 按别名索引
+	byName   map[string]*model.Model  // 按名称索引
+	mu       sync.RWMutex              // 保护索引的读写锁
+}
+
+// NewModelIndex 创建新的模型索引
+func NewModelIndex() *ModelIndex {
+	return &ModelIndex{
+		byID:    make(map[string]*model.Model),
+		byAlias: make(map[string]*model.Model),
+		byName:  make(map[string]*model.Model),
+	}
+}
+
+// Build 构建模型索引
+func (idx *ModelIndex) Build(models []*model.Model) {
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	// 清空旧索引
+	idx.byID = make(map[string]*model.Model)
+	idx.byAlias = make(map[string]*model.Model)
+	idx.byName = make(map[string]*model.Model)
+
+	// 构建新索引
+	for _, m := range models {
+		idx.byID[m.ID] = m
+		if m.Alias != "" {
+			idx.byAlias[m.Alias] = m
+		}
+		idx.byName[m.Name] = m
+	}
+}
+
+// Find 查找模型（按优先级：ID > 别名 > 名称）
+func (idx *ModelIndex) Find(identifier string) (*model.Model, bool) {
+	idx.mu.RLock()
+	defer idx.mu.RUnlock()
+
+	// 优先按 ID 查找
+	if m, ok := idx.byID[identifier]; ok {
+		return m, true
+	}
+
+	// 按别名查找
+	if m, ok := idx.byAlias[identifier]; ok {
+		return m, true
+	}
+
+	// 按名称查找（不区分大小写）
+	for id, m := range idx.byName {
+		if strings.EqualFold(id, identifier) {
+			return m, true
+		}
+	}
+
+	// 按名称模糊匹配（ID 包含搜索字符串）
+	lowerIdentifier := strings.ToLower(identifier)
+	for _, m := range idx.byID {
+		if strings.Contains(strings.ToLower(m.ID), lowerIdentifier) {
+			return m, true
+		}
+	}
+
+	return nil, false
+}
+
 // Handler handles OpenAI API requests
 type Handler struct {
-	modelMgr *model.Manager
-	client   *http.Client
+	modelMgr  *model.Manager
+	client     *http.Client
+	modelIndex *ModelIndex
 }
 
 // NewHandler creates a new OpenAI API handler
 func NewHandler(modelMgr *model.Manager) *Handler {
-	return &Handler{
+	h := &Handler{
 		modelMgr: modelMgr,
 		client: &http.Client{
 			Timeout: 0, // No timeout for streaming responses
 		},
+		modelIndex: NewModelIndex(),
 	}
+
+	// 初始构建索引
+	h.rebuildIndex()
+
+	return h
+}
+
+// rebuildIndex 重建模型索引
+func (h *Handler) rebuildIndex() {
+	models := h.modelMgr.ListModels()
+	h.modelIndex.Build(models)
 }
 
 // HandleChatCompletions handles chat completion requests
@@ -137,40 +221,19 @@ func (h *Handler) HandleModels(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// findModel finds a model by name or ID
+// findModel finds a model by name or ID using index for O(1) lookup
 func (h *Handler) findModel(modelName string) (string, error) {
 	statuses := h.modelMgr.ListStatus()
-	models := h.modelMgr.ListModels()
 
 	// First try exact match with ID
 	if status, exists := statuses[modelName]; exists && status.State == model.StateLoaded {
 		return modelName, nil
 	}
 
-	// Try to find by name/alias
-	for _, m := range models {
-		status, exists := statuses[m.ID]
-		if !exists || status.State != model.StateLoaded {
-			continue
-		}
-
-		// Check alias
-		if m.Alias == modelName {
-			return m.ID, nil
-		}
-
-		// Check name
-		if m.Name == modelName {
-			return m.ID, nil
-		}
-
-		// Check filename
-		if strings.EqualFold(m.Name, modelName) {
-			return m.ID, nil
-		}
-
-		// Check if model ID contains the search string
-		if strings.Contains(strings.ToLower(m.ID), strings.ToLower(modelName)) {
+	// 使用索引查找模型
+	if m, ok := h.modelIndex.Find(modelName); ok {
+		// 检查模型是否已加载
+		if status, exists := statuses[m.ID]; exists && status.State == model.StateLoaded {
 			return m.ID, nil
 		}
 	}

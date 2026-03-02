@@ -20,7 +20,7 @@ func setupTestHandler(t *testing.T) (*Handler, *config.Manager, *storage.Manager
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "test.config.yaml")
 
-	cfgMgr := config.NewManager(configPath)
+	cfgMgr := config.NewManager()
 
 	storageCfg := &storage.StorageConfig{
 		Type: storage.StorageTypeMemory,
