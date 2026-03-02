@@ -5,6 +5,88 @@ All notable changes to Shepherd will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.4.0] - 2026-03-01
+
+### BREAKING CHANGES
+- **删除 standalone 角色**: 移除 standalone 单机模式角色
+  - 统一使用 `node.role` 字段作为唯一角色配置源
+  - 删除 `Config.Mode` 字段，消除双重配置
+  - 仅保留三个角色: `master`、`client`、`hybrid`
+- **默认角色变更**: 系统默认角色从 `standalone` 改为 `hybrid`
+  - 新用户直接使用推荐的混合模式
+  - 混合模式同时启用 Master 和 Client 功能
+- **命令行参数变更**: 删除 `--mode` 参数
+  - 节点角色由配置文件的 `node.role` 字段决定
+  - 运行脚本不再支持位置参数指定模式
+- **API 响应变更**:
+  - `/config` 端点返回 `role` 字段代替 `mode`
+  - `/api/server/status` 端点返回 `role` 字段代替 `mode`
+
+### Changed
+- **配置简化**:
+  - 删除 `ConfigFileNames` 映射（模式→配置文件）
+  - `NewManager()` 不再接受 `mode` 参数
+  - `NewManagerWithPath()` 不再接受 `mode` 参数
+- **日志系统**:
+  - 日志文件命名使用 `role` 代替 `serverMode`
+  - 日志文件格式: `shepherd-{role}-{date}.log`
+- **前端类型**:
+  - `NodeRole` 类型删除 `standalone`
+  - `ServerModeConfig.mode` 字段已删除
+- **脚本更新**:
+  - `scripts/linux/run.sh` 删除模式参数逻辑
+  - 配置文件自动从 `config/example/` 复制到 `config/node/`
+
+### Removed
+- `internal/node/types.go`: `NodeRoleStandalone` 常量
+- `cmd/shepherd/main.go`:
+  - `--mode` 命令行参数
+  - `determineRole()` 函数中的模式映射逻辑
+  - `initStandaloneNode()` 函数
+  - standalone 模式初始化分支
+- `internal/config/config.go`:
+  - `Config.Mode` 字段
+  - `ConfigFileNames` 变量
+  - Mode 验证逻辑
+- `internal/server/server.go`: `Config.Mode` 字段
+- `internal/logger/logger.go`: `serverMode` 字段
+
+### Migration Guide
+如果您使用的是旧版本配置：
+
+1. **更新配置文件**:
+   ```yaml
+   # 删除 mode 字段
+   # mode: standalone  # 删除此行
+
+   # 更新 node.role
+   node:
+     role: hybrid  # standalone → hybrid (推荐)
+   ```
+
+2. **更新启动命令**:
+   ```bash
+   # 旧命令
+   ./build/shepherd standalone
+   ./build/shepherd --mode hybrid
+
+   # 新命令（使用配置文件中的 node.role）
+   ./build/shepherd
+   ./build/shepherd --config config/node/server.config.yaml
+   ```
+
+3. **更新前端代码**:
+   - `serverConfig.mode` → `serverConfig.role`
+   - 删除 `'standalone'` 类型引用
+   - 使用 `'hybrid'` 替代 `'standalone'`
+
+### Technical Details
+- **配置迁移**: `syncLegacyConfig()` 自动将 `mode: standalone` 迁移到 `node.role: hybrid`
+- **向后兼容**: 旧的 `master`、`client` 配置文件仍然有效
+- **日志兼容性**: 旧日志文件仍可识别，新日志使用新的命名格式
+
+---
+
 ## [v0.3.2] - 2026-02-27
 
 ### Added

@@ -32,10 +32,9 @@
 
 | 角色 | 说明 | 使用场景 |
 |------|------|----------|
-| **Standalone** | 单机模式 | 单用户本地部署 |
-| **Master** | 主节点，管理其他 Client | 中心化管理集群 |
-| **Client** | 工作节点，向 Master 注册 | GPU 工作节点 |
-| **Hybrid** | 既是 Master 又是 Client | 分层管理 |
+| **Hybrid** | 混合模式（默认） | 既是 Master 又是 Client，推荐用于大多数场景 |
+| **Master** | 主节点 | 管理多个 Client 节点的中心化管理集群 |
+| **Client** | 工作节点 | 作为 GPU 工作节点向 Master 注册 |
 
 **核心特性：**
 - 统一 Node 模型，节点可随时切换角色
@@ -66,27 +65,26 @@ make build
 
 ### 配置
 
-配置文件位置：`config/*.config.yaml`
+配置文件位置：`config/node/*.config.yaml`
 
-| 配置文件 | 运行模式 |
-|---------|---------|
-| `server.config.yaml` | standalone |
-| `master.config.yaml` | master |
-| `client.config.yaml` | client |
+节点角色由配置文件中的 `node.role` 字段决定：
+
+| node.role | 说明 |
+|-----------|------|
+| `hybrid` | 混合模式（默认） |
+| `master` | 主节点模式 |
+| `client` | 工作节点模式 |
 
 **前端独立配置：** `web/config.yaml` - 支持多后端配置和运行时切换
 
 ### 运行
 
 ```bash
-# 单机模式（默认）
-./build/shepherd standalone
+# 使用默认配置（hybrid 模式）
+./build/shepherd
 
-# Master 模式
-./build/shepherd master
-
-# Client 模式
-./build/shepherd client --master-address=http://master:9190
+# 使用自定义配置文件
+./build/shepherd --config config/node/server.config.yaml
 
 # 查看版本
 ./build/shepherd --version
@@ -115,14 +113,17 @@ make build
 
 ### 快速部署
 
-**1. 启动 Master：**
+**1. 启动 Master 或 Hybrid 节点：**
 ```bash
-./build/shepherd master
+./build/shepherd
+# 或指定配置
+./build/shepherd --config config/node/server.config.yaml
 ```
 
-**2. 启动 Client：**
+**2. 启动 Client 节点：**
 ```bash
-./build/shepherd client --master-address=http://master:9190
+# 在配置文件中设置 node.role: client 和 node.client_role.master_address
+./build/shepherd --config config/node/client.config.yaml
 ```
 
 **3. 查看集群状态：**
