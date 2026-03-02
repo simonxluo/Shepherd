@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,14 +18,16 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/gguf"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
 )
 
 // Manager manages model scanning and loading
 type Manager struct {
-	config     *config.Config
-	configMgr  *config.Manager
-	processMgr *process.Manager
+	config        *config.Config
+	configMgr     *config.Manager
+	processMgr    *process.Manager
+	portAllocator *port.PortAllocator
 
 	models     map[string]*Model
 	statuses   map[string]*ModelStatus
@@ -45,18 +49,19 @@ type ScanStatus struct {
 }
 
 // NewManager creates a new model manager
-func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Manager) *Manager {
+func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Manager, portAllocator *port.PortAllocator) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	m := &Manager{
-		config:     cfg,
-		configMgr:  cfgMgr,
-		processMgr: procMgr,
-		models:     make(map[string]*Model),
-		statuses:   make(map[string]*ModelStatus),
-		scanStatus: &ScanStatus{},
-		ctx:        ctx,
-		cancel:     cancel,
+		config:        cfg,
+		configMgr:     cfgMgr,
+		processMgr:    procMgr,
+		portAllocator: portAllocator,
+		models:        make(map[string]*Model),
+		statuses:      make(map[string]*ModelStatus),
+		scanStatus:    &ScanStatus{},
+		ctx:           ctx,
+		cancel:        cancel,
 	}
 
 	// Log initialization info
@@ -594,16 +599,17 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 
 	logger.Info("开始加载模型", "modelId", req.ModelID, "modelName", model.Name, "ctxSize", req.CtxSize, "gpuLayers", req.GPULayers)
 
-	// Check if already loading
+	// Phase 1: 检查状态并创建初始 status（加锁）
+	var status *ModelStatus
 	m.mu.Lock()
-	if status, exists := m.statuses[req.ModelID]; exists && status.State == StateLoading {
+	if existingStatus, exists := m.statuses[req.ModelID]; exists && existingStatus.State == StateLoading {
 		m.mu.Unlock()
 		logger.Warn("模型加载失败: 模型正在加载中", "modelId", req.ModelID)
 		return nil, fmt.Errorf("model already loading: %s", req.ModelID)
 	}
 
-	// Create status
-	status := &ModelStatus{
+	// Create initial status
+	status = &ModelStatus{
 		ID:    req.ModelID,
 		Name:  model.Name,
 		State: StateLoading,
@@ -613,9 +619,11 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 
 	startTime := time.Now()
 
+	// Phase 2: 准备工作（无锁）- 所有可能失败的操作
 	// Find llama.cpp binary
 	binPath := m.findLlamaCppBinary()
 	if binPath == "" {
+		// 更新状态为错误
 		m.mu.Lock()
 		status.State = StateError
 		status.Error = fmt.Errorf("llama.cpp binary not found")
@@ -628,19 +636,34 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}, status.Error
 	}
 
-	// Build command using BuildCommandFromRequest
-	// Find available port
-	port := m.findAvailablePort()
+	// Allocate port using centralized PortAllocator
+	port, err := m.portAllocator.NextPort()
+	if err != nil {
+		m.mu.Lock()
+		status.State = StateError
+		status.Error = fmt.Errorf("no available ports: %w", err)
+		m.mu.Unlock()
+		logger.Error("模型加载失败: 无可用端口", "modelId", req.ModelID, "error", err)
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   status.Error,
+		}, status.Error
+	}
+
+	// Determine model path
 	modelPath := model.Path
 	if len(model.ShardFiles) > 0 {
 		modelPath = model.ShardFiles[0]
 		fmt.Printf("[INFO] 使用分卷模型主文件: %s (共 %d 个分卷)\n", modelPath, len(model.ShardFiles))
 	}
 
-	// Convert to process.LoadRequest and build command
+	// Build command
 	procReq := toProcessLoadRequest(req, modelPath, port)
 	cmd, err := process.BuildCommandFromRequest(procReq, binPath)
 	if err != nil {
+		// 释放已分配的端口
+		m.portAllocator.Release(port)
 		m.mu.Lock()
 		status.State = StateError
 		status.Error = err
@@ -655,6 +678,8 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	// Start process
 	proc, err := m.processMgr.Start(req.ModelID, model.Name, cmd, binPath)
 	if err != nil {
+		// 释放已分配的端口
+		m.portAllocator.Release(port)
 		m.mu.Lock()
 		status.State = StateError
 		status.Error = err
@@ -675,7 +700,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}
 	})
 
-	// Update status
+	// Phase 3: 更新状态为已加载（加锁）
 	m.mu.Lock()
 	status.State = StateLoaded
 	status.ProcessID = proc.ID
@@ -768,14 +793,27 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 	}
 
 	// Build command using BuildCommandFromRequest
-	// Find available port
-	port := m.findAvailablePort()
+	// Allocate port using centralized PortAllocator
+	port, err := m.portAllocator.NextPort()
+	if err != nil {
+		m.mu.Lock()
+		status.State = StateError
+		status.Error = fmt.Errorf("no available ports: %w", err)
+		m.mu.Unlock()
+		logger.Error("异步模型加载失败: 无可用端口", "modelId", req.ModelID, "error", err)
+		return
+	}
+
 	model, _ := m.GetModel(req.ModelID)
 	modelPath := model.Path
 	if len(model.ShardFiles) > 0 {
 		modelPath = model.ShardFiles[0]
 		logger.Info("使用分卷模型主文件", "modelId", req.ModelID, "mainFile", modelPath, "shardCount", len(model.ShardFiles))
 	}
+
+	// 根据模型大小计算超时时间
+	timeout := m.calculateLoadTimeout(model.Size)
+	logger.Info("模型加载超时设置", "modelId", req.ModelID, "sizeGB", float64(model.Size)/(1024*1024*1024), "timeout", timeout)
 
 	// Convert to process.LoadRequest and build command
 	procReq := toProcessLoadRequest(req, modelPath, port)
@@ -805,6 +843,53 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 	// 等待加载完成（监控进程输出）
 	loadCompleted := make(chan bool, 1)
 	loadError := make(chan error, 1)
+	stopHealthCheck := make(chan bool, 1) // 用于停止健康检查
+
+	// 启动进程健康检查 goroutine
+	go func() {
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+
+		// HTTP 客户端用于健康检查（带超时）
+		httpClient := &http.Client{
+			Timeout: 2 * time.Second,
+		}
+		healthURL := fmt.Sprintf("http://localhost:%d/health", port)
+
+		for {
+			select {
+			case <-stopHealthCheck:
+				// 收到停止信号，退出健康检查
+				return
+			case <-ticker.C:
+				// 定期检查进程是否仍在运行
+				if !proc.IsRunning() {
+					// 进程意外退出
+					select {
+					case loadError <- fmt.Errorf("进程意外退出 (PID: %d)", proc.GetPID()):
+					default:
+					}
+					return
+				}
+
+				// 检查 HTTP 健康端点（备用检测机制）
+				resp, err := httpClient.Get(healthURL)
+				if err == nil && resp.StatusCode == 200 {
+					body, _ := io.ReadAll(resp.Body)
+					resp.Body.Close()
+					// 检查响应内容是否为 {"status":"ok"}
+					if strings.Contains(string(body), `"status":"ok"`) {
+						logger.Info("HTTP 健康检查成功，模型已就绪", "modelId", req.ModelID, "port", port)
+						select {
+						case loadCompleted <- true:
+						default:
+						}
+						return
+					}
+				}
+			}
+		}
+	}()
 
 	// 设置输出处理器检测加载完成并转发日志
 	proc.SetOutputHandler(func(line string) {
@@ -827,6 +912,8 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 	// 等待加载完成或超时
 	select {
 	case <-loadCompleted:
+		// 停止健康检查
+		close(stopHealthCheck)
 		m.mu.Lock()
 		status.State = StateLoaded
 		status.ProcessID = proc.ID
@@ -837,23 +924,54 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 		logger.Info("异步模型加载成功", "modelId", req.ModelID, "port", port, "duration", duration.String())
 
 	case err := <-loadError:
+		// 停止健康检查
+		close(stopHealthCheck)
 		m.mu.Lock()
 		status.State = StateError
 		status.Error = err
 		m.mu.Unlock()
 		logger.Error("异步模型加载失败", "modelId", req.ModelID, "error", err)
-		// 清理进程
+		// 清理进程和端口
 		m.processMgr.Stop(req.ModelID)
+		m.portAllocator.Release(port)
 
-	case <-time.After(10 * time.Minute):
+	case <-time.After(timeout):
+		// 停止健康检查
+		close(stopHealthCheck)
 		m.mu.Lock()
 		status.State = StateError
-		status.Error = fmt.Errorf("模型加载超时 (10分钟)")
+		status.Error = fmt.Errorf("模型加载超时 (%v)", timeout)
 		m.mu.Unlock()
-		logger.Error("异步模型加载超时", "modelId", req.ModelID, "timeout", "10m")
-		// 清理进程
+		logger.Error("异步模型加载超时", "modelId", req.ModelID, "timeout", timeout)
+		// 清理进程和端口
 		m.processMgr.Stop(req.ModelID)
+		m.portAllocator.Release(port)
 	}
+}
+
+// calculateLoadTimeout 根据模型大小计算动态超时时间
+// 规则：每GB 1分钟，最少5分钟，最多30分钟
+func (m *Manager) calculateLoadTimeout(modelSize int64) time.Duration {
+	const (
+		minTimeout     = 5 * time.Minute
+		maxTimeout     = 30 * time.Minute
+		minutesPerGB   = 1 * time.Minute
+		gigabyte       = int64(1024 * 1024 * 1024)
+	)
+
+	// 计算基于模型大小的超时时间
+	sizeGB := float64(modelSize) / float64(gigabyte)
+	dynamicTimeout := time.Duration(sizeGB) * minutesPerGB
+
+	// 限制在最小和最大值之间
+	if dynamicTimeout < minTimeout {
+		dynamicTimeout = minTimeout
+	}
+	if dynamicTimeout > maxTimeout {
+		dynamicTimeout = maxTimeout
+	}
+
+	return dynamicTimeout
 }
 
 // isLoading 检查模型是否正在加载
@@ -889,6 +1007,12 @@ func (m *Manager) Unload(modelID string) error {
 	if err := m.processMgr.Stop(modelID); err != nil {
 		logger.Error("模型卸载失败: 停止进程失败", "modelId", modelID, "error", err)
 		return err
+	}
+
+	// Release allocated port
+	if status.Port > 0 {
+		m.portAllocator.Release(status.Port)
+		logger.Info("已释放端口", "modelId", modelID, "port", status.Port)
 	}
 
 	// Update status
