@@ -80,7 +80,6 @@ func (m *Migrator) MigrateMasterConfig(oldPath, newPath string) error {
 	}
 
 	// 迁移配置
-	newConfig.Mode = "master"
 	newConfig.Node.Role = "master"
 	newConfig.Node.MasterRole.Enabled = true
 	newConfig.Node.MasterRole.Port = oldConfig.Master.Port
@@ -140,7 +139,6 @@ func (m *Migrator) MigrateClientConfig(oldPath, newPath string) error {
 	}
 
 	// 迁移配置
-	newConfig.Mode = "client"
 	newConfig.Node.Role = "client"
 	newConfig.Node.ClientRole.Enabled = true
 	newConfig.Node.ClientRole.MasterAddress = oldConfig.Client.MasterAddress
@@ -294,15 +292,15 @@ func (m *Migrator) MigrateToNodeConfig(cfg *Config) error {
 	m.log("开始配置迁移：旧格式 -> 新 Node 格式")
 
 	// 如果 node 配置已经设置且不是默认值，跳过
-	if cfg.Node.Role != "" && cfg.Node.Role != "standalone" {
+	if cfg.Node.Role != "" && cfg.Node.Role != "hybrid" {
 		m.log("Node 配置已存在，跳过迁移")
 		return nil
 	}
 
-	// 根据 mode 设置 node.role
-	if cfg.Mode != "" {
-		cfg.Node.Role = cfg.Mode
-		m.log("设置 Node.Role = %s (来自 mode)", cfg.Mode)
+	// 如果 node.role 为空，默认使用 hybrid
+	if cfg.Node.Role == "" {
+		cfg.Node.Role = "hybrid"
+		m.log("设置 Node.Role = hybrid (默认)")
 	}
 
 	// 迁移 Client 配置

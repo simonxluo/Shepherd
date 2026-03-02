@@ -12,10 +12,9 @@ import (
 type NodeRole string
 
 const (
-	NodeRoleStandalone NodeRole = "standalone"
-	NodeRoleMaster     NodeRole = "master"
-	NodeRoleClient     NodeRole = "client"
-	NodeRoleHybrid     NodeRole = "hybrid"
+	NodeRoleMaster NodeRole = "master"
+	NodeRoleClient NodeRole = "client"
+	NodeRoleHybrid NodeRole = "hybrid"
 )
 
 // NodeStatus is an alias for the unified NodeState type

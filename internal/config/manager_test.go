@@ -38,7 +38,6 @@ func TestConfigValidate(t *testing.T) {
 		{
 			name: "Invalid web port",
 			config: &Config{
-				Mode:   "standalone",
 				Server: ServerConfig{WebPort: -1},
 			},
 			wantErr: true,
@@ -47,7 +46,6 @@ func TestConfigValidate(t *testing.T) {
 		{
 			name: "Invalid anthropic port",
 			config: &Config{
-				Mode:   "standalone",
 				Server: ServerConfig{WebPort: 8080, AnthropicPort: 70000},
 			},
 			wantErr: true,
@@ -56,7 +54,6 @@ func TestConfigValidate(t *testing.T) {
 		{
 			name: "Port conflict",
 			config: &Config{
-				Mode:   "standalone",
 				Server: ServerConfig{
 					WebPort:       8080,
 					AnthropicPort: 8070,
@@ -74,7 +71,6 @@ func TestConfigValidate(t *testing.T) {
 		{
 			name: "Max concurrent too low",
 			config: &Config{
-				Mode:   "standalone",
 				Server: ServerConfig{
 					WebPort:       8080,
 					AnthropicPort: 8070,
@@ -102,33 +98,6 @@ func TestConfigValidate(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-		})
-	}
-}
-
-func TestConfigValidateValidModes(t *testing.T) {
-	validModes := []string{"standalone", "hybrid", "master", "client"}
-
-	for _, mode := range validModes {
-		t.Run(mode+" mode is valid", func(t *testing.T) {
-			cfg := DefaultConfig()
-			cfg.Mode = mode
-			err := cfg.Validate()
-			assert.NoError(t, err, "mode %s should be valid", mode)
-		})
-	}
-}
-
-func TestConfigValidateInvalidModes(t *testing.T) {
-	invalidModes := []string{"invalid", "standalone-mode", "Standalone", "STANDALONE"}
-
-	for _, mode := range invalidModes {
-		t.Run(mode+" mode is invalid", func(t *testing.T) {
-			cfg := DefaultConfig()
-			cfg.Mode = mode
-			err := cfg.Validate()
-			assert.Error(t, err, "mode %s should be invalid", mode)
-			assert.Contains(t, err.Error(), "invalid mode")
 		})
 	}
 }

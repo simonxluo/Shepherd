@@ -27,8 +27,6 @@ func (m *Manager) Load() (*Config, error) {
 		// If file doesn't exist, create default config
 		if os.IsNotExist(err) {
 			config := DefaultConfig()
-			// 设置 mode 与 Manager 的 mode 一致
-			config.Mode = m.mode
 			// Save without re-acquiring lock
 			m.mu.Unlock()
 			if saveErr := m.saveUnsafe(config); saveErr != nil {
@@ -54,9 +52,6 @@ func (m *Manager) Load() (*Config, error) {
 		// 迁移失败不阻止启动，使用默认配置
 		fmt.Printf("[Config] 配置迁移失败: %v (将使用默认配置)\n", err)
 	}
-
-	// 确保 mode 字段与运行时一致
-	config.Mode = m.mode
 
 	// Validate config
 	if err := config.Validate(); err != nil {

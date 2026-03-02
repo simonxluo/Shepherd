@@ -12,7 +12,7 @@ func TestNewNode(t *testing.T) {
 	config := &NodeConfig{
 		ID:      "test-node-1",
 		Name:    "Test Node",
-		Role:    NodeRoleStandalone,
+		Role:    NodeRoleHybrid,
 		Address: "localhost",
 		Port:    8080,
 	}
@@ -23,7 +23,7 @@ func TestNewNode(t *testing.T) {
 
 	assert.Equal(t, "test-node-1", node.GetID())
 	assert.Equal(t, "Test Node", node.GetName())
-	assert.Equal(t, NodeRoleStandalone, node.GetRole())
+	assert.Equal(t, NodeRoleHybrid, node.GetRole())
 	assert.Equal(t, NodeStatusOffline, node.GetStatus())
 	assert.Equal(t, "localhost", node.GetAddress())
 	assert.Equal(t, 8080, node.GetPort())
@@ -41,7 +41,7 @@ func TestNewNodeWithEmptyID(t *testing.T) {
 	config := &NodeConfig{
 		ID:      "",
 		Name:    "Test Node",
-		Role:    NodeRoleStandalone,
+		Role:    NodeRoleHybrid,
 		Address: "localhost",
 		Port:    8080,
 	}
@@ -56,7 +56,7 @@ func TestNodeStartStop(t *testing.T) {
 	config := &NodeConfig{
 		ID:      "test-node-2",
 		Name:    "Test Node",
-		Role:    NodeRoleStandalone,
+		Role:    NodeRoleHybrid,
 		Address: "localhost",
 		Port:    8080,
 	}
@@ -91,7 +91,7 @@ func TestNodeTags(t *testing.T) {
 	config := &NodeConfig{
 		ID:      "test-node-3",
 		Name:    "Test Node",
-		Role:    NodeRoleStandalone,
+		Role:    NodeRoleHybrid,
 		Address: "localhost",
 		Port:    8080,
 	}
@@ -131,7 +131,7 @@ func TestNodeMetadata(t *testing.T) {
 	config := &NodeConfig{
 		ID:      "test-node-4",
 		Name:    "Test Node",
-		Role:    NodeRoleStandalone,
+		Role:    NodeRoleHybrid,
 		Address: "localhost",
 		Port:    8080,
 	}
@@ -177,7 +177,7 @@ func TestNodeRole(t *testing.T) {
 	err = node.Start()
 	require.NoError(t, err)
 
-	err = node.SetRole(NodeRoleStandalone)
+	err = node.SetRole(NodeRoleHybrid)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "节点运行时不能更改角色")
 	assert.Equal(t, NodeRoleMaster, node.GetRole())
@@ -187,7 +187,7 @@ func TestNodeUptime(t *testing.T) {
 	config := &NodeConfig{
 		ID:      "test-node-6",
 		Name:    "Test Node",
-		Role:    NodeRoleStandalone,
+		Role:    NodeRoleHybrid,
 		Address: "localhost",
 		Port:    8080,
 	}
@@ -224,7 +224,7 @@ func TestNodeToString(t *testing.T) {
 	config := &NodeConfig{
 		ID:      "test-node-7",
 		Name:    "Test Node",
-		Role:    NodeRoleStandalone,
+		Role:    NodeRoleHybrid,
 		Address: "localhost",
 		Port:    8080,
 	}
@@ -235,7 +235,7 @@ func TestNodeToString(t *testing.T) {
 	str := node.String()
 	assert.Contains(t, str, "test-node-7")
 	assert.Contains(t, str, "Test Node")
-	assert.Contains(t, str, "standalone")
+	assert.Contains(t, str, "hybrid")
 	assert.Contains(t, str, "offline")
 	assert.Contains(t, str, "localhost:8080")
 }

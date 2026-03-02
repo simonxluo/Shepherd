@@ -64,7 +64,7 @@ func NewNode(config *NodeConfig) (*Node, error) {
 	}
 
 	if config.Role == "" {
-		config.Role = NodeRoleStandalone
+		config.Role = NodeRoleHybrid
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
