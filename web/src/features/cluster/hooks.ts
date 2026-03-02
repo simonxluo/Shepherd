@@ -20,7 +20,7 @@ import type {
  * 服务器配置响应类型
  */
 interface ServerConfigResponse {
-  mode: 'master' | 'client' | 'standalone';
+  role: 'master' | 'client' | 'hybrid';  // 使用 role 代替 mode
   server: {
     host: string;
     web_port: number;
@@ -65,11 +65,11 @@ export function useServerConfig() {
  * 获取当前运行模式
  * 集群相关功能仅在 Master 模式下可用
  */
-function useClusterMode(): 'master' | 'client' | 'standalone' {
+function useClusterMode(): 'master' | 'client' | 'hybrid' {
   const { data: serverConfig } = useServerConfig();
 
-  // 从后端 API 获取服务器模式，如果未获取到则默认为 standalone
-  return serverConfig?.mode || 'standalone';
+  // 从后端 API 获取节点角色，如果未获取到则默认为 hybrid
+  return serverConfig?.role || 'hybrid';
 }
 
 /**

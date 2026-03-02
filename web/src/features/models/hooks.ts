@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { apiClient } from '@/lib/api/client';
 import type {
   Model,
@@ -207,46 +208,48 @@ export function useFilteredModels(
     favourite?: boolean;
   }
 ): Model[] {
-  if (!models) return [];
+  return useMemo(() => {
+    if (!models) return [];
 
-  // 过滤模型
-  const filtered = models.filter((model) => {
-    // 搜索过滤
-    if (filters.search) {
-      const search = filters.search.toLowerCase();
-      const matchName = model.name.toLowerCase().includes(search);
-      const matchAlias = model.alias?.toLowerCase().includes(search);
-      const matchArch = model.metadata.architecture?.toLowerCase().includes(search);
-      if (!matchName && !matchAlias && !matchArch) return false;
-    }
+    // 过滤模型
+    const filtered = models.filter((model) => {
+      // 搜索过滤
+      if (filters.search) {
+        const search = filters.search.toLowerCase();
+        const matchName = model.name.toLowerCase().includes(search);
+        const matchAlias = model.alias?.toLowerCase().includes(search);
+        const matchArch = model.metadata.architecture?.toLowerCase().includes(search);
+        if (!matchName && !matchAlias && !matchArch) return false;
+      }
 
-    // 状态过滤
-    if (filters.status && model.status !== filters.status) return false;
+      // 状态过滤
+      if (filters.status && model.status !== filters.status) return false;
 
-    // 收藏过滤
-    if (filters.favourite && !model.favourite) return false;
+      // 收藏过滤
+      if (filters.favourite && !model.favourite) return false;
 
-    return true;
-  });
+      return true;
+    });
 
-  // 排序模型：稳定的排序，确保每次刷新后顺序一致
-  // 排序优先级：名称（字母）> 扫描时间 > 路径
-  return [...filtered].sort((a: Model, b: Model) => {
-    // 优先按显示名称（别名或模型名）排序
-    const aName = (a.alias || a.displayName || a.name).toLowerCase();
-    const bName = (b.alias || b.displayName || b.name).toLowerCase();
+    // 排序模型：稳定的排序，确保每次刷新后顺序一致
+    // 排序优先级：名称（字母）> 扫描时间 > 路径
+    return [...filtered].sort((a: Model, b: Model) => {
+      // 优先按显示名称（别名或模型名）排序
+      const aName = (a.alias || a.displayName || a.name).toLowerCase();
+      const bName = (b.alias || b.displayName || b.name).toLowerCase();
 
-    const nameCompare = aName.localeCompare(bName, 'zh-CN');
-    if (nameCompare !== 0) return nameCompare;
+      const nameCompare = aName.localeCompare(bName, 'zh-CN');
+      if (nameCompare !== 0) return nameCompare;
 
-    // 名称相同时，按扫描时间降序排序（最新的在前）
-    const aTime = new Date(a.scannedAt).getTime();
-    const bTime = new Date(b.scannedAt).getTime();
-    if (aTime !== bTime) return bTime - aTime;
+      // 名称相同时，按扫描时间降序排序（最新的在前）
+      const aTime = new Date(a.scannedAt).getTime();
+      const bTime = new Date(b.scannedAt).getTime();
+      if (aTime !== bTime) return bTime - aTime;
 
-    // 扫描时间也相同时，按路径排序
-    return a.path.localeCompare(b.path);
-  });
+      // 扫描时间也相同时，按路径排序
+      return a.path.localeCompare(b.path);
+    });
+  }, [models, filters.search, filters.status, filters.favourite]);
 }
 
 /**

@@ -38,17 +38,17 @@ export function ClusterPage() {
     status: statusFilter || undefined,
   });
 
-  // Standalone 模式下显示提示信息
-  if (serverConfig && serverConfig.mode === 'standalone') {
+  // 非 Master/Hybrid 模式下显示提示信息
+  if (serverConfig && serverConfig.role !== 'master' && serverConfig.role !== 'hybrid') {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)]">
         <AlertCircle className="w-16 h-16 text-yellow-500 mb-4" />
         <h2 className="text-2xl font-bold text-foreground mb-2">集群管理功能不可用</h2>
         <p className="text-muted-foreground text-center max-w-md">
-          集群管理功能仅在 <span className="font-mono bg-muted px-2 py-0.5 rounded">Master</span> 模式下可用。
+          集群管理功能仅在 <span className="font-mono bg-muted px-2 py-0.5 rounded">Master</span> 或 <span className="font-mono bg-muted px-2 py-0.5 rounded">Hybrid</span> 模式下可用。
         </p>
         <p className="text-sm text-muted-foreground mt-4">
-          请在配置文件中将模式设置为 <code className="font-mono bg-muted px-2 py-0.5 rounded">master</code>。
+          请在配置文件中将 node.role 设置为 <code className="font-mono bg-muted px-2 py-0.5 rounded">master</code> 或 <code className="font-mono bg-muted px-2 py-0.5 rounded">hybrid</code>。
         </p>
       </div>
     );

@@ -96,7 +96,7 @@ export function Sidebar() {
         
         {sidebarOpen && (
           <div className="text-xs text-muted-foreground pt-2 border-t">
-            <div>Shepherd v0.4.1</div>
+            <div>Shepherd v0.4.0</div>
             <div className="mt-1">{t('footer.copyright')}</div>
           </div>
         )}

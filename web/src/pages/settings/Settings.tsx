@@ -397,7 +397,6 @@ function AboutPanel() {
   const formatMode = (mode: string | undefined) => {
     if (!mode) return '未知';
     const modeMap: Record<string, string> = {
-      standalone: '单机模式',
       master: '主节点',
       client: '工作节点',
       hybrid: '混合节点',

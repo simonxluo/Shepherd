@@ -136,12 +136,29 @@ export function useSSE(options: UseSSEOptions = {}) {
 
   /**
    * 处理连接打开事件
+   * 连接恢复时刷新所有状态，确保数据同步
    */
   const handleOpen = useCallback(() => {
     console.log('SSE connection opened');
+
+    // 如果是重连（不是首次连接），刷新所有状态
+    if (reconnectAttemptsRef.current > 0) {
+      console.log('SSE reconnected, refreshing all queries...');
+
+      // 刷新所有关键查询，确保状态同步
+      queryClient.invalidateQueries({ queryKey: ['models'] });
+      queryClient.invalidateQueries({ queryKey: ['downloads'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['system'] });
+      queryClient.invalidateQueries({ queryKey: ['nodes'] });
+    }
+
+    // 重置重连计数
     reconnectAttemptsRef.current = 0;
     onOpen?.();
-  }, [onOpen]);
+  }, [onOpen, queryClient]);
 
   /**
    * 连接到 SSE 端点

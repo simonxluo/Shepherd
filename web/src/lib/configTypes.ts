@@ -113,7 +113,7 @@ export interface PerformanceConfig {
  * 服务器运行模式配置
  */
 export interface ServerModeConfig {
-  mode: 'master' | 'client' | 'standalone';
+  // mode 字段已删除，使用后端的 node.role 字段
   masterAddress?: string;
   clientName?: string;
 }

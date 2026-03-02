@@ -1,7 +1,7 @@
 /**
  * 节点角色
  */
-export type NodeRole = 'standalone' | 'master' | 'client' | 'hybrid';
+export type NodeRole = 'master' | 'client' | 'hybrid';
 
 /**
  * 节点状态 - 统一状态定义，与后端 types.NodeState 保持一致

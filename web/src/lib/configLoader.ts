@@ -62,7 +62,6 @@ const DEFAULT_CONFIG: AppConfig = {
     versioning: true,
   },
   server: {
-    mode: 'standalone',
     masterAddress: '',
     clientName: '',
   },
