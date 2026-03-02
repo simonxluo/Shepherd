@@ -17,6 +17,7 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/netutil"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/node"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/server"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/shutdown"
@@ -24,7 +25,7 @@ import (
 
 // 版本信息（编译时注入）
 var (
-	Version   = "v0.3.2"
+	Version   = "v0.4.0"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
@@ -32,12 +33,13 @@ var (
 // App 表示应用程序实例，包含所有组件
 type App struct {
 	// 基础组件
-	cfg         *config.Config
-	configMgr   *config.Manager
-	procMgr     *process.Manager
-	modelMgr    *model.Manager
-	shutdownMgr *shutdown.Manager
-	srv         *server.Server
+	cfg           *config.Config
+	configMgr     *config.Manager
+	procMgr       *process.Manager
+	portAllocator *port.PortAllocator
+	modelMgr      *model.Manager
+	shutdownMgr   *shutdown.Manager
+	srv           *server.Server
 
 	// 分布式节点组件
 	node        *node.Node       // 统一节点实例
@@ -49,9 +51,7 @@ type App struct {
 
 func main() {
 	// 命令行参数
-	mode := flag.String("mode", "", "运行模式: hybrid (默认), master, client")
 	version := flag.Bool("version", false, "显示版本信息")
-	masterAddr := flag.String("master-address", "", "Master 地址 (client 模式)")
 	configPath := flag.String("config", "", "配置文件路径 (可选)")
 	flag.Parse()
 
@@ -66,29 +66,11 @@ func main() {
 	// 打印启动信息
 	printBanner()
 
-	// 确定运行模式
-	// 优先使用位置参数，然后是命令行参数，否则默认为 hybrid
-	runMode := "hybrid"
-
-	// 检查位置参数 (shepherd hybrid, shepherd master, shepherd client)
-	args := flag.Args()
-	if len(args) > 0 {
-		runMode = args[0]
-	} else if *mode != "" {
-		runMode = *mode
-	}
-
-	// 验证运行模式
-	if runMode != "hybrid" && runMode != "master" && runMode != "client" {
-		fmt.Fprintf(os.Stderr, "错误: 无效的运行模式 '%s'，必须是 hybrid、master 或 client\n", runMode)
-		os.Exit(1)
-	}
-
 	// 创建应用程序实例
 	app := &App{}
 
 	// 初始化应用程序
-	if err := app.Initialize(runMode, *masterAddr, *configPath); err != nil {
+	if err := app.Initialize(*configPath); err != nil {
 		fmt.Fprintf(os.Stderr, "初始化失败: %v\n", err)
 		os.Exit(1)
 	}
@@ -123,12 +105,12 @@ func printBanner() {
 }
 
 // Initialize 初始化应用程序
-func (app *App) Initialize(runMode, masterAddr, configPath string) error {
-	// 创建配置管理器（根据运行模式或自定义配置路径）
+func (app *App) Initialize(configPath string) error {
+	// 创建配置管理器
 	if configPath != "" {
-		app.configMgr = config.NewManagerWithPath(runMode, configPath)
+		app.configMgr = config.NewManagerWithPath(configPath)
 	} else {
-		app.configMgr = config.NewManager(runMode)
+		app.configMgr = config.NewManager()
 	}
 
 	// 加载配置
@@ -139,17 +121,8 @@ func (app *App) Initialize(runMode, masterAddr, configPath string) error {
 	}
 	app.cfg = cfg
 
-	// 确保配置中的 mode 与运行时一致（向后兼容）
-	cfg.Mode = runMode
-
-	// 命令行参数覆盖配置
-	if masterAddr != "" && runMode == "client" {
-		cfg.Client.MasterAddress = masterAddr
-		cfg.Node.ClientRole.MasterAddress = masterAddr
-	}
-
-	// 确定节点角色
-	app.role = app.determineRole(runMode)
+	// 确定节点角色（直接从配置读取）
+	app.role = app.determineRole()
 
 	// 初始化日志系统
 	if err := logger.InitLogger(&cfg.Log, app.role); err != nil {
@@ -161,15 +134,28 @@ func (app *App) Initialize(runMode, masterAddr, configPath string) error {
 
 	logger.Info("Shepherd 正在启动...")
 	logger.Infof("版本: %s", Version)
-	logger.Infof("运行模式: %s", cfg.Mode)
 	logger.Infof("节点角色: %s", app.role)
 	logger.Infof("配置文件: %s", app.configMgr.GetConfigPath())
 
 	// 创建进程管理器
 	app.procMgr = process.NewManager()
 
-	// 创建模型管理器
-	app.modelMgr = model.NewManager(cfg, app.configMgr, app.procMgr)
+	// 创建端口分配器（统一管理所有模型服务端口）
+	// 从配置文件读取端口范围，默认 8081-9000
+	basePort, maxPort := 8081, 9000
+	if cfg.Model.PortRange != "" {
+		_, err := fmt.Sscanf(cfg.Model.PortRange, "%d-%d", &basePort, &maxPort)
+		if err != nil {
+			logger.Warnf("无效的端口范围配置: %s，使用默认值 8081-9000", cfg.Model.PortRange)
+			basePort, maxPort = 8081, 9000
+		} else {
+			logger.Infof("使用配置的模型端口范围: %d-%d", basePort, maxPort)
+		}
+	}
+	app.portAllocator = port.NewPortAllocator(basePort, maxPort)
+
+	// 创建模型管理器（传入端口分配器）
+	app.modelMgr = model.NewManager(cfg, app.configMgr, app.procMgr, app.portAllocator)
 
 	// 根据角色初始化分布式组件
 	if err := app.initDistributedComponents(); err != nil {
@@ -186,7 +172,6 @@ func (app *App) Initialize(runMode, masterAddr, configPath string) error {
 		ReadTimeout:   time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout:  time.Duration(cfg.Server.WriteTimeout) * time.Second,
 		WebUIPath:     "./web/dist",
-		Mode:          cfg.Mode,
 		ServerCfg:     cfg,
 		ConfigMgr:     app.configMgr,
 		Version:       Version,
@@ -215,41 +200,19 @@ func (app *App) Initialize(runMode, masterAddr, configPath string) error {
 	return nil
 }
 
-// determineRole 根据运行模式和配置确定节点角色
-func (app *App) determineRole(runMode string) string {
-	// 如果配置了 Node.Role，优先使用
-	if app.cfg.Node.Role != "" && app.cfg.Node.Role != "" {
-		return app.cfg.Node.Role
+// determineRole 根据配置确定节点角色
+func (app *App) determineRole() string {
+	// 直接从配置读取节点角色
+	role := app.cfg.Node.Role
+	if role == "" {
+		return "hybrid" // 默认使用 hybrid
 	}
-
-	// 否则根据运行模式映射
-	switch runMode {
-	case "master":
-		if app.cfg.Node.MasterRole.Enabled {
-			return "master"
-		}
-		return "master"
-	case "client":
-		if app.cfg.Node.ClientRole.Enabled {
-			return "client"
-		}
-		return "client"
-	case "hybrid":
-		return "hybrid"
-	default:
-		return "hybrid"
-	}
+	return role
 }
 func (app *App) initDistributedComponents() error {
 	logger.Infof("初始化分布式组件，角色: %s", app.role)
 
 	switch app.role {
-	case "standalone":
-		// Standalone 模式：创建本地 Node
-		if err := app.initStandaloneNode(); err != nil {
-			logger.Warnf("初始化 standalone 节点失败: %v", err)
-		}
-
 	case "master":
 		// Master 模式：创建 Node + NodeAdapter
 		if err := app.initMasterNode(); err != nil {
@@ -278,21 +241,6 @@ func (app *App) initDistributedComponents() error {
 		return fmt.Errorf("未知的节点角色: %s", app.role)
 	}
 
-	return nil
-}
-
-// initStandaloneNode 初始化 Standalone 模式的 Node
-func (app *App) initStandaloneNode() error {
-	nodeCfg := app.buildNodeConfig()
-	nodeCfg.Role = node.NodeRoleStandalone
-
-	n, err := node.NewNode(nodeCfg)
-	if err != nil {
-		return err
-	}
-
-	app.node = n
-	logger.Info("Standalone 节点已创建")
 	return nil
 }
 
@@ -367,7 +315,7 @@ func generateNodeID() string {
 				continue
 			}
 			hwAddr := iface.HardwareAddr
-			if hwAddr != nil && len(hwAddr) > 0 {
+			if len(hwAddr) > 0 {
 				macAddrs = append(macAddrs, hwAddr.String())
 			}
 		}
@@ -465,18 +413,6 @@ func (app *App) initNodeAdapter() error {
 	return fmt.Errorf("节点未初始化，无法创建 API 适配器")
 }
 
-// initMasterConnector 初始化 Master 连接
-// Client 节点会自动处理与 Master 的连接
-func (app *App) initMasterConnector() error {
-	// Client Node 会自动处理 Master 连接
-	// 这个方法保留为空以保持接口兼容性
-	if app.node == nil {
-		return fmt.Errorf("节点未初始化")
-	}
-	logger.Info("Client 节点将自动处理与 Master 的连接")
-	return nil
-}
-
 // registerShutdownHooks 注册优雅关闭钩子
 func (app *App) registerShutdownHooks() {
 	// 1. 优先级最高：停止接受新连接（HTTP服务器）
@@ -544,7 +480,6 @@ func (app *App) Start() error {
 // printStartupInfo 打印启动信息
 func (app *App) printStartupInfo() {
 	logger.Infof("HTTP 服务器已启动，监听 %s:%d", app.cfg.Server.Host, app.cfg.Server.WebPort)
-	fmt.Printf("✓ 运行模式: %s\n", app.cfg.Mode)
 	fmt.Printf("✓ 节点角色: %s\n", app.role)
 	fmt.Printf("✓ HTTP 服务器已启动，监听 %s:%d\n", app.cfg.Server.Host, app.cfg.Server.WebPort)
 	fmt.Printf("✓ Web UI: http://localhost:%d\n", app.cfg.Server.WebPort)

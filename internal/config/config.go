@@ -23,12 +23,6 @@ const (
 	DefaultLaunchConfigFile = "launch_config.json"
 )
 
-// ConfigFileNames maps mode to config file name
-var ConfigFileNames = map[string]string{
-	"hybrid":     "server.config.yaml",
-	"master":     "master.config.yaml",
-	"client":     "client.config.yaml",
-}
 
 // Config represents the complete application configuration
 type Config struct {
@@ -42,7 +36,6 @@ type Config struct {
 	Log           LogConfig             `mapstructure:"log" yaml:"log" json:"log"`
 	Storage       storage.StorageConfig `mapstructure:"storage" yaml:"storage" json:"storage"`
 	// Master-Client 分布式配置
-	Mode   string       `mapstructure:"mode" yaml:"mode" json:"mode"`
 	Master MasterConfig `mapstructure:"master" yaml:"master" json:"master"`
 	Client ClientConfig `mapstructure:"client" yaml:"client" json:"client"`
 	// Node 节点配置
@@ -66,6 +59,7 @@ type ModelConfig struct {
 	PathConfigs  []ModelPath `mapstructure:"path_configs" yaml:"path_configs" json:"pathConfigs"` // 详细路径配置
 	AutoScan     bool        `mapstructure:"auto_scan" yaml:"auto_scan" json:"autoScan"`
 	ScanInterval int         `mapstructure:"scan_interval" yaml:"scan_interval" json:"scanInterval"` // seconds, 0 = disable
+	PortRange    string      `mapstructure:"port_range" yaml:"port_range" json:"portRange"`         // 模型服务端口范围，如 "8081-9000"
 }
 
 // LlamacppConfig contains llama.cpp binary paths configuration
@@ -345,7 +339,6 @@ func DefaultConfig() *Config {
 	}
 
 	return &Config{
-		Mode: "standalone", // 默认单机模式
 		Server: ServerConfig{
 			WebPort:       9190,
 			AnthropicPort: 9170,
@@ -467,7 +460,7 @@ func DefaultConfig() *Config {
 		Node: NodeConfig{
 			ID:       "auto",
 			Name:     "",
-			Role:     "standalone",
+			Role:     "hybrid", // 默认混合模式
 			Tags:     []string{},
 			Metadata: map[string]string{
 				"os":   "linux",
@@ -544,15 +537,9 @@ func DefaultLaunchConfig() *LaunchConfig {
 // syncLegacyConfig 将旧的 Client/Master 配置同步到新的 Node 配置
 // 此方法确保向后兼容，旧配置会自动同步到新配置
 func (c *Config) syncLegacyConfig() {
-	// 如果 Node.Role 为空，尝试从 mode 字段同步，或默认为 standalone
+	// 如果 Node.Role 为空，默认为 hybrid
 	if c.Node.Role == "" {
-		if c.Mode != "" {
-			c.Node.Role = c.Mode
-		} else {
-			// 如果 mode 也是空，默认为 standalone
-			c.Node.Role = "standalone"
-			c.Mode = "standalone"
-		}
+		c.Node.Role = "hybrid"
 	}
 
 	// 同步 Client 配置 -> Node.ClientRole 和 Node.Capabilities
@@ -622,15 +609,6 @@ func (c *Config) Validate() error {
 	// 同步旧配置到新配置（向后兼容）
 	c.syncLegacyConfig()
 
-	// Validate mode
-	if c.Mode == "" {
-		c.Mode = "standalone"
-	}
-	validModes := map[string]bool{"standalone": true, "hybrid": true, "master": true, "client": true}
-	if !validModes[c.Mode] {
-		return fmt.Errorf("invalid mode: %s (must be standalone, hybrid, master, or client)", c.Mode)
-	}
-
 	// Validate server ports
 	if c.Server.WebPort < 1 || c.Server.WebPort > 65535 {
 		return fmt.Errorf("invalid web port: %d", c.Server.WebPort)
@@ -678,29 +656,6 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// Validate Master mode specific settings
-	if c.Mode == "master" && c.Master.Enabled {
-		if c.Master.ClientConfigDir == "" {
-			return fmt.Errorf("master client config directory cannot be empty")
-		}
-		if c.Master.NetworkScan.Enabled && len(c.Master.NetworkScan.Subnets) == 0 {
-			return fmt.Errorf("network scan enabled but no subnets configured")
-		}
-	}
-
-	// Validate Client mode specific settings
-	if c.Mode == "client" && c.Client.Enabled {
-		if c.Client.MasterAddress == "" {
-			return fmt.Errorf("client mode requires master address")
-		}
-		if c.Client.Heartbeat.Interval < 1 {
-			return fmt.Errorf("heartbeat interval must be at least 1 second")
-		}
-		if c.Client.CondaEnv.Enabled && c.Client.CondaEnv.CondaPath == "" {
-			return fmt.Errorf("conda enabled but conda path is empty")
-		}
-	}
-
 	// 验证 Node 配置
 	if err := c.validateNodeConfig(); err != nil {
 		return err
@@ -712,9 +667,9 @@ func (c *Config) Validate() error {
 // validateNodeConfig validates the Node configuration
 func (c *Config) validateNodeConfig() error {
 	// 验证节点角色
-	validRoles := map[string]bool{"standalone": true, "master": true, "client": true, "hybrid": true}
+	validRoles := map[string]bool{"master": true, "client": true, "hybrid": true}
 	if !validRoles[c.Node.Role] {
-		return fmt.Errorf("invalid node role: %s (must be standalone, master, client, or hybrid)", c.Node.Role)
+		return fmt.Errorf("invalid node role: %s (must be master, client, or hybrid)", c.Node.Role)
 	}
 
 	// 验证 MasterRole 配置
@@ -798,22 +753,18 @@ type Manager struct {
 }
 
 // NewManager creates a new configuration manager
-func NewManager(mode string) *Manager {
+func NewManager() *Manager {
 	configDir := GetConfigDir()
-	configFile := DefaultConfigFile
-	if f, ok := ConfigFileNames[mode]; ok {
-		configFile = f
-	}
 	return &Manager{
-		configPath:       filepath.Join(configDir, configFile),
+		configPath:       filepath.Join(configDir, DefaultConfigFile),
 		modelsConfigPath: filepath.Join(configDir, DefaultModelsConfigFile),
 		launchConfigPath: filepath.Join(configDir, DefaultLaunchConfigFile),
-		mode:             mode,
+		mode:             "", // 不再使用 mode 参数
 	}
 }
 
 // NewManagerWithPath creates a new configuration manager with a custom config path
-func NewManagerWithPath(mode, configPath string) *Manager {
+func NewManagerWithPath(configPath string) *Manager {
 	configDir := filepath.Dir(configPath)
 	// models.json 始终存储在 config/node/ 目录下，与主配置文件位置无关
 	modelsDir := filepath.Join(GetConfigDir(), "node")
@@ -821,7 +772,7 @@ func NewManagerWithPath(mode, configPath string) *Manager {
 		configPath:       configPath,
 		modelsConfigPath: filepath.Join(modelsDir, "models.json"),
 		launchConfigPath: filepath.Join(configDir, DefaultLaunchConfigFile),
-		mode:             mode,
+		mode:             "", // 不再使用 mode 参数
 	}
 }
 

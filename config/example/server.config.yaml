@@ -1,5 +1,6 @@
-# Shepherd 单机模式配置
-# 此配置文件用于单机模式（standalone mode）
+# Shepherd 默认配置文件
+# 此配置文件使用 hybrid 混合模式（推荐）
+# hybrid 模式同时启用 Master 和 Client 功能
 
 server:
     web_port: 9190
@@ -20,7 +21,7 @@ model:
 
 llamacpp:
     paths:
-        - path: ./llama.cpp
+        - path: /usr/local/bin/
           name: Default
           description: ""
 
@@ -71,14 +72,11 @@ storage:
         enable_wal: true
     postgresql: null
 
-# 运行模式
-mode: standalone
-
 # 节点配置（推荐使用）
 node:
     id: auto
     name: ""
-    role: standalone
+    role: hybrid  # 推荐使用 hybrid 混合模式
     tags: []              # 节点标签，例如: ["gpu", "high-memory"]
     metadata:             # 节点元数据
         os: linux
@@ -86,7 +84,7 @@ node:
 
     # Master 角色配置
     master_role:
-        enabled: false  # 单机模式禁用 Master 角色
+        enabled: true   # hybrid 模式启用 Master 角色
         port: 9190
         api_key: ""
         ssl:
@@ -96,7 +94,7 @@ node:
 
     # Client 角色配置
     client_role:
-        enabled: false  # 单机模式禁用 Client 角色
+        enabled: true   # hybrid 模式启用 Client 角色
         master_address: ""
         register_retry: 3
         heartbeat_interval: 5
