@@ -38,7 +38,7 @@ show_help() {
     cat << EOF
 🐏 Shepherd Web 前端
 
-用法: $0 [命令]
+用法: $0 [命令] [选项]
 
 命令:
     dev         启动开发服务器 (默认)
@@ -50,10 +50,13 @@ show_help() {
     check       检查依赖状态
 
 选项:
+    -b, --build    启动前先构建 (仅适用于 dev 命令)
     -h, --help     显示此帮助信息
 
 示例:
     $0 dev                 # 启动开发服务器
+    $0 dev -b              # 构建后启动开发服务器
+    $0 -b                  # 等同于 $0 dev -b
     $0 build              # 构建生产版本
     $0 preview            # 预览构建结果
     $0 install            # 安装依赖
@@ -350,12 +353,17 @@ run_preview() {
 # 主函数
 main() {
     local command=""
+    local build_first=false
 
     # 解析参数
     while [[ $# -gt 0 ]]; do
         case $1 in
             dev|build|preview|install|clean|fix|check)
                 command="$1"
+                shift
+                ;;
+            -b|--build)
+                build_first=true
                 shift
                 ;;
             -h|--help)
@@ -378,6 +386,17 @@ main() {
     # 执行命令（check 命令不需要先检查依赖）
     if [ "$command" != "check" ]; then
         check_dependencies
+    fi
+
+    # 如果指定了 -b 参数，先执行构建
+    if [ "$build_first" = true ]; then
+        if [ "$command" = "dev" ]; then
+            print_info "构建前端..."
+            run_build
+            print_success "构建完成"
+        else
+            print_warning "-b 选项仅对 dev 命令有效"
+        fi
     fi
 
     # 执行命令

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Shepherd Linux 运行脚本
-# 支持 hybrid (默认), master, client 三种模式
+# 支持从配置文件的 node.role 读取运行模式
+# 默认配置为 hybrid 混合模式
 
 set -e
 
@@ -39,42 +40,28 @@ show_help() {
     cat << EOF
 🐏 Shepherd 运行脚本 (Linux)
 
-用法: $0 [模式] [选项]
-
-模式:
-    (不填)         Hybrid 混合模式 (默认) - 既是 Master 又是 Client
-    master         Master 模式 - 管理多个 Client 节点
-    client         Client 模式 - 作为工作节点
+用法: $0 [选项]
 
 通用选项:
     -h, --help     显示此帮助信息
     -b, --build    运行前先编译
     -v, --version  显示版本信息
-    --config PATH  指定配置文件路径
-
-Client 模式选项:
-    --master URL   Master 地址 (可选，也可从配置文件读取)
-    --name NAME    Client 名称 (可选)
-    --tags TAGS    Client 标签，逗号分隔 (可选)
+    --config PATH  指定配置文件路径 (可选)
 
 示例:
-    # Hybrid 混合模式 (默认)
+    # 使用默认配置 (hybrid 混合模式)
     $0
 
-    # Master 模式
-    $0 master
-
-    # Client 模式（从命令行指定 Master 地址）
-    $0 client --master http://192.168.1.100:9190 --name client-1
-
-    # Client 模式（从配置文件读取 Master 地址）
-    $0 client
+    # 使用自定义配置文件
+    $0 --config config/custom.yaml
 
     # 运行前先编译
     $0 -b
 
-    # 使用自定义配置文件
-    $0 --config config/custom.yaml
+注意:
+    - 节点角色由配置文件的 node.role 字段决定
+    - 可选角色: hybrid (默认), master, client
+    - 建议使用 hybrid 模式获得完整功能
 
 EOF
 }
@@ -107,20 +94,12 @@ show_version() {
 
 # 主函数
 main() {
-    local MODE=""
     local BUILD_FIRST=false
-    local MASTER_ADDR=""
-    local CLIENT_NAME=""
-    local CLIENT_TAGS=""
     local CONFIG_PATH=""
 
     # 解析参数
     while [[ $# -gt 0 ]]; do
         case $1 in
-            master|client|hybrid)
-                MODE="$1"
-                shift
-                ;;
             -h|--help)
                 show_help
                 exit 0
@@ -136,18 +115,6 @@ main() {
                 CONFIG_PATH="$2"
                 shift 2
                 ;;
-            --master)
-                MASTER_ADDR="$2"
-                shift 2
-                ;;
-            --name)
-                CLIENT_NAME="$2"
-                shift 2
-                ;;
-            --tags)
-                CLIENT_TAGS="$2"
-                shift 2
-                ;;
             *)
                 print_error "未知参数: $1"
                 show_help
@@ -155,11 +122,6 @@ main() {
                 ;;
         esac
     done
-
-    # 默认模式为 hybrid
-    if [ -z "$MODE" ]; then
-        MODE="hybrid"
-    fi
 
     # 编译（如果需要）
     if [ "$BUILD_FIRST" = true ]; then
@@ -171,32 +133,31 @@ main() {
     # 检查二进制文件
     check_binary
 
-    # 自动检测配置文件：node -> example -> 使用 server.config.yaml (fallback)
+    # 自动检测配置文件：node -> 从 example 自动拷贝 -> server.config.yaml (fallback)
     if [ -z "$CONFIG_PATH" ]; then
-        # 根据模式确定配置文件名
-        local CONFIG_NAME="${MODE}.config.yaml"
-        local NODE_CONFIG="${PROJECT_DIR}/config/node/${CONFIG_NAME}"
-        local EXAMPLE_CONFIG="${PROJECT_DIR}/config/example/${CONFIG_NAME}"
-        local SERVER_CONFIG="${PROJECT_DIR}/config/node/server.config.yaml"
-        
+        local NODE_CONFIG="${PROJECT_DIR}/config/node/server.config.yaml"
+        local EXAMPLE_CONFIG="${PROJECT_DIR}/config/example/server.config.yaml"
+
         if [ -f "$NODE_CONFIG" ]; then
+            # 1. 优先使用 node 目录中的配置文件
             CONFIG_PATH="$NODE_CONFIG"
             print_info "使用 node 配置文件: ${CONFIG_PATH}"
         elif [ -f "$EXAMPLE_CONFIG" ]; then
-            CONFIG_PATH="$EXAMPLE_CONFIG"
-            print_info "使用 example 配置文件: ${CONFIG_PATH}"
-        elif [ -f "$SERVER_CONFIG" ]; then
-            # Fallback: 如果找不到特定模式的配置，使用 server.config.yaml
-            CONFIG_PATH="$SERVER_CONFIG"
-            print_warning "未找到 ${MODE}.config.yaml，使用 server.config.yaml 作为 fallback"
+            # 2. 如果 node 目录没有配置，但 example 目录有，则自动拷贝
+            mkdir -p "$(dirname "$NODE_CONFIG")"
+            cp "$EXAMPLE_CONFIG" "$NODE_CONFIG"
+            CONFIG_PATH="$NODE_CONFIG"
+            print_success "从 example 自动复制配置文件到 node 目录"
+            print_info "配置文件: ${CONFIG_PATH}"
         else
+            # 3. 都不存在则报错
             print_error "未找到配置文件"
             print_error "请确保以下文件之一存在："
-            print_error "  - ${NODE_CONFIG}"
             print_error "  - ${EXAMPLE_CONFIG}"
-            print_error "  - ${SERVER_CONFIG} (fallback)"
+            print_error "  - ${NODE_CONFIG}"
             print_error ""
             print_error "可以从 example 复制配置文件："
+            print_error "  mkdir -p config/node"
             print_error "  cp config/example/*.config.yaml config/node/"
             exit 1
         fi
@@ -214,61 +175,23 @@ main() {
         print_info "使用自定义配置文件: ${CONFIG_PATH}"
         fi
 
-    case "$MODE" in
-        master)
-            print_info "启动 Master 模式..."
-            ;;
-        client)
-            print_info "启动 Client 模式..."
-
-            if [ -n "$MASTER_ADDR" ]; then
-                print_info "Master 地址: ${MASTER_ADDR}"
-            else
-                print_info "将从配置文件读取 Master 地址"
-            fi
-
-            if [ -n "$CLIENT_NAME" ]; then
-                print_info "Client 名称: ${CLIENT_NAME}"
-                export SHEPHERD_CLIENT_NAME="$CLIENT_NAME"
-            fi
-
-            if [ -n "$CLIENT_TAGS" ]; then
-                print_info "Client 标签: ${CLIENT_TAGS}"
-                export SHEPHERD_CLIENT_TAGS="$CLIENT_TAGS"
-            fi
-            ;;
-        hybrid)
-            print_info "启动 Hybrid 混合模式..."
-            ;;
-    esac
-
-    # 构建命令参数
-    # 注意：Go 的 flag 包要求所有标志必须在位置参数之前
-    local ARGS=()
-
-    # 先添加标志参数
-    if [ -n "${CONFIG_PATH}" ]; then
-        ARGS+=("--config=${CONFIG_PATH}")
-    fi
-
-    # 最后添加位置参数（运行模式）
-    ARGS+=("${MODE}")
-
     # 显示启动信息
     echo ""
     echo "=========================================="
     echo "  🐏 Shepherd"
     echo "=========================================="
-    echo "  模式: ${MODE}"
-    if [ "$MODE" = "client" ]; then
-        if [ -n "$MASTER_ADDR" ]; then
-            echo "  Master: ${MASTER_ADDR}"
-        else
-            echo "  Master: (从配置文件读取)"
-        fi
-    fi
+    echo "  配置文件: ${CONFIG_PATH}"
+    echo "  节点角色: (从配置文件读取)"
     echo "=========================================="
     echo ""
+
+    # 构建命令参数
+    local ARGS=()
+
+    # 添加配置文件路径
+    if [ -n "${CONFIG_PATH}" ]; then
+        ARGS+=("--config=${CONFIG_PATH}")
+    fi
 
     # 启动程序
     cd "${PROJECT_DIR}"
