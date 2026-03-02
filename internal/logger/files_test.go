@@ -60,8 +60,8 @@ func TestListLogFiles(t *testing.T) {
 		if file.Path == "" {
 			t.Error("File path is empty")
 		}
-		if file.Mode == "" {
-			t.Error("File mode is empty")
+		if file.Role == "" {
+			t.Error("File role is empty")
 		}
 	}
 }

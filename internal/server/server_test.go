@@ -11,6 +11,7 @@ import (
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,11 +20,12 @@ import (
 // Helper function to create a test server with model manager
 func createTestServer(t *testing.T) *Server {
 	cfg := config.DefaultConfig()
-	configMgr := config.NewManager("standalone")
+	configMgr := config.NewManager()
 	_, _ = configMgr.Load() // 加载默认配置，忽略错误
 
 	procMgr := process.NewManager()
-	modelMgr := model.NewManager(cfg, configMgr, procMgr)
+	portAllocator := port.NewPortAllocator(8000, 9000)
+	modelMgr := model.NewManager(cfg, configMgr, procMgr, portAllocator)
 
 	serverConfig := &Config{
 		WebPort:       8080,
@@ -137,7 +139,7 @@ func TestServerRoutes(t *testing.T) {
 		{"Stop process", "POST", "/api/processes/test-id/stop", http.StatusInternalServerError}, // 进程停止失败（进程不存在是内部错误）
 
 		// Repo routes
-		{"Search repo without query", "GET", "/api/repo/search", http.StatusBadRequest},            // 缺少 q 参数
+		{"Search repo without query", "GET", "/api/repo/search", http.StatusBadRequest},                       // 缺少 q 参数
 		{"Search repo with query", "GET", "/api/repo/search?q=qwen&limit=10", http.StatusInternalServerError}, // 网络请求可能失败
 		{"Get repo config", "GET", "/api/repo/config", http.StatusOK},
 		{"Get repo endpoints", "GET", "/api/repo/endpoints", http.StatusOK},
@@ -211,11 +213,12 @@ func TestServerSSEEndpoint(t *testing.T) {
 
 func TestServerStartStop(t *testing.T) {
 	cfg := config.DefaultConfig()
-	configMgr := config.NewManager("standalone")
+	configMgr := config.NewManager()
 	_, _ = configMgr.Load()
 
 	procMgr := process.NewManager()
-	modelMgr := model.NewManager(cfg, configMgr, procMgr)
+	portAllocator := port.NewPortAllocator(8000, 9000)
+	modelMgr := model.NewManager(cfg, configMgr, procMgr, portAllocator)
 
 	serverConfig := &Config{
 		WebPort:   18080, // Use non-standard port for testing
@@ -268,11 +271,12 @@ func TestServerConfigDefaults(t *testing.T) {
 
 func BenchmarkServerRequest(b *testing.B) {
 	cfg := config.DefaultConfig()
-	configMgr := config.NewManager("standalone")
+	configMgr := config.NewManager()
 	_, _ = configMgr.Load()
 
 	procMgr := process.NewManager()
-	modelMgr := model.NewManager(cfg, configMgr, procMgr)
+	portAllocator := port.NewPortAllocator(8000, 9000)
+	modelMgr := model.NewManager(cfg, configMgr, procMgr, portAllocator)
 
 	serverConfig := &Config{
 		WebPort:   8080,

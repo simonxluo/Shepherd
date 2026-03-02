@@ -11,6 +11,7 @@ import (
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/gguf"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,10 +38,11 @@ func TestLoadStateString(t *testing.T) {
 
 func TestNewManager(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	assert.NotNil(t, manager)
 	assert.NotNil(t, manager.models)
@@ -50,10 +52,11 @@ func TestNewManager(t *testing.T) {
 
 func TestManagerIsGGUFFile(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	tests := []struct {
 		name     string
@@ -77,10 +80,11 @@ func TestManagerIsGGUFFile(t *testing.T) {
 
 func TestManagerGetSetModel(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	t.Run("Get non-existent model", func(t *testing.T) {
 		_, exists := manager.GetModel("non-existent")
@@ -97,10 +101,11 @@ func TestManagerGetSetModel(t *testing.T) {
 
 func TestManagerSetAlias(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// Create a temp directory with a mock model
 	tmpDir := t.TempDir()
@@ -129,10 +134,11 @@ func TestManagerSetAlias(t *testing.T) {
 
 func TestManagerSetFavourite(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// Create a temp directory with a mock model
 	tmpDir := t.TempDir()
@@ -161,10 +167,11 @@ func TestManagerSetFavourite(t *testing.T) {
 
 func TestManagerGetStatus(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	t.Run("Get non-existent status", func(t *testing.T) {
 		_, exists := manager.GetStatus("non-existent")
@@ -179,10 +186,11 @@ func TestManagerGetStatus(t *testing.T) {
 
 func TestManagerGetScanStatus(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	status := manager.GetScanStatus()
 	assert.NotNil(t, status)
@@ -191,10 +199,11 @@ func TestManagerGetScanStatus(t *testing.T) {
 
 func TestFindAvailablePort(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	port := manager.findAvailablePort()
 	assert.GreaterOrEqual(t, port, 8081)
@@ -203,10 +212,11 @@ func TestFindAvailablePort(t *testing.T) {
 
 func TestFindMmproj(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	t.Run("No mmproj found", func(t *testing.T) {
 		mmproj := manager.findMmproj("/path/to/model.gguf")
@@ -216,10 +226,11 @@ func TestFindMmproj(t *testing.T) {
 
 func TestGenerateModelID(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	metadata := &gguf.Metadata{
 		Name: "test-model",
@@ -237,10 +248,11 @@ func TestGenerateModelID(t *testing.T) {
 
 func TestScanStatus(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// Initial status
 	status := manager.GetScanStatus()
@@ -272,10 +284,11 @@ func createMinimalGGUF(path string) error {
 
 func TestLoadModel(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	t.Run("Load minimal GGUF", func(t *testing.T) {
 		tmpDir := t.TempDir()
@@ -301,10 +314,11 @@ func TestLoadModel(t *testing.T) {
 
 func TestScanPath(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	t.Run("Scan directory with GGUF files", func(t *testing.T) {
 		tmpDir := t.TempDir()
@@ -334,10 +348,11 @@ func TestScanPath(t *testing.T) {
 
 func TestLoadUnload(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	t.Run("Load non-existent model", func(t *testing.T) {
 		req := &LoadRequest{
@@ -424,10 +439,11 @@ func TestScanErrorDefaults(t *testing.T) {
 
 func BenchmarkListModels(b *testing.B) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// Add some models
 	for i := 0; i < 100; i++ {
@@ -448,10 +464,11 @@ func BenchmarkListModels(b *testing.B) {
 // TestLoadAsync tests asynchronous model loading
 func TestLoadAsync(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// 创建测试模型
 	tmpDir := t.TempDir()
@@ -497,10 +514,11 @@ func TestLoadAsync(t *testing.T) {
 // TestLoadAsyncAlreadyLoaded tests loading an already loaded model
 func TestLoadAsyncAlreadyLoaded(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// 创建测试模型
 	tmpDir := t.TempDir()
@@ -543,10 +561,11 @@ func TestLoadAsyncAlreadyLoaded(t *testing.T) {
 // TestLoadAsyncAlreadyLoading tests loading while already loading
 func TestLoadAsyncAlreadyLoading(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// 创建测试模型
 	tmpDir := t.TempDir()
@@ -587,10 +606,11 @@ func TestLoadAsyncAlreadyLoading(t *testing.T) {
 // TestIsLoading tests the isLoading helper method
 func TestIsLoading(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	modelID := "test-model"
 
@@ -618,10 +638,11 @@ func TestIsLoading(t *testing.T) {
 // TestLoadAsyncNonExistentModel tests loading a non-existent model
 func TestLoadAsyncNonExistentModel(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	req := &LoadRequest{
 		ModelID: "non-existent-model",
@@ -655,10 +676,11 @@ func TestLoadResultAsyncFields(t *testing.T) {
 // BenchmarkLoadAsync benchmarks asynchronous loading
 func BenchmarkLoadAsync(b *testing.B) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// 创建测试模型
 	modelPath := "/tmp/bench-model.gguf"
@@ -688,10 +710,11 @@ func BenchmarkLoadAsync(b *testing.B) {
 // TestModelStatusTransitions tests model status state transitions
 func TestModelStatusTransitions(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	modelID := "test-model"
 
@@ -736,10 +759,11 @@ func TestModelStatusTransitions(t *testing.T) {
 // TestListStatus tests listing all model statuses
 func TestListStatus(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// 添加多个状态
 	modelIDs := []string{"model-1", "model-2", "model-3"}
@@ -796,10 +820,11 @@ func TestMergeSplitModels(t *testing.T) {
 
 	// 创建配置
 	cfg := config.DefaultConfig()
-	cfgMgr := config.NewManager("standalone")
+	cfgMgr := config.NewManager()
 	procMgr := process.NewManager()
+	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
 
 	// 手动加载所有分卷到 manager
 	var totalSize int64 = 0
@@ -825,13 +850,13 @@ func TestMergeSplitModels(t *testing.T) {
 
 		// 创建模型
 		model := &Model{
-			ID:        fmt.Sprintf("test-shard-%d", i+1),
-			Name:      fmt.Sprintf("Qwen3.5-397B-A17B-%05d-of-00006", i+1),
+			ID:          fmt.Sprintf("test-shard-%d", i+1),
+			Name:        fmt.Sprintf("Qwen3.5-397B-A17B-%05d-of-00006", i+1),
 			DisplayName: fmt.Sprintf("Qwen3.5-397B-A17B [shard %d]", i+1),
-			Path:      path,
-			Size:      info.Size(),
-			Metadata:  metadata,
-			ScannedAt: time.Now(),
+			Path:        path,
+			Size:        info.Size(),
+			Metadata:    metadata,
+			ScannedAt:   time.Now(),
 		}
 
 		manager.mu.Lock()

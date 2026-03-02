@@ -17,7 +17,7 @@ type LogFileInfo struct {
 	Name      string    `json:"name"`
 	Path      string    `json:"path"`
 	Size      int64     `json:"size"`
-	Mode      string    `json:"mode"`
+	Role      string    `json:"role"` // Node role: master, client, hybrid
 	Date      string    `json:"date"`
 	CreatedAt time.Time `json:"createdAt"`
 	IsBackup  bool      `json:"isBackup"`
@@ -44,7 +44,7 @@ type LogFileFilter struct {
 }
 
 // ListLogFiles lists all available log files in the log directory
-func ListLogFiles(logDir string, serverMode string) ([]LogFileInfo, error) {
+func ListLogFiles(logDir string, role string) ([]LogFileInfo, error) {
 	if logDir == "" {
 		return nil, fmt.Errorf("日志目录未配置")
 	}
@@ -85,8 +85,8 @@ func ListLogFiles(logDir string, serverMode string) ([]LogFileInfo, error) {
 		fileMode := matches[1]
 		fileDate := matches[2]
 
-		// Only show files for current mode or all if mode is empty
-		if serverMode != "" && serverMode != fileMode {
+		// Only show files for current role or all if role is empty
+		if role != "" && role != fileMode {
 			continue
 		}
 
@@ -94,7 +94,7 @@ func ListLogFiles(logDir string, serverMode string) ([]LogFileInfo, error) {
 			Name:      name,
 			Path:      filepath.Join(logDir, name),
 			Size:      info.Size(),
-			Mode:      fileMode,
+			Role:      fileMode,
 			Date:      fileDate,
 			CreatedAt: info.ModTime(),
 			IsBackup:  matches[4] != "", // Has rotation timestamp and reason

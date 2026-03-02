@@ -152,6 +152,16 @@ func (p *Process) Start() error {
 	}
 
 	p.PID = p.cmd.Process.Pid
+
+	// 验证进程是否真正运行（防止立即崩溃）
+	// 延迟 500ms 让进程初始化
+	time.Sleep(500 * time.Millisecond)
+
+	// 使用 Signal(0) 检查进程是否仍在运行
+	if !p.IsRunning() {
+		return fmt.Errorf("process exited immediately (PID: %d)", p.PID)
+	}
+
 	p.Running = true
 
 	// Start output readers
