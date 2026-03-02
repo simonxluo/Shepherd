@@ -73,7 +73,7 @@ export interface Model {
 /**
  * 模型状态
  */
-export type ModelStatus = 'stopped' | 'loading' | 'loaded' | 'running' | 'unloading' | 'error';
+export type ModelStatus = 'stopped' | 'loading' | 'running' | 'unloading' | 'error';
 
 /**
  * 处理槽位

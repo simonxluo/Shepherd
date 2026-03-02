@@ -18,7 +18,6 @@ interface ModelCardProps {
 const STATUS_COLORS: Record<ModelStatus, string> = {
   stopped: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
   loading: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-  loaded: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
   running: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
   unloading: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
   error: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
@@ -30,7 +29,6 @@ const STATUS_COLORS: Record<ModelStatus, string> = {
 const STATUS_LABELS: Record<ModelStatus, string> = {
   stopped: '已停止',
   loading: '加载中',
-  loaded: '已加载',
   running: '运行中',
   unloading: '卸载中',
   error: '错误',
@@ -71,7 +69,7 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, actions 
   const statusColor = STATUS_COLORS[model.status];
   const statusLabel = STATUS_LABELS[model.status];
   const isLoading = model.status === 'loading' || model.isLoading;
-  const isLoaded = model.status === 'loaded' || model.status === 'running' || model.isLoaded;
+  const isLoaded = model.status === 'running' || model.isLoaded;
 
   // 调试日志：检查 Qwen3.5-397B 模型的数据
   if (model.name.includes('Qwen3.5-397B')) {

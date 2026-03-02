@@ -29,7 +29,6 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
 	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/modelrepo"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/types"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/websocket"
@@ -77,9 +76,8 @@ type Server struct {
 	nodeAdapter *api.NodeAdapter        // Node API 适配器
 	repoClient  *modelrepoclient.Client // 模型仓库客户端
 
-	// 新增字段：WebSocket Hub 和端口管理器
-	wsHub         *WebSocketHub
-	portAllocator *port.PortAllocator
+	// 新增字段：WebSocket Hub
+	wsHub *WebSocketHub
 
 	// 模型能力存储
 	capabilities   map[string]*ModelCapabilities // modelId -> capabilities
@@ -109,10 +107,8 @@ type Config struct {
 	ReadTimeout   time.Duration
 	WriteTimeout  time.Duration
 	WebUIPath     string
-	// Mode and ServerMode for runtime configuration
-	Mode      string // standalone|master|client
-	ServerCfg *config.Config
-	ConfigMgr *config.Manager // 配置管理器
+	ServerCfg     *config.Config
+	ConfigMgr     *config.Manager // 配置管理器
 	// Version information
 	Version   string // 版本号
 	BuildTime string // 构建时间
@@ -160,9 +156,6 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 
 	// Create WebSocket Hub (新增)
 	s.wsHub = NewWebSocketHub()
-
-	// Create port allocator (新增)
-	s.portAllocator = port.NewPortAllocator(8081, 9000)
 
 	// Create model repository client with config
 	cfg := config.ConfigMgr.Get()
@@ -640,7 +633,7 @@ func (s *Server) handleServerInfo(c *gin.Context) {
 		"gitCommit": s.config.GitCommit,
 		"name":      "Shepherd",
 		"status":    "running",
-		"mode":      s.config.Mode,
+		"role":      s.config.ServerCfg.Node.Role,
 		"ports": gin.H{
 			"web":       s.config.WebPort,
 			"anthropic": s.config.AnthropicPort,
@@ -1062,7 +1055,7 @@ func (s *Server) handleGetConfig(c *gin.Context) {
 	cfg := s.config.ServerCfg
 
 	api.Success(c, gin.H{
-		"mode": s.config.Mode,
+		"role": s.config.ServerCfg.Node.Role,
 		"server": gin.H{
 			"host":           s.config.Host,
 			"web_port":       s.config.WebPort,
@@ -1104,11 +1097,6 @@ func (s *Server) handleUpdateConfig(c *gin.Context) {
 	}
 
 	restartRequired := false
-
-	// 更新模式
-	if req.Mode != "" {
-		s.config.Mode = req.Mode
-	}
 
 	// 更新端口（需要重启）
 	if req.WebPort > 0 && req.WebPort != s.config.WebPort {
@@ -1234,7 +1222,7 @@ func (s *Server) handleListLoadedModels(c *gin.Context) {
 				PathPrefix:  m.PathPrefix,
 				Size:        m.Size,
 				Favourite:   m.Favourite,
-				Status:      "loaded",
+				Status:      "running",
 				IsLoaded:    true,
 			}
 
@@ -1393,12 +1381,12 @@ func (s *Server) handleLoadModel(c *gin.Context) {
 		}
 
 		if result.AlreadyLoaded {
-			// 模型已加载
+			// 模型已加载（运行中）
 			api.Success(c, gin.H{
-				"message":  "模型已加载",
+				"message":  "模型已在运行中",
 				"model_id": result.ModelID,
 				"port":     result.Port,
-				"status":   "loaded",
+				"status":   "running",
 			})
 			return
 		}
@@ -1975,10 +1963,10 @@ func (s *Server) handleLogStream(c *gin.Context) {
 		// Get log file path from configuration
 		if s.config != nil && s.config.ServerCfg != nil {
 			logDir := s.config.ServerCfg.Log.Directory
-			mode := s.config.Mode
+			role := s.config.ServerCfg.Node.Role
 
 			// Get latest log file path
-			logPath, err := logger.GetLatestLogFile(logDir, mode)
+			logPath, err := logger.GetLatestLogFile(logDir, role)
 			if err == nil {
 				// Read log file with empty filter to get all entries
 				parsedEntries, err := logger.ReadLogFile(logPath, logger.LogFileFilter{})
@@ -2070,9 +2058,9 @@ func (s *Server) handleLogEntries(c *gin.Context) {
 func (s *Server) handleLogFiles(c *gin.Context) {
 	cfg := s.config.ConfigMgr.Get()
 	logDir := cfg.Log.Directory
-	serverMode := s.config.Mode
+	role := s.config.ServerCfg.Node.Role
 
-	files, err := logger.ListLogFiles(logDir, serverMode)
+	files, err := logger.ListLogFiles(logDir, role)
 	if err != nil {
 		api.ErrorWithDetails(c, types.ErrInternalError, "获取日志文件列表失败", err.Error())
 		return
@@ -2159,9 +2147,9 @@ func (s *Server) handleDeleteLogFile(c *gin.Context) {
 
 	// Prevent deleting the current day's log file
 	cfg := s.config.ConfigMgr.Get()
-	serverMode := s.config.Mode
+	role := s.config.ServerCfg.Node.Role
 	currentDate := time.Now().Format("2006-01-02")
-	currentLogName := fmt.Sprintf("shepherd-%s-%s.log", serverMode, currentDate)
+	currentLogName := fmt.Sprintf("shepherd-%s-%s.log", role, currentDate)
 
 	if filename == currentLogName {
 		api.Forbidden(c, "不能删除当前日志文件")

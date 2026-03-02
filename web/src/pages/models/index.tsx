@@ -209,7 +209,6 @@ export function ModelsPage() {
           className="px-3 py-2 border border-border rounded-lg bg-input text-foreground"
         >
           <option value="">所有状态</option>
-          <option value="loaded">已加载</option>
           <option value="running">运行中</option>
           <option value="stopped">已停止</option>
           <option value="loading">加载中</option>
@@ -268,7 +267,7 @@ export function ModelsPage() {
           className={cn(
             'gap-3 sm:gap-4',
             viewMode === 'grid'
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
+              ? 'grid grid-cols-1 sm:grid-cols-2'
               : 'flex flex-col'
           )}
         >

@@ -78,7 +78,7 @@ func (s LoadState) String() string {
 	case StateLoading:
 		return "loading"
 	case StateLoaded:
-		return "loaded"
+		return "running"
 	case StateUnloading:
 		return "unloading"
 	case StateError:
