@@ -12,9 +12,20 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// createTestStorageMgr 创建测试用的存储管理器
+func createTestStorageMgr(t *testing.T) *storage.Manager {
+	storageCfg := storage.StorageConfig{
+		Type: storage.StorageTypeMemory, // 测试使用内存存储
+	}
+	storageMgr, err := storage.NewManager(&storageCfg)
+	require.NoError(t, err, "无法创建存储管理器")
+	return storageMgr
+}
 
 func TestNewHandler(t *testing.T) {
 	cfg := config.DefaultConfig()
@@ -22,7 +33,9 @@ func TestNewHandler(t *testing.T) {
 	_, _ = cfgMgr.Load() // 加载默认配置，忽略错误
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
-	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+
+	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	handler := NewHandler(modelMgr)
 	assert.NotNil(t, handler)
@@ -133,7 +146,8 @@ func TestHandler_HandleChat(t *testing.T) {
 	_, _ = cfgMgr.Load() // 加载默认配置，忽略错误
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
-	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 	handler := NewHandler(modelMgr)
 
 	tests := []struct {
@@ -187,7 +201,8 @@ func TestHandler_HandleTags(t *testing.T) {
 	_, _ = cfgMgr.Load() // 加载默认配置，忽略错误
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
-	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 	handler := NewHandler(modelMgr)
 
 	router := gin.New()
@@ -214,7 +229,8 @@ func TestHandler_findModel(t *testing.T) {
 	_, _ = cfgMgr.Load() // 加载默认配置，忽略错误
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
-	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 	handler := NewHandler(modelMgr)
 
 	t.Run("no models loaded", func(t *testing.T) {
@@ -235,7 +251,8 @@ func TestHandler_getModelPort(t *testing.T) {
 	_, _ = cfgMgr.Load() // 加载默认配置，忽略错误
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
-	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 	handler := NewHandler(modelMgr)
 
 	t.Run("model not loaded", func(t *testing.T) {
@@ -258,7 +275,8 @@ func TestHandler_sendError(t *testing.T) {
 	_, _ = cfgMgr.Load() // 加载默认配置，忽略错误
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
-	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	modelMgr := model.NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 	handler := NewHandler(modelMgr)
 
 	router := gin.New()

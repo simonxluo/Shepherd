@@ -100,6 +100,22 @@ type ModelLoadConfig struct {
 	UpdatedAt  time.Time              `json:"updatedAt" db:"updated_at"`
 }
 
+// ModelMetadata represents user-defined metadata for a model
+type ModelMetadata struct {
+	ModelID      string     `json:"modelId" db:"model_id"`           // Model ID (primary key)
+	NodeID       string     `json:"nodeId,omitempty" db:"node_id"`   // Node/Machine ID where model is located
+	StoragePath  string     `json:"storagePath,omitempty" db:"storage_path"` // Storage path (for distributed systems)
+	Alias        string     `json:"alias,omitempty" db:"alias"`      // User-defined alias
+	Favourite    bool       `json:"favourite" db:"favourite"`        // Favorite flag
+	Tags         []string   `json:"tags,omitempty" db:"tags"`        // Tags (JSON array)
+	Description  string     `json:"description,omitempty" db:"description"` // User description
+	LoadCount    int        `json:"loadCount" db:"load_count"`      // Number of times loaded
+	LastLoaded   *time.Time `json:"lastLoaded,omitempty" db:"last_loaded"` // Last load time
+	TotalTokens  int64      `json:"totalTokens" db:"total_tokens"`  // Total tokens generated
+	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`      // Record creation time
+	UpdatedAt    time.Time  `json:"updatedAt" db:"updated_at"`      // Last update time
+}
+
 // Store defines the storage interface
 type Store interface {
 	// Conversation operations
@@ -132,6 +148,13 @@ type Store interface {
 	SaveModelLoadConfig(ctx context.Context, config *ModelLoadConfig) error
 	GetModelLoadConfig(ctx context.Context, nodeID, modelID string) (*ModelLoadConfig, error)
 	DeleteModelLoadConfig(ctx context.Context, nodeID, modelID string) error
+
+	// ModelMetadata operations - 用户设置的模型元数据
+	SaveModelMetadata(ctx context.Context, metadata *ModelMetadata) error
+	GetModelMetadata(ctx context.Context, modelID string) (*ModelMetadata, error)
+	ListModelMetadata(ctx context.Context, limit, offset int) ([]*ModelMetadata, error)
+	DeleteModelMetadata(ctx context.Context, modelID string) error
+	GetAllModelMetadata(ctx context.Context) (map[string]*ModelMetadata, error) // 批量获取所有模型元数据
 
 	// Cleanup
 	Close() error
@@ -189,14 +212,15 @@ func (m *Manager) Close() error {
 
 // Errors
 var (
-	ErrInvalidStorageType    = &StorageError{Code: "INVALID_TYPE", Message: "Invalid storage type"}
-	ErrMissingSQLiteConfig   = &StorageError{Code: "MISSING_CONFIG", Message: "Missing SQLite configuration"}
+	ErrInvalidStorageType     = &StorageError{Code: "INVALID_TYPE", Message: "Invalid storage type"}
+	ErrMissingSQLiteConfig    = &StorageError{Code: "MISSING_CONFIG", Message: "Missing SQLite configuration"}
 	ErrPostgreSQLNotSupported = &StorageError{Code: "NOT_SUPPORTED", Message: "PostgreSQL support is not yet implemented"}
-	ErrConversationNotFound  = &StorageError{Code: "NOT_FOUND", Message: "Conversation not found"}
-	ErrMessageNotFound       = &StorageError{Code: "NOT_FOUND", Message: "Message not found"}
-	ErrBenchmarkNotFound     = &StorageError{Code: "NOT_FOUND", Message: "Benchmark not found"}
+	ErrConversationNotFound   = &StorageError{Code: "NOT_FOUND", Message: "Conversation not found"}
+	ErrMessageNotFound        = &StorageError{Code: "NOT_FOUND", Message: "Message not found"}
+	ErrBenchmarkNotFound      = &StorageError{Code: "NOT_FOUND", Message: "Benchmark not found"}
 	ErrBenchmarkConfigNotFound = &StorageError{Code: "NOT_FOUND", Message: "Benchmark config not found"}
 	ErrModelLoadConfigNotFound = &StorageError{Code: "NOT_FOUND", Message: "Model load config not found"}
+	ErrModelMetadataNotFound   = &StorageError{Code: "NOT_FOUND", Message: "Model metadata not found"}
 )
 
 // StorageError represents a storage error

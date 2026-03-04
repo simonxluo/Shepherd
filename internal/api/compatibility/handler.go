@@ -192,6 +192,10 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 		return
 	}
 
+	// Save original enabled states before modifying cfg
+	ollamaWasEnabled := cfg.Compatibility.Ollama.Enabled
+	lmstudioWasEnabled := cfg.Compatibility.LMStudio.Enabled
+
 	// Update configuration
 	cfg.Compatibility.Ollama.Enabled = req.Ollama.Enabled
 	cfg.Compatibility.Ollama.Port = req.Ollama.Port
@@ -201,7 +205,7 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 	// Start/stop servers based on configuration changes
 	if h.serverManager != nil {
 		// Handle Ollama server
-		if req.Ollama.Enabled && !cfg.Compatibility.Ollama.Enabled {
+		if req.Ollama.Enabled && !ollamaWasEnabled {
 			// Starting Ollama server
 			if err := h.serverManager.StartOllamaServer(req.Ollama.Port); err != nil {
 				logger.Errorf("启动 Ollama 服务器失败: %v", err)
@@ -224,7 +228,7 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 				})
 				return
 			}
-		} else if !req.Ollama.Enabled && cfg.Compatibility.Ollama.Enabled {
+		} else if !req.Ollama.Enabled && ollamaWasEnabled {
 			// Stopping Ollama server
 			if err := h.serverManager.StopOllamaServer(); err != nil {
 				logger.Errorf("停止 Ollama 服务器失败: %v", err)
@@ -232,7 +236,7 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 		}
 
 		// Handle LM Studio server
-		if req.LMStudio.Enabled && !cfg.Compatibility.LMStudio.Enabled {
+		if req.LMStudio.Enabled && !lmstudioWasEnabled {
 			// Starting LM Studio server
 			if err := h.serverManager.StartLMStudioServer(req.LMStudio.Port); err != nil {
 				logger.Errorf("启动 LM Studio 服务器失败: %v", err)
@@ -255,7 +259,7 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 				})
 				return
 			}
-		} else if !req.LMStudio.Enabled && cfg.Compatibility.LMStudio.Enabled {
+		} else if !req.LMStudio.Enabled && lmstudioWasEnabled {
 			// Stopping LM Studio server
 			if err := h.serverManager.StopLMStudioServer(); err != nil {
 				logger.Errorf("停止 LM Studio 服务器失败: %v", err)

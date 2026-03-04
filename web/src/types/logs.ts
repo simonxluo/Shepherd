@@ -50,7 +50,7 @@ export interface LogFileInfo {
   name: string;
   path: string;
   size: number;
-  mode: string;
+  role: string; // Node role: master, client, hybrid
   date: string;
   createdAt: string; // ISO 8601
   isBackup: boolean;

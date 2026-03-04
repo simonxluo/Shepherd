@@ -109,6 +109,7 @@ function GeneralSettingsPanel() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [isLoading, setIsLoading] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isAutoDisabling, setIsAutoDisabling] = useState(false);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,7 +144,8 @@ function GeneralSettingsPanel() {
 
   // 自动保存逻辑 (防抖 2 秒)
   useEffect(() => {
-    if (isLoading || !hasChanges) return;
+    // 跳过自动禁用时的保存
+    if (isLoading || !hasChanges || isAutoDisabling) return;
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
@@ -195,7 +197,7 @@ function GeneralSettingsPanel() {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
     };
-  }, [ollamaEnabled, ollamaPort, lmstudioEnabled, lmstudioPort, isLoading, hasChanges, toast]);
+  }, [ollamaEnabled, ollamaPort, lmstudioEnabled, lmstudioPort, isLoading, hasChanges, isAutoDisabling, toast]);
 
   // 处理配置变化
   const handleOllamaChange = useCallback((config: ApiConfig) => {
@@ -228,6 +230,9 @@ function GeneralSettingsPanel() {
       `端口 ${port} 无响应，服务将自动禁用`
     );
 
+    // 设置标志，防止自动保存被触发
+    setIsAutoDisabling(true);
+
     try {
       // 立即禁用服务
       const response = await compatibilityApi.update({
@@ -248,6 +253,8 @@ function GeneralSettingsPanel() {
         } else {
           setLmstudioEnabled(false);
         }
+        // 清除更改标志，防止触发自动保存
+        setHasChanges(false);
         toast.success(`${serviceName} 已禁用`, '配置已自动还原');
       } else {
         toast.error(`${serviceName} 禁用失败`, response.error || '未知错误');
@@ -255,6 +262,11 @@ function GeneralSettingsPanel() {
     } catch (error) {
       console.error('自动禁用服务失败:', error);
       toast.error('自动禁用失败', '请手动禁用服务');
+    } finally {
+      // 延迟清除标志，确保状态更新完成
+      setTimeout(() => {
+        setIsAutoDisabling(false);
+      }, 100);
     }
   }, [ollamaEnabled, ollamaPort, lmstudioEnabled, lmstudioPort, toast]);
 

@@ -20,6 +20,7 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
 )
 
 // Manager manages model scanning and loading
@@ -28,6 +29,7 @@ type Manager struct {
 	configMgr     *config.Manager
 	processMgr    *process.Manager
 	portAllocator *port.PortAllocator
+	storageMgr    *storage.Manager // 数据库存储管理器
 
 	models     map[string]*Model
 	statuses   map[string]*ModelStatus
@@ -49,7 +51,7 @@ type ScanStatus struct {
 }
 
 // NewManager creates a new model manager
-func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Manager, portAllocator *port.PortAllocator) *Manager {
+func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Manager, portAllocator *port.PortAllocator, storageMgr *storage.Manager) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	m := &Manager{
@@ -57,6 +59,7 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 		configMgr:     cfgMgr,
 		processMgr:    procMgr,
 		portAllocator: portAllocator,
+		storageMgr:    storageMgr,
 		models:        make(map[string]*Model),
 		statuses:      make(map[string]*ModelStatus),
 		scanStatus:    &ScanStatus{},
@@ -120,12 +123,46 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 	result.Duration = time.Since(result.ScannedAt)
 	logger.Info("模型扫描完成", "totalModels", len(result.Models), "duration", result.Duration.String(), "totalErrors", len(result.Errors))
 
+	// ========== 修复：从数据库加载用户设置的属性 ==========
+	// 从数据库加载所有模型的元数据（别名、收藏、标签、描述、使用统计等）
+	modelMetadataMap := make(map[string]*storage.ModelMetadata)
+	if m.storageMgr != nil {
+		store := m.storageMgr.GetStore()
+		metadata, err := store.GetAllModelMetadata(ctx)
+		if err != nil {
+			logger.Warn("从数据库加载模型元数据失败", "error", err)
+		} else {
+			modelMetadataMap = metadata
+			logger.Info("从数据库加载模型元数据", "count", len(metadata))
+		}
+	}
+	// ==============================================
+
 	// Update models map（先清空，再添加）
 	m.mu.Lock()
 	m.models = make(map[string]*Model) // 清空旧数据
 	for _, model := range result.Models {
 		m.models[model.ID] = model
 	}
+
+	// ========== 修复：恢复用户设置的属性 ==========
+	// 将数据库中的用户属性合并回新扫描的模型中
+	for id, model := range m.models {
+		if metadata, exists := modelMetadataMap[id]; exists {
+			// 恢复用户设置的属性
+			model.Alias = metadata.Alias
+			model.Favourite = metadata.Favourite
+			model.Tags = metadata.Tags
+			model.Description = metadata.Description
+			model.LoadCount = metadata.LoadCount
+			if metadata.LastLoaded != nil {
+				model.LastLoaded = *metadata.LastLoaded
+			}
+			model.TotalTokens = metadata.TotalTokens
+			logger.Debug("恢复模型用户属性", "id", id, "alias", metadata.Alias, "favourite", metadata.Favourite)
+		}
+	}
+	// ==============================================
 
 	// ========== 新增：合并分卷文件 ==========
 	mergedCount := m.mergeSplitModels()
@@ -764,8 +801,8 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 	m.statuses[req.ModelID] = status
 	m.mu.Unlock()
 
-	// 启动异步加载
-	go m.loadModelAsync(req, status)
+	// 启动异步加载（传入已获取的 model，避免在 goroutine 中再次获取锁）
+	go m.loadModelAsync(req, status, model)
 
 	return &LoadResult{
 		Success:  true,
@@ -776,10 +813,11 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 }
 
 // loadModelAsync 后台异步加载模型
-func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
+// model 参数已在 LoadAsync 中获取，避免在此 goroutine 中再次获取锁导致死锁
+func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *Model) {
 	startTime := time.Now()
 
-	logger.Info("开始异步加载模型", "modelId", req.ModelID)
+	logger.Info("开始异步加载模型", "modelId", req.ModelID, "modelName", model.Name)
 
 	// Find llama.cpp binary
 	binPath := m.findLlamaCppBinary()
@@ -804,7 +842,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 		return
 	}
 
-	model, _ := m.GetModel(req.ModelID)
+	// 使用传入的 model 参数，不再调用 GetModel 避免死锁
 	modelPath := model.Path
 	if len(model.ShardFiles) > 0 {
 		modelPath = model.ShardFiles[0]
@@ -817,6 +855,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 
 	// Convert to process.LoadRequest and build command
 	procReq := toProcessLoadRequest(req, modelPath, port)
+	logger.Info("构建进程命令", "modelId", req.ModelID, "port", port)
 	cmd, err := process.BuildCommandFromRequest(procReq, binPath)
 	if err != nil {
 		m.mu.Lock()
@@ -826,6 +865,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 		logger.Error("异步模型加载失败: 构建命令失败", "modelId", req.ModelID, "error", err)
 		return
 	}
+	logger.Info("命令构建成功", "modelId", req.ModelID, "cmd", cmd)
 
 	// Start process
 	proc, err := m.processMgr.Start(req.ModelID, model.Name, cmd, binPath)
@@ -838,7 +878,11 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 		return
 	}
 
-	logger.Info("异步模型加载: 进程已启动", "modelId", req.ModelID, "pid", proc.GetPID(), "port", port)
+	logger.Info("进程启动成功，准备获取 PID", "modelId", req.ModelID)
+
+	// 获取 PID (可能在短时间内阻塞，但应该很快返回)
+	pid := proc.GetPID()
+	logger.Info("异步模型加载: 进程已启动", "modelId", req.ModelID, "pid", pid, "port", port)
 
 	// 等待加载完成（监控进程输出）
 	loadCompleted := make(chan bool, 1)
@@ -846,25 +890,71 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 	stopHealthCheck := make(chan bool, 1) // 用于停止健康检查
 
 	// 启动进程健康检查 goroutine
+	logger.Info("启动健康检查 goroutine", "modelId", req.ModelID, "healthURL", fmt.Sprintf("http://localhost:%d/health", port))
 	go func() {
+		// 立即执行一次健康检查（不等待 ticker）
+		httpClient := &http.Client{Timeout: 2 * time.Second}
+		healthURL := fmt.Sprintf("http://localhost:%d/health", port)
+
+		// 启动 ticker 进行定期检查
 		ticker := time.NewTicker(3 * time.Second)
 		defer ticker.Stop()
 
-		// HTTP 客户端用于健康检查（带超时）
-		httpClient := &http.Client{
-			Timeout: 2 * time.Second,
-		}
-		healthURL := fmt.Sprintf("http://localhost:%d/health", port)
+		// 健康检查失败计数器，超过10次则放弃
+		failureCount := 0
+		const maxFailures = 10
 
+		// 首次立即检查
+		func() {
+			logger.Info("首次健康检查", "modelId", req.ModelID, "url", healthURL)
+			if !proc.IsRunning() {
+				logger.Error("首次健康检查发现进程已退出", "modelId", req.ModelID)
+				select {
+				case loadError <- fmt.Errorf("进程启动后立即退出"):
+				default:
+				}
+				return
+			}
+
+			resp, err := httpClient.Get(healthURL)
+			if err != nil {
+				failureCount++
+				logger.Warn("首次健康检查请求失败", "modelId", req.ModelID, "error", err, "failureCount", failureCount, "maxFailures", maxFailures)
+			} else if resp.StatusCode != 200 {
+				failureCount++
+				logger.Warn("首次健康检查返回非200状态", "modelId", req.ModelID, "statusCode", resp.StatusCode, "failureCount", failureCount, "maxFailures", maxFailures)
+				resp.Body.Close()
+			} else {
+				body, _ := io.ReadAll(resp.Body)
+				resp.Body.Close()
+				logger.Info("首次健康检查响应", "modelId", req.ModelID, "body", string(body))
+				if strings.Contains(string(body), `"status":"ok"`) {
+					logger.Info("首次健康检查成功，模型已就绪", "modelId", req.ModelID, "port", port)
+					select {
+					case loadCompleted <- true:
+					default:
+					}
+					return
+				}
+			}
+		}()
+
+		// 定期检查
+		checkCount := 0
 		for {
 			select {
 			case <-stopHealthCheck:
 				// 收到停止信号，退出健康检查
+				logger.Info("健康检查收到停止信号", "modelId", req.ModelID, "checkCount", checkCount)
 				return
 			case <-ticker.C:
+				checkCount++
+				logger.Info("执行定期健康检查", "modelId", req.ModelID, "checkCount", checkCount, "url", healthURL)
+
 				// 定期检查进程是否仍在运行
 				if !proc.IsRunning() {
 					// 进程意外退出
+					logger.Error("定期健康检查发现进程已退出", "modelId", req.ModelID, "pid", proc.GetPID())
 					select {
 					case loadError <- fmt.Errorf("进程意外退出 (PID: %d)", proc.GetPID()):
 					default:
@@ -874,18 +964,54 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus) {
 
 				// 检查 HTTP 健康端点（备用检测机制）
 				resp, err := httpClient.Get(healthURL)
-				if err == nil && resp.StatusCode == 200 {
+				if err != nil {
+					failureCount++
+					logger.Warn("HTTP 健康检查请求失败", "modelId", req.ModelID, "url", healthURL, "error", err, "failureCount", failureCount, "maxFailures", maxFailures)
+
+					// 检查是否超过最大失败次数
+					if failureCount >= maxFailures {
+						logger.Error("健康检查失败次数超过限制，终止进程", "modelId", req.ModelID, "failureCount", failureCount, "maxFailures", maxFailures)
+						// 杀死进程
+						proc.Stop()
+						// 返回错误
+						select {
+						case loadError <- fmt.Errorf("健康检查连续失败 %d 次，已终止进程 (PID: %d)", failureCount, proc.GetPID()):
+						default:
+						}
+						return
+					}
+				} else if resp.StatusCode != 200 {
+					failureCount++
+					logger.Warn("HTTP 健康检查返回非200状态", "modelId", req.ModelID, "statusCode", resp.StatusCode, "failureCount", failureCount, "maxFailures", maxFailures)
+					resp.Body.Close()
+
+					// 检查是否超过最大失败次数
+					if failureCount >= maxFailures {
+						logger.Error("健康检查失败次数超过限制，终止进程", "modelId", req.ModelID, "failureCount", failureCount, "maxFailures", maxFailures)
+						// 杀死进程
+						proc.Stop()
+						// 返回错误
+						select {
+						case loadError <- fmt.Errorf("健康检查连续失败 %d 次，已终止进程 (PID: %d)", failureCount, proc.GetPID()):
+						default:
+						}
+						return
+					}
+				} else {
 					body, _ := io.ReadAll(resp.Body)
 					resp.Body.Close()
+					logger.Info("HTTP 健康检查响应", "modelId", req.ModelID, "body", string(body))
 					// 检查响应内容是否为 {"status":"ok"}
 					if strings.Contains(string(body), `"status":"ok"`) {
-						logger.Info("HTTP 健康检查成功，模型已就绪", "modelId", req.ModelID, "port", port)
+						logger.Info("HTTP 健康检查成功，模型已就绪", "modelId", req.ModelID, "port", port, "checkCount", checkCount)
 						select {
 						case loadCompleted <- true:
 						default:
 						}
 						return
 					}
+					// 响应成功但状态不是 ok，重置失败计数
+					failureCount = 0
 				}
 			}
 		}
@@ -1075,11 +1201,34 @@ func (m *Manager) SetAlias(modelID, alias string) error {
 
 	model.Alias = alias
 
-	// Save to config
-	if m.configMgr != nil {
-		if err := m.configMgr.SaveModelAlias(modelID, alias); err != nil {
-			return err
+	// Save to database
+	if m.storageMgr != nil {
+		store := m.storageMgr.GetStore()
+
+		// 获取或创建元数据
+		metadata, err := store.GetModelMetadata(m.ctx, modelID)
+		if err != nil {
+			// 元数据不存在，创建新的
+			metadata = &storage.ModelMetadata{
+				ModelID:     modelID,
+				StoragePath: filepath.Dir(model.Path),
+				Favourite:   model.Favourite,
+				Tags:        model.Tags,
+				LoadCount:   model.LoadCount,
+			}
+			if !model.LastLoaded.IsZero() {
+				metadata.LastLoaded = &model.LastLoaded
+			}
+			metadata.TotalTokens = model.TotalTokens
 		}
+
+		metadata.Alias = alias
+
+		if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
+			logger.Error("保存模型别名到数据库失败", "modelId", modelID, "error", err)
+			return fmt.Errorf("failed to save alias to database: %w", err)
+		}
+		logger.Info("模型别名已保存到数据库", "modelId", modelID, "alias", alias)
 	}
 
 	return nil
@@ -1097,11 +1246,34 @@ func (m *Manager) SetFavourite(modelID string, favourite bool) error {
 
 	model.Favourite = favourite
 
-	// Save to config
-	if m.configMgr != nil {
-		if err := m.configMgr.SaveModelFavourite(modelID, favourite); err != nil {
-			return err
+	// Save to database
+	if m.storageMgr != nil {
+		store := m.storageMgr.GetStore()
+
+		// 获取或创建元数据
+		metadata, err := store.GetModelMetadata(m.ctx, modelID)
+		if err != nil {
+			// 元数据不存在，创建新的
+			metadata = &storage.ModelMetadata{
+				ModelID:     modelID,
+				StoragePath: filepath.Dir(model.Path),
+				Alias:       model.Alias,
+				Tags:        model.Tags,
+				LoadCount:   model.LoadCount,
+			}
+			if !model.LastLoaded.IsZero() {
+				metadata.LastLoaded = &model.LastLoaded
+			}
+			metadata.TotalTokens = model.TotalTokens
 		}
+
+		metadata.Favourite = favourite
+
+		if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
+			logger.Error("保存模型收藏状态到数据库失败", "modelId", modelID, "error", err)
+			return fmt.Errorf("failed to save favourite to database: %w", err)
+		}
+		logger.Info("模型收藏状态已保存到数据库", "modelId", modelID, "favourite", favourite)
 	}
 
 	return nil
@@ -1861,5 +2033,30 @@ func toProcessLoadRequest(req *LoadRequest, modelPath string, port int) *process
 		DisableJinja:     req.DisableJinja,
 		ChatTemplate:     req.ChatTemplate,
 		ContextShift:     req.ContextShift,
+		// Thread configuration
+		ThreadsBatch:     req.ThreadsBatch,
+		// Extended sampling parameters
+		RepeatLastN:      req.RepeatLastN,
+		TypicalP:         req.TypicalP,
+		IgnoreEOS:        req.IgnoreEOS,
+		// Multi-GPU configuration
+		SplitMode:        req.SplitMode,
+		TensorSplit:      req.TensorSplit,
+		// Server optimization
+		ContBatching:     req.ContBatching,
+		CachePrompt:      req.CachePrompt,
+		// Structured generation
+		Grammar:          req.Grammar,
+		GrammarFile:      req.GrammarFile,
+		// LoRA adapter support
+		Lora:             req.Lora,
+		LoraScaled:       req.LoraScaled,
+		// Chat template kwargs
+		ChatTemplateKwargs: req.ChatTemplateKwargs,
+		// RoPE scaling
+		RopeScaling:      req.RopeScaling,
+		RopeScale:        req.RopeScale,
+		RopeFreqBase:     req.RopeFreqBase,
+		RopeFreqScale:    req.RopeFreqScale,
 	}
 }

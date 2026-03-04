@@ -17,6 +17,7 @@ type MemoryStore struct {
 	benchmarks        map[string]*Benchmark
 	benchmarkConfigs  map[string]*BenchmarkConfig
 	modelLoadConfigs  map[string]*ModelLoadConfig // key: "nodeID:modelID"
+	modelMetadata     map[string]*ModelMetadata    // key: modelID
 }
 
 // NewMemoryStore creates a new in-memory store
@@ -28,6 +29,7 @@ func NewMemoryStore() (*MemoryStore, error) {
 		benchmarks:       make(map[string]*Benchmark),
 		benchmarkConfigs: make(map[string]*BenchmarkConfig),
 		modelLoadConfigs: make(map[string]*ModelLoadConfig),
+		modelMetadata:    make(map[string]*ModelMetadata),
 	}, nil
 }
 
@@ -406,6 +408,87 @@ func (s *MemoryStore) DeleteModelLoadConfig(ctx context.Context, nodeID, modelID
 
 	delete(s.modelLoadConfigs, key)
 	return nil
+}
+
+// ModelMetadata operations
+
+// SaveModelMetadata saves or updates model metadata
+func (s *MemoryStore) SaveModelMetadata(ctx context.Context, metadata *ModelMetadata) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+	if metadata.CreatedAt.IsZero() {
+		metadata.CreatedAt = now
+	}
+	metadata.UpdatedAt = now
+
+	s.modelMetadata[metadata.ModelID] = metadata
+	return nil
+}
+
+// GetModelMetadata retrieves metadata for a single model
+func (s *MemoryStore) GetModelMetadata(ctx context.Context, modelID string) (*ModelMetadata, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	metadata, exists := s.modelMetadata[modelID]
+	if !exists {
+		return nil, ErrModelMetadataNotFound
+	}
+
+	// Return a copy
+	metadataCopy := *metadata
+	return &metadataCopy, nil
+}
+
+// ListModelMetadata lists model metadata with pagination
+func (s *MemoryStore) ListModelMetadata(ctx context.Context, limit, offset int) ([]*ModelMetadata, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var result []*ModelMetadata
+	for _, metadata := range s.modelMetadata {
+		result = append(result, metadata)
+	}
+
+	if offset >= len(result) {
+		return []*ModelMetadata{}, nil
+	}
+
+	end := offset + limit
+	if end > len(result) {
+		end = len(result)
+	}
+
+	return result[offset:end], nil
+}
+
+// DeleteModelMetadata deletes metadata for a model
+func (s *MemoryStore) DeleteModelMetadata(ctx context.Context, modelID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.modelMetadata[modelID]; !exists {
+		return ErrModelMetadataNotFound
+	}
+
+	delete(s.modelMetadata, modelID)
+	return nil
+}
+
+// GetAllModelMetadata retrieves all model metadata as a map
+func (s *MemoryStore) GetAllModelMetadata(ctx context.Context) (map[string]*ModelMetadata, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	result := make(map[string]*ModelMetadata, len(s.modelMetadata))
+	for k, v := range s.modelMetadata {
+		metadataCopy := *v
+		result[k] = &metadataCopy
+	}
+
+	return result, nil
 }
 
 // Close closes the store (no-op for memory store)

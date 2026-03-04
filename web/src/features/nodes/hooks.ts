@@ -141,8 +141,8 @@ export function useFilteredNodes(
   return nodes.filter((node) => {
     if (filters.search) {
       const search = filters.search.toLowerCase();
-      const matchName = node.name.toLowerCase().includes(search);
-      const matchAddress = node.address.toLowerCase().includes(search);
+      const matchName = node.name ? node.name.toLowerCase().includes(search) : false;
+      const matchAddress = node.address ? node.address.toLowerCase().includes(search) : false;
       if (!matchName && !matchAddress) return false;
     }
 

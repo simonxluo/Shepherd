@@ -287,8 +287,8 @@ export function useFilteredClients(
     // 搜索过滤
     if (filters.search) {
       const search = filters.search.toLowerCase();
-      const matchName = client.name.toLowerCase().includes(search);
-      const matchAddress = client.address.toLowerCase().includes(search);
+      const matchName = client.name ? client.name.toLowerCase().includes(search) : false;
+      const matchAddress = client.address ? client.address.toLowerCase().includes(search) : false;
       if (!matchName && !matchAddress) return false;
     }
 

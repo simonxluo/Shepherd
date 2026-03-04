@@ -18,22 +18,16 @@ export function useModels() {
     queryFn: async (): Promise<Model[]> => {
       const response = await apiClient.get<{ success: boolean; data: ModelListResponse }>('/models');
       const data = response.data;
-      // 调试日志：检查返回的数据
-      console.log('[useModels] 获取到模型列表:', data.models.length, '个模型');
-      const qwenModel = data.models.find((m: Model) => m.name.includes('Qwen3.5-397B'));
-      if (qwenModel) {
-        console.log('[useModels] Qwen3.5-397B 模型数据:', {
-          name: qwenModel.name,
-          size: qwenModel.size,
-          totalSize: qwenModel.totalSize,
-          shardCount: qwenModel.shardCount,
-          mmprojPath: qwenModel.mmprojPath,
-        });
-      }
       return data.models;
     },
-    staleTime: 5 * 1000, // 5 秒后数据视为过期，会更频繁刷新
+    staleTime: 2000, // 2秒后数据视为过期
     refetchOnWindowFocus: true, // 窗口获得焦点时刷新
+    refetchInterval: (query) => {
+      // 如果有模型正在加载或卸载，每2秒刷新一次
+      const data = query.state.data;
+      const hasLoadingOrUnloading = data?.some(m => m.status === 'loading' || m.status === 'unloading');
+      return hasLoadingOrUnloading ? 2000 : false;
+    },
   });
 }
 
@@ -58,16 +52,16 @@ export function useLoadModel() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: LoadModelParams) => {
+    mutationFn: async (params: Partial<LoadModelParams>) => {
       const response = await apiClient.post<{ success: boolean }>(
         `/models/${params.modelId}/load`,
         params
       );
       return response;
     },
-    onSuccess: () => {
-      // 使模型列表查询失效
-      queryClient.invalidateQueries({ queryKey: ['models'] });
+    onSuccess: async () => {
+      // 使模型列表查询失效并强制重新获取
+      await queryClient.invalidateQueries({ queryKey: ['models'], refetchType: 'all' });
     },
   });
 }
@@ -85,8 +79,9 @@ export function useUnloadModel() {
       );
       return response;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['models'] });
+    onSuccess: async () => {
+      // 使模型列表查询失效并强制重新获取
+      await queryClient.invalidateQueries({ queryKey: ['models'], refetchType: 'all' });
     },
   });
 }
@@ -152,21 +147,9 @@ export function useScanModels() {
       }>('/model/scan');
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       // 扫描完成后强制刷新模型列表，清除缓存
       queryClient.invalidateQueries({ queryKey: ['models'], refetchType: 'all' });
-      // 显示扫描结果
-      console.log(`[useScanModels] 扫描完成: 找到 ${data.models_found} 个模型`);
-      // 检查 Qwen3.5-397B 模型数据
-      const qwenModel = data.models?.find((m: Model) => m.name.includes('Qwen3.5-397B'));
-      if (qwenModel) {
-        console.log('[useScanModels] Qwen3.5-397B 扫描结果:', {
-          name: qwenModel.name,
-          totalSize: qwenModel.totalSize,
-          shardCount: qwenModel.shardCount,
-          mmprojPath: qwenModel.mmprojPath,
-        });
-      }
     },
   });
 }
@@ -216,9 +199,9 @@ export function useFilteredModels(
       // 搜索过滤
       if (filters.search) {
         const search = filters.search.toLowerCase();
-        const matchName = model.name.toLowerCase().includes(search);
-        const matchAlias = model.alias?.toLowerCase().includes(search);
-        const matchArch = model.metadata.architecture?.toLowerCase().includes(search);
+        const matchName = model.name ? model.name.toLowerCase().includes(search) : false;
+        const matchAlias = model.alias ? model.alias.toLowerCase().includes(search) : false;
+        const matchArch = model.metadata.architecture ? model.metadata.architecture.toLowerCase().includes(search) : false;
         if (!matchName && !matchAlias && !matchArch) return false;
       }
 

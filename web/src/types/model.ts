@@ -145,6 +145,111 @@ export interface LoadModelParams {
   chatTemplate?: string;          // 内置聊天模板
   contextShift?: boolean;         // 上下文移位
   extraArgs?: string;             // 额外命令行参数
+
+  // 线程配置
+  threadsBatch?: number;          // 批处理线程数
+
+  // 扩展采样参数
+  repeatLastN?: number;           // 重复惩罚范围
+  typicalP?: number;              // 典型采样
+  ignoreEos?: boolean;            // 忽略结束token
+
+  // 多GPU配置
+  splitMode?: string;             // GPU分割模式 (none, layer, row)
+  tensorSplit?: string;           // 张量分割比例
+
+  // 服务器优化
+  contBatching?: boolean;         // 连续批处理
+  cachePrompt?: boolean;          // 提示缓存
+
+  // 结构化生成
+  grammar?: string;               // BNF语法
+  grammarFile?: string;           // 语法文件路径
+
+  // LoRA适配器
+  lora?: string;                  // LoRA适配器路径
+  loraScaled?: string;            // 带缩放的LoRA
+
+  // 聊天模板额外参数
+  chatTemplateKwargs?: string;    // 模板额外JSON参数
+
+  // RoPE扩展
+  ropeScaling?: string;           // RoPE缩放方法
+  ropeScale?: number;             // RoPE缩放因子
+  ropeFreqBase?: number;          // RoPE基础频率
+  ropeFreqScale?: number;         // RoPE频率缩放
+
+  // 参数启用状态：标记哪些参数需要手动配置（false表示使用llama-server默认值）
+  enabled?: {
+    // 基础参数
+    ctxSize?: boolean;
+    batchSize?: boolean;
+    threads?: boolean;
+    threadsBatch?: boolean;
+    gpuLayers?: boolean;
+    temperature?: boolean;
+    topP?: boolean;
+    topK?: boolean;
+    repeatPenalty?: boolean;
+    repeatLastN?: boolean;
+    seed?: boolean;
+    nPredict?: boolean;
+
+    // 采样参数
+    minP?: boolean;
+    typicalP?: boolean;
+    presencePenalty?: boolean;
+    frequencyPenalty?: boolean;
+    ignoreEos?: boolean;
+
+    // 批处理和缓存
+    uBatchSize?: boolean;
+    parallelSlots?: boolean;
+    contBatching?: boolean;
+    cachePrompt?: boolean;
+
+    // KV缓存
+    kvCacheSize?: boolean;
+    kvCacheUnified?: boolean;
+    kvCacheTypeK?: boolean;
+    kvCacheTypeV?: boolean;
+
+    // 性能选项
+    flashAttention?: boolean;
+    noMmap?: boolean;
+    lockMemory?: boolean;
+
+    // GPU配置
+    splitMode?: boolean;
+    tensorSplit?: boolean;
+
+    // 结构化生成
+    grammar?: boolean;
+    grammarFile?: boolean;
+
+    // LoRA
+    lora?: boolean;
+    loraScaled?: boolean;
+
+    // 模板
+    chatTemplate?: boolean;
+    chatTemplateKwargs?: boolean;
+    disableJinja?: boolean;
+
+    // RoPE扩展
+    ropeScaling?: boolean;
+    ropeScale?: boolean;
+    ropeFreqBase?: boolean;
+    ropeFreqScale?: boolean;
+
+    // 其他
+    contextShift?: boolean;
+    directIo?: boolean;
+    logitsAll?: boolean;
+    reranking?: boolean;
+    timeout?: boolean;
+    alias?: boolean;
+  };
 }
 
 /**

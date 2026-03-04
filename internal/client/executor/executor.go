@@ -39,8 +39,8 @@ type Executor struct {
 	log    *logger.Logger
 
 	// Running tasks tracking
-	runningTasks    map[string]*runningTask
-	runningProcesses map[string]*runningProcess  // 进程跟踪 (modelID -> process)
+	runningTasks     map[string]*runningTask
+	runningProcesses map[string]*runningProcess // 进程跟踪 (modelID -> process)
 }
 
 // runningTask represents a currently running task
@@ -74,12 +74,12 @@ func NewExecutor(cfg *config.NodeConfig, log *logger.Logger) *Executor {
 	}
 
 	return &Executor{
-		config:          execConfig,
-		ctx:             ctx,
-		cancel:          cancel,
-		wg:              sync.WaitGroup{},
-		log:             log,
-		runningTasks:    make(map[string]*runningTask),
+		config:           execConfig,
+		ctx:              ctx,
+		cancel:           cancel,
+		wg:               sync.WaitGroup{},
+		log:              log,
+		runningTasks:     make(map[string]*runningTask),
 		runningProcesses: make(map[string]*runningProcess),
 	}
 }
@@ -226,7 +226,7 @@ func (e *Executor) executeLoadModel(ctx context.Context, task *cluster.Task) (*c
 		gpuLayers = int(gl)
 	}
 
-	threads := 4 // 默认线程数
+	threads := -1 // 默认线程数
 	if t, ok := task.Payload["threads"].(float64); ok {
 		threads = int(t)
 	}
@@ -253,8 +253,8 @@ func (e *Executor) executeLoadModel(ctx context.Context, task *cluster.Task) (*c
 		"-c", strconv.Itoa(ctxSize),
 		"--n-gpu-layers", strconv.Itoa(gpuLayers),
 		"--threads", strconv.Itoa(threads),
-		"--no-mmap",        // Strix Halo 必需参数
-		"-fa", "1",         // Flash attention
+		"--no-mmap", // Strix Halo 必需参数
+		"-fa", "1",  // Flash attention
 	}
 
 	cmd := exec.CommandContext(ctx, binPath, args...)
@@ -341,10 +341,10 @@ func (e *Executor) executeLoadModel(ctx context.Context, task *cluster.Task) (*c
 				TaskID:  task.ID,
 				Success: true,
 				Result: map[string]interface{}{
-					"port":      port,
-					"pid":       cmd.Process.Pid,
-					"loaded":    true,
-					"model_id":  modelID,
+					"port":       port,
+					"pid":        cmd.Process.Pid,
+					"loaded":     true,
+					"model_id":   modelID,
 					"model_path": modelPath,
 				},
 				Output: "模型加载成功",

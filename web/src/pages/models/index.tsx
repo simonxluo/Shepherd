@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Search, RefreshCw, Filter, Grid3X3, List, Pencil, MessageSquare, Gauge, FileText } from 'lucide-react';
+import { Search, RefreshCw, Filter, Grid3X3, List, Gauge, FileText } from 'lucide-react';
 import { useModels, useLoadModel, useUnloadModel, useSetModelFavourite, useUpdateModelAlias, useScanModels, useFilteredModels, useCreateBenchmark } from '@/features/models/hooks';
 import { ModelCard } from '@/components/models/ModelCard';
 import { LoadModelDialog } from '@/components/models/LoadModelDialog';
 import { EditAliasDialog } from '@/components/models/EditAliasDialog';
-import { TestModelDialog } from '@/components/models/TestModelDialog';
 import { BenchmarkDialog } from '@/components/models/BenchmarkDialog';
 import { BenchmarkResultsDialog } from '@/components/models/BenchmarkResultsDialog';
+import { ModelDetailDialog } from '@/components/models/ModelDetailDialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Model, ModelStatus, BenchmarkConfig, LoadModelParams } from '@/types';
@@ -39,14 +39,14 @@ export function ModelsPage() {
   // 编辑别名对话框状态
   const [editAliasModel, setEditAliasModel] = useState<Model | null>(null);
 
-  // 测试模型对话框状态
-  const [testModel, setTestModel] = useState<Model | null>(null);
-
   // 压测对话框状态
   const [benchmarkModel, setBenchmarkModel] = useState<Model | null>(null);
 
   // 压测结果对话框状态
   const [benchmarkResultsModel, setBenchmarkResultsModel] = useState<Model | null>(null);
+
+  // 模型详情对话框状态
+  const [detailModel, setDetailModel] = useState<Model | null>(null);
 
   // 过滤模型
   const filteredModels = useFilteredModels(models, {
@@ -60,10 +60,14 @@ export function ModelsPage() {
     setDialogModel(model);
   };
 
-  const handleLoadConfirm = (params: LoadModelParams) => {
+  const handleLoadConfirm = (params: Partial<LoadModelParams>) => {
     loadModel.mutate(params, {
       onSuccess: () => {
+        toast.success('模型加载成功', `${params.modelId} 已成功启动`);
         setDialogModel(null);
+      },
+      onError: (error) => {
+        toast.error('模型加载失败', error.message || '未知错误');
       },
     });
   };
@@ -75,18 +79,47 @@ export function ModelsPage() {
       description: '确定要卸载此模型吗？',
     });
     if (confirmed) {
-      unloadModel.mutate(modelId);
+      unloadModel.mutate(modelId, {
+        onSuccess: () => {
+          toast.success('模型卸载成功', `${modelId} 已成功停止`);
+        },
+        onError: (error) => {
+          toast.error('模型卸载失败', error.message || '未知错误');
+        },
+      });
     }
   };
 
   // 处理收藏切换
   const handleToggleFavourite = (modelId: string, favourite: boolean) => {
-    setFavourite.mutate({ modelId, favourite: !favourite });
+    setFavourite.mutate(
+      { modelId, favourite: !favourite },
+      {
+        onSuccess: () => {
+          const newFavourite = !favourite;
+          toast.success(
+            newFavourite ? '已添加到收藏' : '已取消收藏',
+            modelId
+          );
+        },
+        onError: (error) => {
+          toast.error('操作失败', error.message || '未知错误');
+        },
+      }
+    );
   };
 
   // 处理扫描
   const handleScan = () => {
-    scanModels.mutate();
+    scanModels.mutate(undefined, {
+      onSuccess: (data) => {
+        const message = data?.message || `扫描完成，找到 ${data?.models_found || 0} 个模型`;
+        toast.success('模型扫描成功', message);
+      },
+      onError: (error) => {
+        toast.error('模型扫描失败', error.message || '未知错误');
+      },
+    });
   };
 
   // 处理编辑别名
@@ -100,16 +133,15 @@ export function ModelsPage() {
         { modelId: editAliasModel.id, alias },
         {
           onSuccess: () => {
+            toast.success('别名更新成功', `模型别名已设置为 ${alias || '（空）'}`);
             setEditAliasModel(null);
+          },
+          onError: (error) => {
+            toast.error('别名更新失败', error.message || '未知错误');
           },
         }
       );
     }
-  };
-
-  // 处理测试模型
-  const handleTestModel = (model: Model) => {
-    setTestModel(model);
   };
 
   // 处理压测模型
@@ -162,6 +194,11 @@ export function ModelsPage() {
   // 处理查看压测结果
   const handleViewBenchmarkResults = (model: Model) => {
     setBenchmarkResultsModel(model);
+  };
+
+  // 处理查看模型详情
+  const handleShowDetail = (model: Model) => {
+    setDetailModel(model);
   };
 
   return (
@@ -278,26 +315,10 @@ export function ModelsPage() {
               onLoad={() => handleLoadClick(model)}
               onUnload={() => handleUnloadClick(model.id)}
               onToggleFavourite={() => handleToggleFavourite(model.id, model.favourite)}
+              onShowDetail={() => handleShowDetail(model)}
+              onEditAlias={() => handleEditAlias(model)}
               actions={
                 <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEditAlias(model)}
-                    title="编辑别名"
-                    className="h-8 w-8 sm:h-9 sm:w-9"
-                  >
-                    <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleTestModel(model)}
-                    title="测试模型"
-                    className="h-8 w-8 sm:h-9 sm:w-9"
-                  >
-                    <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -348,21 +369,6 @@ export function ModelsPage() {
         />
       )}
 
-      {/* Test Model Dialog */}
-      {testModel && (
-        <TestModelDialog
-          isOpen={!!testModel}
-          onClose={() => setTestModel(null)}
-          modelId={testModel.id}
-          modelName={testModel.alias || testModel.name}
-          isModelLoaded={testModel.isLoaded}
-          onLoadModel={() => {
-            setTestModel(null);
-            handleLoadClick(testModel);
-          }}
-        />
-      )}
-
       {/* Benchmark Dialog */}
       {benchmarkModel && (
         <BenchmarkDialog
@@ -382,6 +388,16 @@ export function ModelsPage() {
           onClose={() => setBenchmarkResultsModel(null)}
           modelId={benchmarkResultsModel.id}
           modelName={benchmarkResultsModel.alias || benchmarkResultsModel.name}
+        />
+      )}
+
+      {/* Model Detail Dialog */}
+      {detailModel && (
+        <ModelDetailDialog
+          isOpen={!!detailModel}
+          onClose={() => setDetailModel(null)}
+          modelId={detailModel.id}
+          modelName={detailModel.alias || detailModel.name}
         />
       )}
     </div>

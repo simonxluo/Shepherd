@@ -13,9 +13,20 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/gguf"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// createTestStorageMgr 创建测试用的存储管理器
+func createTestStorageMgr(tb testing.TB) *storage.Manager {
+	storageCfg := storage.StorageConfig{
+		Type: storage.StorageTypeMemory,
+	}
+	storageMgr, err := storage.NewManager(&storageCfg)
+	require.NoError(tb, err, "无法创建存储管理器")
+	return storageMgr
+}
 
 func TestLoadStateString(t *testing.T) {
 	tests := []struct {
@@ -24,7 +35,7 @@ func TestLoadStateString(t *testing.T) {
 	}{
 		{StateUnloaded, "unloaded"},
 		{StateLoading, "loading"},
-		{StateLoaded, "loaded"},
+		{StateLoaded, "running"},
 		{StateUnloading, "unloading"},
 		{StateError, "error"},
 	}
@@ -42,7 +53,8 @@ func TestNewManager(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	assert.NotNil(t, manager)
 	assert.NotNil(t, manager.models)
@@ -56,7 +68,8 @@ func TestManagerIsGGUFFile(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	tests := []struct {
 		name     string
@@ -84,7 +97,8 @@ func TestManagerGetSetModel(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	t.Run("Get non-existent model", func(t *testing.T) {
 		_, exists := manager.GetModel("non-existent")
@@ -105,7 +119,8 @@ func TestManagerSetAlias(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// Create a temp directory with a mock model
 	tmpDir := t.TempDir()
@@ -138,7 +153,8 @@ func TestManagerSetFavourite(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// Create a temp directory with a mock model
 	tmpDir := t.TempDir()
@@ -171,7 +187,8 @@ func TestManagerGetStatus(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	t.Run("Get non-existent status", func(t *testing.T) {
 		_, exists := manager.GetStatus("non-existent")
@@ -190,7 +207,8 @@ func TestManagerGetScanStatus(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	status := manager.GetScanStatus()
 	assert.NotNil(t, status)
@@ -203,7 +221,8 @@ func TestFindAvailablePort(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	port := manager.findAvailablePort()
 	assert.GreaterOrEqual(t, port, 8081)
@@ -216,7 +235,8 @@ func TestFindMmproj(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	t.Run("No mmproj found", func(t *testing.T) {
 		mmproj := manager.findMmproj("/path/to/model.gguf")
@@ -230,7 +250,8 @@ func TestGenerateModelID(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	metadata := &gguf.Metadata{
 		Name: "test-model",
@@ -252,7 +273,8 @@ func TestScanStatus(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// Initial status
 	status := manager.GetScanStatus()
@@ -288,7 +310,8 @@ func TestLoadModel(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	t.Run("Load minimal GGUF", func(t *testing.T) {
 		tmpDir := t.TempDir()
@@ -318,7 +341,8 @@ func TestScanPath(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	t.Run("Scan directory with GGUF files", func(t *testing.T) {
 		tmpDir := t.TempDir()
@@ -352,7 +376,8 @@ func TestLoadUnload(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	t.Run("Load non-existent model", func(t *testing.T) {
 		req := &LoadRequest{
@@ -443,7 +468,8 @@ func BenchmarkListModels(b *testing.B) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(b)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// Add some models
 	for i := 0; i < 100; i++ {
@@ -468,7 +494,8 @@ func TestLoadAsync(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// 创建测试模型
 	tmpDir := t.TempDir()
@@ -518,7 +545,8 @@ func TestLoadAsyncAlreadyLoaded(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// 创建测试模型
 	tmpDir := t.TempDir()
@@ -565,7 +593,8 @@ func TestLoadAsyncAlreadyLoading(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// 创建测试模型
 	tmpDir := t.TempDir()
@@ -610,7 +639,8 @@ func TestIsLoading(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	modelID := "test-model"
 
@@ -642,7 +672,8 @@ func TestLoadAsyncNonExistentModel(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	req := &LoadRequest{
 		ModelID: "non-existent-model",
@@ -680,7 +711,8 @@ func BenchmarkLoadAsync(b *testing.B) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(b)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// 创建测试模型
 	modelPath := "/tmp/bench-model.gguf"
@@ -714,7 +746,8 @@ func TestModelStatusTransitions(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	modelID := "test-model"
 
@@ -763,7 +796,8 @@ func TestListStatus(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// 添加多个状态
 	modelIDs := []string{"model-1", "model-2", "model-3"}
@@ -824,7 +858,8 @@ func TestMergeSplitModels(t *testing.T) {
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
 
-	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator)
+	storageMgr := createTestStorageMgr(t)
+	manager := NewManager(cfg, cfgMgr, procMgr, portAllocator, storageMgr)
 
 	// 手动加载所有分卷到 manager
 	var totalSize int64 = 0

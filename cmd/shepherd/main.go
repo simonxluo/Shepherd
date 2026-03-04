@@ -21,6 +21,7 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/server"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/shutdown"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
 )
 
 // 版本信息（编译时注入）
@@ -37,6 +38,7 @@ type App struct {
 	configMgr     *config.Manager
 	procMgr       *process.Manager
 	portAllocator *port.PortAllocator
+	storageMgr    *storage.Manager
 	modelMgr      *model.Manager
 	shutdownMgr   *shutdown.Manager
 	srv           *server.Server
@@ -154,8 +156,27 @@ func (app *App) Initialize(configPath string) error {
 	}
 	app.portAllocator = port.NewPortAllocator(basePort, maxPort)
 
-	// 创建模型管理器（传入端口分配器）
-	app.modelMgr = model.NewManager(cfg, app.configMgr, app.procMgr, app.portAllocator)
+	// 创建存储管理器（用于存储模型元数据等）
+	storageCfg := cfg.Storage
+	// 如果没有配置存储，使用默认的SQLite配置
+	if storageCfg.Type == "" {
+		storageCfg = storage.StorageConfig{
+			Type: storage.StorageTypeSQLite,
+			SQLite: &storage.SQLiteConfig{
+				Path:      "./data/shepherd.db",
+				EnableWAL: true,
+			},
+		}
+	}
+	storageMgr, err := storage.NewManager(&storageCfg)
+	if err != nil {
+		return fmt.Errorf("无法创建存储管理器: %w", err)
+	}
+	app.storageMgr = storageMgr
+	logger.Info("存储管理器初始化成功", "type", storageCfg.Type)
+
+	// 创建模型管理器（传入端口分配器和存储管理器）
+	app.modelMgr = model.NewManager(cfg, app.configMgr, app.procMgr, app.portAllocator, app.storageMgr)
 
 	// 根据角色初始化分布式组件
 	if err := app.initDistributedComponents(); err != nil {
@@ -434,6 +455,16 @@ func (app *App) registerShutdownHooks() {
 	if app.modelMgr != nil {
 		app.shutdownMgr.Register("models", func(ctx context.Context) error {
 			app.modelMgr.Close()
+			return nil
+		}, shutdown.PriorityHigh)
+	}
+
+	// 3.5. 优先级高：关闭存储管理器（在模型之后，进程之前）
+	if app.storageMgr != nil {
+		app.shutdownMgr.Register("storage", func(ctx context.Context) error {
+			if err := app.storageMgr.Close(); err != nil {
+				logger.Warnf("关闭存储管理器失败: %v", err)
+			}
 			return nil
 		}, shutdown.PriorityHigh)
 	}

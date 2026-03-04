@@ -20,6 +20,30 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+
+  /* Tailwind CSS v4 需要明确定义颜色 */
+  --color-orange-50: oklch(0.98 0.01 45);
+  --color-orange-100: oklch(0.95 0.03 45);
+  --color-orange-200: oklch(0.90 0.06 45);
+  --color-orange-300: oklch(0.84 0.10 45);
+  --color-orange-400: oklch(0.76 0.15 45);
+  --color-orange-500: oklch(0.67 0.20 45);
+  --color-orange-600: oklch(0.58 0.23 45);
+  --color-orange-700: oklch(0.45 0.22 40);
+  --color-orange-800: oklch(0.38 0.20 40);
+  --color-orange-900: oklch(0.30 0.18 40);
+
+  --color-amber-50: oklch(0.99 0.01 85);
+  --color-amber-100: oklch(0.97 0.03 85);
+  --color-amber-200: oklch(0.93 0.06 85);
+  --color-amber-300: oklch(0.88 0.10 85);
+  --color-amber-400: oklch(0.82 0.14 85);
+  --color-amber-500: oklch(0.76 0.17 85);
+  --color-amber-600: oklch(0.66 0.18 75);
+  --color-amber-700: oklch(0.55 0.17 70);
+  --color-amber-800: oklch(0.45 0.15 70);
+  --color-amber-900: oklch(0.38 0.13 70);
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);

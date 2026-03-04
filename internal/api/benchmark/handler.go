@@ -229,7 +229,7 @@ func (h *Handler) GetParams(c *gin.Context) {
 			FullName:     "-t",
 			ShortName:    "t",
 			Description:  "线程数",
-			DefaultValue: "8",
+			DefaultValue: "-1",
 			Type:         "number",
 		},
 		{

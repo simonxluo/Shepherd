@@ -13,6 +13,7 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,7 +26,15 @@ func createTestServer(t *testing.T) *Server {
 
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
-	modelMgr := model.NewManager(cfg, configMgr, procMgr, portAllocator)
+
+	// 创建存储管理器
+	storageCfg := storage.StorageConfig{
+		Type: storage.StorageTypeMemory, // 测试使用内存存储
+	}
+	storageMgr, err := storage.NewManager(&storageCfg)
+	require.NoError(t, err, "无法创建存储管理器")
+
+	modelMgr := model.NewManager(cfg, configMgr, procMgr, portAllocator, storageMgr)
 
 	serverConfig := &Config{
 		WebPort:       8080,
@@ -218,7 +227,15 @@ func TestServerStartStop(t *testing.T) {
 
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
-	modelMgr := model.NewManager(cfg, configMgr, procMgr, portAllocator)
+
+	// 创建存储管理器
+	storageCfg := storage.StorageConfig{
+		Type: storage.StorageTypeMemory, // 测试使用内存存储
+	}
+	storageMgr, err := storage.NewManager(&storageCfg)
+	require.NoError(t, err, "无法创建存储管理器")
+
+	modelMgr := model.NewManager(cfg, configMgr, procMgr, portAllocator, storageMgr)
 
 	serverConfig := &Config{
 		WebPort:   18080, // Use non-standard port for testing
@@ -276,7 +293,17 @@ func BenchmarkServerRequest(b *testing.B) {
 
 	procMgr := process.NewManager()
 	portAllocator := port.NewPortAllocator(8000, 9000)
-	modelMgr := model.NewManager(cfg, configMgr, procMgr, portAllocator)
+
+	// 创建存储管理器
+	storageCfg := storage.StorageConfig{
+		Type: storage.StorageTypeMemory, // 测试使用内存存储
+	}
+	storageMgr, err := storage.NewManager(&storageCfg)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	modelMgr := model.NewManager(cfg, configMgr, procMgr, portAllocator, storageMgr)
 
 	serverConfig := &Config{
 		WebPort:   8080,

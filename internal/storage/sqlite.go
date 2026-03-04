@@ -120,6 +120,21 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 		UNIQUE(node_id, model_id)
 	);
 
+	CREATE TABLE IF NOT EXISTS model_metadata (
+		model_id TEXT PRIMARY KEY,
+		node_id TEXT,
+		storage_path TEXT,
+		alias TEXT,
+		favourite INTEGER DEFAULT 0,
+		tags TEXT,
+		description TEXT,
+		load_count INTEGER DEFAULT 0,
+		last_loaded INTEGER,
+		total_tokens INTEGER DEFAULT 0,
+		created_at INTEGER NOT NULL,
+		updated_at INTEGER NOT NULL
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
 	CREATE INDEX IF NOT EXISTS idx_conversations_created ON conversations(created_at);
 	CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_at);
@@ -895,6 +910,282 @@ func (s *SQLiteStore) DeleteModelLoadConfig(ctx context.Context, nodeID, modelID
 	}
 
 	return nil
+}
+
+// ========== ModelMetadata Operations ==========
+
+// SaveModelMetadata saves or updates model metadata
+func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMetadata) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := timeNow()
+
+	// Check if this is an insert or update
+	var existingTime int64
+	err := s.db.QueryRowContext(ctx, "SELECT created_at FROM model_metadata WHERE model_id = ?", metadata.ModelID).Scan(&existingTime)
+
+	if err == sql.ErrNoRows {
+		// Insert new record
+		if metadata.CreatedAt.IsZero() {
+			metadata.CreatedAt = now
+		}
+		metadata.UpdatedAt = now
+
+		tagsJSON, _ := json.Marshal(metadata.Tags)
+
+		query := `
+		INSERT INTO model_metadata (model_id, node_id, storage_path, alias, favourite, tags, description,
+			load_count, last_loaded, total_tokens, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`
+
+		_, err = s.db.ExecContext(ctx, query,
+			metadata.ModelID,
+			metadata.NodeID,
+			metadata.StoragePath,
+			metadata.Alias,
+			metadata.Favourite,
+			string(tagsJSON),
+			metadata.Description,
+			metadata.LoadCount,
+			nil, // last_loaded handled below
+			metadata.TotalTokens,
+			metadata.CreatedAt.Unix(),
+			metadata.UpdatedAt.Unix(),
+		)
+	} else if err != nil {
+		return fmt.Errorf("failed to query model metadata: %w", err)
+	} else {
+		// Update existing record
+		metadata.CreatedAt = time.Unix(existingTime, 0)
+		metadata.UpdatedAt = now
+
+		tagsJSON, _ := json.Marshal(metadata.Tags)
+
+		var lastLoaded *int64
+		if metadata.LastLoaded != nil {
+			ld := metadata.LastLoaded.Unix()
+			lastLoaded = &ld
+		}
+
+		query := `
+		UPDATE model_metadata
+		SET node_id = ?, storage_path = ?, alias = ?, favourite = ?, tags = ?, description = ?,
+		    load_count = ?, last_loaded = ?, total_tokens = ?, updated_at = ?
+		WHERE model_id = ?
+		`
+
+		_, err = s.db.ExecContext(ctx, query,
+			metadata.NodeID,
+			metadata.StoragePath,
+			metadata.Alias,
+			metadata.Favourite,
+			string(tagsJSON),
+			metadata.Description,
+			metadata.LoadCount,
+			lastLoaded,
+			metadata.TotalTokens,
+			metadata.UpdatedAt.Unix(),
+			metadata.ModelID,
+		)
+	}
+
+	return err
+}
+
+// GetModelMetadata retrieves metadata for a single model
+func (s *SQLiteStore) GetModelMetadata(ctx context.Context, modelID string) (*ModelMetadata, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	query := `
+	SELECT model_id, node_id, storage_path, alias, favourite, tags, description,
+	       load_count, last_loaded, total_tokens, created_at, updated_at
+	FROM model_metadata
+	WHERE model_id = ?
+	`
+
+	metadata := &ModelMetadata{}
+	var tagsJSON string
+	var lastLoaded *int64
+
+	err := s.db.QueryRowContext(ctx, query, modelID).Scan(
+		&metadata.ModelID,
+		&metadata.NodeID,
+		&metadata.StoragePath,
+		&metadata.Alias,
+		&metadata.Favourite,
+		&tagsJSON,
+		&metadata.Description,
+		&metadata.LoadCount,
+		&lastLoaded,
+		&metadata.TotalTokens,
+		&metadata.CreatedAt,
+		&metadata.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrModelMetadataNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get model metadata: %w", err)
+	}
+
+	// Parse tags JSON
+	if tagsJSON != "" {
+		json.Unmarshal([]byte(tagsJSON), &metadata.Tags)
+	}
+
+	// Parse last_loaded
+	if lastLoaded != nil {
+		ld := time.Unix(*lastLoaded, 0)
+		metadata.LastLoaded = &ld
+	}
+
+	return metadata, nil
+}
+
+// ListModelMetadata lists model metadata with pagination
+func (s *SQLiteStore) ListModelMetadata(ctx context.Context, limit, offset int) ([]*ModelMetadata, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	query := `
+	SELECT model_id, node_id, storage_path, alias, favourite, tags, description,
+	       load_count, last_loaded, total_tokens, created_at, updated_at
+	FROM model_metadata
+	ORDER BY updated_at DESC
+	LIMIT ? OFFSET ?
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list model metadata: %w", err)
+	}
+	defer rows.Close()
+
+	var metadatas []*ModelMetadata
+	for rows.Next() {
+		metadata := &ModelMetadata{}
+		var tagsJSON string
+		var lastLoaded *int64
+
+		err := rows.Scan(
+			&metadata.ModelID,
+			&metadata.NodeID,
+			&metadata.StoragePath,
+			&metadata.Alias,
+			&metadata.Favourite,
+			&tagsJSON,
+			&metadata.Description,
+			&metadata.LoadCount,
+			&lastLoaded,
+			&metadata.TotalTokens,
+			&metadata.CreatedAt,
+			&metadata.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan model metadata: %w", err)
+		}
+
+		// Parse tags JSON
+		if tagsJSON != "" {
+			json.Unmarshal([]byte(tagsJSON), &metadata.Tags)
+		}
+
+		// Parse last_loaded
+		if lastLoaded != nil {
+			ld := time.Unix(*lastLoaded, 0)
+			metadata.LastLoaded = &ld
+		}
+
+		metadatas = append(metadatas, metadata)
+	}
+
+	return metadatas, nil
+}
+
+// DeleteModelMetadata deletes metadata for a model
+func (s *SQLiteStore) DeleteModelMetadata(ctx context.Context, modelID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result, err := s.db.ExecContext(ctx, "DELETE FROM model_metadata WHERE model_id = ?", modelID)
+	if err != nil {
+		return fmt.Errorf("failed to delete model metadata: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrModelMetadataNotFound
+	}
+
+	return nil
+}
+
+// GetAllModelMetadata retrieves all model metadata as a map
+func (s *SQLiteStore) GetAllModelMetadata(ctx context.Context) (map[string]*ModelMetadata, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	query := `
+	SELECT model_id, node_id, storage_path, alias, favourite, tags, description,
+	       load_count, last_loaded, total_tokens, created_at, updated_at
+	FROM model_metadata
+	`
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all model metadata: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]*ModelMetadata)
+	for rows.Next() {
+		metadata := &ModelMetadata{}
+		var tagsJSON string
+		var lastLoaded *int64
+		var createdAt int64
+		var updatedAt int64
+
+		err := rows.Scan(
+			&metadata.ModelID,
+			&metadata.NodeID,
+			&metadata.StoragePath,
+			&metadata.Alias,
+			&metadata.Favourite,
+			&tagsJSON,
+			&metadata.Description,
+			&metadata.LoadCount,
+			&lastLoaded,
+			&metadata.TotalTokens,
+			&createdAt,
+			&updatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan model metadata: %w", err)
+		}
+
+		// Convert Unix timestamps to time.Time
+		metadata.CreatedAt = time.Unix(createdAt, 0)
+		metadata.UpdatedAt = time.Unix(updatedAt, 0)
+
+		// Parse tags JSON
+		if tagsJSON != "" {
+			json.Unmarshal([]byte(tagsJSON), &metadata.Tags)
+		}
+
+		// Parse last_loaded
+		if lastLoaded != nil {
+			ld := time.Unix(*lastLoaded, 0)
+			metadata.LastLoaded = &ld
+		}
+
+		result[metadata.ModelID] = metadata
+	}
+
+	return result, nil
 }
 
 // Close closes the database connection

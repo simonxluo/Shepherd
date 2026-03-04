@@ -376,6 +376,39 @@ type LoadRequest struct {
 	DisableJinja bool   // --no-jinja (disable Jinja template)
 	ChatTemplate string // --chat-template (built-in chat template)
 	ContextShift bool   // --context-shift (enable context shift)
+
+	// Thread configuration
+	ThreadsBatch int // --threads-batch (batch processing threads)
+
+	// Extended sampling parameters
+	RepeatLastN int     // --repeat-last-n
+	TypicalP    float64 // --typical-p
+	IgnoreEOS   bool    // --ignore-eos
+
+	// Multi-GPU configuration
+	SplitMode  string // --split-mode (none, layer, row)
+	TensorSplit string // --tensor-split (comma-separated values)
+
+	// Server optimization
+	ContBatching bool // --cont-batching
+	CachePrompt  bool // --cache-prompt
+
+	// Structured generation
+	Grammar     string // --grammar
+	GrammarFile string // --grammar-file
+
+	// LoRA adapter support
+	Lora        string // --lora
+	LoraScaled  string // --lora-scaled
+
+	// Chat template kwargs
+	ChatTemplateKwargs string // --chat-template-kwargs
+
+	// RoPE scaling (for extended context)
+	RopeScaling   string  // --rope-scaling
+	RopeScale     float64 // --rope-scale
+	RopeFreqBase  float64 // --rope-freq-base
+	RopeFreqScale float64 // --rope-freq-scale
 }
 
 // BuildCommandFromRequest builds the llama-server command line from a LoadRequest struct
@@ -416,6 +449,9 @@ func BuildCommandFromRequest(req *LoadRequest, binPath string) (string, error) {
 	if req.Threads > 0 {
 		args = append(args, "-t", strconv.Itoa(req.Threads))
 	}
+	if req.ThreadsBatch > 0 {
+		args = append(args, "-tb", strconv.Itoa(req.ThreadsBatch))
+	}
 
 	// GPU configuration
 	if req.GPULayers > 0 {
@@ -426,15 +462,21 @@ func BuildCommandFromRequest(req *LoadRequest, binPath string) (string, error) {
 	// Single GPU: -sm none -dev cuda:0 -mg 0
 	// Multi-GPU: -dev cuda:0,cuda:1
 	if len(req.Devices) > 0 {
-		if len(req.Devices) == 1 {
-			// Single GPU mode: disable split mode
+		// Use explicit split mode if specified
+		if req.SplitMode != "" {
+			args = append(args, "-sm", req.SplitMode)
+		} else if len(req.Devices) == 1 {
+			// Single GPU mode: disable split mode by default
 			args = append(args, "-sm", "none")
-			args = append(args, "-dev", req.Devices[0])
-			args = append(args, "-mg", strconv.Itoa(req.MainGPU))
-		} else {
-			// Multi-GPU mode: comma-separated devices
-			args = append(args, "-dev", strings.Join(req.Devices, ","))
 		}
+		args = append(args, "-dev", strings.Join(req.Devices, ","))
+		if len(req.Devices) == 1 {
+			args = append(args, "-mg", strconv.Itoa(req.MainGPU))
+		}
+	}
+	// Tensor split for multi-GPU
+	if req.TensorSplit != "" {
+		args = append(args, "-ts", req.TensorSplit)
 	}
 
 	// Vision/Multimodal support
@@ -443,8 +485,9 @@ func BuildCommandFromRequest(req *LoadRequest, binPath string) (string, error) {
 	}
 
 	// Performance feature flags
+	// Flash Attention requires a value: on, off, or auto
 	if req.FlashAttention {
-		args = append(args, "-fa")
+		args = append(args, "-fa", "on")
 	}
 	if req.NoMmap {
 		args = append(args, "--no-mmap")
@@ -482,16 +525,16 @@ func BuildCommandFromRequest(req *LoadRequest, binPath string) (string, error) {
 
 	// KV cache configuration
 	if req.KVCacheTypeK != "" {
-		args = append(args, "--kv-cache-type-k", req.KVCacheTypeK)
+		args = append(args, "-ctk", req.KVCacheTypeK)
 	}
 	if req.KVCacheTypeV != "" {
-		args = append(args, "--kv-cache-type-v", req.KVCacheTypeV)
+		args = append(args, "-ctv", req.KVCacheTypeV)
 	}
 	if req.KVCacheUnified {
-		args = append(args, "--kv-unified")
+		args = append(args, "-kvu")
 	}
 	if req.KVCacheSize > 0 {
-		args = append(args, "--kv-cache-size", strconv.Itoa(req.KVCacheSize))
+		args = append(args, "--cache-ram", strconv.Itoa(req.KVCacheSize))
 	}
 
 	// Runtime configuration
@@ -555,6 +598,63 @@ func BuildCommandFromRequest(req *LoadRequest, binPath string) (string, error) {
 	}
 	if req.ContextShift {
 		args = append(args, "--context-shift")
+	}
+
+	// Extended sampling parameters
+	if req.RepeatLastN != 0 {
+		args = append(args, "--repeat-last-n", strconv.Itoa(req.RepeatLastN))
+	}
+	if req.TypicalP > 0 {
+		args = append(args, "--typical-p", fmt.Sprintf("%.2f", req.TypicalP))
+	}
+	if req.IgnoreEOS {
+		args = append(args, "--ignore-eos")
+	}
+
+	// Server optimization
+	if req.ContBatching {
+		args = append(args, "--cont-batching")
+	} else if !req.ContBatching && req.ExtraParams == "" {
+		// Only add --no-cont-batching if explicitly disabled and no extra params
+		args = append(args, "--no-cont-batching")
+	}
+	if req.CachePrompt {
+		args = append(args, "--cache-prompt")
+	}
+
+	// Structured generation
+	if req.Grammar != "" {
+		args = append(args, "--grammar", req.Grammar)
+	}
+	if req.GrammarFile != "" {
+		args = append(args, "--grammar-file", req.GrammarFile)
+	}
+
+	// LoRA adapter support
+	if req.Lora != "" {
+		args = append(args, "--lora", req.Lora)
+	}
+	if req.LoraScaled != "" {
+		args = append(args, "--lora-scaled", req.LoraScaled)
+	}
+
+	// Chat template kwargs
+	if req.ChatTemplateKwargs != "" {
+		args = append(args, "--chat-template-kwargs", req.ChatTemplateKwargs)
+	}
+
+	// RoPE scaling for extended context
+	if req.RopeScaling != "" {
+		args = append(args, "--rope-scaling", req.RopeScaling)
+	}
+	if req.RopeScale > 0 {
+		args = append(args, "--rope-scale", fmt.Sprintf("%.2f", req.RopeScale))
+	}
+	if req.RopeFreqBase > 0 {
+		args = append(args, "--rope-freq-base", fmt.Sprintf("%.2f", req.RopeFreqBase))
+	}
+	if req.RopeFreqScale > 0 {
+		args = append(args, "--rope-freq-scale", fmt.Sprintf("%.2f", req.RopeFreqScale))
 	}
 
 	// Build the base command string

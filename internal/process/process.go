@@ -152,17 +152,30 @@ func (p *Process) Start() error {
 	}
 
 	p.PID = p.cmd.Process.Pid
+	p.Running = true
 
 	// 验证进程是否真正运行（防止立即崩溃）
 	// 延迟 500ms 让进程初始化
+	// 注意：必须在释放锁后进行睡眠和检查，避免死锁
+	// 因为 IsRunning() 也会获取 p.mu 锁
+	p.mu.Unlock() // 临时释放锁，允许睡眠期间其他 goroutine 访问
 	time.Sleep(500 * time.Millisecond)
 
 	// 使用 Signal(0) 检查进程是否仍在运行
-	if !p.IsRunning() {
+	// 重新获取锁进行状态检查
+	p.mu.Lock()
+	isRunning := p.checkRunningUnsafe() // 使用不获取锁的内部方法
+	p.mu.Unlock()
+
+	if !isRunning {
+		// 进程已退出，清理状态
+		p.mu.Lock()
+		p.Running = false
+		p.mu.Unlock()
 		return fmt.Errorf("process exited immediately (PID: %d)", p.PID)
 	}
 
-	p.Running = true
+	p.mu.Lock() // 重新获取锁，保持函数语义一致
 
 	// Start output readers
 	p.wg.Add(2)
@@ -344,7 +357,12 @@ func (p *Process) Stop() error {
 func (p *Process) IsRunning() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	return p.checkRunningUnsafe()
+}
 
+// checkRunningUnsafe checks if process is running without acquiring lock
+// IMPORTANT: Caller must hold p.mu lock
+func (p *Process) checkRunningUnsafe() bool {
 	if !p.Running || p.cmd == nil || p.cmd.Process == nil {
 		return false
 	}

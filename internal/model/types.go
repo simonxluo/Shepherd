@@ -175,11 +175,44 @@ type LoadRequest struct {
 	PresencePenalty float64 `json:"presencePenalty"` // --presence-penalty
 	FrequencyPenalty float64 `json:"frequencyPenalty"` // --frequency-penalty
 
+	// Thread configuration
+	ThreadsBatch int `json:"threadsBatch"` // --threads-batch
+
 	// Template and processing
 	DirectIo      string `json:"directIo"`      // --dio
 	DisableJinja  bool   `json:"disableJinja"`  // --jinja (false to disable)
 	ChatTemplate  string `json:"chatTemplate"`  // --chat-template
 	ContextShift  bool   `json:"contextShift"`  // --context-shift
+
+	// Extended sampling parameters
+	RepeatLastN int     `json:"repeatLastN"`    // --repeat-last-n
+	TypicalP    float64 `json:"typicalP"`       // --typical-p
+	IgnoreEOS   bool    `json:"ignoreEos"`      // --ignore-eos
+
+	// Multi-GPU configuration
+	SplitMode  string `json:"splitMode"`  // --split-mode (none, layer, row)
+	TensorSplit string `json:"tensorSplit"` // --tensor-split (comma-separated values)
+
+	// Server optimization
+	ContBatching bool `json:"contBatching"` // --cont-batching
+	CachePrompt  bool `json:"cachePrompt"`  // --cache-prompt
+
+	// Structured generation
+	Grammar     string `json:"grammar"`     // --grammar
+	GrammarFile string `json:"grammarFile"` // --grammar-file
+
+	// LoRA adapter support
+	Lora        string `json:"lora"`        // --lora
+	LoraScaled  string `json:"loraScaled"`  // --lora-scaled
+
+	// Chat template kwargs
+	ChatTemplateKwargs string `json:"chatTemplateKwargs"` // --chat-template-kwargs
+
+	// RoPE scaling (for extended context)
+	RopeScaling   string  `json:"ropeScaling"`   // --rope-scaling
+	RopeScale     float64 `json:"ropeScale"`     // --rope-scale
+	RopeFreqBase  float64 `json:"ropeFreqBase"`  // --rope-freq-base
+	RopeFreqScale float64 `json:"ropeFreqScale"` // --rope-freq-scale
 }
 
 // LoadResult represents the result of a load operation

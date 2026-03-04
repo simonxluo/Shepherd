@@ -1264,12 +1264,78 @@ func (s *Server) handleListLoadedModels(c *gin.Context) {
 
 func (s *Server) handleGetModel(c *gin.Context) {
 	id := c.Param("id")
-	model, exists := s.modelMgr.GetModel(id)
+	m, exists := s.modelMgr.GetModel(id)
 	if !exists {
 		api.NotFound(c, "模型")
 		return
 	}
-	api.Success(c, gin.H{"model": model})
+
+	// 转换为 ModelDTO 格式（与 handleListModels 保持一致）
+	statuses := s.modelMgr.ListStatus()
+	dto := ModelDTO{
+		ID:          m.ID,
+		Name:        m.Name,
+		DisplayName: m.DisplayName,
+		Alias:       m.Alias,
+		Path:        m.Path,
+		PathPrefix:  m.PathPrefix,
+		Size:        m.Size,
+		Favourite:   m.Favourite,
+		Status:      "stopped",
+		IsLoaded:    false,
+	}
+
+	// 添加分卷信息
+	if m.ShardCount > 0 {
+		dto.ShardCount = m.ShardCount
+		dto.TotalSize = m.TotalSize
+		dto.ShardFiles = m.ShardFiles
+	}
+
+	// 添加 mmproj 路径
+	if m.MmprojPath != "" {
+		dto.MmprojPath = m.MmprojPath
+	}
+
+	// 添加扫描时间
+	if !m.ScannedAt.IsZero() {
+		dto.ScannedAt = m.ScannedAt.Format(time.RFC3339)
+	}
+
+	// 转换元数据
+	if m.Metadata != nil {
+		metadata := map[string]interface{}{
+			"name":                m.Metadata.Name,
+			"architecture":        m.Metadata.Architecture,
+			"quantization":        m.Metadata.Quantization,
+			"contextLength":       m.Metadata.ContextLength,
+			"embeddingLength":     m.Metadata.EmbeddingLength,
+			"layerCount":          m.Metadata.BlockSize,
+			"headCount":           m.Metadata.HeadCount,
+			"type":                nonEmptyString(m.Metadata.Type),
+			"author":              nonEmptyString(m.Metadata.Author),
+			"url":                 nonEmptyString(m.Metadata.URL),
+			"description":         nonEmptyString(m.Metadata.Description),
+			"license":             nonEmptyString(m.Metadata.License),
+			"fileType":            m.Metadata.FileType,
+			"fileTypeDescriptor":  nonEmptyString(m.Metadata.FileTypeDescriptor),
+			"quantizationVersion": m.Metadata.QuantizationVersion,
+			"parameters":          m.Metadata.Parameters,
+			"bitsPerWeight":       m.Metadata.BitsPerWeight,
+			"alignment":           m.Metadata.Alignment,
+			"fileSize":            m.Metadata.FileSize,
+			"modelSize":           m.Metadata.ModelSize,
+		}
+		dto.Metadata = metadata
+	}
+
+	// 添加状态信息
+	if status, ok := statuses[m.ID]; ok {
+		dto.Status = status.State.String()
+		dto.IsLoaded = status.State == model.StateLoaded
+	}
+
+	api.Success(c, gin.H{"model": dto})
 }
 
 func (s *Server) handleLoadModel(c *gin.Context) {
