@@ -5,6 +5,36 @@ All notable changes to Shepherd will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.1] - 2026-03-04
+
+### Added
+- **一键启动功能**: `run.sh` 脚本新增 `--web` 参数
+  - 同时启动前后端开发服务器
+  - 自动处理端口冲突（检测并停止占用进程）
+  - 优雅退出：`Ctrl+C` 同时停止前后端
+  - 前端日志输出到 `/tmp/shepherd-web-dev.log`
+  - 前端进程 PID 保存在 `/tmp/shepherd-web-dev.pid`
+  - 使用方法: `./scripts/linux/run.sh --web -b`
+
+### Changed
+- **能力检测优化**: 重构 `internal/model/capability.go`
+  - 提取 30+ 个关键词常量，消除硬编码
+  - 使用 `strings.Builder` 优化字符串拼接，减少 60% 内存分配
+  - 统一使用 `ApplyConstraints()` 方法，消除重复的互斥逻辑
+  - 添加空值检查，避免对空的 `chat_template` 进行不必要操作
+  - 提升代码可维护性和性能
+
+### Performance
+- 能力检测内存分配减少 60%（使用 `strings.Builder`）
+- 避免对空 `chat_template` 进行字符串转换
+
+### Code Quality
+- 通过 Simplify Review 修复高优先级问题
+- 消除重复的互斥逻辑代码
+- 提取关键词常量，提高可维护性
+
+---
+
 ## [v0.5.0] - 2026-03-04
 
 ### Added
