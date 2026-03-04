@@ -424,6 +424,30 @@ func (m *Manager) loadModel(path string) (*Model, error) {
 		}
 	}
 
+	// Auto-detect and save capabilities
+	if model.Metadata != nil {
+		detectedCaps := DetectCapabilities(model.Metadata)
+
+		// Save capabilities to database
+		ctx := context.Background()
+		existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, model.ID)
+		if err == nil && existingMeta != nil {
+			// Update existing metadata, preserve user settings
+			existingMeta.Capabilities = detectedCaps
+			if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); err != nil {
+				logger.Warn("保存模型能力失败", "modelId", model.ID, "error", err)
+			}
+		} else {
+			// Create new metadata entry with capabilities
+			if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
+				ModelID:      model.ID,
+				Capabilities: detectedCaps,
+			}); err != nil {
+				logger.Warn("保存模型能力失败", "modelId", model.ID, "error", err)
+			}
+		}
+	}
+
 	return model, nil
 }
 

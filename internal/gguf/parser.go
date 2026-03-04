@@ -205,6 +205,12 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		}
 	}
 
+	// ========== Chat Template - 用于能力检测 ==========
+	// 读取 tokenizer.chat_template（Jinja 模板用于对话格式化）
+	if kv, ok := getKV("tokenizer.chat_template"); ok {
+		meta.ChatTemplate = kv.ValueString()
+	}
+
 	// ========== 计算量化字符串 ==========
 	meta.Quantization = meta.GetQuantizationString()
 

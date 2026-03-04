@@ -135,6 +135,13 @@ type Metadata struct {
 	// PostToken is the string to append to tokens during tokenization
 	PostToken string
 
+	/* ========== Tokenizer Chat Template ========== */
+
+	// ChatTemplate is the Jinja chat template for conversation formatting
+	// This contains the template used for formatting conversations in llama.cpp
+	// Used for automatic capability detection (tools, thinking, etc.)
+	ChatTemplate string
+
 	/* ========== Additional Metadata ========== */
 
 	// Extra stores any additional metadata as key-value pairs

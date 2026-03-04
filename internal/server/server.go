@@ -79,22 +79,10 @@ type Server struct {
 	// 新增字段：WebSocket Hub
 	wsHub *WebSocketHub
 
-	// 模型能力存储
-	capabilities   map[string]*ModelCapabilities // modelId -> capabilities
-	capabilitiesMu sync.RWMutex
-
 	mu     sync.RWMutex
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
-}
-
-// ModelCapabilities 表示模型能力配置
-type ModelCapabilities struct {
-	Thinking  bool `json:"thinking"`  // 思考能力（如 DeepSeek-R1）
-	Tools     bool `json:"tools"`     // 工具使用/函数调用
-	Rerank    bool `json:"rerank"`    // 重排序能力
-	Embedding bool `json:"embedding"` // 嵌入向量生成
 }
 
 // Config contains server configuration
@@ -132,12 +120,11 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Server{
-		config:       config,
-		ctx:          ctx,
-		cancel:       cancel,
-		handlers:     &Handlers{},
-		modelMgr:     modelMgr,
-		capabilities: make(map[string]*ModelCapabilities), // 初始化 capabilities map
+		config:   config,
+		ctx:      ctx,
+		cancel:   cancel,
+		handlers: &Handlers{},
+		modelMgr: modelMgr,
 	}
 
 	// Initialize storage manager
@@ -1347,7 +1334,7 @@ func (s *Server) handleLoadModel(c *gin.Context) {
 	// 定义包含 capabilities 的请求结构
 	var req struct {
 		model.LoadRequest
-		Capabilities *ModelCapabilities `json:"capabilities"`
+		Capabilities *storage.Capabilities `json:"capabilities"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1360,24 +1347,31 @@ func (s *Server) handleLoadModel(c *gin.Context) {
 		req.LoadRequest.ModelID = id
 	}
 
-	// 如果请求中包含 capabilities，保存到内存存储
+	// 如果请求中包含 capabilities，保存到数据库
 	if req.Capabilities != nil {
-		// 应用约束规则：rerank 和 embedding 互斥
-		if req.Capabilities.Rerank && req.Capabilities.Embedding {
-			api.BadRequest(c, "rerank 和 embedding 不能同时启用")
+		// 验证并应用约束规则
+		if err := req.Capabilities.Validate(); err != nil {
+			api.BadRequest(c, err.Error())
 			return
 		}
+		req.Capabilities.ApplyConstraints()
 
-		// 如果启用了 rerank 或 embedding，则禁用 thinking 和 tools
-		if req.Capabilities.Rerank || req.Capabilities.Embedding {
-			req.Capabilities.Thinking = false
-			req.Capabilities.Tools = false
+		// 保存到数据库
+		ctx := context.Background()
+		existingMeta, err := s.storageMgr.GetStore().GetModelMetadata(ctx, req.LoadRequest.ModelID)
+		if err == nil && existingMeta != nil {
+			existingMeta.Capabilities = req.Capabilities
+			if err := s.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); err != nil {
+				logger.Warn("保存模型能力失败", "modelId", req.LoadRequest.ModelID, "error", err)
+			}
+		} else {
+			if err := s.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
+				ModelID:      req.LoadRequest.ModelID,
+				Capabilities: req.Capabilities,
+			}); err != nil {
+				logger.Warn("保存模型能力失败", "modelId", req.LoadRequest.ModelID, "error", err)
+			}
 		}
-
-		// 保存到内存存储
-		s.capabilitiesMu.Lock()
-		s.capabilities[req.LoadRequest.ModelID] = req.Capabilities
-		s.capabilitiesMu.Unlock()
 
 		logger.Info("模型能力已更新", "modelId", req.LoadRequest.ModelID,
 			"thinking", req.Capabilities.Thinking,
@@ -1533,17 +1527,21 @@ func (s *Server) handleGetModelCapabilities(c *gin.Context) {
 		return
 	}
 
-	s.capabilitiesMu.RLock()
-	caps, exists := s.capabilities[modelID]
-	s.capabilitiesMu.RUnlock()
-
-	if !exists {
-		// 如果没有配置过，返回默认值（全部为 false）
+	// 从数据库获取模型元数据
+	ctx := context.Background()
+	metadata, err := s.storageMgr.GetStore().GetModelMetadata(ctx, modelID)
+	if err != nil {
+		// 如果没有找到，返回默认值（全部为 false）
 		api.Success(c, gin.H{
 			"modelId":      modelID,
-			"capabilities": &ModelCapabilities{},
+			"capabilities": &storage.Capabilities{},
 		})
 		return
+	}
+
+	caps := metadata.Capabilities
+	if caps == nil {
+		caps = &storage.Capabilities{}
 	}
 
 	api.Success(c, gin.H{
@@ -1555,8 +1553,8 @@ func (s *Server) handleGetModelCapabilities(c *gin.Context) {
 // handleSetModelCapabilities 设置模型能力配置
 func (s *Server) handleSetModelCapabilities(c *gin.Context) {
 	var req struct {
-		ModelID      string             `json:"modelId"`
-		Capabilities *ModelCapabilities `json:"capabilities"`
+		ModelID      string                 `json:"modelId"`
+		Capabilities *storage.Capabilities `json:"capabilities"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1574,22 +1572,31 @@ func (s *Server) handleSetModelCapabilities(c *gin.Context) {
 		return
 	}
 
-	// 应用约束规则：rerank 和 embedding 互斥
-	if req.Capabilities.Rerank && req.Capabilities.Embedding {
-		api.BadRequest(c, "rerank 和 embedding 不能同时启用")
+	// 验证并应用约束规则
+	if err := req.Capabilities.Validate(); err != nil {
+		api.BadRequest(c, err.Error())
 		return
 	}
+	req.Capabilities.ApplyConstraints()
 
-	// 如果启用了 rerank 或 embedding，则禁用 thinking 和 tools
-	if req.Capabilities.Rerank || req.Capabilities.Embedding {
-		req.Capabilities.Thinking = false
-		req.Capabilities.Tools = false
+	// 保存到数据库
+	ctx := context.Background()
+	existingMeta, err := s.storageMgr.GetStore().GetModelMetadata(ctx, req.ModelID)
+	if err == nil && existingMeta != nil {
+		// 更新现有元数据
+		existingMeta.Capabilities = req.Capabilities
+		if err := s.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); err != nil {
+			logger.Warn("保存模型能力失败", "modelId", req.ModelID, "error", err)
+		}
+	} else {
+		// 创建新的元数据条目
+		if err := s.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
+			ModelID:      req.ModelID,
+			Capabilities: req.Capabilities,
+		}); err != nil {
+			logger.Warn("保存模型能力失败", "modelId", req.ModelID, "error", err)
+		}
 	}
-
-	// 保存到内存存储
-	s.capabilitiesMu.Lock()
-	s.capabilities[req.ModelID] = req.Capabilities
-	s.capabilitiesMu.Unlock()
 
 	logger.Info("模型能力已更新", "modelId", req.ModelID,
 		"thinking", req.Capabilities.Thinking,

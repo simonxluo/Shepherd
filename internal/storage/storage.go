@@ -3,6 +3,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -37,6 +38,31 @@ type PostgreSQLConfig struct {
 	Username string `mapstructure:"username" yaml:"username" json:"username"`
 	Password string `mapstructure:"password" yaml:"password" json:"password"`
 	SSLMode  string `mapstructure:"sslmode" yaml:"sslmode" json:"sslmode"` // disable, require, verify-ca, verify-full
+}
+
+// Capabilities represents model capabilities configuration
+type Capabilities struct {
+	Thinking  bool `json:"thinking" db:"thinking"`
+	Tools     bool `json:"tools" db:"tools"`
+	Rerank    bool `json:"rerank" db:"rerank"`
+	Embedding bool `json:"embedding" db:"embedding"`
+}
+
+// Validate checks if the capabilities configuration is valid
+func (c *Capabilities) Validate() error {
+	if c.Rerank && c.Embedding {
+		return fmt.Errorf("rerank and embedding cannot both be enabled")
+	}
+	return nil
+}
+
+// ApplyConstraints enforces mutual exclusion rules between capabilities.
+// If rerank or embedding is enabled, thinking and tools are automatically disabled.
+func (c *Capabilities) ApplyConstraints() {
+	if c.Rerank || c.Embedding {
+		c.Thinking = false
+		c.Tools = false
+	}
 }
 
 // Message represents a chat message
@@ -102,18 +128,19 @@ type ModelLoadConfig struct {
 
 // ModelMetadata represents user-defined metadata for a model
 type ModelMetadata struct {
-	ModelID      string     `json:"modelId" db:"model_id"`           // Model ID (primary key)
-	NodeID       string     `json:"nodeId,omitempty" db:"node_id"`   // Node/Machine ID where model is located
-	StoragePath  string     `json:"storagePath,omitempty" db:"storage_path"` // Storage path (for distributed systems)
-	Alias        string     `json:"alias,omitempty" db:"alias"`      // User-defined alias
-	Favourite    bool       `json:"favourite" db:"favourite"`        // Favorite flag
-	Tags         []string   `json:"tags,omitempty" db:"tags"`        // Tags (JSON array)
-	Description  string     `json:"description,omitempty" db:"description"` // User description
-	LoadCount    int        `json:"loadCount" db:"load_count"`      // Number of times loaded
-	LastLoaded   *time.Time `json:"lastLoaded,omitempty" db:"last_loaded"` // Last load time
-	TotalTokens  int64      `json:"totalTokens" db:"total_tokens"`  // Total tokens generated
-	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`      // Record creation time
-	UpdatedAt    time.Time  `json:"updatedAt" db:"updated_at"`      // Last update time
+	ModelID      string        `json:"modelId" db:"model_id"`           // Model ID (primary key)
+	NodeID       string        `json:"nodeId,omitempty" db:"node_id"`   // Node/Machine ID where model is located
+	StoragePath  string        `json:"storagePath,omitempty" db:"storage_path"` // Storage path (for distributed systems)
+	Alias        string        `json:"alias,omitempty" db:"alias"`      // User-defined alias
+	Favourite    bool          `json:"favourite" db:"favourite"`        // Favorite flag
+	Tags         []string      `json:"tags,omitempty" db:"tags"`        // Tags (JSON array)
+	Description  string        `json:"description,omitempty" db:"description"` // User description
+	LoadCount    int           `json:"loadCount" db:"load_count"`      // Number of times loaded
+	LastLoaded   *time.Time    `json:"lastLoaded,omitempty" db:"last_loaded"` // Last load time
+	TotalTokens  int64         `json:"totalTokens" db:"total_tokens"`  // Total tokens generated
+	Capabilities *Capabilities `json:"capabilities,omitempty" db:"capabilities"` // Model capabilities (auto-detected or user-defined)
+	CreatedAt    time.Time     `json:"createdAt" db:"created_at"`      // Record creation time
+	UpdatedAt    time.Time     `json:"updatedAt" db:"updated_at"`      // Last update time
 }
 
 // Store defines the storage interface

@@ -131,6 +131,7 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 		load_count INTEGER DEFAULT 0,
 		last_loaded INTEGER,
 		total_tokens INTEGER DEFAULT 0,
+		capabilities TEXT,
 		created_at INTEGER NOT NULL,
 		updated_at INTEGER NOT NULL
 	);
@@ -167,6 +168,49 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 	for _, pragma := range pragmas {
 		if _, err := s.db.Exec(pragma); err != nil {
 			return fmt.Errorf("failed to set pragma %s: %w", pragma, err)
+		}
+	}
+
+	// Database migration: add capabilities column if not exists
+	if err := s.migrateCapabilitiesColumn(); err != nil {
+		return fmt.Errorf("failed to migrate capabilities column: %w", err)
+	}
+
+	return nil
+}
+
+// migrateCapabilitiesColumn adds capabilities column to existing databases
+func (s *SQLiteStore) migrateCapabilitiesColumn() error {
+	// Check if capabilities column exists
+	capabilitiesExists := false
+	rows, err := s.db.Query("PRAGMA table_info(model_metadata)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notnull, pk int
+		var dflt_value interface{}
+
+		err := rows.Scan(&cid, &name, &colType, &notnull, &dflt_value, &pk)
+		if err != nil {
+			return err
+		}
+
+		if name == "capabilities" {
+			capabilitiesExists = true
+			break
+		}
+	}
+
+	// Add capabilities column if it doesn't exist
+	if !capabilitiesExists {
+		_, err := s.db.Exec("ALTER TABLE model_metadata ADD COLUMN capabilities TEXT")
+		if err != nil {
+			return fmt.Errorf("failed to add capabilities column: %w", err)
 		}
 	}
 
@@ -933,11 +977,12 @@ func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMeta
 		metadata.UpdatedAt = now
 
 		tagsJSON, _ := json.Marshal(metadata.Tags)
+		capsJSON, _ := json.Marshal(metadata.Capabilities)
 
 		query := `
 		INSERT INTO model_metadata (model_id, node_id, storage_path, alias, favourite, tags, description,
-			load_count, last_loaded, total_tokens, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			load_count, last_loaded, total_tokens, capabilities, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`
 
 		_, err = s.db.ExecContext(ctx, query,
@@ -951,6 +996,7 @@ func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMeta
 			metadata.LoadCount,
 			nil, // last_loaded handled below
 			metadata.TotalTokens,
+			string(capsJSON),
 			metadata.CreatedAt.Unix(),
 			metadata.UpdatedAt.Unix(),
 		)
@@ -962,6 +1008,7 @@ func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMeta
 		metadata.UpdatedAt = now
 
 		tagsJSON, _ := json.Marshal(metadata.Tags)
+		capsJSON, _ := json.Marshal(metadata.Capabilities)
 
 		var lastLoaded *int64
 		if metadata.LastLoaded != nil {
@@ -972,7 +1019,7 @@ func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMeta
 		query := `
 		UPDATE model_metadata
 		SET node_id = ?, storage_path = ?, alias = ?, favourite = ?, tags = ?, description = ?,
-		    load_count = ?, last_loaded = ?, total_tokens = ?, updated_at = ?
+		    load_count = ?, last_loaded = ?, total_tokens = ?, capabilities = ?, updated_at = ?
 		WHERE model_id = ?
 		`
 
@@ -986,6 +1033,7 @@ func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMeta
 			metadata.LoadCount,
 			lastLoaded,
 			metadata.TotalTokens,
+			string(capsJSON),
 			metadata.UpdatedAt.Unix(),
 			metadata.ModelID,
 		)
@@ -1001,13 +1049,14 @@ func (s *SQLiteStore) GetModelMetadata(ctx context.Context, modelID string) (*Mo
 
 	query := `
 	SELECT model_id, node_id, storage_path, alias, favourite, tags, description,
-	       load_count, last_loaded, total_tokens, created_at, updated_at
+	       load_count, last_loaded, total_tokens, capabilities, created_at, updated_at
 	FROM model_metadata
 	WHERE model_id = ?
 	`
 
 	metadata := &ModelMetadata{}
 	var tagsJSON string
+	var capsJSON string
 	var lastLoaded *int64
 
 	err := s.db.QueryRowContext(ctx, query, modelID).Scan(
@@ -1021,6 +1070,7 @@ func (s *SQLiteStore) GetModelMetadata(ctx context.Context, modelID string) (*Mo
 		&metadata.LoadCount,
 		&lastLoaded,
 		&metadata.TotalTokens,
+		&capsJSON,
 		&metadata.CreatedAt,
 		&metadata.UpdatedAt,
 	)
@@ -1035,6 +1085,11 @@ func (s *SQLiteStore) GetModelMetadata(ctx context.Context, modelID string) (*Mo
 	// Parse tags JSON
 	if tagsJSON != "" {
 		json.Unmarshal([]byte(tagsJSON), &metadata.Tags)
+	}
+
+	// Parse capabilities JSON
+	if capsJSON != "" {
+		json.Unmarshal([]byte(capsJSON), &metadata.Capabilities)
 	}
 
 	// Parse last_loaded
@@ -1053,7 +1108,7 @@ func (s *SQLiteStore) ListModelMetadata(ctx context.Context, limit, offset int) 
 
 	query := `
 	SELECT model_id, node_id, storage_path, alias, favourite, tags, description,
-	       load_count, last_loaded, total_tokens, created_at, updated_at
+	       load_count, last_loaded, total_tokens, capabilities, created_at, updated_at
 	FROM model_metadata
 	ORDER BY updated_at DESC
 	LIMIT ? OFFSET ?
@@ -1069,6 +1124,7 @@ func (s *SQLiteStore) ListModelMetadata(ctx context.Context, limit, offset int) 
 	for rows.Next() {
 		metadata := &ModelMetadata{}
 		var tagsJSON string
+		var capsJSON string
 		var lastLoaded *int64
 
 		err := rows.Scan(
@@ -1082,6 +1138,7 @@ func (s *SQLiteStore) ListModelMetadata(ctx context.Context, limit, offset int) 
 			&metadata.LoadCount,
 			&lastLoaded,
 			&metadata.TotalTokens,
+			&capsJSON,
 			&metadata.CreatedAt,
 			&metadata.UpdatedAt,
 		)
@@ -1092,6 +1149,11 @@ func (s *SQLiteStore) ListModelMetadata(ctx context.Context, limit, offset int) 
 		// Parse tags JSON
 		if tagsJSON != "" {
 			json.Unmarshal([]byte(tagsJSON), &metadata.Tags)
+		}
+
+		// Parse capabilities JSON
+		if capsJSON != "" {
+			json.Unmarshal([]byte(capsJSON), &metadata.Capabilities)
 		}
 
 		// Parse last_loaded
@@ -1131,7 +1193,7 @@ func (s *SQLiteStore) GetAllModelMetadata(ctx context.Context) (map[string]*Mode
 
 	query := `
 	SELECT model_id, node_id, storage_path, alias, favourite, tags, description,
-	       load_count, last_loaded, total_tokens, created_at, updated_at
+	       load_count, last_loaded, total_tokens, capabilities, created_at, updated_at
 	FROM model_metadata
 	`
 
@@ -1145,6 +1207,7 @@ func (s *SQLiteStore) GetAllModelMetadata(ctx context.Context) (map[string]*Mode
 	for rows.Next() {
 		metadata := &ModelMetadata{}
 		var tagsJSON string
+		var capsJSON string
 		var lastLoaded *int64
 		var createdAt int64
 		var updatedAt int64
@@ -1160,6 +1223,7 @@ func (s *SQLiteStore) GetAllModelMetadata(ctx context.Context) (map[string]*Mode
 			&metadata.LoadCount,
 			&lastLoaded,
 			&metadata.TotalTokens,
+			&capsJSON,
 			&createdAt,
 			&updatedAt,
 		)
@@ -1174,6 +1238,11 @@ func (s *SQLiteStore) GetAllModelMetadata(ctx context.Context) (map[string]*Mode
 		// Parse tags JSON
 		if tagsJSON != "" {
 			json.Unmarshal([]byte(tagsJSON), &metadata.Tags)
+		}
+
+		// Parse capabilities JSON
+		if capsJSON != "" {
+			json.Unmarshal([]byte(capsJSON), &metadata.Capabilities)
 		}
 
 		// Parse last_loaded

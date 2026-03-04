@@ -5,6 +5,77 @@ All notable changes to Shepherd will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.0] - 2026-03-04
+
+### Added
+- **模型能力自动检测**: 基于模型元数据自动检测模型能力
+  - 新增 `internal/model/capability.go` 包，实现能力检测核心逻辑
+  - 支持检测四种能力：Thinking（思考）、Tools（工具调用）、Rerank（重排序）、Embedding（嵌入）
+  - 基于 GGUF 元数据的模型名称、架构和 `chat_template` 进行关键词匹配
+  - 检测规则：
+    - **Thinking**: 匹配 `deepseek-r1`、`qwq`、`enable_thinking`、`reasoning` 等关键词
+    - **Tools**: 匹配 `tool_call`、`function`、`tools`、`mcp` 等关键词
+    - **Rerank**: 匹配 `rerank`、`cross-encoder`、`ranker` 等关键词
+    - **Embedding**: 匹配 `embedding`、`e5`、`bge`、`jina`、`nomic` 等关键词
+  - 互斥规则：Rerank/Embedding 与 Thinking/Tools 互斥（启用前者时自动禁用后者）
+- **GGUF 解析器增强**: 新增 `tokenizer.chat_template` 字段解析
+  - `internal/gguf/metadata.go`: 添加 `ChatTemplate` 字段
+  - `internal/gguf/parser.go`: 解析 `tokenizer.chat_template` KV 键
+- **能力持久化**: 将模型能力存储从内存迁移到数据库
+  - `internal/storage/storage.go`: 新增 `Capabilities` 类型定义
+  - `internal/storage/sqlite.go`: 添加 `capabilities` 列到 `model_metadata` 表
+  - 实现数据库迁移逻辑：使用 `PRAGMA table_info` 检查列是否存在
+  - JSON 序列化存储到 SQLite TEXT 列
+- **能力验证方法**: `storage.Capabilities` 类型新增验证方法
+  - `Validate()`: 验证能力配置（检查互斥规则）
+  - `ApplyConstraints()`: 自动应用互斥约束
+- **单元测试**: 新增 8 个能力检测测试用例
+  - `TestDetectCapabilities_DeepSeekR1`: DeepSeek-R1 思考模型
+  - `TestDetectCapabilities_BGE_M3`: BGE-M3 嵌入模型
+  - `TestDetectCapabilities_BGEReranker`: BGE Reranker 重排序模型
+  - `TestDetectCapabilities_GPT4o`: GPT-4o 工具调用模型
+  - `TestDetectCapabilities_QWQ`: QWQ 思考模型
+  - `TestDetectCapabilities_E5Embedding`: E5 嵌入模型
+  - `TestDetectCapabilities_NilMetadata`: 空 metadata 处理
+  - `TestDetectCapabilities_EmptyMetadata`: 空 metadata 处理
+
+### Changed
+- **模型扫描流程**: 集成能力检测到 `loadModel()` 函数
+  - 扫描时自动检测并保存能力到数据库
+  - `internal/model/manager.go`: 在 `loadModel()` 中调用 `DetectCapabilities()`
+- **API 层重构**: 移除内存存储，改用数据库
+  - `internal/server/server.go`: 删除 `capabilities` map 和 `capabilitiesMu` 互斥锁
+  - 删除本地 `ModelCapabilities` 类型定义，统一使用 `storage.Capabilities`
+  - `handleLoadModel()`: 使用 `Validate()` 和 `ApplyConstraints()` 方法
+  - `handleSetModelCapabilities()`: 同样使用新的验证方法
+  - `handleGetModelCapabilities()`: 从数据库读取能力
+- **错误处理改进**: 添加数据库保存失败的警告日志
+  - `internal/server/server.go`: 能力保存失败时记录警告日志
+  - `internal/model/manager.go`: 能力保存失败时记录警告日志
+
+### Removed
+- `docs/llama-server-params-analysis.md`: llama-server 参数分析文档（已过时）
+- `docs/llama-server-params-summary.md`: llama-server 参数摘要文档（已过时）
+- `web/scripts/check-model-detail.cjs`: 旧版模型详情检查脚本
+- `web/scripts/check-model-detail.ts`: 旧版模型详情检查脚本
+- `web/scripts/migrate-text-colors.cjs`: 文本颜色迁移脚本
+
+### Fixed
+- **代码质量**: 通过 Simplify Review 修复多个问题
+  - 提取重复的验证逻辑到 `Capabilities.Validate()` 方法
+  - 添加错误日志记录（之前使用 `_` 忽略错误）
+  - 统一错误消息格式
+
+### Technical Details
+- **能力检测算法**: 关键词匹配（不区分大小写）
+  - 组合输入：`model.Name + " " + model.Architecture` (小写)
+  - Chat Template 检测：匹配 Jinja 模板中的特定标记
+- **数据库迁移**: 使用 `ALTER TABLE ADD COLUMN` 动态添加列
+- **JSON 存储**: 使用 `encoding/json` 序列化 `Capabilities` 结构
+- **测试覆盖**: 所有 8 个测试用例通过
+
+---
+
 ## [v0.4.0] - 2026-03-01
 
 ### BREAKING CHANGES
