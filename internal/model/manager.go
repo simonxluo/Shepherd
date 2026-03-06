@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -224,7 +225,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 		if err != nil {
 			return nil, []ScanError{{Path: scanPath, Error: fmt.Sprintf("目录读取失败: %v", err)}}
 		}
-		f.Close()
+		utils.CloseQuietly(f)
 	}
 
 	// Use concurrent processing for directories
@@ -469,7 +470,7 @@ func (m *Manager) loadModelWithValidation(path string) (*Model, error) {
 	if err != nil {
 		return nil, fmt.Errorf("无法读取模型文件: %w", err)
 	}
-	f.Close()
+	utils.CloseQuietly(f)
 
 	// Load model
 	model, err := m.loadModel(path)
@@ -947,10 +948,10 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 			} else if resp.StatusCode != 200 {
 				failureCount++
 				logger.Warn("首次健康检查返回非200状态", "modelId", req.ModelID, "statusCode", resp.StatusCode, "failureCount", failureCount, "maxFailures", maxFailures)
-				resp.Body.Close()
+				utils.CloseQuietly(resp.Body)
 			} else {
 				body, _ := io.ReadAll(resp.Body)
-				resp.Body.Close()
+				utils.CloseQuietly(resp.Body)
 				logger.Info("首次健康检查响应", "modelId", req.ModelID, "body", string(body))
 				if strings.Contains(string(body), `"status":"ok"`) {
 					logger.Info("首次健康检查成功，模型已就绪", "modelId", req.ModelID, "port", port)
@@ -996,7 +997,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 					if failureCount >= maxFailures {
 						logger.Error("健康检查失败次数超过限制，终止进程", "modelId", req.ModelID, "failureCount", failureCount, "maxFailures", maxFailures)
 						// 杀死进程
-						proc.Stop()
+						utils.StopQuietly(proc)
 						// 返回错误
 						select {
 						case loadError <- fmt.Errorf("健康检查连续失败 %d 次，已终止进程 (PID: %d)", failureCount, proc.GetPID()):
@@ -1007,13 +1008,13 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 				} else if resp.StatusCode != 200 {
 					failureCount++
 					logger.Warn("HTTP 健康检查返回非200状态", "modelId", req.ModelID, "statusCode", resp.StatusCode, "failureCount", failureCount, "maxFailures", maxFailures)
-					resp.Body.Close()
+					utils.CloseQuietly(resp.Body)
 
 					// 检查是否超过最大失败次数
 					if failureCount >= maxFailures {
 						logger.Error("健康检查失败次数超过限制，终止进程", "modelId", req.ModelID, "failureCount", failureCount, "maxFailures", maxFailures)
 						// 杀死进程
-						proc.Stop()
+						utils.StopQuietly(proc)
 						// 返回错误
 						select {
 						case loadError <- fmt.Errorf("健康检查连续失败 %d 次，已终止进程 (PID: %d)", failureCount, proc.GetPID()):
@@ -1023,7 +1024,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 					}
 				} else {
 					body, _ := io.ReadAll(resp.Body)
-					resp.Body.Close()
+					utils.CloseQuietly(resp.Body)
 					logger.Info("HTTP 健康检查响应", "modelId", req.ModelID, "body", string(body))
 					// 检查响应内容是否为 {"status":"ok"}
 					if strings.Contains(string(body), `"status":"ok"`) {
@@ -1082,7 +1083,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		m.mu.Unlock()
 		logger.Error("异步模型加载失败", "modelId", req.ModelID, "error", err)
 		// 清理进程和端口
-		m.processMgr.Stop(req.ModelID)
+		m.processMgr.Stop(req.ModelID) //errcheck:ignore
 		m.portAllocator.Release(port)
 
 	case <-time.After(timeout):
@@ -1094,7 +1095,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		m.mu.Unlock()
 		logger.Error("异步模型加载超时", "modelId", req.ModelID, "timeout", timeout)
 		// 清理进程和端口
-		m.processMgr.Stop(req.ModelID)
+		m.processMgr.Stop(req.ModelID) //errcheck:ignore
 		m.portAllocator.Release(port)
 	}
 }
@@ -1441,7 +1442,7 @@ func (m *Manager) saveModels() {
 		configModels = append(configModels, entry)
 	}
 
-	m.configMgr.SaveModelsConfig(configModels)
+	if err := m.configMgr.SaveModelsConfig(configModels); err != nil { logger.Warn("保存模型配置失败", "error", err) }
 }
 
 // findLlamaCppBinary finds the llama.cpp binary

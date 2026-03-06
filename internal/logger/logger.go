@@ -202,7 +202,9 @@ func (l *Logger) rotateLog(reason string) {
 	timestamp := time.Now().Format("20060102-150405")
 	backupFile := filepath.Join(l.logDir, fmt.Sprintf("shepherd-%s-%s-%s-%s.log", l.role, l.currentDate, timestamp, reason))
 
-	os.Rename(logFile, backupFile)
+	if err := os.Rename(logFile, backupFile); err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] 重命名日志文件失败: %v\n", err)
+	}
 
 	// 第四步：清理旧备份
 	l.cleanOldBackups()
@@ -258,10 +260,15 @@ func (l *Logger) cleanOldBackups() {
 
 		if fileDate.Before(cutoffDate) {
 			for _, fileName := range backupFiles {
-				os.Remove(filepath.Join(l.logDir, fileName))
+				removeQuietly(filepath.Join(l.logDir, fileName))
 			}
 		}
 	}
+}
+
+// removeQuietly removes a file and ignores errors (file may not exist)
+func removeQuietly(path string) {
+	_ = os.Remove(path)
 }
 
 // parseLevel converts string level to LogLevel

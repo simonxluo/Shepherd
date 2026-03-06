@@ -2,6 +2,7 @@
 package compatibility
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
 	"net"
 	"net/http"
@@ -94,7 +95,7 @@ func checkPortAvailability(port int) PortCheckResult {
 			ErrorType: "unknown",
 		}
 	}
-	listener.Close()
+	utils.CloseQuietly(listener)
 	return PortCheckResult{Available: true}
 }
 
@@ -346,7 +347,7 @@ func (h *Handler) TestConnection(c *gin.Context) {
 		})
 		return
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode == http.StatusOK {
 		c.JSON(http.StatusOK, gin.H{

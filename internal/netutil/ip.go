@@ -2,6 +2,7 @@
 package netutil
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"net"
 )
 
@@ -15,7 +16,7 @@ func GetBestLocalIP() string {
 	// 首先尝试连接到一个外部地址来获取出口IP
 	// 这可以确保我们获取的是可以访问Master的IP
 	if conn, err := net.Dial("udp", "8.8.8.8:80"); err == nil {
-		defer conn.Close()
+		defer utils.CloseQuietly(conn)
 		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok {
 			return addr.IP.String()
 		}

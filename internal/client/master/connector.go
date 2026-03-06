@@ -2,6 +2,7 @@
 package master
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -98,7 +99,7 @@ func (c *Connector) Stop() {
 
 	c.mu.Lock()
 	if c.connected {
-		c.unregister()
+		if err := c.unregister(); err != nil { logger.Warn(fmt.Sprintf("取消注册失败: %v", err)) }
 		c.connected = false
 	}
 	c.mu.Unlock()
@@ -129,7 +130,7 @@ func (c *Connector) register() error {
 	if err != nil {
 		return fmt.Errorf("注册请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -152,7 +153,7 @@ func (c *Connector) unregister() error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	return nil
 }
@@ -166,14 +167,14 @@ func (c *Connector) heartbeatLoop() {
 	defer ticker.Stop()
 
 	// Send initial heartbeat
-	c.sendHeartbeat()
+	if err := c.sendHeartbeat(); err != nil { logger.Warn(fmt.Sprintf("发送心跳失败: %v", err)) }
 
 	for {
 		select {
 		case <-c.ctx.Done():
 			return
 		case <-ticker.C:
-			c.sendHeartbeat()
+			if err := c.sendHeartbeat(); err != nil { logger.Warn(fmt.Sprintf("发送心跳失败: %v", err)) }
 		}
 	}
 }
@@ -202,7 +203,7 @@ func (c *Connector) sendHeartbeat() error {
 		c.mu.Unlock()
 		return fmt.Errorf("发送心跳失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode == http.StatusOK {
 		c.mu.Lock()

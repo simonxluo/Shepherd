@@ -2,6 +2,7 @@
 package node
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -286,7 +287,7 @@ func (hm *HeartbeatManager) sendHeartbeat() error {
 	if err != nil {
 		return fmt.Errorf("发送心跳请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("心跳请求返回非 200 状态码: %d", resp.StatusCode)

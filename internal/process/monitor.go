@@ -2,6 +2,7 @@
 package process
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
 	"net/http"
 	"os"
@@ -272,7 +273,7 @@ func (m *ProcessMonitor) healthCheck() bool {
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	return resp.StatusCode == 200
 }

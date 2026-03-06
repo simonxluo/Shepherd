@@ -150,7 +150,7 @@ func StreamLogFile(logPath string, fromBeginning bool) (<-chan StreamLogEntry, e
 
 	go func() {
 		defer close(ch)
-		defer file.Close()
+		defer closeQuietly(file)
 
 		// If not from beginning, seek to end
 		if !fromBeginning {

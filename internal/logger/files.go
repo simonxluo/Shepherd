@@ -4,6 +4,7 @@ package logger
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -117,7 +118,7 @@ func ReadLogFile(logPath string, filter LogFileFilter) ([]ParsedLogEntry, error)
 	if err != nil {
 		return nil, fmt.Errorf("打开日志文件失败: %w", err)
 	}
-	defer file.Close()
+	defer closeQuietly(file)
 
 	var entries []ParsedLogEntry
 	scanner := bufio.NewScanner(file)
@@ -318,4 +319,9 @@ func matchesFilter(entry *ParsedLogEntry, filter LogFileFilter) bool {
 	}
 
 	return true
+}
+
+// closeQuietly closes a file and ignores the error (used in defer)
+func closeQuietly(c io.Closer) {
+	_ = c.Close()
 }

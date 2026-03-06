@@ -298,30 +298,30 @@ func TestBuildCommand(t *testing.T) {
 			contains:  []string{"llama-server", "-m", "/models/model.gguf", "--port", "8081"},
 		},
 		{
-			name:    "With context size",
-			binPath: "/llama.cpp",
+			name:      "With context size",
+			binPath:   "/llama.cpp",
 			modelPath: "/models/model.gguf",
-			port:    8081,
+			port:      8081,
 			opts: map[string]interface{}{
 				"ctx_size": 4096,
 			},
 			contains: []string{"-c", "4096"},
 		},
 		{
-			name:    "With GPU layers",
-			binPath: "/llama.cpp",
+			name:      "With GPU layers",
+			binPath:   "/llama.cpp",
 			modelPath: "/models/model.gguf",
-			port:    8081,
+			port:      8081,
 			opts: map[string]interface{}{
 				"gpu_layers": 99,
 			},
 			contains: []string{"-ngl", "99"},
 		},
 		{
-			name:    "With temperature",
-			binPath: "/llama.cpp",
+			name:      "With temperature",
+			binPath:   "/llama.cpp",
 			modelPath: "/models/model.gguf",
-			port:    8081,
+			port:      8081,
 			opts: map[string]interface{}{
 				"temperature": 0.7,
 			},
@@ -429,7 +429,6 @@ func TestEscapeQuotes(t *testing.T) {
 // LoadRequest is now defined in manager.go
 // (previously defined locally to avoid import cycle)
 
-
 // TestBuildCommandFromRequest tests the new LoadRequest-based BuildCommand
 func TestBuildCommandFromRequest(t *testing.T) {
 	tests := []struct {
@@ -469,7 +468,7 @@ func TestBuildCommandFromRequest(t *testing.T) {
 				GPULayers: 99,
 				Devices:   []string{"cuda:0", "cuda:1"},
 			},
-			contains: []string{"-dev cuda:0,cuda:1", "-ngl 99"},
+			contains:    []string{"-dev cuda:0,cuda:1", "-ngl 99"},
 			notContains: []string{"-sm none", "-mg"},
 		},
 		{
@@ -659,11 +658,11 @@ func TestBuildCommandFromRequest(t *testing.T) {
 			name:    "Template and processing flags",
 			binPath: "/llama.cpp",
 			req: &LoadRequest{
-				ModelPath:     "/models/model.gguf",
-				Port:          8081,
-				DisableJinja:  true,
-				ChatTemplate:  "chatml",
-				ContextShift:  true,
+				ModelPath:    "/models/model.gguf",
+				Port:         8081,
+				DisableJinja: true,
+				ChatTemplate: "chatml",
+				ContextShift: true,
 			},
 			contains: []string{
 				"--no-jinja",
@@ -676,18 +675,18 @@ func TestBuildCommandFromRequest(t *testing.T) {
 			name:    "All new fields combined",
 			binPath: "/llama.cpp",
 			req: &LoadRequest{
-				ModelPath:        "/models/model.gguf",
-				Port:             8081,
-				CtxSize:          4096,
+				ModelPath: "/models/model.gguf",
+				Port:      8081,
+				CtxSize:   4096,
 				// Additional sampling parameters
 				Reranking:        true,
 				MinP:             0.05,
 				PresencePenalty:  0.1,
 				FrequencyPenalty: 0.2,
 				// Template and processing
-				DisableJinja:  true,
-				ChatTemplate:  "chatml",
-				ContextShift:  true,
+				DisableJinja: true,
+				ChatTemplate: "chatml",
+				ContextShift: true,
 			},
 			contains: []string{
 				"llama-server",

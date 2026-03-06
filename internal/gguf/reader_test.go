@@ -140,7 +140,7 @@ func TestInvalidFile(t *testing.T) {
 		{
 			name:    "Truncated header",
 			content: []byte("GGUF"), // Only magic, nothing else
-			wantErr: "EOF", // Error will be EOF since we can't read more
+			wantErr: "EOF",          // Error will be EOF since we can't read more
 		},
 	}
 
@@ -206,9 +206,9 @@ func TestFileTypeMapping(t *testing.T) {
 // TestIsChatModel tests the chat model detection heuristic
 func TestIsChatModel(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		modelName string
-		want     bool
+		want      bool
 	}{
 		{"Chat model", "llama-2-7b-chat", true},
 		{"Instruct model", "llama-2-7b-instruct", true},

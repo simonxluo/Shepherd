@@ -676,7 +676,7 @@ func (n *Node) startSubsystems() error {
 		if err := n.subsystemManager.Start(); err != nil {
 			// 停止已启动的资源监控器
 			if n.resource != nil {
-				n.resource.Stop()
+				n.resource.Stop() //errcheck:ignore
 			}
 			return fmt.Errorf("启动子系统失败: %w", err)
 		}
@@ -697,6 +697,7 @@ func (n *Node) stopSubsystems() {
 
 	// 停止资源监控器
 	if n.resource != nil {
+		//errcheck:ignore
 		if err := n.resource.Stop(); err != nil {
 			// 停止失败只记录日志，不影响其他清理
 		}

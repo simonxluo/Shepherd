@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 )
 
 type CommandExecutor struct {
@@ -125,11 +126,11 @@ func (ce *CommandExecutor) Cancel(commandID string) error {
 
 	task.cancel()
 	if task.osCmd != nil && task.osCmd.Process != nil {
-		task.osCmd.Process.Signal(syscall.SIGTERM)
+		utils.SignalQuietly(task.osCmd.Process, syscall.SIGTERM)
 		go func() {
 			time.Sleep(5 * time.Second)
 			if task.osCmd != nil && task.osCmd.Process != nil {
-				task.osCmd.Process.Kill()
+				utils.KillQuietly(task.osCmd.Process)
 			}
 		}()
 	}

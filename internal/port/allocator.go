@@ -2,6 +2,7 @@
 package port
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
 	"net"
 	"sync"
@@ -63,7 +64,7 @@ func (a *PortAllocator) isPortInUse(port int) bool {
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	utils.CloseQuietly(conn)
 	return true
 }
 

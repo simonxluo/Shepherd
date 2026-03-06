@@ -2,6 +2,7 @@
 package ollama
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -206,7 +207,7 @@ func (h *Handler) forwardToOpenAI(c *gin.Context, modelID string, port int, olla
 		logger.Errorf("转发请求到 llama.cpp 失败: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	// Read response
 	respBody, err := io.ReadAll(resp.Body)
@@ -218,7 +219,7 @@ func (h *Handler) forwardToOpenAI(c *gin.Context, modelID string, port int, olla
 	// Forward response
 	c.Header("Content-Type", "application/json")
 	c.Status(resp.StatusCode)
-	c.Writer.Write(respBody)
+	utils.WriteQuietly(c.Writer, respBody)
 }
 
 // sendError sends an error response

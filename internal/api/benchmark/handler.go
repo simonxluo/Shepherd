@@ -529,7 +529,7 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string) {
 		task.Error = "Handler shutdown"
 		finishedAt := time.Now()
 		task.FinishedAt = &finishedAt
-		h.store.UpdateBenchmark(h.ctx, task)
+		if err := h.store.UpdateBenchmark(h.ctx, task); err != nil { h.log.Errorf("Failed to update benchmark: %v", err) }
 		return
 	}
 
@@ -548,7 +548,7 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string) {
 		task.Error = "Empty command"
 		finishedAt := time.Now()
 		task.FinishedAt = &finishedAt
-		h.store.UpdateBenchmark(h.ctx, task)
+		if err := h.store.UpdateBenchmark(h.ctx, task); err != nil { h.log.Errorf("Failed to update benchmark: %v", err) }
 		cancel()
 		return
 	}
@@ -575,7 +575,7 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string) {
 	}()
 
 	// 保存启动状态
-	h.store.UpdateBenchmark(h.ctx, task)
+	if err := h.store.UpdateBenchmark(h.ctx, task); err != nil { h.log.Warnf("Failed to save benchmark status: %v", err) }
 
 	// 执行并捕获输出
 	output, err := cmd.CombinedOutput()
@@ -629,7 +629,7 @@ func (h *Handler) parseBenchmarkOutput(output string) map[string]interface{} {
 			for i, part := range parts {
 				if strings.Contains(part, "ms") && i > 0 {
 					var ms float64
-					fmt.Sscanf(parts[i-1], "%f", &ms)
+				_, _ = fmt.Sscanf(parts[i-1], "%f", &ms)
 					metrics["total_time_ms"] = ms
 				}
 			}
@@ -739,7 +739,7 @@ func (h *Handler) Cancel(c *gin.Context) {
 			h.log.Infof("Sending SIGTERM to benchmark process %s", taskID)
 			if err := runningTask.cmd.Process.Signal(syscall.SIGTERM); err != nil {
 				h.log.Warnf("Failed to send SIGTERM, trying SIGKILL: %v", err)
-				runningTask.cmd.Process.Kill()
+				_ = runningTask.cmd.Process.Kill()
 			}
 		}
 	}

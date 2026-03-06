@@ -46,6 +46,9 @@ func createTestServer(t *testing.T) *Server {
 		WriteTimeout:  60 * time.Second,
 		ServerCfg:     cfg,
 		ConfigMgr:     configMgr,
+		Version:       "0.5.1",
+		BuildTime:     "test-build",
+		GitCommit:     "test-commit",
 	}
 
 	server, err := NewServer(serverConfig, modelMgr)
@@ -81,7 +84,7 @@ func TestServerHandleServerInfo(t *testing.T) {
 	assert.Equal(t, true, response["success"])
 	data, ok := response["data"].(map[string]interface{})
 	assert.True(t, ok)
-	assert.Equal(t, "1.0.0", data["version"])
+	assert.Equal(t, "0.5.1", data["version"])
 	assert.Equal(t, "Shepherd", data["name"])
 	assert.Equal(t, "running", data["status"])
 
@@ -242,6 +245,9 @@ func TestServerStartStop(t *testing.T) {
 		Host:      "127.0.0.1",
 		ServerCfg: cfg,
 		ConfigMgr: configMgr,
+		Version:       "0.5.1",
+		BuildTime:     "test-build",
+		GitCommit:     "test-commit",
 	}
 
 	server, err := NewServer(serverConfig, modelMgr)
@@ -310,6 +316,9 @@ func BenchmarkServerRequest(b *testing.B) {
 		Host:      "0.0.0.0",
 		ServerCfg: cfg,
 		ConfigMgr: configMgr,
+		Version:       "0.5.1",
+		BuildTime:     "test-build",
+		GitCommit:     "test-commit",
 	}
 
 	server, err := NewServer(serverConfig, modelMgr)

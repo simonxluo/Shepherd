@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,7 +34,7 @@ func main() {
 			fmt.Printf("❌ 创建解析器失败: %v\n", err)
 			continue
 		}
-		defer parser.Close()
+		defer utils.CloseQuietly(parser)
 
 		// 获取元数据
 		meta, err := parser.GetMetadata()

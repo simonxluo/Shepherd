@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -89,7 +90,7 @@ func (m *Manager) saveUnsafe(config *Config) error {
 
 	// Atomic rename
 	if err := os.Rename(tempPath, m.configPath); err != nil {
-		os.Remove(tempPath) // Clean up temp file
+		utils.RemoveQuietly(tempPath) // Clean up temp file
 		return fmt.Errorf("failed to rename config file: %w", err)
 	}
 
@@ -127,7 +128,7 @@ func (m *Manager) Save(config *Config) error {
 
 	// Atomic rename
 	if err := os.Rename(tempPath, m.configPath); err != nil {
-		os.Remove(tempPath) // Clean up temp file
+		utils.RemoveQuietly(tempPath) // Clean up temp file
 		return fmt.Errorf("failed to rename config file: %w", err)
 	}
 
@@ -213,7 +214,7 @@ func (m *Manager) SaveModelsConfig(models []ModelConfigEntry) error {
 
 	// Atomic rename
 	if err := os.Rename(tempPath, m.modelsConfigPath); err != nil {
-		os.Remove(tempPath)
+		utils.RemoveQuietly(tempPath)
 		return fmt.Errorf("failed to rename models config file: %w", err)
 	}
 
@@ -324,7 +325,7 @@ func (m *Manager) saveLaunchConfigsUnsafe(configs map[string]*LaunchConfig) erro
 
 	// Atomic rename
 	if err := os.Rename(tempPath, m.launchConfigPath); err != nil {
-		os.Remove(tempPath)
+		utils.RemoveQuietly(tempPath)
 		return fmt.Errorf("failed to rename launch config file: %w", err)
 	}
 

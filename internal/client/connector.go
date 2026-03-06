@@ -6,6 +6,7 @@
 package client
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -270,7 +271,7 @@ func (mc *MasterConnector) register() error {
 	if err != nil {
 		return fmt.Errorf("发送注册请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -293,7 +294,7 @@ func (mc *MasterConnector) unregister() error {
 	if err != nil {
 		return fmt.Errorf("发送注销请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("注销失败，HTTP %d", resp.StatusCode)
@@ -368,7 +369,7 @@ func (mc *MasterConnector) fetchCommands() ([]*node.Command, error) {
 	if err != nil {
 		return nil, fmt.Errorf("发送请求失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode == http.StatusNoContent {
 		return nil, nil
@@ -445,7 +446,7 @@ func (mc *MasterConnector) reportResult(result *node.CommandResult) error {
 	if err != nil {
 		return fmt.Errorf("发送结果失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("上报结果失败，HTTP %d", resp.StatusCode)

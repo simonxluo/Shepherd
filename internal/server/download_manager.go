@@ -2,6 +2,7 @@
 package server
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"fmt"
 	"io"
@@ -193,7 +194,7 @@ func (dm *DownloadManager) DeleteDownload(id string) error {
 
 	// 删除部分下载的文件
 	if _, err := os.Stat(task.TargetPath); err == nil {
-		os.Remove(task.TargetPath)
+		utils.RemoveQuietly(task.TargetPath)
 	}
 
 	delete(dm.downloads, id)
@@ -229,7 +230,7 @@ func (dm *DownloadManager) startDownload(task *DownloadTask) {
 func (t *DownloadTask) download() {
 	defer func() {
 		if t.file != nil {
-			t.file.Close()
+			utils.CloseQuietly(t.file)
 		}
 	}()
 
@@ -245,7 +246,7 @@ func (t *DownloadTask) download() {
 		t.setError(fmt.Sprintf("HTTP 请求失败: %v", err))
 		return
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		t.setError(fmt.Sprintf("HTTP %d: %s", resp.StatusCode, resp.Status))
@@ -275,7 +276,7 @@ func (t *DownloadTask) download() {
 
 // downloadWithProgress downloads with progress tracking
 func (t *DownloadTask) downloadWithProgress(body io.ReadCloser) {
-	defer body.Close()
+	defer utils.CloseQuietly(body)
 
 	buffer := make([]byte, 32*1024)
 	var lastUpdate time.Time

@@ -5,6 +5,7 @@
 package modelrepo
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -212,7 +213,7 @@ func (c *Client) ListGGUFFiles(repoID string) ([]FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch model info: %s", resp.Status)
@@ -302,7 +303,7 @@ func (c *Client) SearchHuggingFaceModels(query string, limit int) (*SearchResult
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to search models: %s", resp.Status)
@@ -536,7 +537,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer source.Close()
+	defer utils.CloseQuietly(source)
 
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return err
@@ -546,7 +547,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer destination.Close()
+	defer utils.CloseQuietly(destination)
 
 	_, err = io.Copy(destination, source)
 	return err

@@ -2,6 +2,7 @@
 package openai
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bufio"
 	"bytes"
 	"encoding/json"
@@ -288,7 +289,7 @@ func (h *Handler) forwardRequest(c *gin.Context, modelID string, port int, path 
 		logger.Errorf("转发请求到 llama.cpp 失败: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	// Read response
 	respBody, err := io.ReadAll(resp.Body)
@@ -305,7 +306,7 @@ func (h *Handler) forwardRequest(c *gin.Context, modelID string, port int, path 
 		}
 	}
 	c.Status(resp.StatusCode)
-	c.Writer.Write(respBody)
+	utils.WriteQuietly(c.Writer, respBody)
 }
 
 // forwardStreamRequest forwards a streaming request to llama.cpp
@@ -337,7 +338,7 @@ func (h *Handler) forwardStreamRequest(c *gin.Context, modelID string, port int,
 		logger.Errorf("转发流式请求到 llama.cpp 失败: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	// Set streaming headers
 	c.Header("Content-Type", "text/event-stream")
@@ -375,7 +376,7 @@ func (h *Handler) forwardStreamRequest(c *gin.Context, modelID string, port int,
 		}
 
 		// Write line to client
-		c.Writer.Write([]byte(line))
+		utils.WriteQuietly(c.Writer, []byte(line))
 		flusher.Flush()
 	}
 }

@@ -2,6 +2,7 @@
 package filesystem
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -278,6 +279,6 @@ func isReadable(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer file.Close()
+	defer utils.CloseQuietly(file)
 	return true
 }

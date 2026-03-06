@@ -141,8 +141,8 @@ func TestShardedModelSizes(t *testing.T) {
 // TestGetQuantizationString 测试量化字符串映射
 func TestGetQuantizationString(t *testing.T) {
 	testCases := []struct {
-		fileType   uint32
-		expected   string
+		fileType uint32
+		expected string
 	}{
 		{0, "F32"},
 		{1, "F16"},

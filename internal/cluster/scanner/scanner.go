@@ -2,6 +2,7 @@
 package scanner
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -55,7 +56,7 @@ func (c *DefaultHTTPClient) Get(url string) (int, []byte, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	body := make([]byte, 1024)
 	n, _ := resp.Body.Read(body)
@@ -299,7 +300,7 @@ func (s *Scanner) autoScan() {
 			return
 		case <-ticker.C:
 			if s.config.AutoDiscover {
-				s.Scan()
+				func() { _, err := s.Scan(); if err != nil { s.log.Warn("模型扫描失败", "error", err) } }()
 			}
 		}
 	}

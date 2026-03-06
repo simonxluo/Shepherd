@@ -2,6 +2,7 @@
 package node
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -299,7 +300,7 @@ func (hs *HeartbeatSubsystem) sendHeartbeatToMaster() {
 		logger.Errorf("发送心跳到 Master 失败: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer utils.CloseQuietly(resp.Body)
 
 	// 检查响应状态
 	if resp.StatusCode != http.StatusOK {
@@ -507,7 +508,7 @@ func (rs *RegistrationSubsystem) registerWithMaster(ctx context.Context) {
 
 		// 读取响应
 		respBody, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		utils.CloseQuietly(resp.Body)
 
 		// 检查响应状态
 		if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {

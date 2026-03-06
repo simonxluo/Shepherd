@@ -211,9 +211,9 @@ func TestLaunchConfig(t *testing.T) {
 
 	t.Run("Save and load launch config", func(t *testing.T) {
 		config := &LaunchConfig{
-			CtxSize:       8192,
-			Temperature:   0.8,
-			GPULayers:     99,
+			CtxSize:     8192,
+			Temperature: 0.8,
+			GPULayers:   99,
 		}
 
 		err := manager.SaveLaunchConfig("model-1", config)

@@ -97,7 +97,7 @@ func (d *downloader) prepare(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	closeQuietly(resp.Body)
 
 	// Get content length
 	contentLength := resp.ContentLength
@@ -154,7 +154,7 @@ func (d *downloader) downloadSimple(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	closeQuietly(resp.Body)
 
 	// Check status code
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
@@ -181,7 +181,7 @@ func (d *downloader) downloadSimple(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	closeQuietly(file)
 
 	// Start progress updater
 	stopProgress := make(chan struct{})
@@ -329,7 +329,7 @@ func (d *downloader) downloadPart(ctx context.Context, part *PartDownload) error
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	closeQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusPartialContent && resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -341,7 +341,7 @@ func (d *downloader) downloadPart(ctx context.Context, part *PartDownload) error
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	closeQuietly(file)
 
 	// Download part
 	_, err = io.Copy(file, resp.Body)
@@ -366,7 +366,7 @@ func (d *downloader) mergeParts() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	closeQuietly(file)
 
 	for _, part := range d.task.Parts {
 		if part.FileName == "" {
@@ -379,8 +379,8 @@ func (d *downloader) mergeParts() error {
 		}
 
 		_, err = io.Copy(file, partFile)
-		partFile.Close()
-		os.Remove(part.FileName)
+		closeQuietly(partFile)
+		removeQuietly(part.FileName)
 
 		if err != nil {
 			return err

@@ -1,15 +1,16 @@
 package download
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -188,13 +189,13 @@ func (m *Manager) Delete(taskID string) error {
 	// Delete temp files if any
 	if task.TempFileName != "" {
 		tempPath := filepath.Join(task.Path, task.TempFileName)
-		os.Remove(tempPath)
+		utils.RemoveQuietly(tempPath)
 	}
 
 	// Delete completed file if exists
 	if task.State == StateCompleted {
 		filePath := filepath.Join(task.Path, task.FileName)
-		os.Remove(filePath)
+		utils.RemoveQuietly(filePath)
 	}
 
 	return nil
@@ -343,7 +344,7 @@ func (m *Manager) SaveTasks(filePath string) error {
 
 	// Atomic rename
 	if err := os.Rename(tempPath, filePath); err != nil {
-		os.Remove(tempPath)
+		utils.RemoveQuietly(tempPath)
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
 
@@ -389,4 +390,14 @@ func (m *Manager) ResumePendingTasks() error {
 	}
 
 	return nil
+}
+
+// closeQuietly closes a file and ignores the error (used in defer)
+func closeQuietly(c io.Closer) {
+	_ = c.Close()
+}
+
+// removeQuietly removes a file and ignores errors (file may not exist)
+func removeQuietly(path string) {
+	utils.RemoveQuietly(path)
 }

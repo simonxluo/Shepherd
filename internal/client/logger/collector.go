@@ -2,6 +2,7 @@
 package logger
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"io"
 	"os"
@@ -143,7 +144,7 @@ func (c *Collector) tailLogFile() {
 	if err != nil {
 		return
 	}
-	defer file.Close()
+	defer utils.CloseQuietly(file)
 
 	// Seek to end of file
 	_, err = file.Seek(0, io.SeekEnd)

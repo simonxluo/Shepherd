@@ -290,9 +290,9 @@ func TestDownloaderPrepare(t *testing.T) {
 	}
 
 	task := &Task{
-		URL:    "https://example.com",
-		Path:   "/tmp",
-		State:  StateIdle,
+		URL:   "https://example.com",
+		Path:  "/tmp",
+		State: StateIdle,
 	}
 
 	downloader := newDownloader(config, task)
@@ -309,10 +309,10 @@ func TestDownloaderPrepare(t *testing.T) {
 
 func TestDownloadStateTransitions(t *testing.T) {
 	task := &Task{
-		ID:     "test-task",
-		State:  StateIdle,
-		URL:    "https://example.com",
-		Path:   "/tmp",
+		ID:    "test-task",
+		State: StateIdle,
+		URL:   "https://example.com",
+		Path:  "/tmp",
 	}
 
 	// Test state transitions

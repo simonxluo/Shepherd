@@ -4,8 +4,8 @@ package model
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/gguf"
+	"github.com/stretchr/testify/assert"
 )
 
 // TestDetectCapabilities_DeepSeekR1 测试 DeepSeek-R1 思考模型检测

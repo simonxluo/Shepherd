@@ -17,6 +17,7 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/cluster"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 )
 
 // runningProcess represents a running model process
@@ -103,7 +104,7 @@ func (e *Executor) Stop() {
 	// Stop all running processes
 	for _, proc := range e.runningProcesses {
 		if proc.cmd != nil && proc.cmd.Process != nil {
-			proc.cmd.Process.Kill()
+			utils.KillQuietly(proc.cmd.Process)
 		}
 	}
 
@@ -353,7 +354,7 @@ func (e *Executor) executeLoadModel(ctx context.Context, task *cluster.Task) (*c
 	case err := <-loadError:
 		// Clean up process on error
 		if cmd.Process != nil {
-			cmd.Process.Kill()
+			utils.KillQuietly(cmd.Process)
 		}
 		e.mu.Lock()
 		delete(e.runningProcesses, modelID)
@@ -366,7 +367,7 @@ func (e *Executor) executeLoadModel(ctx context.Context, task *cluster.Task) (*c
 	case <-time.After(10 * time.Minute):
 		// Timeout
 		if cmd.Process != nil {
-			cmd.Process.Kill()
+			utils.KillQuietly(cmd.Process)
 		}
 		e.mu.Lock()
 		delete(e.runningProcesses, modelID)
@@ -379,7 +380,7 @@ func (e *Executor) executeLoadModel(ctx context.Context, task *cluster.Task) (*c
 	case <-ctx.Done():
 		// Context cancelled
 		if cmd.Process != nil {
-			cmd.Process.Kill()
+			utils.KillQuietly(cmd.Process)
 		}
 		e.mu.Lock()
 		delete(e.runningProcesses, modelID)
@@ -428,13 +429,10 @@ func (e *Executor) executeUnloadModel(ctx context.Context, task *cluster.Task) (
 
 	// Kill the process
 	if proc.cmd != nil && proc.cmd.Process != nil {
-		if err := proc.cmd.Process.Kill(); err != nil {
-			e.log.Error(fmt.Sprintf("终止进程失败: %v", err))
-		} else {
-			e.log.Info(fmt.Sprintf("已终止进程: PID=%d", proc.pid))
-		}
+		utils.KillQuietly(proc.cmd.Process)
+		e.log.Info(fmt.Sprintf("已终止进程: PID=%d", proc.pid))
 		// Wait for process to exit
-		proc.cmd.Wait()
+		proc.cmd.Wait() //errcheck:ignore
 	}
 
 	return &client.TaskResult{

@@ -3,6 +3,7 @@
 package process
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bufio"
 	"context"
 	"fmt"
@@ -223,7 +224,7 @@ func (p *Process) setupEnvironment(cmd *exec.Cmd, binPath string) error {
 // readOutput reads from a pipe and sends lines to the output channel
 func (p *Process) readOutput(pipe io.ReadCloser, name string) {
 	defer p.wg.Done()
-	defer pipe.Close()
+	defer utils.CloseQuietly(pipe)
 
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
@@ -310,14 +311,14 @@ func (p *Process) Stop() error {
 
 	// Close stdin
 	if p.stdinPipe != nil {
-		p.stdinPipe.Close()
+		utils.CloseQuietly(p.stdinPipe)
 		p.stdinPipe = nil
 	}
 
 	// Try graceful shutdown first
 	if p.cmd != nil && p.cmd.Process != nil {
 		// Send SIGTERM
-		p.cmd.Process.Signal(syscall.SIGTERM)
+		utils.SignalQuietly(p.cmd.Process, syscall.SIGTERM)
 
 		// Wait for up to 5 seconds
 		done := make(chan error, 1)
@@ -331,7 +332,7 @@ func (p *Process) Stop() error {
 			// Process exited gracefully
 		case <-time.After(5 * time.Second):
 			// Timeout, force kill
-			p.cmd.Process.Kill()
+			utils.KillQuietly(p.cmd.Process)
 			<-done // Wait for the goroutine to finish
 		}
 	}

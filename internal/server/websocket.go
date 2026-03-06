@@ -2,6 +2,7 @@
 package server
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -134,7 +135,7 @@ func (c *WebSocketClient) WritePump() {
 	ticker := time.NewTicker(54 * time.Second)
 	defer func() {
 		ticker.Stop()
-		c.Conn.Close()
+		utils.CloseQuietly(c.Conn)
 	}()
 
 	for {
@@ -143,12 +144,12 @@ func (c *WebSocketClient) WritePump() {
 			c.mu.Lock()
 			if !ok {
 				// Hub closed the channel
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				utils.WriteMessageQuietly(c.Conn, websocket.CloseMessage, []byte{})
 				c.mu.Unlock()
 				return
 			}
 
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			utils.SetWriteDeadlineQuietly(c.Conn, 10*time.Second)
 			err := c.Conn.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
 				c.mu.Unlock()
@@ -159,7 +160,7 @@ func (c *WebSocketClient) WritePump() {
 		case <-ticker.C:
 			// Send keepalive ping
 			c.mu.Lock()
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			utils.SetWriteDeadlineQuietly(c.Conn, 10*time.Second)
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				c.mu.Unlock()
 				return
@@ -173,12 +174,12 @@ func (c *WebSocketClient) WritePump() {
 func (c *WebSocketClient) ReadPump() {
 	defer func() {
 		c.Hub.Unregister(c)
-		c.Conn.Close()
+		utils.CloseQuietly(c.Conn)
 	}()
 
-	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	utils.SetReadDeadlineQuietly(c.Conn, 60*time.Second)
 	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		utils.SetReadDeadlineQuietly(c.Conn, 60*time.Second)
 		return nil
 	})
 

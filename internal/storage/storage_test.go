@@ -20,11 +20,11 @@ func TestMemoryStore(t *testing.T) {
 
 	// Test conversation creation
 	conv := &Conversation{
-		ID:          "test-conv-1",
-		Model:       "llama-3.2",
-		Title:       "Test Conversation",
+		ID:           "test-conv-1",
+		Model:        "llama-3.2",
+		Title:        "Test Conversation",
 		SystemPrompt: "You are a helpful assistant",
-		Metadata:    map[string]interface{}{"key": "value"},
+		Metadata:     map[string]interface{}{"key": "value"},
 	}
 
 	err = store.CreateConversation(ctx, conv)

@@ -1,6 +1,7 @@
 package gguf
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"errors"
 	"fmt"
 	"os"
@@ -40,7 +41,7 @@ func ReadMetadata(path string) (*Metadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer parser.Close()
+	defer utils.CloseQuietly(parser)
 
 	return parser.GetMetadata()
 }

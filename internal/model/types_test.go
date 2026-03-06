@@ -262,10 +262,10 @@ func TestLoadRequestJSONRoundTrip(t *testing.T) {
 		PresencePenalty:  0.1,
 		FrequencyPenalty: 0.2,
 		// Template and processing
-		DirectIo:         "5,5,5",
-		DisableJinja:     true,
-		ChatTemplate:     "chatml",
-		ContextShift:     false,
+		DirectIo:     "5,5,5",
+		DisableJinja: true,
+		ChatTemplate: "chatml",
+		ContextShift: false,
 	}
 
 	// Marshal to JSON

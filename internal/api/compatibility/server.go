@@ -1,6 +1,7 @@
 package compatibility
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"fmt"
 	"net/http"
@@ -90,7 +91,7 @@ func (sm *ServerManager) StopOllamaServer() error {
 
 	if err := sm.ollamaServer.Shutdown(ctx); err != nil {
 		logger.Errorf("Ollama 服务器关闭失败: %v", err)
-		sm.ollamaServer.Close()
+		utils.CloseQuietly(sm.ollamaServer)
 	}
 
 	sm.ollamaServer = nil
@@ -165,7 +166,7 @@ func (sm *ServerManager) StopLMStudioServer() error {
 
 	if err := sm.lmstudioServer.Shutdown(ctx); err != nil {
 		logger.Errorf("LM Studio 服务器关闭失败: %v", err)
-		sm.lmstudioServer.Close()
+		utils.CloseQuietly(sm.lmstudioServer)
 	}
 
 	sm.lmstudioServer = nil
