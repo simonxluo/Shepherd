@@ -13,6 +13,7 @@ import (
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/api"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/netutil"
@@ -26,7 +27,7 @@ import (
 
 // 版本信息（编译时注入）
 var (
-	Version   = "v0.5.1"
+	Version   = "v0.6.0"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
@@ -46,6 +47,10 @@ type App struct {
 	// 分布式节点组件
 	node        *node.Node       // 统一节点实例
 	nodeAdapter *api.NodeAdapter // Node API 适配器
+
+	// LangChainGo 组件
+	langchainMgr     *langchain.Manager   // LangChainGo 管理器
+	langchainHandler *langchain.Handler // LangChainGo API 处理器
 
 	// 运行模式
 	role string
@@ -178,6 +183,11 @@ func (app *App) Initialize(configPath string) error {
 	// 创建模型管理器（传入端口分配器和存储管理器）
 	app.modelMgr = model.NewManager(cfg, app.configMgr, app.procMgr, app.portAllocator, app.storageMgr)
 
+	// 创建 LangChainGo 管理器和 API 处理器
+	app.langchainMgr = langchain.NewManager(app.modelMgr, logger.GetLogger())
+	app.langchainHandler = langchain.NewHandler(app.langchainMgr, logger.GetLogger())
+	logger.Info("LangChainGo 组件已初始化")
+
 	// 根据角色初始化分布式组件
 	if err := app.initDistributedComponents(); err != nil {
 		return fmt.Errorf("初始化分布式组件失败: %w", err)
@@ -200,12 +210,19 @@ func (app *App) Initialize(configPath string) error {
 		GitCommit:     GitCommit,
 	}
 
+	// 创建 HTTP 服务器
 	app.srv, err = server.NewServer(serverCfg, app.modelMgr)
 	if err != nil {
 		return fmt.Errorf("无法创建服务器: %w", err)
 	}
 
-	// 注册 Master API 路由（如果是 master 或 hybrid 模式）
+	// 注册 LangChainGo API 路由（所有模式都可用）
+	if app.langchainHandler != nil {
+		app.srv.RegisterLangChainHandler(app.langchainHandler)
+		logger.Info("LangChainGo API 已启用")
+	}
+
+	// 注册 Node API 路由（如果是 master 或 hybrid 模式）
 	if app.role == "master" || app.role == "hybrid" {
 		if app.nodeAdapter != nil {
 			app.srv.RegisterNodeAdapter(app.nodeAdapter)
@@ -454,7 +471,7 @@ func (app *App) registerShutdownHooks() {
 	// 3. 优先级高：停止所有模型加载和处理
 	if app.modelMgr != nil {
 		app.shutdownMgr.Register("models", func(ctx context.Context) error {
-			app.modelMgr.Close()
+			app.modelMgr.Close() //errcheck:ignore
 			return nil
 		}, shutdown.PriorityHigh)
 	}

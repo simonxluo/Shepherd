@@ -3,6 +3,7 @@
 package server
 
 import (
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"fmt"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 	filesystemapi "github.com/shepherd-project/shepherd/Shepherd/internal/api/filesystem"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/api/ollama"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/api/openai"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/api/paths"
 	storageapi "github.com/shepherd-project/shepherd/Shepherd/internal/api/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
@@ -75,6 +77,7 @@ type Server struct {
 	downloadMgr *DownloadManager        // 下载管理器
 	nodeAdapter *api.NodeAdapter        // Node API 适配器
 	repoClient  *modelrepoclient.Client // 模型仓库客户端
+	langchainHandler *langchain.Handler // LangChainGo API 处理器
 
 	// 新增字段：WebSocket Hub
 	wsHub *WebSocketHub
@@ -457,7 +460,7 @@ func (s *Server) Stop() error {
 		if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
 			logger.Errorf("HTTP 服务器关闭失败: %v", err)
 			// Force close if graceful shutdown fails
-			s.httpServer.Close()
+			utils.CloseQuietly(s.httpServer)
 		} else {
 			logger.Info("HTTP 服务器已优雅关闭")
 		}
@@ -519,7 +522,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		// Force stop
 		s.mu.Lock()
 		if s.httpServer != nil {
-			s.httpServer.Close()
+			utils.CloseQuietly(s.httpServer)
 			s.httpServer = nil
 		}
 		s.mu.Unlock()
@@ -533,9 +536,6 @@ func (s *Server) GetEngine() *gin.Engine {
 }
 
 // GetWebSocketManager returns the WebSocket manager
-func (s *Server) GetWebSocketManager() *websocket.Manager {
-	return s.wsMgr
-}
 
 // RegisterMasterHandler 注册 Master Handler（已废弃）
 // Deprecated: 请使用 RegisterNodeAdapter 代替
@@ -560,59 +560,20 @@ func (s *Server) RegisterNodeAdapter(nodeAdapter *api.NodeAdapter) {
 	logger.Info("Node API 适配器路由已注册")
 }
 
+// RegisterLangChainHandler 注册 LangChainGo API 处理器
+func (s *Server) RegisterLangChainHandler(handler *langchain.Handler) {
+	s.langchainHandler = handler
+
+	// 注册 LangChainGo API 路由
+	api := s.engine.Group("/api")
+	handler.RegisterRoutes(api)
+	logger.Info("LangChainGo API 路由已注册: /api/langchain/*")
+
+}
 // Middleware
 
 // corsMiddleware handles CORS
-func (s *Server) corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	}
-}
-
 // loggerMiddleware logs requests
-func (s *Server) loggerMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		start := time.Now()
-		path := c.Request.URL.Path
-		query := c.Request.URL.RawQuery
-
-		c.Next()
-
-		latency := time.Since(start)
-		status := c.Writer.Status()
-
-		logFields := map[string]interface{}{
-			"method":  c.Request.Method,
-			"path":    path,
-			"status":  status,
-			"latency": latency.String(),
-		}
-
-		if query != "" {
-			logFields["query"] = query
-		}
-
-		// Log based on status code
-		if status >= 500 {
-			logger.WithFields(logFields).Error("请求处理失败")
-		} else if status >= 400 {
-			logger.WithFields(logFields).Warn("客户端错误")
-		} else {
-			logger.WithFields(logFields).Info("请求处理成功")
-		}
-	}
-}
-
-// Health check handler
 func (s *Server) handleServerInfo(c *gin.Context) {
 	api.Success(c, gin.H{
 		"version":   s.config.Version,
@@ -1097,7 +1058,7 @@ func (s *Server) handleUpdateConfig(c *gin.Context) {
 
 		// 触发重新扫描
 		if req.AutoScan {
-			go s.modelMgr.Scan(c.Request.Context())
+			go func() { if _,err := s.modelMgr.Scan(c.Request.Context()); err != nil { logger.Warn("模型扫描失败", "error", err) } }()
 		}
 	}
 
@@ -2015,7 +1976,7 @@ func (s *Server) handleLogStream(c *gin.Context) {
 	fromBeginning := c.DefaultQuery("fromBeginning", "false") == "true"
 	limit := 100
 	if l := c.Query("limit"); l != "" {
-		fmt.Sscanf(l, "%d", &limit)
+		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil { limit = 100 }
 	}
 
 	// Get log stream
@@ -2073,7 +2034,7 @@ func (s *Server) handleLogStream(c *gin.Context) {
 					entry.Message)
 				buf.WriteString(data)
 			}
-			c.Writer.WriteString(buf.String())
+			utils.WriteStringQuietly(c.Writer, buf.String())
 			c.Writer.Flush()
 		}
 	}
@@ -2108,14 +2069,14 @@ func (s *Server) sendSSE(c *gin.Context, entry *logger.StreamLogEntry) {
 		entry.Timestamp.Format(time.RFC3339),
 		entry.Level,
 		entry.Message)
-	c.Writer.WriteString(data)
+	utils.WriteStringQuietly(c.Writer, data)
 }
 
 // handleLogEntries returns recent log entries
 func (s *Server) handleLogEntries(c *gin.Context) {
 	limit := 100
 	if l := c.Query("limit"); l != "" {
-		fmt.Sscanf(l, "%d", &limit)
+		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil { limit = 100 }
 	}
 
 	logStream := logger.GetLogStream()
@@ -2166,10 +2127,10 @@ func (s *Server) handleLogFileContent(c *gin.Context) {
 	}
 
 	if offset := c.Query("offset"); offset != "" {
-		fmt.Sscanf(offset, "%d", &filter.Offset)
+		if _, err := fmt.Sscanf(offset, "%d", &filter.Offset); err != nil { filter.Offset = 0 }
 	}
 	if limit := c.Query("limit"); limit != "" {
-		fmt.Sscanf(limit, "%d", &filter.Limit)
+		if _, err := fmt.Sscanf(limit, "%d", &filter.Limit); err != nil { filter.Limit = 100 }
 	}
 
 	// Read log file
