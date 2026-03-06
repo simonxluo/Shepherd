@@ -5,6 +5,134 @@ All notable changes to Shepherd will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.0] - 2026-03-06
+
+### Breaking Changes
+- **移除 internal/master 包**: 完全移除 master 节点管理器实现
+  - 所有功能已迁移到 `internal/node` 包
+  - 使用 `NodeAdapter` 统一所有角色的 API 接口
+  - 删除了 2,400+ 行代码，简化架构
+  - 符合 v0.4.0+ 统一 Node 架构设计
+
+### Added
+- **LangChainGo 集成**: 新增 LangChainGo 框架集成支持
+  - 新增 `internal/langchain/` 包，包含 6 个核心文件
+  - `LlamaCPP` 适配器实现 LangChainGo `llms.LLM` 接口
+  - `Manager` 管理多个 LangChainGo 实例
+  - `Handler` 提供 HTTP API 路由 (`/api/langchain/*`)
+  - 支持流式和非流式文本生成
+  - 完整的单元测试覆盖 (`llama_test.go`, `example_test.go`)
+  - 集成到主程序启动流程（所有模式可用）
+- **工具函数包**: 新增 `internal/utils/` 包，提供统一的错误处理接口
+  - `CloseQuietly()` - 安全关闭 io.Closer，忽略错误
+  - `RemoveQuietly()` - 安全删除文件，不存在时不报错
+  - `RenameQuietly()` - 安全重命名文件，失败时记录警告
+  - `KillQuietly()` - 安全终止进程，已退出时不报错
+  - `UnmarshalQuietly()` - 安全 JSON 解析，失败时提供默认值
+  - `WriteStringQuietly()` - 安全写入字符串
+  - `SetReadDeadlineQuietly()` / `SetWriteDeadlineQuietly()` - 网络超时设置
+  - 所有函数都有完整的文档注释和使用示例
+  - 避免循环依赖（不导入其他 internal 包）
+- **进程管理脚本**: 新增 `scripts/linux/stop_all.sh`
+  - 智能检测 Shepherd 相关进程（后端 + 前端）
+  - 优雅关闭机制（SIGTERM + 超时 + SIGKILL）
+  - 支持三种模式：
+    - 默认模式：停止所有相关进程
+    - `--dry-run`：预览将要停止的进程（不实际停止）
+    - `--force`：强制停止端口占用
+  - 多层检测策略（模式匹配 → 目录检测 → 路径匹配）
+  - 彩色输出和详细日志
+  - 清理 PID 文件和日志文件
+- **启动脚本增强**: `scripts/linux/run.sh` 集成进程清理
+  - 启动前自动调用 `stop_all.sh --force`
+  - 清理残留进程，避免端口冲突
+  - 静默执行，失败不影响启动
+
+### Changed
+- **文档重组**: `doc/` 目录迁移到 `docs/`
+  - 更规范的目录命名（复数形式）
+  - 新增 LangChainGo 集成文档：
+    - `docs/langchain-integration-summary.md` - 集成概述
+    - `docs/langchain-integration-complete.md` - 完整指南
+    - `docs/api-vs-langchain-comparison.md` - API 对比
+- **代码质量改进**: 统一使用工具函数，提高代码一致性
+  - 资源清理：`defer rows.Close()` → `defer utils.CloseQuietly(rows)`
+  - 文件操作：`os.Rename()` → `utils.RenameQuietly()`
+  - JSON 解析：`json.Unmarshal()` → `utils.UnmarshalQuietly()`（带默认值）
+  - 进程管理：添加 `//errcheck:ignore` 注释标记
+  - 涉及 50+ 个文件的代码重构
+- **依赖管理更新** (go.mod):
+  - 新增 `github.com/tmc/langchaingo v0.1.14`
+  - `github.com/ROCm/amdsmi` 从 indirect 改为 direct 依赖
+  - 更新间接依赖版本（多个包的小版本更新）
+
+### Removed
+- **internal/master 包** (2,400+ 行):
+  - `doc.go` - 包文档
+  - `handler.go` - Master HTTP 处理器
+  - `node_manager.go` - 节点管理器（674 行）
+  - `node_manager_test.go` - 节点管理器测试（482 行）
+  - `scheduler.go` - 调度器（540 行）
+  - `scheduler_test.go` - 调度器测试
+  - 所有功能已由 `internal/node` + `api.NodeAdapter` 替代
+- **doc/ 目录** (2,800+ 行):
+  - 所有文档已迁移到 `docs/` 目录
+  - 保持相同的目录结构和文件名
+- **废弃的 API 函数**:
+  - `server.GetWebSocketManager()` - 不再公开 WebSocket Manager
+
+### Fixed
+- **错误处理改进**: 使用 `UnmarshalQuietly` 避免 JSON 解析失败导致崩溃
+  - 数据库元数据解析：添加默认值逻辑
+  - 会话/消息元数据解析：失败时使用空 map
+  - 模型标签/能力解析：失败时使用空切片/空对象
+- **资源清理改进**: 确保所有资源正确释放
+  - 数据库连接、文件句柄、HTTP 服务器
+  - 即使在错误情况下也能优雅关闭
+- **测试代码格式化**: 统一测试代码的对齐和缩进
+
+### Migration Guide
+
+如果您使用了已删除的 `internal/master` 包：
+
+1. **后端代码迁移**:
+   ```go
+   // 旧代码
+   import "github.com/shepherd-project/shepherd/internal/master"
+   mgr := master.NewNodeManager(...)
+
+   // 新代码
+   import "github.com/shepherd-project/shepherd/internal/node"
+   node := node.NewNode(...) // 使用统一的 Node
+   ```
+
+2. **API 路由迁移**:
+   ```bash
+   # 旧路由（v0.4.0+ 已废弃）
+   GET /api/master/nodes
+
+   # 新路由（统一 API）
+   GET /api/nodes
+   ```
+
+3. **前端代码迁移**:
+   ```typescript
+   // 旧代码（v0.2.0 已废弃）
+   import type { Client } from '@/types/cluster';
+
+   // 新代码（推荐）
+   import type { UnifiedNode } from '@/types/node';
+   ```
+
+### Technical Details
+- **架构简化**: 删除 master 专用代码，所有角色共享同一个 Node 实现
+- **依赖注入**: LangChainGo Handler 通过 `RegisterLangChainHandler()` 注入
+- **测试策略**: LangChainGo 包使用表驱动测试 + 示例测试
+- **向后兼容**: v0.4.0+ 的 API 路由保持兼容
+- **代码统计**: 净删除 5,016 行代码（-5,449 +433），提高可维护性
+
+---
+
 ## [v0.5.1] - 2026-03-04
 
 ### Added
