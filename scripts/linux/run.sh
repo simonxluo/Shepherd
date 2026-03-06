@@ -284,6 +284,15 @@ main() {
         print_info "使用自定义配置文件: ${CONFIG_PATH}"
     fi
 
+    # 清理残留进程（如果需要启动前端或后端）
+    print_info "清理残留进程..."
+    local stop_script="${SCRIPT_DIR}/stop_all.sh"
+    if [ -f "$stop_script" ]; then
+        "$stop_script" --force >/dev/null 2>&1 || true
+        print_success "残留进程已清理"
+    fi
+    echo ""
+
     # 启动前端（如果需要）
     if [ "$START_WEB" = true ]; then
         # 注册清理函数
