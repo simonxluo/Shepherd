@@ -234,12 +234,15 @@ export function useModelFiles(source: 'huggingface' | 'modelscope', repoId: stri
 
 /**
  * 搜索 HuggingFace 模型 Hook
+ * @param query 搜索关键词
+ * @param limit 返回数量限制
+ * @param format 格式过滤器 (gguf, safetensors, onnx, bin, all)
  */
-export function useHuggingFaceSearch(query: string, limit?: number) {
+export function useHuggingFaceSearch(query: string, limit?: number, format?: string) {
   return useQuery({
-    queryKey: ['huggingface-search', query, limit],
+    queryKey: ['huggingface-search', query, limit, format],
     queryFn: async ({ signal }) => {
-      const response = await downloadsApi.searchHuggingFace(query, limit, signal);
+      const response = await downloadsApi.searchHuggingFace(query, limit, format, signal);
       if (!response.success) {
         throw new Error(response.error || '搜索模型失败');
       }

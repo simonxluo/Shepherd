@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Download, ExternalLink, Loader2, Settings, Key, Globe, File, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Download, ExternalLink, Loader2, Settings, Key, Globe, File, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useHuggingFaceSearch, useModelRepoConfig, useAvailableEndpoints, useUpdateModelRepoConfig, useModelFiles } from '@/features/downloads/hooks';
 import type { HuggingFaceModel } from '@/lib/api/downloads';
@@ -15,12 +15,13 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
   const [showSettings, setShowSettings] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [searchFormat, setSearchFormat] = useState<string>('gguf'); // Default to GGUF
   
-  const { data: searchResult, isLoading, error } = useHuggingFaceSearch(query, 20);
+  const { data: searchResult, isLoading, error } = useHuggingFaceSearch(query, pageSize, searchFormat);
   const { data: config, isLoading: configLoading } = useModelRepoConfig();
   const { data: endpoints } = useAvailableEndpoints();
   const updateConfig = useUpdateModelRepoConfig();
-
   const handleSaveSettings = () => {
     const updates: { endpoint?: string; token?: string } = {};
     if (config && endpoints) {
@@ -74,9 +75,9 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        {/* 搜索框 */}
-        <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+      {/* 搜索框和筛选器 */}
+      <div className="flex items-center gap-2">
+        <form onSubmit={handleSearch} className="flex gap-2 flex-1 items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -87,6 +88,44 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
               className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-input text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+          
+          {/* 每页条数筛选器 */}
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              if (searchInput.trim()) {
+                setQuery(searchInput.trim());
+              }
+            }}
+            className="px-3 py-2 border border-border rounded-md bg-input text-foreground text-sm"
+            title="每页条数"
+          >
+            <option value={10}>10 条</option>
+            <option value={20}>20 条</option>
+            <option value={50}>50 条</option>
+            <option value={100}>100 条</option>
+          </select>
+          
+          {/* 格式筛选器 */}
+          <select
+            value={searchFormat}
+            onChange={(e) => {
+              setSearchFormat(e.target.value);
+              if (searchInput.trim()) {
+                setQuery(searchInput.trim());
+              }
+            }}
+            className="px-3 py-2 border border-border rounded-md bg-input text-foreground text-sm"
+            title="文件格式"
+          >
+            <option value="gguf">GGUF</option>
+            <option value="safetensors">SafeTensors</option>
+            <option value="onnx">ONNX</option>
+            <option value="mlx">MLX</option>
+            <option value="all">所有格式</option>
+          </select>
+          
           <Button
             type="submit"
             disabled={isLoading || !searchInput.trim()}
@@ -111,7 +150,7 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
           variant="ghost"
           size="sm"
           onClick={() => setShowSettings(!showSettings)}
-          className="ml-2"
+          title="搜索设置"
         >
           <Settings className="w-4 h-4" />
         </Button>
@@ -293,7 +332,11 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
 
               {/* 展开的文件列表 */}
               {expandedModelId === model.modelId && (
-                <ModelFilesList model={model} onDownload={onDownload} formatFileSize={formatFileSize} />
+                <ModelFilesList 
+                  model={model} 
+                  onDownload={onDownload} 
+                  formatFileSize={formatFileSize} 
+                />
               )}
             </div>
           ))}
@@ -306,21 +349,51 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
 function ModelFilesList({ 
   model, 
   onDownload, 
-  formatFileSize 
-}: { 
+  formatFileSize
+  }: { 
   model: HuggingFaceModel; 
   onDownload: (model: HuggingFaceModel, fileName?: string) => void;
   formatFileSize: (bytes: number) => string;
-}) {
+  }) {
   const { data: files, isLoading, error } = useModelFiles('huggingface', model.modelId);
+  const [fileFormat, setFileFormat] = useState<string>('gguf'); // Default to GGUF
+
+
+  // 根据文件格式筛选
+  const filteredFiles = files?.filter((file) => {
+    if (fileFormat === 'all') return true;
+    if (fileFormat === 'gguf') return file.name.toLowerCase().endsWith('.gguf');
+    if (fileFormat === 'safetensors') return file.name.toLowerCase().endsWith('.safetensors');
+    if (fileFormat === 'onnx') return file.name.toLowerCase().endsWith('.onnx');
+    if (fileFormat === 'mlx') return file.name.toLowerCase().endsWith('.mlx') || file.name.toLowerCase().includes('mlx');
+    if (fileFormat === 'other') {
+      const lower = file.name.toLowerCase();
+      return !lower.endsWith('.gguf') && !lower.endsWith('.safetensors') && !lower.endsWith('.mlx');
+    }
+    return true;
+  });
 
   return (
     <div className="mt-4 pt-4 border-t border-border">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-          <File className="w-4 h-4" />
-          可用模型文件 (GGUF)
-        </h4>
+        <div className="flex items-center gap-3">
+          <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+            <File className="w-4 h-4" />
+            可用模型文件
+          </h4>
+          <select
+            value={fileFormat}
+            onChange={(e) => setFileFormat(e.target.value)}
+            className="px-2 py-1 border border-border rounded text-xs bg-input text-foreground"
+            title="文件格式"
+          >
+            <option value="gguf">GGUF</option>
+            <option value="safetensors">SafeTensors</option>
+            <option value="onnx">ONNX</option>
+            <option value="mlx">MLX</option>
+            <option value="all">所有格式</option>
+          </select>
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -340,13 +413,13 @@ function ModelFilesList({
         <div className="text-sm text-red-600 dark:text-red-400 py-2">
           加载失败: {error.message}
         </div>
-      ) : !files || files.length === 0 ? (
+      ) : !filteredFiles || filteredFiles.length === 0 ? (
         <div className="text-sm text-muted-foreground py-4 text-center bg-muted/50 rounded-md">
-          未找到 GGUF 格式的模型文件
+          {fileFormat === 'all' ? '未找到模型文件' : `未找到 ${fileFormat} 格式的模型文件`}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-          {files.map((file) => {
+          {filteredFiles.map((file) => {
             // 尝试从文件名中提取量化精度 (如 Q4_K_M, Q8_0)
             const quantMatch = file.name.match(/(q[1-8]_[0-1k_a-z]+|f16|f32)/i);
             const quant = quantMatch ? quantMatch[1].toUpperCase() : null;

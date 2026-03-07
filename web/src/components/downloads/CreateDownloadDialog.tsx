@@ -52,7 +52,9 @@ export function CreateDownloadDialog({
   // 当仓库ID变化时更新可用文件列表
   useEffect(() => {
     if (files) {
-      setAvailableFiles(files);
+      // 强制过滤，只显示 GGUF 文件
+      const ggufFiles = files.filter((f) => f.name.toLowerCase().endsWith('.gguf'));
+      setAvailableFiles(ggufFiles);
     } else {
       setAvailableFiles([]);
     }

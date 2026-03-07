@@ -136,9 +136,13 @@ export const downloadsApi = {
 
   /**
    * 搜索 HuggingFace 模型
+   * @param query 搜索关键词
+   * @param limit 返回数量限制
+   * @param format 格式过滤器 (gguf, safetensors, onnx, bin, all)
+   * @param signal 取消信号
    */
-  searchHuggingFace: (query: string, limit?: number, signal?: AbortSignal): Promise<HuggingFaceSearchResponse> =>
-    apiClient.get<HuggingFaceSearchResponse>('/repo/search', { q: query, limit: limit || 20 }, signal),
+  searchHuggingFace: (query: string, limit?: number, format?: string, signal?: AbortSignal): Promise<HuggingFaceSearchResponse> =>
+    apiClient.get<HuggingFaceSearchResponse>('/repo/search', { q: query, limit: limit || 20, format: format || 'all' }, signal),
 
   /**
    * 获取模型仓库配置
