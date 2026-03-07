@@ -213,6 +213,188 @@ func (ch *CommandHandler) handleLoadModel(command *node.Command, result *node.Co
 			ch.logger.Debug(fmt.Sprintf("预测令牌数: %d", req.NPredict))
 		}
 	}
+	// === GPU Configuration ===
+	// Devices ([]string from []interface{})
+	if val, ok := command.Payload["devices"].([]interface{}); ok {
+		devices := make([]string, 0, len(val))
+		for _, v := range val {
+			if s, ok := v.(string); ok {
+				devices = append(devices, s)
+			}
+		}
+		req.Devices = devices
+	}
+	// MainGPU (float64 -> int)
+	if val, ok := command.Payload["mainGpu"].(float64); ok {
+		req.MainGPU = int(val)
+	}
+	// SplitMode (string)
+	if val, ok := command.Payload["splitMode"].(string); ok {
+		req.SplitMode = val
+	}
+	// TensorSplit (string)
+	if val, ok := command.Payload["tensorSplit"].(string); ok {
+		req.TensorSplit = val
+	}
+
+	// === Vision/Multimodal ===
+	if val, ok := command.Payload["mmprojPath"].(string); ok {
+		req.MmprojPath = val
+	}
+	if val, ok := command.Payload["enableVision"].(bool); ok {
+		req.EnableVision = val
+	}
+
+	// === Performance ===
+	if val, ok := command.Payload["flashAttention"].(bool); ok {
+		req.FlashAttention = val
+	}
+	if val, ok := command.Payload["noMmap"].(bool); ok {
+		req.NoMmap = val
+	}
+	if val, ok := command.Payload["lockMemory"].(bool); ok {
+		req.LockMemory = val
+	}
+
+	// === Server Features ===
+	if val, ok := command.Payload["noWebUI"].(bool); ok {
+		req.NoWebUI = val
+	}
+	if val, ok := command.Payload["enableMetrics"].(bool); ok {
+		req.EnableMetrics = val
+	}
+	if val, ok := command.Payload["slotSavePath"].(string); ok {
+		req.SlotSavePath = val
+	}
+	if val, ok := command.Payload["cacheRam"].(float64); ok {
+		req.CacheRAM = int(val)
+	}
+
+	// === Chat Template ===
+	if val, ok := command.Payload["chatTemplateFile"].(string); ok {
+		req.ChatTemplateFile = val
+	}
+	if val, ok := command.Payload["chatTemplate"].(string); ok {
+		req.ChatTemplate = val
+	}
+	if val, ok := command.Payload["disableJinja"].(bool); ok {
+		req.DisableJinja = val
+	}
+
+	// === Runtime ===
+	if val, ok := command.Payload["timeout"].(float64); ok {
+		req.Timeout = int(val)
+	}
+	if val, ok := command.Payload["alias"].(string); ok {
+		req.Alias = val
+	}
+	if val, ok := command.Payload["llamaCppPath"].(string); ok {
+		req.CustomCmd = val
+	}
+	if val, ok := command.Payload["extraArgs"].(string); ok {
+		req.ExtraParams = val
+	}
+
+	// === Batch Processing ===
+	if val, ok := command.Payload["uBatchSize"].(float64); ok {
+		req.UBatchSize = int(val)
+	}
+	if val, ok := command.Payload["parallelSlots"].(float64); ok {
+		req.ParallelSlots = int(val)
+	}
+
+	// === KV Cache ===
+	if val, ok := command.Payload["kvCacheTypeK"].(string); ok {
+		req.KVCacheTypeK = val
+	}
+	if val, ok := command.Payload["kvCacheTypeV"].(string); ok {
+		req.KVCacheTypeV = val
+	}
+	if val, ok := command.Payload["kvCacheUnified"].(bool); ok {
+		req.KVCacheUnified = val
+	}
+	if val, ok := command.Payload["kvCacheSize"].(float64); ok {
+		req.KVCacheSize = int(val)
+	}
+
+	// === Extended Sampling ===
+	if val, ok := command.Payload["seed"].(float64); ok {
+		req.Seed = int(val)
+	}
+	if val, ok := command.Payload["minP"].(float64); ok {
+		req.MinP = val
+	}
+	if val, ok := command.Payload["presencePenalty"].(float64); ok {
+		req.PresencePenalty = val
+	}
+	if val, ok := command.Payload["frequencyPenalty"].(float64); ok {
+		req.FrequencyPenalty = val
+	}
+	if val, ok := command.Payload["repeatLastN"].(float64); ok {
+		req.RepeatLastN = int(val)
+	}
+	if val, ok := command.Payload["typicalP"].(float64); ok {
+		req.TypicalP = val
+	}
+	if val, ok := command.Payload["logitsAll"].(bool); ok {
+		req.LogitsAll = val
+	}
+	if val, ok := command.Payload["reranking"].(bool); ok {
+		req.Reranking = val
+	}
+	if val, ok := command.Payload["ignoreEos"].(bool); ok {
+		req.IgnoreEOS = val
+	}
+
+	// === Thread Configuration ===
+	if val, ok := command.Payload["threadsBatch"].(float64); ok {
+		req.ThreadsBatch = int(val)
+	}
+
+	// === I/O Configuration ===
+	if val, ok := command.Payload["directIo"].(string); ok {
+		req.DirectIo = val
+	}
+	if val, ok := command.Payload["contextShift"].(bool); ok {
+		req.ContextShift = val
+	}
+
+	// === Advanced ===
+	if val, ok := command.Payload["contBatching"].(bool); ok {
+		req.ContBatching = val
+	}
+	if val, ok := command.Payload["cachePrompt"].(bool); ok {
+		req.CachePrompt = val
+	}
+	if val, ok := command.Payload["grammar"].(string); ok {
+		req.Grammar = val
+	}
+	if val, ok := command.Payload["grammarFile"].(string); ok {
+		req.GrammarFile = val
+	}
+	if val, ok := command.Payload["lora"].(string); ok {
+		req.Lora = val
+	}
+	if val, ok := command.Payload["loraScaled"].(string); ok {
+		req.LoraScaled = val
+	}
+	if val, ok := command.Payload["chatTemplateKwargs"].(string); ok {
+		req.ChatTemplateKwargs = val
+	}
+
+	// === RoPE Scaling ===
+	if val, ok := command.Payload["ropeScaling"].(string); ok {
+		req.RopeScaling = val
+	}
+	if val, ok := command.Payload["ropeScale"].(float64); ok {
+		req.RopeScale = val
+	}
+	if val, ok := command.Payload["ropeFreqBase"].(float64); ok {
+		req.RopeFreqBase = val
+	}
+	if val, ok := command.Payload["ropeFreqScale"].(float64); ok {
+		req.RopeFreqScale = val
+	}
 
 	if ch.logger != nil {
 		ch.logger.Info(fmt.Sprintf("模型参数解析完成，准备执行加载: %s", modelID))
