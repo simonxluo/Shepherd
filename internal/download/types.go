@@ -83,6 +83,7 @@ type Task struct {
 	// Metadata
 	FileType        string // "gguf", "json", etc.
 	SourceType      string // "huggingface", "modelscope", etc.
+	RepoID          string // "Qwen/Qwen2-7B-Instruct"
 }
 
 // PartDownload represents a part of a parallel download

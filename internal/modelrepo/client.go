@@ -198,7 +198,8 @@ func (c *Client) generateModelScopeURL(repoID, fileName string) (string, error) 
 
 // ListGGUFFiles lists GGUF files in a HuggingFace repository
 func (c *Client) ListGGUFFiles(repoID string) ([]FileInfo, error) {
-	apiURL := fmt.Sprintf("https://%s/api/models/%s?tree=1&recursive=1", c.endpoint, repoID)
+	// 使用 tree/main 端点获取带文件大小的文件列表
+	apiURL := fmt.Sprintf("https://%s/api/models/%s/tree/main", c.endpoint, repoID)
 
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
@@ -219,20 +220,19 @@ func (c *Client) ListGGUFFiles(repoID string) ([]FileInfo, error) {
 		return nil, fmt.Errorf("failed to fetch model info: %s", resp.Status)
 	}
 
-	var result struct {
-		Tree []struct {
-			Path string `json:"path"`
-			Type string `json:"type"`
-			Size int64  `json:"size"`
-		} `json:"tree"`
+	// HuggingFace tree API 返回文件列表，每个元素包含 path, type, size
+	var treeFiles []struct {
+		Path string `json:"path"`
+		Type string `json:"type"`
+		Size int64  `json:"size"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&treeFiles); err != nil {
 		return nil, err
 	}
 
 	var files []FileInfo
-	for _, item := range result.Tree {
+	for _, item := range treeFiles {
 		if item.Type == "file" && isGGUFFile(item.Path) {
 			files = append(files, FileInfo{
 				Name:        item.Path,
@@ -282,13 +282,19 @@ type SearchResult struct {
 }
 
 // SearchHuggingFaceModels searches for models on HuggingFace
-func (c *Client) SearchHuggingFaceModels(query string, limit int) (*SearchResult, error) {
+// formatFilter can be used to filter by format (e.g., "gguf", "safetensors", "onnx")
+func (c *Client) SearchHuggingFaceModels(query string, limit int, formatFilter string) (*SearchResult, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 20
 	}
 
 	apiURL := fmt.Sprintf("https://%s/api/models?search=%s&limit=%d",
 		c.endpoint, url.QueryEscape(query), limit)
+
+	// Add filter parameter for format
+	if formatFilter != "" && formatFilter != "all" {
+		apiURL = fmt.Sprintf("%s&filter=%s", apiURL, url.QueryEscape(formatFilter))
+	}
 
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {

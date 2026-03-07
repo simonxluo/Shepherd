@@ -77,7 +77,7 @@ func (m *Manager) AddProgressListener(listener ProgressListener) {
 }
 
 // CreateTask creates a new download task
-func (m *Manager) CreateTask(url, path, fileName string) (string, error) {
+func (m *Manager) CreateTask(url, path, fileName, source, repoId string) (string, error) {
 	if url == "" {
 		return "", fmt.Errorf("URL cannot be empty")
 	}
@@ -94,11 +94,12 @@ func (m *Manager) CreateTask(url, path, fileName string) (string, error) {
 		URL:        url,
 		Path:       path,
 		FileName:   fileName,
+		SourceType: source,
+		RepoID:     repoId,
 		State:      StateIdle,
 		CreatedAt:  time.Now(),
 		MaxRetries: m.config.RetryCount,
 	}
-
 	// Add to tasks map
 	m.mu.Lock()
 	m.tasks[taskID] = task
@@ -182,7 +183,6 @@ func (m *Manager) Delete(taskID string) error {
 	if task.State == StateDownloading || task.State == StatePreparing {
 		task.StopRequested = true
 	}
-
 	// Delete from map
 	delete(m.tasks, taskID)
 
@@ -192,11 +192,17 @@ func (m *Manager) Delete(taskID string) error {
 		utils.RemoveQuietly(tempPath)
 	}
 
-	// Delete completed file if exists
-	if task.State == StateCompleted {
-		filePath := filepath.Join(task.Path, task.FileName)
-		utils.RemoveQuietly(filePath)
+	// Delete part files (分片文件)
+	partPattern := filepath.Join(task.Path, task.FileName+".downloading.part*")
+	if partFiles, err := filepath.Glob(partPattern); err == nil {
+		for _, partFile := range partFiles {
+			utils.RemoveQuietly(partFile)
+		}
 	}
+
+	// Delete downloaded file (不管状态)
+	filePath := filepath.Join(task.Path, task.FileName)
+	utils.RemoveQuietly(filePath)
 
 	return nil
 }

@@ -82,7 +82,6 @@ type Server struct {
 
 	// 新增字段：WebSocket Hub
 	wsHub *WebSocketHub
-	downloadTasksFile string // 下载任务持久化文件路径
 
 	mu     sync.RWMutex
 	ctx    context.Context
