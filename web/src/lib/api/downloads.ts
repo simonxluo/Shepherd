@@ -46,7 +46,7 @@ export interface HuggingFaceModel {
 export interface HuggingFaceSearchResponse {
   success: boolean;
   data: {
-    items: HuggingFaceModel[];
+    models: HuggingFaceModel[];
     count: number;
     total: number;
   };

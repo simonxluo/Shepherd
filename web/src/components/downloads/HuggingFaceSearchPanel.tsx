@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Search, Download, ExternalLink, Loader2, Settings, Key, Globe } from 'lucide-react';
+import { Search, Download, ExternalLink, Loader2, Settings, Key, Globe, File, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useHuggingFaceSearch, useModelRepoConfig, useAvailableEndpoints, useUpdateModelRepoConfig } from '@/features/downloads/hooks';
+import { useHuggingFaceSearch, useModelRepoConfig, useAvailableEndpoints, useUpdateModelRepoConfig, useModelFiles } from '@/features/downloads/hooks';
 import type { HuggingFaceModel } from '@/lib/api/downloads';
 import { cn } from '@/lib/utils';
 
 interface HuggingFaceSearchPanelProps {
-  onDownload: (model: HuggingFaceModel) => void;
+  onDownload: (model: HuggingFaceModel, fileName?: string) => void;
 }
 
 export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelProps) {
@@ -14,6 +14,7 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
   const [searchInput, setSearchInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
+  const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   
   const { data: searchResult, isLoading, error } = useHuggingFaceSearch(query, 20);
   const { data: config, isLoading: configLoading } = useModelRepoConfig();
@@ -58,6 +59,17 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
       return (num / 1000).toFixed(1) + 'K';
     }
     return num.toString();
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let size = bytes;
+    let unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
   };
 
   return (
@@ -199,7 +211,7 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
         </div>
       )}
 
-      {searchResult && searchResult.items.length === 0 && (
+      {searchResult && searchResult.models.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <Search className="w-12 h-12 mb-4" />
           <p className="text-lg">未找到模型</p>
@@ -207,13 +219,13 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
         </div>
       )}
 
-      {searchResult && searchResult.items.length > 0 && (
+      {searchResult && searchResult.models.length > 0 && (
         <div className="space-y-3">
           <div className="text-sm text-muted-foreground">
-            找到 {searchResult.total} 个模型，显示前 {searchResult.items.length} 个
+            找到 {searchResult.total} 个模型，显示前 {searchResult.models.length} 个
           </div>
           
-          {searchResult.items.map((model) => (
+          {searchResult.models.map((model) => (
             <div
               key={model.id}
               className="p-4 bg-card rounded-lg border border-border hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
@@ -256,12 +268,12 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
                 {/* 操作按钮 */}
                 <div className="flex flex-col gap-2">
                   <Button
-                    onClick={() => onDownload(model)}
+                    onClick={() => setExpandedModelId(expandedModelId === model.modelId ? null : model.modelId)}
                     size="sm"
                     className="whitespace-nowrap"
                   >
                     <Download className="w-4 h-4 mr-1" />
-                    下载
+                    {expandedModelId === model.modelId ? '收起' : '下载'}
                   </Button>
                   <a
                     href={`https://${config?.endpoint || 'huggingface.co'}/${model.modelId}`}
@@ -278,8 +290,98 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
                   </a>
                 </div>
               </div>
+
+              {/* 展开的文件列表 */}
+              {expandedModelId === model.modelId && (
+                <ModelFilesList model={model} onDownload={onDownload} formatFileSize={formatFileSize} />
+              )}
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModelFilesList({ 
+  model, 
+  onDownload, 
+  formatFileSize 
+}: { 
+  model: HuggingFaceModel; 
+  onDownload: (model: HuggingFaceModel, fileName?: string) => void;
+  formatFileSize: (bytes: number) => string;
+}) {
+  const { data: files, isLoading, error } = useModelFiles('huggingface', model.modelId);
+
+  return (
+    <div className="mt-4 pt-4 border-t border-border">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <File className="w-4 h-4" />
+          可用模型文件 (GGUF)
+        </h4>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onDownload(model)}
+          className="text-xs h-7"
+        >
+          手动输入文件名
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          加载文件列表...
+        </div>
+      ) : error ? (
+        <div className="text-sm text-red-600 dark:text-red-400 py-2">
+          加载失败: {error.message}
+        </div>
+      ) : !files || files.length === 0 ? (
+        <div className="text-sm text-muted-foreground py-4 text-center bg-muted/50 rounded-md">
+          未找到 GGUF 格式的模型文件
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+          {files.map((file) => {
+            // 尝试从文件名中提取量化精度 (如 Q4_K_M, Q8_0)
+            const quantMatch = file.name.match(/(q[1-8]_[0-1k_a-z]+|f16|f32)/i);
+            const quant = quantMatch ? quantMatch[1].toUpperCase() : null;
+            
+            return (
+              <div
+                key={file.name}
+                className="flex items-center justify-between p-2 rounded-md border border-border bg-card hover:border-blue-300 dark:hover:border-blue-700 transition-colors group"
+              >
+                <div className="flex-1 min-w-0 mr-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate" title={file.name}>
+                      {file.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                    <span>{formatFileSize(file.size)}</span>
+                    {quant && (
+                      <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded font-mono">
+                        {quant}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onDownload(model, file.name)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity h-8 px-3"
+                >
+                  下载
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

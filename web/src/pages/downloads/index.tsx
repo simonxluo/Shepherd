@@ -36,7 +36,7 @@ export function DownloadsPage() {
   const [stateFilter, setStateFilter] = useState<DownloadState | ''>('');
   const [sourceFilter, setSourceFilter] = useState<DownloadSource | ''>('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [preFillParams, setPreFillParams] = useState<{ source: DownloadSource; repoId: string } | null>(null);
+  const [preFillParams, setPreFillParams] = useState<{ source: DownloadSource; repoId: string; fileName?: string } | null>(null);
 
   // 统计
   const stats = useDownloadStats(downloads);
@@ -59,8 +59,8 @@ export function DownloadsPage() {
   };
 
   // 处理从 HuggingFace 下载
-  const handleHuggingFaceDownload = (model: HuggingFaceModel) => {
-    setPreFillParams({ source: 'huggingface', repoId: model.modelId });
+  const handleHuggingFaceDownload = (model: HuggingFaceModel, fileName?: string) => {
+    setPreFillParams({ source: 'huggingface', repoId: model.modelId, fileName });
     setDialogOpen(true);
   };
 

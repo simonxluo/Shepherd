@@ -399,7 +399,7 @@ func (m *Manager) loadModel(path string) (*Model, error) {
 	// Create display name with path prefix for duplicates
 	displayName := modelName
 	if pathPrefix != "" && pathPrefix != "models" {
-		displayName = fmt.Sprintf("%s [%s]", modelName, pathPrefix)
+		displayName = fmt.Sprintf("[%s]%s", pathPrefix, modelName)
 	}
 
 	// Create model

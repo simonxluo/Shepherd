@@ -276,7 +276,7 @@ type HuggingFaceModel struct {
 
 // SearchResult represents the search response from HuggingFace
 type SearchResult struct {
-	Models []HuggingFaceModel `json:"items"`
+	Models []HuggingFaceModel `json:"models"`
 	Count  int                `json:"count"`
 	Total  int                `json:"total"`
 }
@@ -309,12 +309,18 @@ func (c *Client) SearchHuggingFaceModels(query string, limit int) (*SearchResult
 		return nil, fmt.Errorf("failed to search models: %s", resp.Status)
 	}
 
-	var result SearchResult
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	var models []HuggingFaceModel
+	if err := json.NewDecoder(resp.Body).Decode(&models); err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	result := &SearchResult{
+		Models: models,
+		Count:  len(models),
+		Total:  len(models),
+	}
+
+	return result, nil
 }
 
 // HasGGUFFiles checks if a repository contains GGUF files

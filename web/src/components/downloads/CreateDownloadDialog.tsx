@@ -11,7 +11,7 @@ interface CreateDownloadDialogProps {
   onClose: () => void;
   onConfirm: (params: CreateDownloadParams) => void;
   isLoading?: boolean;
-  preFill?: { source: DownloadSource; repoId: string } | null;
+  preFill?: { source: DownloadSource; repoId: string; fileName?: string } | null;
 }
 
 export function CreateDownloadDialog({
@@ -33,8 +33,9 @@ export function CreateDownloadDialog({
     if (preFill) {
       setSource(preFill.source);
       setRepoId(preFill.repoId);
-      setFileName('');
+      setFileName(preFill.fileName || '');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preFill]);
 
   // 文件列表状态
@@ -56,6 +57,7 @@ export function CreateDownloadDialog({
       setAvailableFiles([]);
     }
     setIsLoadingFiles(loadingFiles);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files, loadingFiles]);
 
   if (!isOpen) return null;
