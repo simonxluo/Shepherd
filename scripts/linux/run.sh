@@ -220,7 +220,7 @@ main() {
                 CONFIG_PATH="$2"
                 shift 2
                 ;;
-            --web)
+            -w|--web)
                 START_WEB=true
                 shift
                 ;;
