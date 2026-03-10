@@ -34,6 +34,10 @@ interface UIState {
   setModelStatusFilter: (status: string) => void;
   showFavouritesOnly: boolean;
   setShowFavouritesOnly: (show: boolean) => void;
+
+  // 模型视图模式
+  modelViewMode: 'grid' | 'list';
+  setModelViewMode: (mode: 'grid' | 'list') => void;
 }
 
 /**
@@ -93,12 +97,17 @@ export const useUIStore = create<UIState>()(
       setModelStatusFilter: (modelStatusFilter) => set({ modelStatusFilter }),
       showFavouritesOnly: false,
       setShowFavouritesOnly: (showFavouritesOnly) => set({ showFavouritesOnly }),
+
+      // 模型视图模式
+      modelViewMode: 'grid',
+      setModelViewMode: (modelViewMode) => set({ modelViewMode }),
     }),
     {
       name: 'shepherd-ui-storage',
       partialize: (state) => ({
         theme: state.theme,
         sidebarOpen: state.sidebarOpen,
+        modelViewMode: state.modelViewMode,
       }),
     }
   )

@@ -63,7 +63,7 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
   const quantizationLabel = model.metadata.fileTypeDescriptor || model.metadata.quantization || '未知';
 
   return (
-    <div className="group flex items-center gap-4 px-4 py-3 bg-card hover:bg-accent/5 rounded-lg border border-border transition-all duration-200">
+    <div className="group flex items-center gap-4 px-4 py-4 bg-card hover:bg-accent/5 rounded-lg border border-border transition-all duration-200">
       {/* 左侧 - 模型信息区 */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {/* 收藏星标 */}
@@ -95,7 +95,7 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
 
         {/* 模型名称和元数据 */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-base text-foreground truncate">
+          <h3 className="font-medium text-base text-foreground truncate">
             {model.alias || model.displayName || model.name}
           </h3>
           <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">

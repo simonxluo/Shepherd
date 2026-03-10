@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import type { Model, ModelStatus, BenchmarkConfig, LoadModelParams } from '@/types';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 import { useToast } from '@/hooks/useToast';
+import { useUIStore } from '@/stores/uiStore';
 
 /**
  * 模型管理页面
@@ -31,7 +32,7 @@ export function ModelsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ModelStatus | ''>('');
   const [favouriteFilter, setFavouriteFilter] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const { modelViewMode: viewMode, setModelViewMode: setViewMode } = useUIStore();
 
   // 加载对话框状态
   const [dialogModel, setDialogModel] = useState<Model | null>(null);
@@ -302,7 +303,7 @@ export function ModelsPage() {
       ) : (
         <div
           className={cn(
-            'gap-3 sm:gap-4',
+            'gap-4 sm:gap-5',
             viewMode === 'grid'
               ? 'grid grid-cols-1 sm:grid-cols-2'
               : 'flex flex-col'
