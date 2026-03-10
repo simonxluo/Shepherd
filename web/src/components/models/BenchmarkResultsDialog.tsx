@@ -1,21 +1,10 @@
-import { useState } from 'react';
-import { X, FileText, Trash2, Loader2, Gauge, Copy, Download, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, FileText, Loader2, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 import { Button } from '@/components/ui/button';
-import {
-  useBenchmarkResults,
-} from '@/features/models/hooks';
-import type { Benchmark } from '@/types';
-
 import { useToast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
-
-// 常量定义
-const SEPARATOR_LENGTH = 60;
-const SEPARATOR_CHAR = '=';
-const FILE_SIZE_UNITS = ['B', 'KB', 'MB', 'GB'] as const;
-const BYTES_IN_KB = 1024;
+import type { BenchmarkResultFile, BenchmarkResult } from '@/types';
 
 interface BenchmarkResultsDialogProps {
   isOpen: boolean;
@@ -25,7 +14,9 @@ interface BenchmarkResultsDialogProps {
 }
 
 /**
- * 压测结果查看对话框组件
+ * 测试结果对比对话框
+ * 参考 LlamacppServer 的 model-benchmark.js 结果对比功能
+ * 左侧显示测试结果文件列表，右侧显示内容对比区域
  */
 export function BenchmarkResultsDialog({
   isOpen,
@@ -36,145 +27,173 @@ export function BenchmarkResultsDialog({
   const toast = useToast();
   const alertDialog = useAlertDialog();
 
-  const { data: benchmarks = [], isLoading: listLoading, refetch } = useBenchmarkResults(
-    isOpen ? modelId : ''
-  );
+  const [resultFiles, setResultFiles] = useState<BenchmarkResultFile[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [resultContent, setResultContent] = useState<string>('');
+  const [loadingFile, setLoadingFile] = useState<string | null>(null);
 
-  const [selectedResults, setSelectedResults] = useState<Benchmark[]>([]);
-  const [displayContent, setDisplayContent] = useState<string>('');
-
-  // 追加结果到显示区域
-  const handleAppendResult = (result: Benchmark) => {
-    // 检查是否已经添加过
-    if (selectedResults.some(r => r.id === result.id)) {
-      toast.info('该测试结果已经添加');
-      return;
+  // 加载测试结果文件列表
+  useEffect(() => {
+    if (isOpen && modelId) {
+      loadResultFiles();
+      setResultContent(''); // 打开时清空内容
     }
-    
-    setSelectedResults((prev) => [...prev, result]);
-    appendResultToDisplay(result);
-  };
+  }, [isOpen, modelId]);
 
-  // 追加结果到显示区域
-  const appendResultToDisplay = (result: Benchmark) => {
-    const separator = '\n' + SEPARATOR_CHAR.repeat(SEPARATOR_LENGTH) + '\n';
-    let text = displayContent || '';
-
-    if (text.length > 0) {
-      text += separator;
-    }
-
-    text += `测试 ID: ${result.id}\n`;
-    text += `模型: ${result.modelName}\n`;
-    text += `状态: ${result.status}\n`;
-    text += `创建时间: ${new Date(result.createdAt).toLocaleString('zh-CN')}\n`;
-    if (result.finishedAt) {
-      text += `完成时间: ${new Date(result.finishedAt).toLocaleString('zh-CN')}\n`;
-    }
-    text += `\n命令:\n${result.command}\n`;
-    
-    if (result.error) {
-      text += `\n错误:\n${result.error}\n`;
-    }
-
-    // 解析的性能指标
-    if (result.metrics) {
-      text += `\n性能指标:\n`;
-      if (result.metrics.tokens_per_second) {
-        text += `  - TPS: ${Number(result.metrics.tokens_per_second).toFixed(2)} tokens/s\n`;
-      }
-      if (result.metrics.total_time_ms) {
-        text += `  - Total Time: ${result.metrics.total_time_ms} ms\n`;
-      }
-      
-      if (result.metrics.raw_output) {
-        text += `\n原始输出:\n${result.metrics.raw_output}\n`;
-      }
-    }
-
-    setDisplayContent(text);
-  };
-
-  // 清空显示内容
-  const handleClearContent = () => {
-    setDisplayContent('');
-    setSelectedResults([]);
-  };
-
-  // 删除结果 (暂不实现 API)
-  const handleDeleteResult = async (id: string) => {
-    const confirmed = await alertDialog.confirm({
-      title: '删除测试结果',
-      description: '确定要移除显示吗？这不会从服务器删除数据。',
-      confirmText: '移除',
-      cancelText: '取消',
-      variant: 'destructive',
-    });
-    if (!confirmed) return;
-
-    setSelectedResults((prev) => prev.filter((r) => r.id !== id));
-    
-    // 重新生成显示内容
-    const newContent = selectedResults
-      .filter((r) => r.id !== id)
-      .map((r) => formatResultText(r))
-      .join('\n' + SEPARATOR_CHAR.repeat(SEPARATOR_LENGTH) + '\n');
-    setDisplayContent(newContent);
-  };
-
-  // 格式化单个结果为文本
-  const formatResultText = (result: Benchmark): string => {
-    let text = `测试 ID: ${result.id}\n`;
-    text += `模型: ${result.modelName}\n`;
-    text += `创建时间: ${new Date(result.createdAt).toLocaleString('zh-CN')}\n`;
-    text += `\n命令:\n${result.command}\n`;
-    if (result.metrics?.raw_output) {
-      text += `\n原始输出:\n${result.metrics.raw_output}\n`;
-    }
-    return text;
-  };
-
-  // 复制到剪贴板
-  const handleCopyToClipboard = async () => {
+  const loadResultFiles = async () => {
+    setIsLoading(true);
     try {
-      await navigator.clipboard.writeText(displayContent);
-      toast.success('已复制到剪贴板');
-    } catch (error) {
-      toast.error('复制失败', error instanceof Error ? error.message : '未知错误');
-    }
-  };
+      const response = await fetch(`/api/models/benchmark/list?modelId=${encodeURIComponent(modelId)}`);
+      const data = await response.json();
 
-  // 下载为文件
-  const handleDownload = () => {
-    const blob = new Blob([displayContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `benchmark-results-${modelId}-${Date.now()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      if (data.success && data.data?.files) {
+        setResultFiles(data.data.files);
+      } else {
+        setResultFiles([]);
+      }
+    } catch (error) {
+      console.error('Failed to load benchmark results:', error);
+      toast.error('加载测试结果列表失败', error instanceof Error ? error.message : '未知错误');
+      setResultFiles([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 格式化文件大小
   const formatFileSize = (bytes: number): string => {
-    let size = bytes;
-    let unitIndex = 0;
-    while (size >= BYTES_IN_KB && unitIndex < FILE_SIZE_UNITS.length - 1) {
-      size /= BYTES_IN_KB;
-      unitIndex++;
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // 格式化时间
+  const formatTime = (timestamp: string): string => {
+    try {
+      return new Date(timestamp).toLocaleString('zh-CN');
+    } catch {
+      return timestamp;
     }
-    return `${size.toFixed(2)} ${FILE_SIZE_UNITS[unitIndex]}`;
+  };
+
+  // 追加测试结果到内容区域
+  const appendResult = (result: BenchmarkResult, fileName: string) => {
+    let text = '';
+
+    // 如果已有内容，添加分隔线
+    if (resultContent.trim().length > 0) {
+      text += '\n\n';
+    }
+
+    text += '==============================\n';
+    text += `文件: ${fileName}\n`;
+    text += `模型: ${result.modelName || modelName}\n`;
+    text += `模型ID: ${result.modelId || modelId}\n`;
+
+    if (result.commandStr) {
+      text += `\n命令:\n${result.commandStr}\n`;
+    } else if (result.command && result.command.length) {
+      text += `\n命令:\n${result.command.join(' ')}\n`;
+    }
+
+    if (result.exitCode != null) {
+      text += `\n退出码: ${result.exitCode}\n`;
+    }
+
+    if (result.savedPath) {
+      text += `\n保存文件: ${result.savedPath}\n`;
+    }
+
+    // 显示性能指标
+    if (result.metrics) {
+      text += `\n性能指标:\n`;
+      if (result.metrics.tps != null) {
+        text += `  - TPS (tokens/s): ${result.metrics.tps}\n`;
+      }
+      if (result.metrics.promptTps != null) {
+        text += `  - Prompt TPS: ${result.metrics.promptTps}\n`;
+      }
+      if (result.metrics.totalTokens != null) {
+        text += `  - Total Tokens: ${result.metrics.totalTokens}\n`;
+      }
+      if (result.metrics.loadTime != null) {
+        text += `  - Load Time: ${result.metrics.loadTime} ms\n`;
+      }
+      if (result.metrics.memoryUsage != null) {
+        text += `  - Memory Usage: ${result.metrics.memoryUsage} MB\n`;
+      }
+    }
+
+    if (result.rawOutput) {
+      text += `\n原始输出:\n${result.rawOutput}\n`;
+    }
+
+    setResultContent(prev => prev + text);
+  };
+
+  // 加载并追加测试结果
+  const loadBenchmarkResult = async (fileName: string) => {
+    setLoadingFile(fileName);
+    try {
+      const response = await fetch(`/api/models/benchmark/get?fileName=${encodeURIComponent(fileName)}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        appendResult(data.data as BenchmarkResult, fileName);
+        toast.success('已追加测试结果');
+      } else {
+        toast.error('加载测试结果失败', data.error || '未知错误');
+      }
+    } catch (error) {
+      console.error('Failed to load benchmark result:', error);
+      toast.error('加载测试结果失败', error instanceof Error ? error.message : '网络错误');
+    } finally {
+      setLoadingFile(null);
+    }
+  };
+
+  // 删除测试结果文件
+  const deleteBenchmarkResult = async (fileName: string) => {
+    const confirmed = await alertDialog.confirm({
+      title: '删除测试结果',
+      description: `确定要删除测试结果文件 "${fileName}" 吗？此操作不可恢复。`,
+      confirmText: '删除',
+      cancelText: '取消',
+      variant: 'destructive',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/models/benchmark/delete?fileName=${encodeURIComponent(fileName)}`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setResultFiles(prev => prev.filter(f => f.name !== fileName));
+        toast.success('测试结果已删除');
+      } else {
+        toast.error('删除测试结果失败', data.error || '未知错误');
+      }
+    } catch (error) {
+      console.error('Failed to delete benchmark result:', error);
+      toast.error('删除测试结果失败', error instanceof Error ? error.message : '网络错误');
+    }
+  };
+
+  // 清空内容区域
+  const clearContent = () => {
+    setResultContent('');
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-card rounded-lg shadow-xl max-w-6xl w-full max-h-[85vh] flex flex-col">
+      <div className="bg-card rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] flex flex-col">
         {/* 标题栏 */}
-        <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold text-foreground">
@@ -183,136 +202,120 @@ export function BenchmarkResultsDialog({
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-muted-foreground hover:text-foreground"
+            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* 内容区域 - 两列布局 */}
-        <div className="flex-1 flex min-h-0">
-          {/* 左侧：测试任务列表 */}
-          <div className="w-80 border-r border-border flex flex-col bg-muted/50">
-            <div className="flex items-center justify-between p-3 border-b border-border bg-muted">
-              <h3 className="text-sm font-medium text-foreground">测试历史记录</h3>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => refetch()} title="刷新记录">
-                <RefreshCw className="h-4 w-4" />
+        {/* 内容区域 - 两栏布局 */}
+        <div className="flex-1 flex gap-4 p-4 min-h-0 overflow-hidden">
+          {/* 左侧：文件列表 */}
+          <div className="w-1/3 min-w-[280px] border border-border rounded-lg overflow-hidden bg-muted/30 flex flex-col">
+            <div className="px-3 py-2 border-b border-border text-sm font-medium text-foreground bg-muted/50 flex items-center justify-between">
+              <span>测试结果文件</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={loadResultFiles}
+                disabled={isLoading}
+              >
+                <RefreshCw className={cn("w-3 h-3", isLoading && "animate-spin")} />
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {listLoading ? (
+              {isLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                  <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                   <span className="ml-2 text-sm text-muted-foreground">加载中...</span>
                 </div>
-              ) : benchmarks.length === 0 ? (
-                <div className="text-sm text-muted-foreground text-center py-8 px-4">
-                  暂无测试记录
-                </div>
-              ) : (
+              ) : resultFiles.length > 0 ? (
                 <div className="divide-y divide-border">
-                  {benchmarks.map((task) => (
+                  {resultFiles.map((file, index) => (
                     <div
-                      key={task.id}
-                      className="p-3 hover:bg-accent transition-colors"
+                      key={index}
+                      className="p-3 hover:bg-accent/50 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-foreground truncate" title={task.command}>
-                            {task.status === 'running' ? '⏳ 测试中...' : task.status === 'failed' ? '❌ 失败' : '✅ 完成'}
+                          <div className="flex items-center gap-1.5 text-sm font-medium text-foreground truncate">
+                            <FileText className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                            <span className="truncate" title={file.name}>{file.name}</span>
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            时间: {new Date(task.createdAt).toLocaleString('zh-CN')}
+                          <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
+                            <div>修改时间: {file.modified || '-'}</div>
+                            <div>大小: {formatFileSize(file.size)}</div>
                           </div>
-                          {task.metrics?.tokens_per_second && (
-                            <div className="text-xs font-semibold text-green-600 mt-1">
-                              TPS: {Number(task.metrics.tokens_per_second).toFixed(2)}
-                            </div>
-                          )}
                         </div>
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1 flex-shrink-0">
                           <Button
-                            type="button"
                             size="sm"
-                            variant="outline"
-                            onClick={() => handleAppendResult(task)}
-                            className="px-2 py-1 text-xs h-7"
+                            variant="default"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => loadBenchmarkResult(file.name)}
+                            disabled={loadingFile === file.name}
                           >
-                            追加
+                            {loadingFile === file.name ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <>
+                                <PlusCircle className="w-3 h-3 mr-1" />
+                                追加
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                            onClick={() => deleteBenchmarkResult(file.name)}
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            删除
                           </Button>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* 右侧：结果显示区域 */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {/* 工具栏 */}
-            <div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
-              <div className="text-sm text-foreground">
-                当前模型: {modelName}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleClearContent}
-                  disabled={!displayContent}
-                >
-                  清空内容
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCopyToClipboard}
-                  disabled={!displayContent}
-                >
-                  <Copy className="w-4 h-4 mr-1" />
-                  复制
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDownload}
-                  disabled={!displayContent}
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  下载
-                </Button>
-              </div>
-            </div>
-
-            {/* 内容显示区 */}
-            <div className="flex-1 overflow-auto p-4 bg-slate-900">
-              {displayContent ? (
-                <pre className="text-sm text-slate-100 whitespace-pre-wrap font-mono">
-                  {displayContent}
-                </pre>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-400">
-                  <div className="text-center">
-                    <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>点击左侧"追加"按钮查看测试结果</p>
-                  </div>
+                <div className="text-sm text-muted-foreground text-center py-8 px-4">
+                  <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                  <p>未找到测试结果文件</p>
                 </div>
               )}
             </div>
           </div>
+
+          {/* 右侧：内容显示区域 */}
+          <div className="flex-1 flex flex-col min-w-0 border border-border rounded-lg overflow-hidden">
+            <div className="px-3 py-2 border-b border-border flex items-center justify-between bg-muted/50">
+              <div className="text-sm text-muted-foreground">
+                当前模型: <span className="font-medium text-foreground">{modelName}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                onClick={clearContent}
+                disabled={!resultContent}
+              >
+                清空内容
+              </Button>
+            </div>
+            <pre className="flex-1 overflow-auto p-3 text-xs bg-gray-900 text-gray-100 font-mono whitespace-pre-wrap break-all">
+              {resultContent || <span className="text-gray-500">点击左侧文件的「追加」按钮查看测试结果，支持追加多个结果进行对比</span>}
+            </pre>
+          </div>
         </div>
 
-        {/* 底部状态栏 */}
-        {selectedResults.length > 0 && (
-          <div className="px-4 py-2 border-t border-border bg-muted/50 text-xs text-muted-foreground">
-            已加载 {selectedResults.length} 个结果，共 {displayContent.length} 字符
-          </div>
-        )}
+        {/* 底部按钮 */}
+        <div className="flex justify-end px-4 py-3 border-t border-border bg-card flex-shrink-0">
+          <Button variant="secondary" onClick={onClose}>
+            关闭
+          </Button>
+        </div>
       </div>
     </div>
   );
