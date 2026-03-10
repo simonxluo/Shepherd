@@ -277,6 +277,16 @@ func (h *Handler) GetParams(c *gin.Context) {
 		},
 		{
 			FullName:     "-r",
+			Name:         "重复次数",
+			Abbreviation: "-r",
+			Description:  "重复测试的次数 (提高结果稳定性)",
+			DefaultValue: "1",
+			Type:         "INTEGER",
+			Sort:         9,
+		},
+	}
+		{
+			FullName:     "-r",
 			Name:         "测试次数",
 			Abbreviation: "-r",
 			Description:  "重复测试的次数 (提高结果稳定性)",
