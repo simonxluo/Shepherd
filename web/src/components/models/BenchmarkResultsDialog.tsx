@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { X, FileText, Trash2, Loader2, Gauge, Copy, Download } from 'lucide-react';
+import { X, FileText, Trash2, Loader2, Gauge, Copy, Download, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
 import { Button } from '@/components/ui/button';
 import {
   useBenchmarkResults,
-  useBenchmarkResult,
-  useDeleteBenchmarkResult,
 } from '@/features/models/hooks';
-import type { BenchmarkResult, BenchmarkResultFile } from '@/types';
+import type { Benchmark } from '@/types';
+
 import { useToast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/hooks/useAlertDialog';
 
@@ -36,33 +36,27 @@ export function BenchmarkResultsDialog({
   const toast = useToast();
   const alertDialog = useAlertDialog();
 
-  const { data: resultFiles = [], isLoading: listLoading } = useBenchmarkResults(
+  const { data: benchmarks = [], isLoading: listLoading, refetch } = useBenchmarkResults(
     isOpen ? modelId : ''
   );
 
-  const deleteResult = useDeleteBenchmarkResult();
-
-  const [selectedResults, setSelectedResults] = useState<BenchmarkResult[]>([]);
+  const [selectedResults, setSelectedResults] = useState<Benchmark[]>([]);
   const [displayContent, setDisplayContent] = useState<string>('');
 
-  // 加载并追加结果到显示区域
-  const handleAppendResult = async (fileName: string) => {
-    try {
-      const response = await fetch(`/api/models/benchmark/get?fileName=${encodeURIComponent(fileName)}`);
-      const data = await response.json();
-      if (data.success && data.data) {
-        const result = data.data as BenchmarkResult;
-        setSelectedResults((prev) => [...prev, result]);
-        appendResultToDisplay(result);
-      }
-    } catch (error) {
-      console.error('Failed to load result:', error);
-      toast.error('加载结果失败', error instanceof Error ? error.message : '未知错误');
+  // 追加结果到显示区域
+  const handleAppendResult = (result: Benchmark) => {
+    // 检查是否已经添加过
+    if (selectedResults.some(r => r.id === result.id)) {
+      toast.info('该测试结果已经添加');
+      return;
     }
+    
+    setSelectedResults((prev) => [...prev, result]);
+    appendResultToDisplay(result);
   };
 
   // 追加结果到显示区域
-  const appendResultToDisplay = (result: BenchmarkResult) => {
+  const appendResultToDisplay = (result: Benchmark) => {
     const separator = '\n' + SEPARATOR_CHAR.repeat(SEPARATOR_LENGTH) + '\n';
     let text = displayContent || '';
 
@@ -70,70 +64,74 @@ export function BenchmarkResultsDialog({
       text += separator;
     }
 
-    text += `文件: ${result.fileName}\n`;
+    text += `测试 ID: ${result.id}\n`;
     text += `模型: ${result.modelName}\n`;
-    text += `模型ID: ${result.modelId}\n`;
-    text += `时间: ${new Date(result.timestamp).toLocaleString('zh-CN')}\n`;
-    text += `\n命令:\n${result.commandStr}\n`;
-    text += `\n退出码: ${result.exitCode}\n`;
-    text += `\n保存路径: ${result.savedPath}\n`;
+    text += `状态: ${result.status}\n`;
+    text += `创建时间: ${new Date(result.createdAt).toLocaleString('zh-CN')}\n`;
+    if (result.finishedAt) {
+      text += `完成时间: ${new Date(result.finishedAt).toLocaleString('zh-CN')}\n`;
+    }
+    text += `\n命令:\n${result.command}\n`;
+    
+    if (result.error) {
+      text += `\n错误:\n${result.error}\n`;
+    }
 
     // 解析的性能指标
     if (result.metrics) {
       text += `\n性能指标:\n`;
-      if (result.metrics.tps) text += `  - TPS: ${result.metrics.tps.toFixed(2)} tokens/s\n`;
-      if (result.metrics.promptTps) text += `  - Prompt TPS: ${result.metrics.promptTps.toFixed(2)} tokens/s\n`;
-      if (result.metrics.totalTokens) text += `  - Total Tokens: ${result.metrics.totalTokens}\n`;
-      if (result.metrics.loadTime) text += `  - Load Time: ${result.metrics.loadTime} ms\n`;
-      if (result.metrics.memoryUsage) text += `  - Memory Usage: ${result.metrics.memoryUsage} MB\n`;
+      if (result.metrics.tokens_per_second) {
+        text += `  - TPS: ${Number(result.metrics.tokens_per_second).toFixed(2)} tokens/s\n`;
+      }
+      if (result.metrics.total_time_ms) {
+        text += `  - Total Time: ${result.metrics.total_time_ms} ms\n`;
+      }
+      
+      if (result.metrics.raw_output) {
+        text += `\n原始输出:\n${result.metrics.raw_output}\n`;
+      }
     }
 
-    text += `\n原始输出:\n${result.rawOutput}\n`;
-
     setDisplayContent(text);
-  };
-
-  // 删除结果
-  const handleDeleteResult = async (fileName: string) => {
-    const confirmed = await alertDialog.confirm({
-      title: '删除测试结果',
-      description: '确定要删除该测试结果吗？此操作不可撤销。',
-      confirmText: '删除',
-      cancelText: '取消',
-      variant: 'destructive',
-    });
-    if (!confirmed) return;
-
-    deleteResult.mutate(fileName, {
-      onSuccess: () => {
-        // 从已选结果中移除
-        setSelectedResults((prev) =>
-          prev.filter((r) => r.fileName !== fileName)
-        );
-        // 重新生成显示内容（移除已删除的结果）
-        const newContent = selectedResults
-          .filter((r) => r.fileName !== fileName)
-          .map((r) => formatResultText(r))
-          .join('\n' + SEPARATOR_CHAR.repeat(SEPARATOR_LENGTH) + '\n');
-        setDisplayContent(newContent);
-      },
-    });
-  };
-
-  // 格式化单个结果为文本
-  const formatResultText = (result: BenchmarkResult): string => {
-    let text = `文件: ${result.fileName}\n`;
-    text += `模型: ${result.modelName}\n`;
-    text += `时间: ${new Date(result.timestamp).toLocaleString('zh-CN')}\n`;
-    text += `\n命令:\n${result.commandStr}\n`;
-    text += `\n原始输出:\n${result.rawOutput}\n`;
-    return text;
   };
 
   // 清空显示内容
   const handleClearContent = () => {
     setDisplayContent('');
     setSelectedResults([]);
+  };
+
+  // 删除结果 (暂不实现 API)
+  const handleDeleteResult = async (id: string) => {
+    const confirmed = await alertDialog.confirm({
+      title: '删除测试结果',
+      description: '确定要移除显示吗？这不会从服务器删除数据。',
+      confirmText: '移除',
+      cancelText: '取消',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+
+    setSelectedResults((prev) => prev.filter((r) => r.id !== id));
+    
+    // 重新生成显示内容
+    const newContent = selectedResults
+      .filter((r) => r.id !== id)
+      .map((r) => formatResultText(r))
+      .join('\n' + SEPARATOR_CHAR.repeat(SEPARATOR_LENGTH) + '\n');
+    setDisplayContent(newContent);
+  };
+
+  // 格式化单个结果为文本
+  const formatResultText = (result: Benchmark): string => {
+    let text = `测试 ID: ${result.id}\n`;
+    text += `模型: ${result.modelName}\n`;
+    text += `创建时间: ${new Date(result.createdAt).toLocaleString('zh-CN')}\n`;
+    text += `\n命令:\n${result.command}\n`;
+    if (result.metrics?.raw_output) {
+      text += `\n原始输出:\n${result.metrics.raw_output}\n`;
+    }
+    return text;
   };
 
   // 复制到剪贴板
