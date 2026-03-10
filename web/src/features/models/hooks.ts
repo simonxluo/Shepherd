@@ -215,9 +215,15 @@ export function useFilteredModels(
     });
 
     // 排序模型：稳定的排序，确保每次刷新后顺序一致
-    // 排序优先级：名称（字母）> 扫描时间 > 路径
+    // 排序优先级：架构 > 名称（字母）> 扫描时间 > 路径
     return [...filtered].sort((a: Model, b: Model) => {
-      // 优先按显示名称（别名或模型名）排序
+      // 优先按架构排序
+      const aArch = (a.metadata?.architecture || '').toLowerCase();
+      const bArch = (b.metadata?.architecture || '').toLowerCase();
+      const archCompare = aArch.localeCompare(bArch);
+      if (archCompare !== 0) return archCompare;
+
+      // 架构相同时，按显示名称（别名或模型名）排序
       const aName = (a.alias || a.displayName || a.name).toLowerCase();
       const bName = (b.alias || b.displayName || b.name).toLowerCase();
 
