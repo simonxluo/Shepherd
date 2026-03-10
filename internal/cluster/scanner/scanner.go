@@ -2,10 +2,10 @@
 package scanner
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"net"
 	"net/http"
 	"strconv"
@@ -20,14 +20,14 @@ import (
 
 // Scanner performs network scans to discover client nodes
 type Scanner struct {
-	config   *config.NetworkScanConfig
-	clients  []*cluster.DiscoveredClient
-	mu       sync.Mutex
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
-	scanning bool
-	log      *logger.Logger
+	config     *config.NetworkScanConfig
+	clients    []*cluster.DiscoveredClient
+	mu         sync.Mutex
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
+	scanning   bool
+	log        *logger.Logger
 	httpClient HTTPClient
 }
 
@@ -224,11 +224,11 @@ func (s *Scanner) checkClient(host string, port int) *cluster.DiscoveredClient {
 
 	// Parse response
 	var info struct {
-		ID       string                `json:"id"`
-		Name     string                `json:"name"`
-		Version  string                `json:"version"`
+		ID           string                `json:"id"`
+		Name         string                `json:"name"`
+		Version      string                `json:"version"`
 		Capabilities *cluster.Capabilities `json:"capabilities"`
-		Tags     []string              `json:"tags"`
+		Tags         []string              `json:"tags"`
 	}
 
 	if len(body) > 0 {
@@ -300,7 +300,12 @@ func (s *Scanner) autoScan() {
 			return
 		case <-ticker.C:
 			if s.config.AutoDiscover {
-				func() { _, err := s.Scan(); if err != nil { s.log.Warn("模型扫描失败", "error", err) } }()
+				func() {
+					_, err := s.Scan()
+					if err != nil {
+						s.log.Warn("模型扫描失败", "error", err)
+					}
+				}()
 			}
 		}
 	}

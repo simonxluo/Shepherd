@@ -2,8 +2,8 @@
 package filesystem
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -263,11 +263,11 @@ func (h *Handler) ValidatePath(c *gin.Context) {
 	}
 
 	api.Success(c, gin.H{
-		"success":       true,
-		"valid":         true,
-		"exists":        true,
-		"isDirectory":   true,
-		"isReadable":    true,
+		"success":        true,
+		"valid":          true,
+		"exists":         true,
+		"isDirectory":    true,
+		"isReadable":     true,
 		"normalizedPath": cleanPath,
 	})
 }

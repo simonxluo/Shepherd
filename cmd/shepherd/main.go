@@ -49,7 +49,7 @@ type App struct {
 	nodeAdapter *api.NodeAdapter // Node API 适配器
 
 	// LangChainGo 组件
-	langchainMgr     *langchain.Manager   // LangChainGo 管理器
+	langchainMgr     *langchain.Manager // LangChainGo 管理器
 	langchainHandler *langchain.Handler // LangChainGo API 处理器
 
 	// 运行模式

@@ -2,11 +2,11 @@
 package openai
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"net/http"
 	"strings"
@@ -19,10 +19,10 @@ import (
 
 // ModelIndex 加速模型查找的索引结构
 type ModelIndex struct {
-	byID     map[string]*model.Model  // 按 ID 索引
-	byAlias  map[string]*model.Model  // 按别名索引
-	byName   map[string]*model.Model  // 按名称索引
-	mu       sync.RWMutex              // 保护索引的读写锁
+	byID    map[string]*model.Model // 按 ID 索引
+	byAlias map[string]*model.Model // 按别名索引
+	byName  map[string]*model.Model // 按名称索引
+	mu      sync.RWMutex            // 保护索引的读写锁
 }
 
 // NewModelIndex 创建新的模型索引
@@ -89,7 +89,7 @@ func (idx *ModelIndex) Find(identifier string) (*model.Model, bool) {
 
 // Handler handles OpenAI API requests
 type Handler struct {
-	modelMgr  *model.Manager
+	modelMgr   *model.Manager
 	client     *http.Client
 	modelIndex *ModelIndex
 }

@@ -26,7 +26,7 @@ type MemoryClientRegistry struct {
 func NewMemoryClientRegistry(log *logger.Logger, cleanupInterval, clientTimeout time.Duration) *MemoryClientRegistry {
 	return &MemoryClientRegistry{
 		clients:         make(map[string]*node.NodeInfo),
-		log:              log,
+		log:             log,
 		cleanupInterval: cleanupInterval,
 		clientTimeout:   clientTimeout,
 	}
@@ -236,7 +236,7 @@ func (r *MemoryClientRegistry) Cleanup(timeout time.Duration) int {
 	}
 
 	for _, nodeID := range toRemove {
-			delete(r.clients, nodeID)
+		delete(r.clients, nodeID)
 	}
 
 	if len(toRemove) > 0 {

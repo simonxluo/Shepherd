@@ -8,21 +8,21 @@ import (
 
 // ChatCompletionRequest represents a chat completion request
 type ChatCompletionRequest struct {
-	Model            string                 `json:"model"`
-	Messages         []ChatMessage          `json:"messages"`
-	Stream           bool                   `json:"stream,omitempty"`
-	Temperature      float64                `json:"temperature,omitempty"`
-	TopP             float64                `json:"top_p,omitempty"`
-	TopK             int                    `json:"top_k,omitempty"`
-	N                int                    `json:"n,omitempty"`
-	MaxTokens        int                    `json:"max_tokens,omitempty"`
-	Seed             int                    `json:"seed,omitempty"`
-	FrequencyPenalty float64                `json:"frequency_penalty,omitempty"`
-	PresencePenalty  float64                `json:"presence_penalty,omitempty"`
-	RepeatPenalty   float64                `json:"repeat_penalty,omitempty"`
-	Stop             []string               `json:"stop,omitempty"`
+	Model            string                        `json:"model"`
+	Messages         []ChatMessage                 `json:"messages"`
+	Stream           bool                          `json:"stream,omitempty"`
+	Temperature      float64                       `json:"temperature,omitempty"`
+	TopP             float64                       `json:"top_p,omitempty"`
+	TopK             int                           `json:"top_k,omitempty"`
+	N                int                           `json:"n,omitempty"`
+	MaxTokens        int                           `json:"max_tokens,omitempty"`
+	Seed             int                           `json:"seed,omitempty"`
+	FrequencyPenalty float64                       `json:"frequency_penalty,omitempty"`
+	PresencePenalty  float64                       `json:"presence_penalty,omitempty"`
+	RepeatPenalty    float64                       `json:"repeat_penalty,omitempty"`
+	Stop             []string                      `json:"stop,omitempty"`
 	ResponseFormat   *ChatCompletionResponseFormat `json:"response_format,omitempty"`
-	Extra            map[string]interface{} `json:"-"`
+	Extra            map[string]interface{}        `json:"-"`
 }
 
 // UnmarshalJSON handles custom JSON unmarshaling for ChatCompletionRequest
@@ -70,11 +70,11 @@ func (r *ChatCompletionRequest) UnmarshalJSON(data []byte) error {
 
 // ChatMessage represents a chat message
 type ChatMessage struct {
-	Role         string `json:"role"`
-	Content      string `json:"content"`
-	Name         string `json:"name,omitempty"`
+	Role         string        `json:"role"`
+	Content      string        `json:"content"`
+	Name         string        `json:"name,omitempty"`
 	FunctionCall *FunctionCall `json:"function_call,omitempty"`
-	ToolCalls    []ToolCall `json:"tool_calls,omitempty"`
+	ToolCalls    []ToolCall    `json:"tool_calls,omitempty"`
 }
 
 // FunctionCall represents a function call
@@ -85,8 +85,8 @@ type FunctionCall struct {
 
 // ToolCall represents a tool call
 type ToolCall struct {
-	ID       string       `json:"id,omitempty"`
-	Type     string       `json:"type,omitempty"`
+	ID       string        `json:"id,omitempty"`
+	Type     string        `json:"type,omitempty"`
 	Function *FunctionCall `json:"function,omitempty"`
 }
 
@@ -111,7 +111,7 @@ type CompletionRequest struct {
 	Stop             []string               `json:"stop,omitempty"`
 	FrequencyPenalty float64                `json:"frequency_penalty,omitempty"`
 	PresencePenalty  float64                `json:"presence_penalty,omitempty"`
-	RepeatPenalty   float64                `json:"repeat_penalty,omitempty"`
+	RepeatPenalty    float64                `json:"repeat_penalty,omitempty"`
 	Seed             int                    `json:"seed,omitempty"`
 	Extra            map[string]interface{} `json:"-"`
 }
@@ -129,10 +129,10 @@ type ChatCompletionResponse struct {
 
 // ChatCompletionChoice represents a choice in chat completion
 type ChatCompletionChoice struct {
-	Index        int          `json:"index"`
-	Message      ChatMessage  `json:"message"`
-	FinishReason string       `json:"finish_reason,omitempty"`
-	LogProbs     *LogProbs    `json:"logprobs,omitempty"`
+	Index        int         `json:"index"`
+	Message      ChatMessage `json:"message"`
+	FinishReason string      `json:"finish_reason,omitempty"`
+	LogProbs     *LogProbs   `json:"logprobs,omitempty"`
 }
 
 // CompletionResponse represents a legacy completion response
@@ -148,10 +148,10 @@ type CompletionResponse struct {
 
 // CompletionChoice represents a choice in legacy completion
 type CompletionChoice struct {
-	Index        int          `json:"index"`
-	Text         string       `json:"text"`
-	FinishReason string       `json:"finish_reason,omitempty"`
-	LogProbs     *LogProbs    `json:"logprobs,omitempty"`
+	Index        int       `json:"index"`
+	Text         string    `json:"text"`
+	FinishReason string    `json:"finish_reason,omitempty"`
+	LogProbs     *LogProbs `json:"logprobs,omitempty"`
 }
 
 // ModelsResponse represents the list of available models
@@ -177,10 +177,10 @@ type Usage struct {
 
 // LogProbs represents log probabilities
 type LogProbs struct {
-	Tokens        []string `json:"tokens,omitempty"`
-	TokenLogprobs []float64 `json:"token_logprobs,omitempty"`
+	Tokens        []string     `json:"tokens,omitempty"`
+	TokenLogprobs []float64    `json:"token_logprobs,omitempty"`
 	TopLogprobs   []TopLogprob `json:"top_logprobs,omitempty"`
-	TextOffset    []int `json:"text_offset,omitempty"`
+	TextOffset    []int        `json:"text_offset,omitempty"`
 }
 
 // TopLogprob represents top log probabilities

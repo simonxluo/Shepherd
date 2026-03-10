@@ -26,8 +26,8 @@ func NewMigrator(verbose bool) *Migrator {
 // OldMasterConfig represents the old master.config.yaml format
 type OldMasterConfig struct {
 	Master struct {
-		Enabled         bool `yaml:"enabled"`
-		Port            int  `yaml:"port"`
+		Enabled         bool   `yaml:"enabled"`
+		Port            int    `yaml:"port"`
 		ClientConfigDir string `yaml:"client_config_dir"`
 	} `yaml:"master"`
 }
@@ -35,7 +35,7 @@ type OldMasterConfig struct {
 // OldClientConfig represents the old client.config.yaml format
 type OldClientConfig struct {
 	Client struct {
-		Enabled       bool `yaml:"enabled"`
+		Enabled       bool   `yaml:"enabled"`
 		MasterAddress string `yaml:"master_address"`
 	} `yaml:"client"`
 }

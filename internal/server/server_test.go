@@ -245,9 +245,9 @@ func TestServerStartStop(t *testing.T) {
 		Host:      "127.0.0.1",
 		ServerCfg: cfg,
 		ConfigMgr: configMgr,
-		Version:       "0.5.1",
-		BuildTime:     "test-build",
-		GitCommit:     "test-commit",
+		Version:   "0.5.1",
+		BuildTime: "test-build",
+		GitCommit: "test-commit",
 	}
 
 	server, err := NewServer(serverConfig, modelMgr)
@@ -316,9 +316,9 @@ func BenchmarkServerRequest(b *testing.B) {
 		Host:      "0.0.0.0",
 		ServerCfg: cfg,
 		ConfigMgr: configMgr,
-		Version:       "0.5.1",
-		BuildTime:     "test-build",
-		GitCommit:     "test-commit",
+		Version:   "0.5.1",
+		BuildTime: "test-build",
+		GitCommit: "test-commit",
 	}
 
 	server, err := NewServer(serverConfig, modelMgr)

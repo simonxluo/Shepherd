@@ -3,12 +3,12 @@
 package langchain
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"net/http"
 	"strings"

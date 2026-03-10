@@ -13,13 +13,13 @@ import (
 
 // Aggregator aggregates logs from multiple clients
 type Aggregator struct {
-	log          *shepherdLogger.Logger
-	clientLogs   map[string][]*cluster.LogEntry // clientID -> logs
-	mu           sync.RWMutex
-	ctx          context.Context
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
-	config       *config.LogAggregationConfig
+	log        *shepherdLogger.Logger
+	clientLogs map[string][]*cluster.LogEntry // clientID -> logs
+	mu         sync.RWMutex
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
+	config     *config.LogAggregationConfig
 }
 
 // NewAggregator creates a new log aggregator

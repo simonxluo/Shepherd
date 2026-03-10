@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"os"
 	"path/filepath"
 

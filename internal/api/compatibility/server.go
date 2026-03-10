@@ -1,9 +1,9 @@
 package compatibility
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"net/http"
 	"sync"
 	"time"

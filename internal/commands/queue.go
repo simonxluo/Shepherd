@@ -21,8 +21,8 @@ type MemoryCommandQueue struct {
 
 	// Command tracking
 	commandResults map[string]*node.CommandResult
-	completedCount  int64
-	failedCount     int64
+	completedCount int64
+	failedCount    int64
 }
 
 // NewMemoryCommandQueue creates a new in-memory command queue

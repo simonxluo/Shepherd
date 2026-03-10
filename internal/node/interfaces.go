@@ -144,9 +144,9 @@ type RegistryStats struct {
 // CommandQueueStats contains statistics about the command queue
 // 命令队列统计信息
 type CommandQueueStats struct {
-	TotalCommands  int `json:"totalCommands"`
-	QueuedCommands int `json:"queuedCommands"`
-	RunningCommands int `json:"runningCommands"`
+	TotalCommands     int   `json:"totalCommands"`
+	QueuedCommands    int   `json:"queuedCommands"`
+	RunningCommands   int   `json:"runningCommands"`
 	CompletedCommands int64 `json:"completedCommands"`
 	FailedCommands    int64 `json:"failedCommands"`
 }

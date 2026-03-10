@@ -41,9 +41,9 @@ const (
 
 // Header represents the GGUF file header structure
 type Header struct {
-	Magic        uint32 // Magic number (0x46554747 "GGUF")
-	Version      uint32 // GGUF version
-	TensorCount  uint64 // Number of tensors in the file
+	Magic           uint32 // Magic number (0x46554747 "GGUF")
+	Version         uint32 // GGUF version
+	TensorCount     uint64 // Number of tensors in the file
 	MetadataKVCount uint64 // Number of key-value pairs in metadata
 }
 
@@ -69,15 +69,15 @@ type KVPair struct {
 
 // Errors returned by the GGUF parser
 var (
-	ErrInvalidMagic      = errors.New("invalid GGUF magic number")
+	ErrInvalidMagic       = errors.New("invalid GGUF magic number")
 	ErrUnsupportedVersion = errors.New("unsupported GGUF version")
-	ErrInvalidValueType  = errors.New("invalid value type")
-	ErrUnexpectedEOF     = errors.New("unexpected end of file")
+	ErrInvalidValueType   = errors.New("invalid value type")
+	ErrUnexpectedEOF      = errors.New("unexpected end of file")
 )
 
 // Reader wraps an io.Reader and provides GGUF-specific reading methods
 type Reader struct {
-	r   io.ReadSeeker
+	r     io.ReadSeeker
 	order binary.ByteOrder
 }
 

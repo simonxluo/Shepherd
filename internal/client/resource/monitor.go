@@ -10,23 +10,23 @@ import (
 	"sync"
 	"time"
 
+	"github.com/shepherd-project/shepherd/Shepherd/internal/cluster"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/cluster"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 )
 
 // Monitor monitors system resources
 type Monitor struct {
-	mu               sync.RWMutex
-	currentUsage     *cluster.ResourceUsage
-	startTime        time.Time
-	ctx              context.Context
-	cancel           context.CancelFunc
-	wg               sync.WaitGroup
-	updateInterval   time.Duration
-	log              *logger.Logger
+	mu             sync.RWMutex
+	currentUsage   *cluster.ResourceUsage
+	startTime      time.Time
+	ctx            context.Context
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
+	updateInterval time.Duration
+	log            *logger.Logger
 }
 
 // NewMonitor creates a new resource monitor
@@ -36,10 +36,10 @@ func NewMonitor(updateInterval time.Duration, log *logger.Logger) *Monitor {
 	return &Monitor{
 		currentUsage:   &cluster.ResourceUsage{},
 		startTime:      time.Now(),
-		ctx:           ctx,
-		cancel:        cancel,
+		ctx:            ctx,
+		cancel:         cancel,
 		updateInterval: updateInterval,
-		log:           log,
+		log:            log,
 	}
 }
 

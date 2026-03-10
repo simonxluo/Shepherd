@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/types"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/types"
 )
 
 // RequestID middleware adds a unique request ID to each request

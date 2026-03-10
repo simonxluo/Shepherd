@@ -1,11 +1,11 @@
 package model
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"net/http"
 	"os"
@@ -797,20 +797,20 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 		if status.State == StateLoaded {
 			m.mu.RUnlock()
 			return &LoadResult{
-				Success:  true,
-				ModelID:  req.ModelID,
-				Port:     status.Port,
-				Async:    true,
+				Success:       true,
+				ModelID:       req.ModelID,
+				Port:          status.Port,
+				Async:         true,
 				AlreadyLoaded: true,
 			}, nil
 		}
 		if status.State == StateLoading {
 			m.mu.RUnlock()
 			return &LoadResult{
-				Success:  true,
-				ModelID:  req.ModelID,
-				Async:    true,
-				Loading:  true,
+				Success: true,
+				ModelID: req.ModelID,
+				Async:   true,
+				Loading: true,
 			}, nil
 		}
 	}
@@ -830,10 +830,10 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 	go m.loadModelAsync(req, status, model)
 
 	return &LoadResult{
-		Success:  true,
-		ModelID:  req.ModelID,
-		Async:    true,
-		Loading:  true,
+		Success: true,
+		ModelID: req.ModelID,
+		Async:   true,
+		Loading: true,
 	}, nil
 }
 
@@ -1104,10 +1104,10 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 // 规则：每GB 1分钟，最少5分钟，最多30分钟
 func (m *Manager) calculateLoadTimeout(modelSize int64) time.Duration {
 	const (
-		minTimeout     = 5 * time.Minute
-		maxTimeout     = 30 * time.Minute
-		minutesPerGB   = 1 * time.Minute
-		gigabyte       = int64(1024 * 1024 * 1024)
+		minTimeout   = 5 * time.Minute
+		maxTimeout   = 30 * time.Minute
+		minutesPerGB = 1 * time.Minute
+		gigabyte     = int64(1024 * 1024 * 1024)
 	)
 
 	// 计算基于模型大小的超时时间
@@ -1442,7 +1442,9 @@ func (m *Manager) saveModels() {
 		configModels = append(configModels, entry)
 	}
 
-	if err := m.configMgr.SaveModelsConfig(configModels); err != nil { logger.Warn("保存模型配置失败", "error", err) }
+	if err := m.configMgr.SaveModelsConfig(configModels); err != nil {
+		logger.Warn("保存模型配置失败", "error", err)
+	}
 }
 
 // findLlamaCppBinary finds the llama.cpp binary
@@ -2008,7 +2010,6 @@ func (m *Manager) mergeSplitModels() int {
 	return mergedCount
 }
 
-
 // toProcessLoadRequest converts model.LoadRequest to process.LoadRequest for command building
 // This bridges the canonical LoadRequest (with ModelID/NodeID) to the command-building LoadRequest (with ModelPath/Port)
 func toProcessLoadRequest(req *LoadRequest, modelPath string, port int) *process.LoadRequest {
@@ -2054,34 +2055,34 @@ func toProcessLoadRequest(req *LoadRequest, modelPath string, port int) *process
 		PresencePenalty:  req.PresencePenalty,
 		FrequencyPenalty: req.FrequencyPenalty,
 		// Template and processing
-		DirectIo:         req.DirectIo,
-		DisableJinja:     req.DisableJinja,
-		ChatTemplate:     req.ChatTemplate,
-		ContextShift:     req.ContextShift,
+		DirectIo:     req.DirectIo,
+		DisableJinja: req.DisableJinja,
+		ChatTemplate: req.ChatTemplate,
+		ContextShift: req.ContextShift,
 		// Thread configuration
-		ThreadsBatch:     req.ThreadsBatch,
+		ThreadsBatch: req.ThreadsBatch,
 		// Extended sampling parameters
-		RepeatLastN:      req.RepeatLastN,
-		TypicalP:         req.TypicalP,
-		IgnoreEOS:        req.IgnoreEOS,
+		RepeatLastN: req.RepeatLastN,
+		TypicalP:    req.TypicalP,
+		IgnoreEOS:   req.IgnoreEOS,
 		// Multi-GPU configuration
-		SplitMode:        req.SplitMode,
-		TensorSplit:      req.TensorSplit,
+		SplitMode:   req.SplitMode,
+		TensorSplit: req.TensorSplit,
 		// Server optimization
-		ContBatching:     req.ContBatching,
-		CachePrompt:      req.CachePrompt,
+		ContBatching: req.ContBatching,
+		CachePrompt:  req.CachePrompt,
 		// Structured generation
-		Grammar:          req.Grammar,
-		GrammarFile:      req.GrammarFile,
+		Grammar:     req.Grammar,
+		GrammarFile: req.GrammarFile,
 		// LoRA adapter support
-		Lora:             req.Lora,
-		LoraScaled:       req.LoraScaled,
+		Lora:       req.Lora,
+		LoraScaled: req.LoraScaled,
 		// Chat template kwargs
 		ChatTemplateKwargs: req.ChatTemplateKwargs,
 		// RoPE scaling
-		RopeScaling:      req.RopeScaling,
-		RopeScale:        req.RopeScale,
-		RopeFreqBase:     req.RopeFreqBase,
-		RopeFreqScale:    req.RopeFreqScale,
+		RopeScaling:   req.RopeScaling,
+		RopeScale:     req.RopeScale,
+		RopeFreqBase:  req.RopeFreqBase,
+		RopeFreqScale: req.RopeFreqScale,
 	}
 }

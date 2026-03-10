@@ -2,9 +2,9 @@
 package server
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"net/http"
 	"sync"
 	"time"
@@ -15,14 +15,14 @@ import (
 
 // Event types
 const (
-	EventModelLoadStart     = "model_load_start"
-	EventModelLoadProgress  = "model_load_progress"
-	EventModelLoadComplete  = "model_load_complete"
-	EventModelLoadError     = "model_load_error"
-	EventModelUnload        = "model_unload"
-	EventModelStatusChange  = "model_status_changed"
-	EventProcessMetrics     = "process_metrics"
-	EventProcessLog         = "process_log"
+	EventModelLoadStart    = "model_load_start"
+	EventModelLoadProgress = "model_load_progress"
+	EventModelLoadComplete = "model_load_complete"
+	EventModelLoadError    = "model_load_error"
+	EventModelUnload       = "model_unload"
+	EventModelStatusChange = "model_status_changed"
+	EventProcessMetrics    = "process_metrics"
+	EventProcessLog        = "process_log"
 )
 
 // Event represents a WebSocket event

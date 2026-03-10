@@ -2,11 +2,11 @@
 package node
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"net/http"
 	"sync"
 	"time"

@@ -2,17 +2,18 @@ package process
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 )
 
 // Manager manages multiple llama.cpp processes
 type Manager struct {
-	processes   map[string]*Process
-	loading     map[string]*Process
-	mu          sync.RWMutex
+	processes map[string]*Process
+	loading   map[string]*Process
+	mu        sync.RWMutex
 }
 
 // NewManager creates a new process manager
@@ -239,8 +240,11 @@ func BuildCommand(binPath, modelPath string, port int, opts map[string]interface
 		return "", fmt.Errorf("model path cannot be empty")
 	}
 
-	// Find the llama-server executable
-	serverBin := filepath.Join(binPath, "llama-server")
+	// Find the llama-server executable using unified utility function
+	serverBin := utils.FindLlamacppBinary(binPath, "server")
+	if serverBin == "" {
+		return "", fmt.Errorf("llama-server not found in path: %s", binPath)
+	}
 
 	// Build command arguments
 	args := []string{
@@ -325,7 +329,6 @@ func escapeQuotes(s string) string {
 	return result.String()
 }
 
-
 // LoadRequest contains parameters for building a llama-server command
 // This is a local definition to avoid import cycle; the canonical version is in internal/model
 type LoadRequest struct {
@@ -365,10 +368,10 @@ type LoadRequest struct {
 	KVCacheSize      int      // KV cache size (--kv-cache-size)
 
 	// Additional sampling parameters
-	LogitsAll       bool    // --logits-all (input vector mode)
-	Reranking       bool    // --reranking (reranking mode)
-	MinP            float64 // --min-p (Min-P sampling)
-	PresencePenalty float64 // --presence-penalty
+	LogitsAll        bool    // --logits-all (input vector mode)
+	Reranking        bool    // --reranking (reranking mode)
+	MinP             float64 // --min-p (Min-P sampling)
+	PresencePenalty  float64 // --presence-penalty
 	FrequencyPenalty float64 // --frequency-penalty
 
 	// Template and processing
@@ -386,7 +389,7 @@ type LoadRequest struct {
 	IgnoreEOS   bool    // --ignore-eos
 
 	// Multi-GPU configuration
-	SplitMode  string // --split-mode (none, layer, row)
+	SplitMode   string // --split-mode (none, layer, row)
 	TensorSplit string // --tensor-split (comma-separated values)
 
 	// Server optimization
@@ -398,8 +401,8 @@ type LoadRequest struct {
 	GrammarFile string // --grammar-file
 
 	// LoRA adapter support
-	Lora        string // --lora
-	LoraScaled  string // --lora-scaled
+	Lora       string // --lora
+	LoraScaled string // --lora-scaled
 
 	// Chat template kwargs
 	ChatTemplateKwargs string // --chat-template-kwargs
@@ -428,8 +431,11 @@ func BuildCommandFromRequest(req *LoadRequest, binPath string) (string, error) {
 		return "", fmt.Errorf("port must be positive")
 	}
 
-	// Find the llama-server executable
-	serverBin := filepath.Join(binPath, "llama-server")
+	// Find the llama-server executable using unified utility function
+	serverBin := utils.FindLlamacppBinary(binPath, "server")
+	if serverBin == "" {
+		return "", fmt.Errorf("llama-server not found in path: %s", binPath)
+	}
 
 	// Build command arguments
 	args := []string{

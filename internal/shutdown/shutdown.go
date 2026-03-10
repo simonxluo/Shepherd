@@ -38,16 +38,16 @@ type shutdownHook struct {
 
 // Manager manages graceful shutdown
 type Manager struct {
-	mu         sync.RWMutex
-	hooks      []shutdownHook
-	timeout    time.Duration
-	sigChan    chan os.Signal
-	stopChan   chan struct{}
+	mu          sync.RWMutex
+	hooks       []shutdownHook
+	timeout     time.Duration
+	sigChan     chan os.Signal
+	stopChan    chan struct{}
 	shutdownCtx context.Context
-	cancel     context.CancelFunc
-	wg         sync.WaitGroup
-	started    bool
-	shutdown   bool
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
+	started     bool
+	shutdown    bool
 }
 
 // NewManager creates a new shutdown manager
@@ -90,8 +90,8 @@ func (m *Manager) Start() {
 	// Listen for interrupt signals
 	signal.Notify(m.sigChan,
 		os.Interrupt,    // Ctrl+C
-		syscall.SIGTERM,  // kill command
-		syscall.SIGQUIT,  // quit signal
+		syscall.SIGTERM, // kill command
+		syscall.SIGQUIT, // quit signal
 	)
 
 	m.wg.Add(1)

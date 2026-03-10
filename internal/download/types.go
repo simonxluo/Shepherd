@@ -8,7 +8,7 @@ import "time"
 type DownloadState int
 
 const (
-	StateIdle       DownloadState = iota
+	StateIdle DownloadState = iota
 	StatePreparing
 	StateDownloading
 	StateMerging
@@ -43,47 +43,47 @@ func (s DownloadState) String() string {
 
 // Task represents a download task
 type Task struct {
-	ID              string
-	URL             string
-	Path            string
-	FileName        string
-	State           DownloadState
+	ID       string
+	URL      string
+	Path     string
+	FileName string
+	State    DownloadState
 
 	// Progress tracking
 	DownloadedBytes int64
 	TotalBytes      int64
-	Speed           int64    // bytes per second
-	ETA             int64    // seconds remaining
+	Speed           int64 // bytes per second
+	ETA             int64 // seconds remaining
 
 	// Resume support
-	ETag            string
-	RangeSupported  bool
-	FinalURL        string
-	TempFileName    string
+	ETag           string
+	RangeSupported bool
+	FinalURL       string
+	TempFileName   string
 
 	// Part downloads (for parallel downloads)
-	Parts           []PartDownload
-	PartsTotal      int
-	PartsCompleted  int
+	Parts          []PartDownload
+	PartsTotal     int
+	PartsCompleted int
 
 	// Timing
-	CreatedAt       time.Time
-	StartedAt       time.Time
-	FinishedAt      time.Time
+	CreatedAt  time.Time
+	StartedAt  time.Time
+	FinishedAt time.Time
 
 	// Error handling
-	Error           error
-	RetryCount      int
-	MaxRetries      int
+	Error      error
+	RetryCount int
+	MaxRetries int
 
 	// Control
-	Paused          bool
-	StopRequested   bool
+	Paused        bool
+	StopRequested bool
 
 	// Metadata
-	FileType        string // "gguf", "json", etc.
-	SourceType      string // "huggingface", "modelscope", etc.
-	RepoID          string // "Qwen/Qwen2-7B-Instruct"
+	FileType   string // "gguf", "json", etc.
+	SourceType string // "huggingface", "modelscope", etc.
+	RepoID     string // "Qwen/Qwen2-7B-Instruct"
 }
 
 // PartDownload represents a part of a parallel download
@@ -112,11 +112,11 @@ type ProgressListener func(progress Progress)
 
 // DownloadConfig contains configuration for downloads
 type DownloadConfig struct {
-	MaxConcurrent   int           // Maximum concurrent downloads
-	ChunkSize       int64         // Size of each download chunk
-	Timeout         time.Duration // Request timeout
-	RetryCount      int           // Maximum retry attempts
-	MinPartSize     int64         // Minimum size for parallel download
-	MaxParallelism  int           // Maximum parallel parts
-	UserAgent       string
+	MaxConcurrent  int           // Maximum concurrent downloads
+	ChunkSize      int64         // Size of each download chunk
+	Timeout        time.Duration // Request timeout
+	RetryCount     int           // Maximum retry attempts
+	MinPartSize    int64         // Minimum size for parallel download
+	MaxParallelism int           // Maximum parallel parts
+	UserAgent      string
 }

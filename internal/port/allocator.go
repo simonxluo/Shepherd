@@ -2,8 +2,8 @@
 package port
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"net"
 	"sync"
 	"time"
@@ -12,9 +12,9 @@ import (
 // PortAllocator manages dynamic port allocation
 type PortAllocator struct {
 	mu        sync.Mutex
-	basePort  int           // Base port number (e.g., 8081)
-	maxPort   int           // Maximum port number (e.g., 9000)
-	allocated map[int]bool  // Allocated ports
+	basePort  int          // Base port number (e.g., 8081)
+	maxPort   int          // Maximum port number (e.g., 9000)
+	allocated map[int]bool // Allocated ports
 }
 
 // NewPortAllocator creates a new port allocator

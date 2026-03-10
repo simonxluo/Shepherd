@@ -35,37 +35,37 @@ const (
 
 // NodeCapabilities describes what a node can do
 type NodeCapabilities struct {
-	GPU              bool              `json:"gpu"`
-	GPUCount         int               `json:"gpuCount"`
-	GPUName          string            `json:"gpuName,omitempty"`
-	GPUNames         []string          `json:"gpuNames,omitempty"`
-	GPUMemory        int64             `json:"gpuMemory,omitempty"`
-	CPUCount         int               `json:"cpuCount"`
-	Memory           int64             `json:"memory"` // bytes
-	SupportsLlama    bool              `json:"supportsLlama"`
-	SupportsPython   bool              `json:"supportsPython"`
-	PythonVersion    string            `json:"pythonVersion,omitempty"`
-	CondaPath        string            `json:"condaPath,omitempty"`
+	GPU               bool              `json:"gpu"`
+	GPUCount          int               `json:"gpuCount"`
+	GPUName           string            `json:"gpuName,omitempty"`
+	GPUNames          []string          `json:"gpuNames,omitempty"`
+	GPUMemory         int64             `json:"gpuMemory,omitempty"`
+	CPUCount          int               `json:"cpuCount"`
+	Memory            int64             `json:"memory"` // bytes
+	SupportsLlama     bool              `json:"supportsLlama"`
+	SupportsPython    bool              `json:"supportsPython"`
+	PythonVersion     string            `json:"pythonVersion,omitempty"`
+	CondaPath         string            `json:"condaPath,omitempty"`
 	CondaEnvironments map[string]string `json:"condaEnvironments,omitempty"`
-	CondaEnvs        []string          `json:"condaEnvs,omitempty"` // 已废弃，使用 CondaEnvironments
-	DockerEnabled    bool              `json:"dockerEnabled,omitempty"`
+	CondaEnvs         []string          `json:"condaEnvs,omitempty"` // 已废弃，使用 CondaEnvironments
+	DockerEnabled     bool              `json:"dockerEnabled,omitempty"`
 }
 
 // NodeResources represents current resource usage and availability
 type NodeResources struct {
-	CPUUsed       int64     `json:"cpuUsed"`     // cores * 1000 (millicores)
-	CPUTotal      int64     `json:"cpuTotal"`    // cores * 1000 (millicores)
-	MemoryUsed    int64     `json:"memoryUsed"`  // bytes
-	MemoryTotal   int64     `json:"memoryTotal"` // bytes
-	DiskUsed      int64     `json:"diskUsed"`    // bytes
-	DiskTotal     int64     `json:"diskTotal"`   // bytes
+	CPUUsed       int64      `json:"cpuUsed"`     // cores * 1000 (millicores)
+	CPUTotal      int64      `json:"cpuTotal"`    // cores * 1000 (millicores)
+	MemoryUsed    int64      `json:"memoryUsed"`  // bytes
+	MemoryTotal   int64      `json:"memoryTotal"` // bytes
+	DiskUsed      int64      `json:"diskUsed"`    // bytes
+	DiskTotal     int64      `json:"diskTotal"`   // bytes
 	GPUInfo       []gpu.Info `json:"gpuInfo,omitempty"`
-	NetworkRx     int64     `json:"networkRx"`               // bytes per second
-	NetworkTx     int64     `json:"networkTx"`               // bytes per second
-	Uptime        int64     `json:"uptime"`                  // seconds
-	LoadAverage   []float64 `json:"loadAverage,omitempty"`   // 1min, 5min, 15min
-	ROCmVersion   string    `json:"rocmVersion,omitempty"`   // ROCm version (if AMD GPU)
-	KernelVersion string    `json:"kernelVersion,omitempty"` // Linux kernel version
+	NetworkRx     int64      `json:"networkRx"`               // bytes per second
+	NetworkTx     int64      `json:"networkTx"`               // bytes per second
+	Uptime        int64      `json:"uptime"`                  // seconds
+	LoadAverage   []float64  `json:"loadAverage,omitempty"`   // 1min, 5min, 15min
+	ROCmVersion   string     `json:"rocmVersion,omitempty"`   // ROCm version (if AMD GPU)
+	KernelVersion string     `json:"kernelVersion,omitempty"` // Linux kernel version
 }
 
 // GPUInfo is an alias for gpu.Info for backward compatibility.

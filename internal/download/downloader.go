@@ -13,10 +13,10 @@ import (
 
 // downloader handles the actual download logic
 type downloader struct {
-	config    DownloadConfig
-	task      *Task
-	client    *http.Client
-	manager   *Manager
+	config  DownloadConfig
+	task    *Task
+	client  *http.Client
+	manager *Manager
 }
 
 // newDownloader creates a new downloader

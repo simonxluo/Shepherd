@@ -1,9 +1,9 @@
 package gguf
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"errors"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"os"
 	"syscall"
 )

@@ -1,9 +1,9 @@
 package config
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"os"
 	"path/filepath"
 	"time"

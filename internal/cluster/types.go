@@ -13,12 +13,12 @@ type ClientStatus = types.NodeState
 
 // ClientStatus constants - 使用统一的 NodeState 常量
 const (
-	ClientStatusOffline   ClientStatus = types.StateOffline
-	ClientStatusOnline    ClientStatus = types.StateOnline
-	ClientStatusBusy      ClientStatus = types.StateBusy
-	ClientStatusError     ClientStatus = types.StateError
-	ClientStatusDegraded  ClientStatus = types.StateDegraded
-	ClientStatusDisabled  ClientStatus = types.StateDisabled
+	ClientStatusOffline  ClientStatus = types.StateOffline
+	ClientStatusOnline   ClientStatus = types.StateOnline
+	ClientStatusBusy     ClientStatus = types.StateBusy
+	ClientStatusError    ClientStatus = types.StateError
+	ClientStatusDegraded ClientStatus = types.StateDegraded
+	ClientStatusDisabled ClientStatus = types.StateDisabled
 )
 
 // TaskStatus represents the current status of a task
@@ -45,16 +45,16 @@ const (
 
 // Client represents a connected client node
 type Client struct {
-	ID           string                 `json:"id"`
-	Name         string                 `json:"name"`
-	Address      string                 `json:"address"`
-	Port         int                    `json:"port"`
-	Tags         []string               `json:"tags"`
-	Capabilities *Capabilities          `json:"capabilities"`
-	Status       ClientStatus           `json:"status"`
-	LastSeen     time.Time              `json:"lastSeen"`
-	Metadata     map[string]string      `json:"metadata"`
-	Connected    bool                   `json:"connected"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Address      string            `json:"address"`
+	Port         int               `json:"port"`
+	Tags         []string          `json:"tags"`
+	Capabilities *Capabilities     `json:"capabilities"`
+	Status       ClientStatus      `json:"status"`
+	LastSeen     time.Time         `json:"lastSeen"`
+	Metadata     map[string]string `json:"metadata"`
+	Connected    bool              `json:"connected"`
 }
 
 // Capabilities describes what a client can do
@@ -64,7 +64,7 @@ type Capabilities struct {
 	GPUName        string   `json:"gpuName,omitempty"`
 	GPUMemory      int64    `json:"gpuMemory,omitempty"` // bytes
 	CPUCount       int      `json:"cpuCount"`
-	Memory         int64    `json:"memory"`        // bytes
+	Memory         int64    `json:"memory"` // bytes
 	SupportsLlama  bool     `json:"supportsLlama"`
 	SupportsPython bool     `json:"supportsPython"`
 	CondaEnvs      []string `json:"condaEnvs,omitempty"`
@@ -95,18 +95,18 @@ type Command struct {
 
 // Heartbeat represents a heartbeat message from client to master
 type Heartbeat struct {
-	ClientID    string                 `json:"clientId"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Status      ClientStatus           `json:"status"`
-	Resources   *ResourceUsage         `json:"resources,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	ClientID  string                 `json:"clientId"`
+	Timestamp time.Time              `json:"timestamp"`
+	Status    ClientStatus           `json:"status"`
+	Resources *ResourceUsage         `json:"resources,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // ResourceUsage represents current resource usage
 type ResourceUsage struct {
 	CPUPercent     float64 `json:"cpuPercent"`
-	MemoryUsed     int64   `json:"memoryUsed"`     // bytes
-	MemoryTotal    int64   `json:"memoryTotal"`    // bytes
+	MemoryUsed     int64   `json:"memoryUsed"`  // bytes
+	MemoryTotal    int64   `json:"memoryTotal"` // bytes
 	GPUPercent     float64 `json:"gpuPercent"`
 	GPUMemoryUsed  int64   `json:"gpuMemoryUsed"`  // bytes
 	GPUMemoryTotal int64   `json:"gpuMemoryTotal"` // bytes
@@ -116,52 +116,52 @@ type ResourceUsage struct {
 
 // LogEntry represents a log entry from a client
 type LogEntry struct {
-	ClientID  string    `json:"clientId"`
-	Timestamp time.Time `json:"timestamp"`
-	Level     string    `json:"level"`
-	Message   string    `json:"message"`
+	ClientID  string            `json:"clientId"`
+	Timestamp time.Time         `json:"timestamp"`
+	Level     string            `json:"level"`
+	Message   string            `json:"message"`
 	Fields    map[string]string `json:"fields,omitempty"`
 }
 
 // DiscoveredClient represents a client found during network scan
 type DiscoveredClient struct {
-	Address      string         `json:"address"`
-	Port         int            `json:"port"`
-	ID           string         `json:"id"`
-	Name         string         `json:"name"`
-	Version      string         `json:"version"`
-	Capabilities *Capabilities  `json:"capabilities"`
-	Tags         []string       `json:"tags"`
+	Address      string        `json:"address"`
+	Port         int           `json:"port"`
+	ID           string        `json:"id"`
+	Name         string        `json:"name"`
+	Version      string        `json:"version"`
+	Capabilities *Capabilities `json:"capabilities"`
+	Tags         []string      `json:"tags"`
 }
 
 // ScanStatus represents the status of a network scan
 type ScanStatus struct {
-	Running     bool              `json:"running"`
-	StartTime   time.Time         `json:"startTime,omitempty"`
-	Progress    float64           `json:"progress"` // 0-1
-	Found       []DiscoveredClient `json:"found,omitempty"`
-	TotalScanned int              `json:"totalScanned"`
-	Errors      []string          `json:"errors,omitempty"`
+	Running      bool               `json:"running"`
+	StartTime    time.Time          `json:"startTime,omitempty"`
+	Progress     float64            `json:"progress"` // 0-1
+	Found        []DiscoveredClient `json:"found,omitempty"`
+	TotalScanned int                `json:"totalScanned"`
+	Errors       []string           `json:"errors,omitempty"`
 }
 
 // ClusterInfo represents cluster-wide information
 type ClusterInfo struct {
-	TotalClients   int            `json:"totalClients"`
-	OnlineClients  int            `json:"onlineClients"`
-	BusyClients    int            `json:"busyClients"`
-	OfflineClients int            `json:"offlineClients"`
-	TotalTasks     int            `json:"totalTasks"`
-	RunningTasks   int            `json:"runningTasks"`
-	PendingTasks   int            `json:"pendingTasks"`
+	TotalClients   int               `json:"totalClients"`
+	OnlineClients  int               `json:"onlineClients"`
+	BusyClients    int               `json:"busyClients"`
+	OfflineClients int               `json:"offlineClients"`
+	TotalTasks     int               `json:"totalTasks"`
+	RunningTasks   int               `json:"runningTasks"`
+	PendingTasks   int               `json:"pendingTasks"`
 	Resources      *ClusterResources `json:"resources"`
 }
 
 // ClusterResources represents aggregated cluster resources
 type ClusterResources struct {
-	TotalCPUCores  int    `json:"totalCPUCores"`
-	TotalMemory    int64  `json:"totalMemory"`    // bytes
-	TotalGPUMemory int64  `json:"totalGPUMemory"` // bytes
-	UsedCPUCores   int    `json:"usedCPUCores"`
-	UsedMemory     int64  `json:"usedMemory"`
-	UsedGPUMemory  int64  `json:"usedGPUMemory"`
+	TotalCPUCores  int   `json:"totalCPUCores"`
+	TotalMemory    int64 `json:"totalMemory"`    // bytes
+	TotalGPUMemory int64 `json:"totalGPUMemory"` // bytes
+	UsedCPUCores   int   `json:"usedCPUCores"`
+	UsedMemory     int64 `json:"usedMemory"`
+	UsedGPUMemory  int64 `json:"usedGPUMemory"`
 }

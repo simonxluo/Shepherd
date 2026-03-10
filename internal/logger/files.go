@@ -245,8 +245,8 @@ func parseJSONLogLine(line string, entry *ParsedLogEntry) error {
 		// Try multiple time formats
 		formats := []string{
 			time.RFC3339,
-			"2006-01-02 15:04:05",     // JSON log format
-			"2006-01-02T15:04:05Z",    // ISO format
+			"2006-01-02 15:04:05",       // JSON log format
+			"2006-01-02T15:04:05Z",      // ISO format
 			"2006-01-02T15:04:05+08:00", // ISO with timezone
 		}
 		for _, format := range formats {

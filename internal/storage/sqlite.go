@@ -292,7 +292,9 @@ func (s *SQLiteStore) GetConversation(ctx context.Context, id string) (*Conversa
 
 	// Parse metadata JSON
 	if len(metadataJSON) > 0 {
-		if !utils.UnmarshalQuietly(metadataJSON, &conv.Metadata, "会话元数据") { conv.Metadata = make(map[string]interface{}) }
+		if !utils.UnmarshalQuietly(metadataJSON, &conv.Metadata, "会话元数据") {
+			conv.Metadata = make(map[string]interface{})
+		}
 	}
 
 	// Convert Unix timestamps to time.Time
@@ -344,7 +346,9 @@ func (s *SQLiteStore) ListConversations(ctx context.Context, limit, offset int) 
 
 		// Parse metadata JSON
 		if len(metadataJSON) > 0 {
-			if !utils.UnmarshalQuietly(metadataJSON, &conv.Metadata, "会话元数据") { conv.Metadata = make(map[string]interface{}) }
+			if !utils.UnmarshalQuietly(metadataJSON, &conv.Metadata, "会话元数据") {
+				conv.Metadata = make(map[string]interface{})
+			}
 		}
 
 		// Convert Unix timestamps
@@ -499,7 +503,9 @@ func (s *SQLiteStore) GetMessages(ctx context.Context, conversationID string, li
 
 		// Parse metadata JSON
 		if len(metadataJSON) > 0 {
-			if !utils.UnmarshalQuietly(metadataJSON, &msg.Metadata, "消息元数据") { msg.Metadata = make(map[string]interface{}) }
+			if !utils.UnmarshalQuietly(metadataJSON, &msg.Metadata, "消息元数据") {
+				msg.Metadata = make(map[string]interface{})
+			}
 		}
 
 		// Convert Unix timestamp
@@ -765,8 +771,12 @@ func (s *SQLiteStore) GetBenchmarkConfig(ctx context.Context, name string) (*Ben
 		return nil, err
 	}
 
-	if !utils.UnmarshalQuietly([]byte(devicesJSON.String), &c.Devices, "设备配置") { c.Devices = []string{} }
-	if !utils.UnmarshalQuietly([]byte(paramsJSON.String), &c.Params, "模型参数") { c.Params = make(map[string]string) }
+	if !utils.UnmarshalQuietly([]byte(devicesJSON.String), &c.Devices, "设备配置") {
+		c.Devices = []string{}
+	}
+	if !utils.UnmarshalQuietly([]byte(paramsJSON.String), &c.Params, "模型参数") {
+		c.Params = make(map[string]string)
+	}
 
 	return &c, nil
 }
@@ -802,8 +812,12 @@ func (s *SQLiteStore) ListBenchmarkConfigs(ctx context.Context, limit, offset in
 			return nil, err
 		}
 
-		if !utils.UnmarshalQuietly([]byte(devicesJSON.String), &c.Devices, "设备配置") { c.Devices = []string{} }
-		if !utils.UnmarshalQuietly([]byte(paramsJSON.String), &c.Params, "模型参数") { c.Params = make(map[string]string) }
+		if !utils.UnmarshalQuietly([]byte(devicesJSON.String), &c.Devices, "设备配置") {
+			c.Devices = []string{}
+		}
+		if !utils.UnmarshalQuietly([]byte(paramsJSON.String), &c.Params, "模型参数") {
+			c.Params = make(map[string]string)
+		}
 
 		configs = append(configs, &c)
 	}
@@ -1085,12 +1099,16 @@ func (s *SQLiteStore) GetModelMetadata(ctx context.Context, modelID string) (*Mo
 
 	// Parse tags JSON
 	if tagsJSON != "" {
-		if !utils.UnmarshalQuietly([]byte(tagsJSON), &metadata.Tags, "模型标签") { metadata.Tags = []string{} }
+		if !utils.UnmarshalQuietly([]byte(tagsJSON), &metadata.Tags, "模型标签") {
+			metadata.Tags = []string{}
+		}
 	}
 
 	// Parse capabilities JSON
 	if capsJSON != "" {
-		if !utils.UnmarshalQuietly([]byte(capsJSON), &metadata.Capabilities, "模型能力") { metadata.Capabilities = &Capabilities{} }
+		if !utils.UnmarshalQuietly([]byte(capsJSON), &metadata.Capabilities, "模型能力") {
+			metadata.Capabilities = &Capabilities{}
+		}
 	}
 
 	// Parse last_loaded
@@ -1149,12 +1167,16 @@ func (s *SQLiteStore) ListModelMetadata(ctx context.Context, limit, offset int) 
 
 		// Parse tags JSON
 		if tagsJSON != "" {
-			if !utils.UnmarshalQuietly([]byte(tagsJSON), &metadata.Tags, "模型标签") { metadata.Tags = []string{} }
+			if !utils.UnmarshalQuietly([]byte(tagsJSON), &metadata.Tags, "模型标签") {
+				metadata.Tags = []string{}
+			}
 		}
 
 		// Parse capabilities JSON
 		if capsJSON != "" {
-			if !utils.UnmarshalQuietly([]byte(capsJSON), &metadata.Capabilities, "模型能力") { metadata.Capabilities = &Capabilities{} }
+			if !utils.UnmarshalQuietly([]byte(capsJSON), &metadata.Capabilities, "模型能力") {
+				metadata.Capabilities = &Capabilities{}
+			}
 		}
 
 		// Parse last_loaded
@@ -1238,12 +1260,16 @@ func (s *SQLiteStore) GetAllModelMetadata(ctx context.Context) (map[string]*Mode
 
 		// Parse tags JSON
 		if tagsJSON != "" {
-			if !utils.UnmarshalQuietly([]byte(tagsJSON), &metadata.Tags, "模型标签") { metadata.Tags = []string{} }
+			if !utils.UnmarshalQuietly([]byte(tagsJSON), &metadata.Tags, "模型标签") {
+				metadata.Tags = []string{}
+			}
 		}
 
 		// Parse capabilities JSON
 		if capsJSON != "" {
-			if !utils.UnmarshalQuietly([]byte(capsJSON), &metadata.Capabilities, "模型能力") { metadata.Capabilities = &Capabilities{} }
+			if !utils.UnmarshalQuietly([]byte(capsJSON), &metadata.Capabilities, "模型能力") {
+				metadata.Capabilities = &Capabilities{}
+			}
 		}
 
 		// Parse last_loaded
@@ -1276,8 +1302,12 @@ func (s *SQLiteStore) Stats() (map[string]interface{}, error) {
 	// Get table counts
 	var convCount, msgCount int64
 
-	if err := s.db.QueryRow("SELECT COUNT(*) FROM conversations").Scan(&convCount); err != nil { return nil, fmt.Errorf("获取会话计数失败: %w", err) }
-	if err := s.db.QueryRow("SELECT COUNT(*) FROM messages").Scan(&msgCount); err != nil { return nil, fmt.Errorf("获取消息计数失败: %w", err) }
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM conversations").Scan(&convCount); err != nil {
+		return nil, fmt.Errorf("获取会话计数失败: %w", err)
+	}
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM messages").Scan(&msgCount); err != nil {
+		return nil, fmt.Errorf("获取消息计数失败: %w", err)
+	}
 
 	stats["conversations"] = convCount
 	stats["messages"] = msgCount

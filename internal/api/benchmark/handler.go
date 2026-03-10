@@ -206,93 +206,19 @@ func (h *Handler) GetParams(c *gin.Context) {
 			FullName:     "-p",
 			Name:         "Prompt Tokens",
 			Abbreviation: "-p",
-			Description:  "提示词 token 数量 (默认 512, 设为 0 表示只测生成)",
-			DefaultValue: "512",
+			Description:  "提示词 token 数量 (建议 8192)",
+			DefaultValue: "8192",
 			Type:         "INTEGER",
 			Sort:         1,
 		},
 		{
 			FullName:     "-n",
-			Name:         "生成 Tokens",
+			Name:         "Max Tokens",
 			Abbreviation: "-n",
-			Description:  "生成的 token 数量 (默认 128, 设为 0 表示只测提示词)",
-			DefaultValue: "128",
+			Description:  "生成的 token 数量 (建议 256)",
+			DefaultValue: "256",
 			Type:         "INTEGER",
 			Sort:         2,
-		},
-		{
-			FullName:     "-c",
-			Name:         "上下文大小",
-			Abbreviation: "-c",
-			Description:  "上下文容量大小 (0 = 从模型加载)",
-			DefaultValue: "0",
-			Type:         "INTEGER",
-			Sort:         3,
-		},
-		{
-			FullName:     "-b",
-			Name:         "Batch Size",
-			Abbreviation: "-b",
-			Description:  "逻辑批处理大小",
-			DefaultValue: "512",
-			Type:         "INTEGER",
-			Sort:         4,
-		},
-		{
-			FullName:     "-ub",
-			Name:         "UBatch Size",
-			Abbreviation: "-ub",
-			Description:  "物理批处理大小",
-			DefaultValue: "512",
-			Type:         "INTEGER",
-			Sort:         5,
-		},
-		{
-			FullName:     "-t",
-			Name:         "线程数",
-			Abbreviation: "-t",
-			Description:  "CPU 线程数",
-			DefaultValue: "-1",
-			Type:         "INTEGER",
-			Sort:         6,
-		},
-		{
-			FullName:     "-ngl",
-			Name:         "GPU层数",
-			Abbreviation: "-ngl",
-			Description:  "卸载到 GPU 的层数 (99 卸载全部)",
-			DefaultValue: "99",
-			Type:         "INTEGER",
-			Sort:         7,
-		},
-		{
-			FullName:     "-fa",
-			Name:         "Flash Attention",
-			Abbreviation: "-fa",
-			Description:  "启用 Flash Attention 加速",
-			DefaultValue: "1",
-			Type:         "LOGIC",
-			Values:       []string{"0", "1"},
-			Sort:         8,
-		},
-		{
-			FullName:     "-r",
-			Name:         "重复次数",
-			Abbreviation: "-r",
-			Description:  "重复测试的次数 (提高结果稳定性)",
-			DefaultValue: "1",
-			Type:         "INTEGER",
-			Sort:         9,
-		},
-	}
-		{
-			FullName:     "-r",
-			Name:         "测试次数",
-			Abbreviation: "-r",
-			Description:  "重复测试的次数 (提高结果稳定性)",
-			DefaultValue: "3",
-			Type:         "INTEGER",
-			Sort:         9,
 		},
 	}
 
@@ -469,7 +395,9 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string, arg
 		task.Error = "Handler shutdown"
 		finishedAt := time.Now()
 		task.FinishedAt = &finishedAt
-		if err := h.store.UpdateBenchmark(h.ctx, task); err != nil { h.log.Errorf("Failed to update benchmark: %v", err) }
+		if err := h.store.UpdateBenchmark(h.ctx, task); err != nil {
+			h.log.Errorf("Failed to update benchmark: %v", err)
+		}
 		return
 	}
 
@@ -492,7 +420,9 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string, arg
 		task.Error = "Empty command"
 		finishedAt := time.Now()
 		task.FinishedAt = &finishedAt
-		if err := h.store.UpdateBenchmark(h.ctx, task); err != nil { h.log.Errorf("Failed to update benchmark: %v", err) }
+		if err := h.store.UpdateBenchmark(h.ctx, task); err != nil {
+			h.log.Errorf("Failed to update benchmark: %v", err)
+		}
 		cancel()
 		return
 	}
@@ -519,7 +449,9 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string, arg
 	}()
 
 	// 保存启动状态
-	if err := h.store.UpdateBenchmark(h.ctx, task); err != nil { h.log.Warnf("Failed to save benchmark status: %v", err) }
+	if err := h.store.UpdateBenchmark(h.ctx, task); err != nil {
+		h.log.Warnf("Failed to save benchmark status: %v", err)
+	}
 
 	// 执行并捕获输出
 	output, err := cmd.CombinedOutput()
@@ -573,7 +505,7 @@ func (h *Handler) parseBenchmarkOutput(output string) map[string]interface{} {
 			for i, part := range parts {
 				if strings.Contains(part, "ms") && i > 0 {
 					var ms float64
-				_, _ = fmt.Sscanf(parts[i-1], "%f", &ms)
+					_, _ = fmt.Sscanf(parts[i-1], "%f", &ms)
 					metrics["total_time_ms"] = ms
 				}
 			}

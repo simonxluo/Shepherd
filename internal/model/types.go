@@ -116,18 +116,18 @@ type ScanError struct {
 
 // LoadRequest contains parameters for loading a model
 type LoadRequest struct {
-	ModelID       string `json:"modelId"`
-	NodeID        string `json:"nodeId"` // 指定运行节点 ID，为空表示自动调度
-	CtxSize       int    `json:"ctxSize"`
-	BatchSize     int    `json:"batchSize"`
-	Threads       int    `json:"threads"`
-	GPULayers     int    `json:"gpuLayers"`
+	ModelID       string  `json:"modelId"`
+	NodeID        string  `json:"nodeId"` // 指定运行节点 ID，为空表示自动调度
+	CtxSize       int     `json:"ctxSize"`
+	BatchSize     int     `json:"batchSize"`
+	Threads       int     `json:"threads"`
+	GPULayers     int     `json:"gpuLayers"`
 	Temperature   float64 `json:"temperature"`
 	TopP          float64 `json:"topP"`
-	TopK          int    `json:"topK"`
+	TopK          int     `json:"topK"`
 	RepeatPenalty float64 `json:"repeatPenalty"`
-	Seed          int    `json:"seed"`
-	NPredict      int    `json:"nPredict"`
+	Seed          int     `json:"seed"`
+	NPredict      int     `json:"nPredict"`
 	// GPU device selection
 	Devices []string `json:"devices"` // -dev flags (e.g., ["cuda:0", "cuda:1"])
 	MainGPU int      `json:"mainGpu"` // -mg flag (main GPU index)
@@ -159,7 +159,7 @@ type LoadRequest struct {
 	Alias   string `json:"alias"`   // --alias for model identification
 
 	// Batch processing
-	UBatchSize   int `json:"uBatchSize"`   // --ubatch-size
+	UBatchSize    int `json:"uBatchSize"`    // --ubatch-size
 	ParallelSlots int `json:"parallelSlots"` // --parallel
 
 	// KV cache configuration
@@ -169,28 +169,28 @@ type LoadRequest struct {
 	KVCacheSize    int    `json:"kvCacheSize"`    // --kv-cache-size
 
 	// Additional sampling parameters
-	LogitsAll       bool    `json:"logitsAll"`       // --logits-all
-	Reranking       bool    `json:"reranking"`       // --reranking
-	MinP            float64 `json:"minP"`            // --min-p
-	PresencePenalty float64 `json:"presencePenalty"` // --presence-penalty
+	LogitsAll        bool    `json:"logitsAll"`        // --logits-all
+	Reranking        bool    `json:"reranking"`        // --reranking
+	MinP             float64 `json:"minP"`             // --min-p
+	PresencePenalty  float64 `json:"presencePenalty"`  // --presence-penalty
 	FrequencyPenalty float64 `json:"frequencyPenalty"` // --frequency-penalty
 
 	// Thread configuration
 	ThreadsBatch int `json:"threadsBatch"` // --threads-batch
 
 	// Template and processing
-	DirectIo      string `json:"directIo"`      // --dio
-	DisableJinja  bool   `json:"disableJinja"`  // --jinja (false to disable)
-	ChatTemplate  string `json:"chatTemplate"`  // --chat-template
-	ContextShift  bool   `json:"contextShift"`  // --context-shift
+	DirectIo     string `json:"directIo"`     // --dio
+	DisableJinja bool   `json:"disableJinja"` // --jinja (false to disable)
+	ChatTemplate string `json:"chatTemplate"` // --chat-template
+	ContextShift bool   `json:"contextShift"` // --context-shift
 
 	// Extended sampling parameters
-	RepeatLastN int     `json:"repeatLastN"`    // --repeat-last-n
-	TypicalP    float64 `json:"typicalP"`       // --typical-p
-	IgnoreEOS   bool    `json:"ignoreEos"`      // --ignore-eos
+	RepeatLastN int     `json:"repeatLastN"` // --repeat-last-n
+	TypicalP    float64 `json:"typicalP"`    // --typical-p
+	IgnoreEOS   bool    `json:"ignoreEos"`   // --ignore-eos
 
 	// Multi-GPU configuration
-	SplitMode  string `json:"splitMode"`  // --split-mode (none, layer, row)
+	SplitMode   string `json:"splitMode"`   // --split-mode (none, layer, row)
 	TensorSplit string `json:"tensorSplit"` // --tensor-split (comma-separated values)
 
 	// Server optimization
@@ -202,8 +202,8 @@ type LoadRequest struct {
 	GrammarFile string `json:"grammarFile"` // --grammar-file
 
 	// LoRA adapter support
-	Lora        string `json:"lora"`        // --lora
-	LoraScaled  string `json:"loraScaled"`  // --lora-scaled
+	Lora       string `json:"lora"`       // --lora
+	LoraScaled string `json:"loraScaled"` // --lora-scaled
 
 	// Chat template kwargs
 	ChatTemplateKwargs string `json:"chatTemplateKwargs"` // --chat-template-kwargs
@@ -223,9 +223,9 @@ type LoadResult struct {
 	CtxSize       int
 	Error         error
 	Duration      time.Duration
-	Async         bool   // 异步加载标志
-	Loading       bool   // 正在加载中（仅当 Async=true 时有效）
-	AlreadyLoaded bool   // 模型已加载（仅当 Async=true 时有效）
+	Async         bool // 异步加载标志
+	Loading       bool // 正在加载中（仅当 Async=true 时有效）
+	AlreadyLoaded bool // 模型已加载（仅当 Async=true 时有效）
 }
 
 // ModelFilter represents filter criteria for model search

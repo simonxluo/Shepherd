@@ -2,11 +2,11 @@
 package master
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"net"
 	"net/http"
@@ -55,9 +55,9 @@ func NewConnector(cfg *config.NodeConfig, log *logger.Logger) (*Connector, error
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Connector{
-		nodeConfig:  cfg,
-		clientInfo:  clientInfo,
-		httpClient:  &http.Client{
+		nodeConfig: cfg,
+		clientInfo: clientInfo,
+		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 		connected:   false,
@@ -99,7 +99,9 @@ func (c *Connector) Stop() {
 
 	c.mu.Lock()
 	if c.connected {
-		if err := c.unregister(); err != nil { logger.Warn(fmt.Sprintf("取消注册失败: %v", err)) }
+		if err := c.unregister(); err != nil {
+			logger.Warn(fmt.Sprintf("取消注册失败: %v", err))
+		}
 		c.connected = false
 	}
 	c.mu.Unlock()
@@ -167,14 +169,18 @@ func (c *Connector) heartbeatLoop() {
 	defer ticker.Stop()
 
 	// Send initial heartbeat
-	if err := c.sendHeartbeat(); err != nil { logger.Warn(fmt.Sprintf("发送心跳失败: %v", err)) }
+	if err := c.sendHeartbeat(); err != nil {
+		logger.Warn(fmt.Sprintf("发送心跳失败: %v", err))
+	}
 
 	for {
 		select {
 		case <-c.ctx.Done():
 			return
 		case <-ticker.C:
-			if err := c.sendHeartbeat(); err != nil { logger.Warn(fmt.Sprintf("发送心跳失败: %v", err)) }
+			if err := c.sendHeartbeat(); err != nil {
+				logger.Warn(fmt.Sprintf("发送心跳失败: %v", err))
+			}
 		}
 	}
 }
@@ -505,5 +511,3 @@ func generateClientInfo(cfg *config.NodeConfig) (*client.ClientInfo, error) {
 		Metadata:     metadata,
 	}, nil
 }
-
-

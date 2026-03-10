@@ -1,17 +1,17 @@
 package download
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
-	"github.com/google/uuid"
 )
 
 // Manager manages download tasks
@@ -22,10 +22,10 @@ type Manager struct {
 	listeners       []ProgressListener
 	progressChan    chan Progress
 
-	mu         sync.RWMutex
-	ctx        context.Context
-	cancel     context.CancelFunc
-	wg         sync.WaitGroup
+	mu     sync.RWMutex
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 // NewManager creates a new download manager

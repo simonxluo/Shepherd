@@ -2,8 +2,8 @@
 package compatibility
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"net"
 	"net/http"
 	"syscall"

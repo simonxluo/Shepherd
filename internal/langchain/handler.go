@@ -56,7 +56,7 @@ func (h *Handler) HandleSimplePrompt(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.log.Errorf("解析简单提示请求失败: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request format",
+			"error":   "Invalid request format",
 			"details": err.Error(),
 		})
 		return
@@ -82,7 +82,7 @@ func (h *Handler) HandleSimplePrompt(c *gin.Context) {
 	if err != nil {
 		h.log.Errorf("生成文本失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to generate text",
+			"error":   "Failed to generate text",
 			"details": err.Error(),
 		})
 		return
@@ -101,7 +101,7 @@ func (h *Handler) HandleChatPrompt(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.log.Errorf("解析聊天提示请求失败: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request format",
+			"error":   "Invalid request format",
 			"details": err.Error(),
 		})
 		return
@@ -152,7 +152,7 @@ func (h *Handler) HandleChatPrompt(c *gin.Context) {
 	if err != nil {
 		h.log.Errorf("生成聊天响应失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to generate chat response",
+			"error":   "Failed to generate chat response",
 			"details": err.Error(),
 		})
 		return
@@ -171,7 +171,7 @@ func (h *Handler) HandleStreamPrompt(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.log.Errorf("解析流式提示请求失败: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request format",
+			"error":   "Invalid request format",
 			"details": err.Error(),
 		})
 		return
@@ -222,7 +222,7 @@ func (h *Handler) HandleStreamPrompt(c *gin.Context) {
 	if err != nil {
 		h.log.Errorf("启动流式生成失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to start streaming",
+			"error":   "Failed to start streaming",
 			"details": err.Error(),
 		})
 		return

@@ -12,12 +12,12 @@ import (
 type NodeState string
 
 const (
-	StateOffline   NodeState = "offline"
-	StateOnline    NodeState = "online"
-	StateBusy      NodeState = "busy"
-	StateError     NodeState = "error"
-	StateDegraded  NodeState = "degraded"
-	StateDisabled  NodeState = "disabled"
+	StateOffline  NodeState = "offline"
+	StateOnline   NodeState = "online"
+	StateBusy     NodeState = "busy"
+	StateError    NodeState = "error"
+	StateDegraded NodeState = "degraded"
+	StateDisabled NodeState = "disabled"
 )
 
 // String returns the string representation of the state
@@ -156,13 +156,13 @@ func NewErrorResponseWithDetails(code ErrorCode, message, details string, reques
 // PaginatedResponse represents a paginated API response
 // 分页响应格式
 type PaginatedResponse[T any] struct {
-	Success   bool          `json:"success"`
-	Data      []T           `json:"data,omitempty"`
-	Total     int64         `json:"total"`
-	Page      int           `json:"page"`
-	PageSize  int           `json:"pageSize"`
-	Error     *ErrorInfo    `json:"error,omitempty"`
-	Metadata  *ResponseMeta `json:"metadata,omitempty"`
+	Success  bool          `json:"success"`
+	Data     []T           `json:"data,omitempty"`
+	Total    int64         `json:"total"`
+	Page     int           `json:"page"`
+	PageSize int           `json:"pageSize"`
+	Error    *ErrorInfo    `json:"error,omitempty"`
+	Metadata *ResponseMeta `json:"metadata,omitempty"`
 }
 
 // NewPaginatedResponse creates a paginated response

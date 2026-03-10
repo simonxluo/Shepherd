@@ -8,11 +8,11 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/shepherd-project/shepherd/Shepherd/internal/client/tester"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/node"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/client/tester"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/types"
 )
 

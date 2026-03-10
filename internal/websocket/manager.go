@@ -16,31 +16,31 @@ import (
 // Manager manages WebSocket connections and broadcasts events
 type Manager struct {
 	// Connection management
-	connections     map[string]*Connection
-	connectionStatus map[string]bool
+	connections       map[string]*Connection
+	connectionStatus  map[string]bool
 	connectionCounter int
 
 	// Channels
-	eventChan   chan *Event
+	eventChan chan *Event
 
 	// Model manager reference (for status updates)
-	modelMgr   *model.Manager
+	modelMgr *model.Manager
 
 	// Synchronization
-	mu         sync.RWMutex
-	wg         sync.WaitGroup
+	mu sync.RWMutex
+	wg sync.WaitGroup
 
 	// Lifecycle
-	ctx        context.Context
-	cancel     context.CancelFunc
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // Connection represents a WebSocket connection
 type Connection struct {
-	ID         string
-	Send       chan *Event
-	mu         sync.Mutex
-	closed     bool
+	ID     string
+	Send   chan *Event
+	mu     sync.Mutex
+	closed bool
 }
 
 // NewManager creates a new WebSocket manager

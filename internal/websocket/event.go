@@ -12,48 +12,48 @@ import (
 type EventType string
 
 const (
-	EventTypeHeartbeat      EventType = "heartbeat"
-	EventTypeSystemStatus   EventType = "systemStatus"
-	EventTypeModelLoad      EventType = "modelLoad"
-	EventTypeModelLoadStart EventType = "modelLoadStart"
-	EventTypeModelStop      EventType = "modelStop"
-	EventTypeModelSlots     EventType = "model_slots"
-	EventTypeConsole        EventType = "console"
-	EventTypeDownloadUpdate EventType = "download_update"
+	EventTypeHeartbeat        EventType = "heartbeat"
+	EventTypeSystemStatus     EventType = "systemStatus"
+	EventTypeModelLoad        EventType = "modelLoad"
+	EventTypeModelLoadStart   EventType = "modelLoadStart"
+	EventTypeModelStop        EventType = "modelStop"
+	EventTypeModelSlots       EventType = "model_slots"
+	EventTypeConsole          EventType = "console"
+	EventTypeDownloadUpdate   EventType = "download_update"
 	EventTypeDownloadProgress EventType = "download_progress"
-	EventTypeScanProgress   EventType = "scan_progress"
-	EventTypeScanComplete   EventType = "scan_complete"
+	EventTypeScanProgress     EventType = "scan_progress"
+	EventTypeScanComplete     EventType = "scan_complete"
 )
 
 // Event represents a WebSocket event
 type Event struct {
-	Type      EventType   `json:"type"`
-	Timestamp int64       `json:"timestamp"`
+	Type      EventType `json:"type"`
+	Timestamp int64     `json:"timestamp"`
 
 	// Model events
-	ModelID   string      `json:"modelId,omitempty"`
-	Success   bool        `json:"success,omitempty"`
-	Message   string      `json:"message,omitempty"`
-	Port      int         `json:"port,omitempty"`
-	Data      interface{} `json:"data,omitempty"`
+	ModelID string      `json:"modelId,omitempty"`
+	Success bool        `json:"success,omitempty"`
+	Message string      `json:"message,omitempty"`
+	Port    int         `json:"port,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
 
 	// Console events
-	Line64    string      `json:"line64,omitempty"` // Base64 encoded console line
+	Line64 string `json:"line64,omitempty"` // Base64 encoded console line
 
 	// Download events
-	TaskID           string  `json:"taskId,omitempty"`
-	State            string  `json:"state,omitempty"`
-	DownloadedBytes  int64   `json:"downloadedBytes,omitempty"`
-	TotalBytes       int64   `json:"totalBytes,omitempty"`
-	PartsCompleted   int     `json:"partsCompleted,omitempty"`
-	PartsTotal       int     `json:"partsTotal,omitempty"`
-	FileName         string  `json:"fileName,omitempty"`
-	ErrorMessage     string  `json:"errorMessage,omitempty"`
-	ProgressRatio    float64 `json:"progressRatio,omitempty"`
+	TaskID          string  `json:"taskId,omitempty"`
+	State           string  `json:"state,omitempty"`
+	DownloadedBytes int64   `json:"downloadedBytes,omitempty"`
+	TotalBytes      int64   `json:"totalBytes,omitempty"`
+	PartsCompleted  int     `json:"partsCompleted,omitempty"`
+	PartsTotal      int     `json:"partsTotal,omitempty"`
+	FileName        string  `json:"fileName,omitempty"`
+	ErrorMessage    string  `json:"errorMessage,omitempty"`
+	ProgressRatio   float64 `json:"progressRatio,omitempty"`
 
 	// System status
-	LoadedModels       int `json:"loadedModels,omitempty"`
-	Connections        int `json:"connections,omitempty"`
+	LoadedModels         int `json:"loadedModels,omitempty"`
+	Connections          int `json:"connections,omitempty"`
 	ConfirmedConnections int `json:"confirmedConnections,omitempty"`
 }
 

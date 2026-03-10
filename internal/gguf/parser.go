@@ -113,8 +113,8 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 
 	// 定义要读取的通用字段名（不带前缀）
 	commonFields := []struct {
-		key       string
-		setter    func(int)
+		key         string
+		setter      func(int)
 		floatSetter func(float64)
 	}{
 		{"context_length", func(v int) { meta.ContextLength = v }, nil},

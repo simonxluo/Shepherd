@@ -2,8 +2,8 @@
 package process
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"net/http"
 	"os"
 	"strconv"
@@ -16,29 +16,29 @@ import (
 
 // ProcessMetrics represents process performance metrics
 type ProcessMetrics struct {
-	PID        int       `json:"pid"`
-	Port       int       `json:"port"`
-	State      string    `json:"state"`
-	MemoryMB   float64   `json:"memory_mb"`
-	CPUPercent float64   `json:"cpu_percent"`
-	Uptime     int64     `json:"uptime_seconds"`
-	LastLog    string    `json:"last_log"`
-	HealthOK   bool      `json:"health_ok"`
+	PID        int     `json:"pid"`
+	Port       int     `json:"port"`
+	State      string  `json:"state"`
+	MemoryMB   float64 `json:"memory_mb"`
+	CPUPercent float64 `json:"cpu_percent"`
+	Uptime     int64   `json:"uptime_seconds"`
+	LastLog    string  `json:"last_log"`
+	HealthOK   bool    `json:"health_ok"`
 }
 
 // ProcessMonitor monitors a managed process
 type ProcessMonitor struct {
-	process    *Process
-	interval   time.Duration
-	stopChan   chan bool
-	metrics    ProcessMetrics
-	mu         sync.RWMutex
-	callbacks  []func(ProcessMetrics)
-	log        *logger.Logger
-	startTime  time.Time
+	process     *Process
+	interval    time.Duration
+	stopChan    chan bool
+	metrics     ProcessMetrics
+	mu          sync.RWMutex
+	callbacks   []func(ProcessMetrics)
+	log         *logger.Logger
+	startTime   time.Time
 	lastCPUTime float64
-	logBuffer  []string  // Circular buffer for log lines
-	logMu      sync.Mutex
+	logBuffer   []string // Circular buffer for log lines
+	logMu       sync.Mutex
 }
 
 // NewProcessMonitor creates a new process monitor

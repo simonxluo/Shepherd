@@ -2,11 +2,11 @@
 package node
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"net/http"
 	"sync"
@@ -190,9 +190,9 @@ func (sm *SubsystemManager) IsRunning() bool {
 
 // HeartbeatSubsystem manages heartbeats for client nodes
 type HeartbeatSubsystem struct {
-	node    *Node
-	running bool
-	mu      sync.RWMutex
+	node     *Node
+	running  bool
+	mu       sync.RWMutex
 	interval time.Duration
 }
 
@@ -202,7 +202,7 @@ func NewHeartbeatSubsystem(node *Node, interval time.Duration) *HeartbeatSubsyst
 		interval = 30 * time.Second
 	}
 	return &HeartbeatSubsystem{
-		node:    node,
+		node:     node,
 		interval: interval,
 	}
 }
@@ -452,8 +452,8 @@ func (rs *RegistrationSubsystem) registerWithMaster(ctx context.Context) {
 			Memory:         rs.node.capabilities.Memory,
 			CondaEnvs:      rs.node.capabilities.CondaEnvs,
 		},
-		Resources:   rs.node.GetResources(),
-		LastSeen:    time.Now(),
+		Resources:    rs.node.GetResources(),
+		LastSeen:     time.Now(),
 		RegisteredAt: time.Now(),
 	}
 

@@ -35,8 +35,8 @@ type ClientManager interface {
 type SchedulingStrategy string
 
 const (
-	RoundRobinStrategy  SchedulingStrategy = "round_robin"
-	LeastLoadedStrategy SchedulingStrategy = "least_loaded"
+	RoundRobinStrategy    SchedulingStrategy = "round_robin"
+	LeastLoadedStrategy   SchedulingStrategy = "least_loaded"
 	ResourceAwareStrategy SchedulingStrategy = "resource_aware"
 )
 

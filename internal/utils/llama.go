@@ -119,9 +119,9 @@ func GetLlamacppDeviceList(benchPath string) ([]string, error) {
 //   - string: 找到的可执行文件完整路径，如果未找到返回空字符串
 //
 // 查找逻辑:
-//   1. 如果 binPath 是文件且可执行，直接返回
-//   2. 如果 binPath 是目录，在目录中查找对应的二进制文件
-//   3. 如果未找到，尝试在 bin/ 子目录中查找
+//  1. 如果 binPath 是文件且可执行，直接返回
+//  2. 如果 binPath 是目录，在目录中查找对应的二进制文件
+//  3. 如果未找到，尝试在 bin/ 子目录中查找
 //
 // 支持的二进制文件名:
 //   - server: llama-server, server

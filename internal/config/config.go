@@ -23,7 +23,6 @@ const (
 	DefaultLaunchConfigFile = "launch_config.json"
 )
 
-
 // Config represents the complete application configuration
 type Config struct {
 	Server        ServerConfig          `mapstructure:"server" yaml:"server" json:"server"`
@@ -59,7 +58,7 @@ type ModelConfig struct {
 	PathConfigs  []ModelPath `mapstructure:"path_configs" yaml:"path_configs" json:"pathConfigs"` // 详细路径配置
 	AutoScan     bool        `mapstructure:"auto_scan" yaml:"auto_scan" json:"autoScan"`
 	ScanInterval int         `mapstructure:"scan_interval" yaml:"scan_interval" json:"scanInterval"` // seconds, 0 = disable
-	PortRange    string      `mapstructure:"port_range" yaml:"port_range" json:"portRange"`         // 模型服务端口范围，如 "8081-9000"
+	PortRange    string      `mapstructure:"port_range" yaml:"port_range" json:"portRange"`          // 模型服务端口范围，如 "8081-9000"
 }
 
 // LlamacppConfig contains llama.cpp binary paths configuration
@@ -187,17 +186,17 @@ type ClientConfig struct {
 
 // NodeConfig contains node configuration for the new distributed architecture
 type NodeConfig struct {
-	ID       string            `mapstructure:"id" yaml:"id" json:"id"`             // 节点ID，auto表示自动生成
-	Name     string            `mapstructure:"name" yaml:"name" json:"name"`       // 节点名称
-	Role     string            `mapstructure:"role" yaml:"role" json:"role"`       // 节点角色: standalone/master/client/hybrid
-	Tags     []string          `mapstructure:"tags" yaml:"tags" json:"tags"`       // 节点标签
+	ID       string            `mapstructure:"id" yaml:"id" json:"id"`                   // 节点ID，auto表示自动生成
+	Name     string            `mapstructure:"name" yaml:"name" json:"name"`             // 节点名称
+	Role     string            `mapstructure:"role" yaml:"role" json:"role"`             // 节点角色: standalone/master/client/hybrid
+	Tags     []string          `mapstructure:"tags" yaml:"tags" json:"tags"`             // 节点标签
 	Metadata map[string]string `mapstructure:"metadata" yaml:"metadata" json:"metadata"` // 节点元数据
 	// 各角色配置
 	MasterRole NodeMasterRoleConfig `mapstructure:"master_role" yaml:"master_role" json:"masterRole"` // Master角色配置
 	ClientRole NodeClientRoleConfig `mapstructure:"client_role" yaml:"client_role" json:"clientRole"` // Client角色配置
 	// 资源和执行器配置
-	Resources   NodeResourceConfig    `mapstructure:"resources" yaml:"resources" json:"resources"`       // 资源监控配置
-	Executor    NodeExecutorConfig    `mapstructure:"executor" yaml:"executor" json:"executor"`          // 命令执行器配置
+	Resources    NodeResourceConfig     `mapstructure:"resources" yaml:"resources" json:"resources"`          // 资源监控配置
+	Executor     NodeExecutorConfig     `mapstructure:"executor" yaml:"executor" json:"executor"`             // 命令执行器配置
 	Capabilities NodeCapabilitiesConfig `mapstructure:"capabilities" yaml:"capabilities" json:"capabilities"` // 能力配置
 }
 
@@ -243,8 +242,8 @@ type NodeExecutorConfig struct {
 
 // NodeCapabilitiesConfig contains node capabilities configuration
 type NodeCapabilitiesConfig struct {
-	PythonEnabled     bool              `mapstructure:"python_enabled" yaml:"python_enabled" json:"pythonEnabled"`           // 是否启用 Python 支持
-	CondaPath         string            `mapstructure:"conda_path" yaml:"conda_path" json:"condaPath"`                       // Conda 可执行文件路径
+	PythonEnabled     bool              `mapstructure:"python_enabled" yaml:"python_enabled" json:"pythonEnabled"`             // 是否启用 Python 支持
+	CondaPath         string            `mapstructure:"conda_path" yaml:"conda_path" json:"condaPath"`                         // Conda 可执行文件路径
 	CondaEnvironments map[string]string `mapstructure:"conda_environments" yaml:"conda_environments" json:"condaEnvironments"` // Conda 环境列表 (name -> path)
 }
 
@@ -458,10 +457,10 @@ func DefaultConfig() *Config {
 		},
 		// Node 节点配置
 		Node: NodeConfig{
-			ID:       "auto",
-			Name:     "",
-			Role:     "hybrid", // 默认混合模式
-			Tags:     []string{},
+			ID:   "auto",
+			Name: "",
+			Role: "hybrid", // 默认混合模式
+			Tags: []string{},
 			Metadata: map[string]string{
 				"os":   "linux",
 				"arch": "amd64",
@@ -503,8 +502,8 @@ func DefaultConfig() *Config {
 				},
 			},
 			Capabilities: NodeCapabilitiesConfig{
-				PythonEnabled:     false,
-				CondaPath:         "",
+				PythonEnabled: false,
+				CondaPath:     "",
 				CondaEnvironments: map[string]string{
 					"shepherd": "",
 				},

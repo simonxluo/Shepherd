@@ -5,10 +5,10 @@
 package modelrepo
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"net"
 	"net/http"
@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	hfhub "github.com/gomlx/go-huggingface/hub"
 	hfdownloader "github.com/bodaay/HuggingFaceModelDownloader/pkg/hfdownloader"
+	hfhub "github.com/gomlx/go-huggingface/hub"
 )
 
 // Source represents the model repository source
@@ -40,16 +40,16 @@ const (
 type DownloadMode string
 
 const (
-	DownloadModeBasic   DownloadMode = "basic"   // Use go-huggingface/hub (simple, reliable)
+	DownloadModeBasic    DownloadMode = "basic"    // Use go-huggingface/hub (simple, reliable)
 	DownloadModeAdvanced DownloadMode = "advanced" // Use bodaay/HuggingFaceModelDownloader (multipart, resumable)
 )
 
 // Client is a model repository client
 type Client struct {
-	httpClient  *http.Client
-	hfToken     string
-	endpoint    string
-	cacheDir    string
+	httpClient   *http.Client
+	hfToken      string
+	endpoint     string
+	cacheDir     string
 	downloadMode DownloadMode
 }
 

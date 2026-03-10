@@ -2,8 +2,8 @@
 package logger
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"os"
 	"sync"
@@ -14,14 +14,14 @@ import (
 
 // Collector collects logs from the client and sends them to the master
 type Collector struct {
-	clientID    string
-	logFilePath string
-	mu          sync.RWMutex
-	ctx         context.Context
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
-	buffer      []*cluster.LogEntry
-	bufferSize  int
+	clientID      string
+	logFilePath   string
+	mu            sync.RWMutex
+	ctx           context.Context
+	cancel        context.CancelFunc
+	wg            sync.WaitGroup
+	buffer        []*cluster.LogEntry
+	bufferSize    int
 	flushInterval time.Duration
 }
 

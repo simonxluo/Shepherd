@@ -14,18 +14,18 @@ import (
 
 // Manager 管理 LangChainGo LLM 实例
 type Manager struct {
-	modelMgr    *model.Manager
+	modelMgr     *model.Manager
 	llmInstances map[string]*LlamaCPP // 模型ID -> LLM 实例
-	mu          sync.RWMutex
-	logger      *logger.Logger
+	mu           sync.RWMutex
+	logger       *logger.Logger
 }
 
 // NewManager 创建新的 LangChainGo 管理器
 func NewManager(modelMgr *model.Manager, log *logger.Logger) *Manager {
 	return &Manager{
-		modelMgr:    modelMgr,
+		modelMgr:     modelMgr,
 		llmInstances: make(map[string]*LlamaCPP),
-		logger:      log,
+		logger:       log,
 	}
 }
 
@@ -188,10 +188,10 @@ func (m *Manager) GetStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"total_models":       len(statuses),
-		"loaded_models":      len(loadedModels),
-		"llm_instances":      len(m.llmInstances),
-		"cached_instances":   m.llmInstances,
-		"available_models":   loadedModels,
+		"total_models":     len(statuses),
+		"loaded_models":    len(loadedModels),
+		"llm_instances":    len(m.llmInstances),
+		"cached_instances": m.llmInstances,
+		"available_models": loadedModels,
 	}
 }

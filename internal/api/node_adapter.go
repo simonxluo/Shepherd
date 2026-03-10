@@ -313,15 +313,15 @@ func (a *NodeAdapter) convertNodeToFrontendFormat(client *node.NodeInfo) gin.H {
 	}
 
 	result := gin.H{
-		"id":          client.ID,
-		"name":        client.Name,
-		"address":     client.Address,
-		"port":        client.Port,
-		"tags":        client.Tags,
-		"status":      client.Status,
-		"lastSeen":    client.LastSeen.Format(time.RFC3339),
-		"connected":   client.Status == "online",
-		"metadata":    client.Metadata,
+		"id":           client.ID,
+		"name":         client.Name,
+		"address":      client.Address,
+		"port":         client.Port,
+		"tags":         client.Tags,
+		"status":       client.Status,
+		"lastSeen":     client.LastSeen.Format(time.RFC3339),
+		"connected":    client.Status == "online",
+		"metadata":     client.Metadata,
 		"capabilities": capabilities,
 	}
 
@@ -940,7 +940,6 @@ func (a *NodeAdapter) GetClusterOverview(c *gin.Context) {
 	})
 }
 
-
 // GetNodeConfig 获取节点配置信息
 // GET /api/nodes/:id/config
 func (a *NodeAdapter) GetNodeConfig(c *gin.Context) {
@@ -952,9 +951,9 @@ func (a *NodeAdapter) GetNodeConfig(c *gin.Context) {
 
 	// 向节点发送获取配置命令
 	cmd := node.Command{
-		ID:      fmt.Sprintf("cmd-config-%d", time.Now().UnixNano()),
-		Type:    node.CommandTypeGetConfig,
-		Payload: map[string]interface{}{},
+		ID:        fmt.Sprintf("cmd-config-%d", time.Now().UnixNano()),
+		Type:      node.CommandTypeGetConfig,
+		Payload:   map[string]interface{}{},
 		CreatedAt: time.Now(),
 	}
 
@@ -990,9 +989,9 @@ func (a *NodeAdapter) TestNodeLlamacpp(c *gin.Context) {
 
 	// 向节点发送测试命令
 	cmd := node.Command{
-		ID:      fmt.Sprintf("cmd-test-%d", time.Now().UnixNano()),
-		Type:    node.CommandTypeTestLlamacpp,
-		Payload: map[string]interface{}{},
+		ID:        fmt.Sprintf("cmd-test-%d", time.Now().UnixNano()),
+		Type:      node.CommandTypeTestLlamacpp,
+		Payload:   map[string]interface{}{},
 		CreatedAt: time.Now(),
 	}
 

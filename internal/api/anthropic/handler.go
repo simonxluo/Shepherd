@@ -2,10 +2,10 @@
 package anthropic
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"net/http"
 
@@ -30,15 +30,15 @@ func NewHandler(modelMgr *model.Manager) *Handler {
 
 // MessageRequest represents an Anthropic messages API request
 type MessageRequest struct {
-	Model     string         `json:"model"`
-	MaxTokens int            `json:"max_tokens"`
-	Messages  []Message     `json:"messages"`
-	System    string        `json:"system,omitempty"`
-	Temperature float64      `json:"temperature,omitempty"`
-	TopP      float64       `json:"top_p,omitempty"`
-	TopK      int           `json:"top_k,omitempty"`
-	Stream    bool          `json:"stream,omitempty"`
-	StopSequences []string `json:"stop_sequences,omitempty"`
+	Model         string    `json:"model"`
+	MaxTokens     int       `json:"max_tokens"`
+	Messages      []Message `json:"messages"`
+	System        string    `json:"system,omitempty"`
+	Temperature   float64   `json:"temperature,omitempty"`
+	TopP          float64   `json:"top_p,omitempty"`
+	TopK          int       `json:"top_k,omitempty"`
+	Stream        bool      `json:"stream,omitempty"`
+	StopSequences []string  `json:"stop_sequences,omitempty"`
 }
 
 // Message represents a message in Anthropic format
@@ -49,14 +49,14 @@ type Message struct {
 
 // MessageResponse represents an Anthropic messages API response
 type MessageResponse struct {
-	ID           string        `json:"id"`
-	Type         string        `json:"type"`
-	Role         string        `json:"role"`
-	Content      []ContentBlock `json:"content,omitempty"`
-	StopReason   string        `json:"stop_reason,omitempty"`
-	Model        string        `json:"model"`
-	Usage        *Usage        `json:"usage,omitempty"`
-	Error        *ErrorDetail  `json:"error,omitempty"`
+	ID         string         `json:"id"`
+	Type       string         `json:"type"`
+	Role       string         `json:"role"`
+	Content    []ContentBlock `json:"content,omitempty"`
+	StopReason string         `json:"stop_reason,omitempty"`
+	Model      string         `json:"model"`
+	Usage      *Usage         `json:"usage,omitempty"`
+	Error      *ErrorDetail   `json:"error,omitempty"`
 }
 
 // ContentBlock represents a content block
@@ -184,9 +184,9 @@ func (h *Handler) forwardToOpenAI(c *gin.Context, modelID string, port int, anth
 	}
 
 	openaiReq := map[string]interface{}{
-		"model":    modelID,
-		"messages": messages,
-		"stream":   anthropicReq.Stream,
+		"model":      modelID,
+		"messages":   messages,
+		"stream":     anthropicReq.Stream,
 		"max_tokens": anthropicReq.MaxTokens,
 	}
 
@@ -254,10 +254,10 @@ func (h *Handler) forwardToOpenAI(c *gin.Context, modelID string, port int, anth
 // convertResponse converts OpenAI response to Anthropic format
 func (h *Handler) convertResponse(openaiResp map[string]interface{}, model string) *MessageResponse {
 	resp := &MessageResponse{
-		ID:     generateID("msg"),
-		Type:   "message",
-		Role:   "assistant",
-		Model:  model,
+		ID:    generateID("msg"),
+		Type:  "message",
+		Role:  "assistant",
+		Model: model,
 	}
 
 	// Extract choices

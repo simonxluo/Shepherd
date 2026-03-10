@@ -25,8 +25,8 @@ import (
 // MemoryResourceMonitor 使用内存存储实现 IResourceMonitor
 type MemoryResourceMonitor struct {
 	// 配置参数
-	interval      time.Duration              // 采样间隔
-	llamacppPaths []string                   // llama.cpp 可执行文件路径
+	interval      time.Duration               // 采样间隔
+	llamacppPaths []string                    // llama.cpp 可执行文件路径
 	callbacks     []func(*node.NodeResources) // 资源更新回调函数列表
 
 	// 运行时状态
@@ -51,11 +51,11 @@ type MemoryResourceMonitor struct {
 
 // ResourceMonitorConfig 资源监控器配置
 type ResourceMonitorConfig struct {
-	Interval      time.Duration        // 采样间隔，默认5秒
-	LlamacppPaths []string             // llama.cpp 可执行文件路径
+	Interval      time.Duration             // 采样间隔，默认5秒
+	LlamacppPaths []string                  // llama.cpp 可执行文件路径
 	Callback      func(*node.NodeResources) // 资源更新回调（单个，向后兼容）
 	Logger        *logger.Logger
-	MaxMetrics    int                  // 最大保存历史指标数量
+	MaxMetrics    int // 最大保存历史指标数量
 }
 
 // NewMemoryResourceMonitor creates a new in-memory resource monitor
@@ -716,23 +716,23 @@ func (m *MemoryResourceMonitor) GetStats() *MonitorStats {
 	defer m.mu.RUnlock()
 
 	return &MonitorStats{
-		Running:       m.running,
-		StartTime:     m.startTime,
-		LastUpdate:    m.lastUpdate,
-		UpdateCount:   len(m.metrics),
+		Running:        m.running,
+		StartTime:      m.startTime,
+		LastUpdate:     m.lastUpdate,
+		UpdateCount:    len(m.metrics),
 		UpdateInterval: m.interval,
-		GPUCount:      len(m.gpuInfo),
-		LlamacppFound: m.llamacppInfo != nil,
+		GPUCount:       len(m.gpuInfo),
+		LlamacppFound:  m.llamacppInfo != nil,
 	}
 }
 
 // MonitorStats represents monitor statistics
 type MonitorStats struct {
-	Running       bool      `json:"running"`
-	StartTime     time.Time `json:"startTime"`
-	LastUpdate    time.Time `json:"lastUpdate"`
-	UpdateCount   int       `json:"updateCount"`
+	Running        bool          `json:"running"`
+	StartTime      time.Time     `json:"startTime"`
+	LastUpdate     time.Time     `json:"lastUpdate"`
+	UpdateCount    int           `json:"updateCount"`
 	UpdateInterval time.Duration `json:"updateInterval"`
-	GPUCount      int       `json:"gpuCount"`
-	LlamacppFound bool      `json:"llamacppFound"`
+	GPUCount       int           `json:"gpuCount"`
+	LlamacppFound  bool          `json:"llamacppFound"`
 }

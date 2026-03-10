@@ -6,11 +6,11 @@
 package client
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"net/http"
 	"sync"

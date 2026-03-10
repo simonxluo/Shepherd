@@ -18,16 +18,16 @@ const (
 
 // StorageConfig represents storage configuration
 type StorageConfig struct {
-	Type     StorageType `mapstructure:"type" yaml:"type" json:"type"`
-	SQLite   *SQLiteConfig   `mapstructure:"sqlite" yaml:"sqlite" json:"sqlite,omitempty"`
+	Type       StorageType       `mapstructure:"type" yaml:"type" json:"type"`
+	SQLite     *SQLiteConfig     `mapstructure:"sqlite" yaml:"sqlite" json:"sqlite,omitempty"`
 	PostgreSQL *PostgreSQLConfig `mapstructure:"postgresql" yaml:"postgresql" json:"postgresql,omitempty"`
 }
 
 // SQLiteConfig contains SQLite-specific configuration
 type SQLiteConfig struct {
-	Path       string `mapstructure:"path" yaml:"path" json:"path"`                   // Database file path
-	Pragmas    map[string]string `mapstructure:"pragmas" yaml:"pragmas" json:"pragmas,omitempty"` // SQLite pragmas
-	EnableWAL  bool   `mapstructure:"enable_wal" yaml:"enable_wal" json:"enableWAL"` // Enable WAL mode
+	Path      string            `mapstructure:"path" yaml:"path" json:"path"`                    // Database file path
+	Pragmas   map[string]string `mapstructure:"pragmas" yaml:"pragmas" json:"pragmas,omitempty"` // SQLite pragmas
+	EnableWAL bool              `mapstructure:"enable_wal" yaml:"enable_wal" json:"enableWAL"`   // Enable WAL mode
 }
 
 // PostgreSQLConfig contains PostgreSQL-specific configuration
@@ -67,26 +67,26 @@ func (c *Capabilities) ApplyConstraints() {
 
 // Message represents a chat message
 type Message struct {
-	ID          string                 `json:"id" db:"id"`
-	ConversationID string              `json:"conversationId" db:"conversation_id"`
-	Role        string                 `json:"role" db:"role"`         // user, assistant, system
-	Content     string                 `json:"content" db:"content"`
-	Name        string                 `json:"name,omitempty" db:"name"`
-	TokenCount  int                    `json:"tokenCount,omitempty" db:"token_count"`
-	CreatedAt   time.Time              `json:"createdAt" db:"created_at"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty" db:"metadata"` // JSON encoded
+	ID             string                 `json:"id" db:"id"`
+	ConversationID string                 `json:"conversationId" db:"conversation_id"`
+	Role           string                 `json:"role" db:"role"` // user, assistant, system
+	Content        string                 `json:"content" db:"content"`
+	Name           string                 `json:"name,omitempty" db:"name"`
+	TokenCount     int                    `json:"tokenCount,omitempty" db:"token_count"`
+	CreatedAt      time.Time              `json:"createdAt" db:"created_at"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty" db:"metadata"` // JSON encoded
 }
 
 // Conversation represents a chat conversation
 type Conversation struct {
-	ID          string                 `json:"id" db:"id"`
-	Model       string                 `json:"model" db:"model"`
-	Title       string                 `json:"title,omitempty" db:"title"`
-	SystemPrompt string                `json:"systemPrompt,omitempty" db:"system_prompt"`
-	MessageCount int                   `json:"messageCount" db:"message_count"`
-	CreatedAt   time.Time              `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time              `json:"updatedAt" db:"updated_at"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty" db:"metadata"` // JSON encoded
+	ID           string                 `json:"id" db:"id"`
+	Model        string                 `json:"model" db:"model"`
+	Title        string                 `json:"title,omitempty" db:"title"`
+	SystemPrompt string                 `json:"systemPrompt,omitempty" db:"system_prompt"`
+	MessageCount int                    `json:"messageCount" db:"message_count"`
+	CreatedAt    time.Time              `json:"createdAt" db:"created_at"`
+	UpdatedAt    time.Time              `json:"updatedAt" db:"updated_at"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty" db:"metadata"` // JSON encoded
 }
 
 // Benchmark represents a benchmark task
@@ -96,7 +96,7 @@ type Benchmark struct {
 	ModelName  string                 `json:"modelName" db:"model_name"`
 	Status     string                 `json:"status" db:"status"` // running, completed, failed, cancelled
 	Command    string                 `json:"command" db:"command"`
-	Config     map[string]interface{} `json:"config,omitempty" db:"config"` // JSON encoded
+	Config     map[string]interface{} `json:"config,omitempty" db:"config"`   // JSON encoded
 	Metrics    map[string]interface{} `json:"metrics,omitempty" db:"metrics"` // JSON encoded
 	Error      string                 `json:"error,omitempty" db:"error"`
 	CreatedAt  time.Time              `json:"createdAt" db:"created_at"`
@@ -106,41 +106,41 @@ type Benchmark struct {
 
 // BenchmarkConfig represents a saved benchmark configuration
 type BenchmarkConfig struct {
-	Name        string                 `json:"name" db:"name"`
-	ModelID     string                 `json:"modelId" db:"model_id"`
-	ModelName   string                 `json:"modelName" db:"model_name"`
-	LlamaCppPath string                `json:"llamaCppPath" db:"llamacpp_path"`
-	Devices     []string               `json:"devices" db:"devices"` // JSON array
-	Params      map[string]string      `json:"params" db:"params"` // JSON encoded
-	CreatedAt   time.Time              `json:"createdAt" db:"created_at"`
+	Name         string            `json:"name" db:"name"`
+	ModelID      string            `json:"modelId" db:"model_id"`
+	ModelName    string            `json:"modelName" db:"model_name"`
+	LlamaCppPath string            `json:"llamaCppPath" db:"llamacpp_path"`
+	Devices      []string          `json:"devices" db:"devices"` // JSON array
+	Params       map[string]string `json:"params" db:"params"`   // JSON encoded
+	CreatedAt    time.Time         `json:"createdAt" db:"created_at"`
 }
 
 // ModelLoadConfig represents a saved model loading configuration
 type ModelLoadConfig struct {
-	ID         string                 `json:"id" db:"id"`
-	NodeID     string                 `json:"nodeId" db:"node_id"`       // Machine/Node ID
-	ModelID    string                 `json:"modelId" db:"model_id"`    // Model ID
-	ModelName  string                 `json:"modelName" db:"model_name"` // Model name (for reference)
-	Config     map[string]interface{} `json:"config" db:"config"`      // LoadModelParams as JSON
-	CreatedAt  time.Time              `json:"createdAt" db:"created_at"`
-	UpdatedAt  time.Time              `json:"updatedAt" db:"updated_at"`
+	ID        string                 `json:"id" db:"id"`
+	NodeID    string                 `json:"nodeId" db:"node_id"`       // Machine/Node ID
+	ModelID   string                 `json:"modelId" db:"model_id"`     // Model ID
+	ModelName string                 `json:"modelName" db:"model_name"` // Model name (for reference)
+	Config    map[string]interface{} `json:"config" db:"config"`        // LoadModelParams as JSON
+	CreatedAt time.Time              `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time              `json:"updatedAt" db:"updated_at"`
 }
 
 // ModelMetadata represents user-defined metadata for a model
 type ModelMetadata struct {
-	ModelID      string        `json:"modelId" db:"model_id"`           // Model ID (primary key)
-	NodeID       string        `json:"nodeId,omitempty" db:"node_id"`   // Node/Machine ID where model is located
-	StoragePath  string        `json:"storagePath,omitempty" db:"storage_path"` // Storage path (for distributed systems)
-	Alias        string        `json:"alias,omitempty" db:"alias"`      // User-defined alias
-	Favourite    bool          `json:"favourite" db:"favourite"`        // Favorite flag
-	Tags         []string      `json:"tags,omitempty" db:"tags"`        // Tags (JSON array)
-	Description  string        `json:"description,omitempty" db:"description"` // User description
-	LoadCount    int           `json:"loadCount" db:"load_count"`      // Number of times loaded
-	LastLoaded   *time.Time    `json:"lastLoaded,omitempty" db:"last_loaded"` // Last load time
-	TotalTokens  int64         `json:"totalTokens" db:"total_tokens"`  // Total tokens generated
+	ModelID      string        `json:"modelId" db:"model_id"`                    // Model ID (primary key)
+	NodeID       string        `json:"nodeId,omitempty" db:"node_id"`            // Node/Machine ID where model is located
+	StoragePath  string        `json:"storagePath,omitempty" db:"storage_path"`  // Storage path (for distributed systems)
+	Alias        string        `json:"alias,omitempty" db:"alias"`               // User-defined alias
+	Favourite    bool          `json:"favourite" db:"favourite"`                 // Favorite flag
+	Tags         []string      `json:"tags,omitempty" db:"tags"`                 // Tags (JSON array)
+	Description  string        `json:"description,omitempty" db:"description"`   // User description
+	LoadCount    int           `json:"loadCount" db:"load_count"`                // Number of times loaded
+	LastLoaded   *time.Time    `json:"lastLoaded,omitempty" db:"last_loaded"`    // Last load time
+	TotalTokens  int64         `json:"totalTokens" db:"total_tokens"`            // Total tokens generated
 	Capabilities *Capabilities `json:"capabilities,omitempty" db:"capabilities"` // Model capabilities (auto-detected or user-defined)
-	CreatedAt    time.Time     `json:"createdAt" db:"created_at"`      // Record creation time
-	UpdatedAt    time.Time     `json:"updatedAt" db:"updated_at"`      // Last update time
+	CreatedAt    time.Time     `json:"createdAt" db:"created_at"`                // Record creation time
+	UpdatedAt    time.Time     `json:"updatedAt" db:"updated_at"`                // Last update time
 }
 
 // Store defines the storage interface
@@ -189,7 +189,7 @@ type Store interface {
 
 // Manager manages the storage backend
 type Manager struct {
-	store Store
+	store  Store
 	config *StorageConfig
 }
 
@@ -239,12 +239,12 @@ func (m *Manager) Close() error {
 
 // Errors
 var (
-	ErrInvalidStorageType     = &StorageError{Code: "INVALID_TYPE", Message: "Invalid storage type"}
-	ErrMissingSQLiteConfig    = &StorageError{Code: "MISSING_CONFIG", Message: "Missing SQLite configuration"}
-	ErrPostgreSQLNotSupported = &StorageError{Code: "NOT_SUPPORTED", Message: "PostgreSQL support is not yet implemented"}
-	ErrConversationNotFound   = &StorageError{Code: "NOT_FOUND", Message: "Conversation not found"}
-	ErrMessageNotFound        = &StorageError{Code: "NOT_FOUND", Message: "Message not found"}
-	ErrBenchmarkNotFound      = &StorageError{Code: "NOT_FOUND", Message: "Benchmark not found"}
+	ErrInvalidStorageType      = &StorageError{Code: "INVALID_TYPE", Message: "Invalid storage type"}
+	ErrMissingSQLiteConfig     = &StorageError{Code: "MISSING_CONFIG", Message: "Missing SQLite configuration"}
+	ErrPostgreSQLNotSupported  = &StorageError{Code: "NOT_SUPPORTED", Message: "PostgreSQL support is not yet implemented"}
+	ErrConversationNotFound    = &StorageError{Code: "NOT_FOUND", Message: "Conversation not found"}
+	ErrMessageNotFound         = &StorageError{Code: "NOT_FOUND", Message: "Message not found"}
+	ErrBenchmarkNotFound       = &StorageError{Code: "NOT_FOUND", Message: "Benchmark not found"}
 	ErrBenchmarkConfigNotFound = &StorageError{Code: "NOT_FOUND", Message: "Benchmark config not found"}
 	ErrModelLoadConfigNotFound = &StorageError{Code: "NOT_FOUND", Message: "Model load config not found"}
 	ErrModelMetadataNotFound   = &StorageError{Code: "NOT_FOUND", Message: "Model metadata not found"}

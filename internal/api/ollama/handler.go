@@ -2,10 +2,10 @@
 package ollama
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"net/http"
 	"strings"
@@ -31,11 +31,11 @@ func NewHandler(modelMgr *model.Manager) *Handler {
 
 // ChatRequest represents an Ollama chat request
 type ChatRequest struct {
-	Model    string         `json:"model"`
-	Messages []ChatMessage `json:"messages"`
-	Stream   bool           `json:"stream,omitempty"`
+	Model    string            `json:"model"`
+	Messages []ChatMessage     `json:"messages"`
+	Stream   bool              `json:"stream,omitempty"`
 	Options  *GenerationParams `json:"options,omitempty"`
-	Format   string         `json:"format,omitempty"`
+	Format   string            `json:"format,omitempty"`
 }
 
 // ChatMessage represents a chat message
@@ -46,21 +46,21 @@ type ChatMessage struct {
 
 // GenerationParams represents generation parameters
 type GenerationParams struct {
-	Temperature      float64 `json:"temperature,omitempty"`
-	TopP            float64 `json:"top_p,omitempty"`
-	TopK            int     `json:"top_k,omitempty"`
-	NumPredict      int     `json:"num_predict,omitempty"`
-	RepeatPenalty   float64 `json:"repeat_penalty,omitempty"`
-	Stop            []string `json:"stop,omitempty"`
+	Temperature   float64  `json:"temperature,omitempty"`
+	TopP          float64  `json:"top_p,omitempty"`
+	TopK          int      `json:"top_k,omitempty"`
+	NumPredict    int      `json:"num_predict,omitempty"`
+	RepeatPenalty float64  `json:"repeat_penalty,omitempty"`
+	Stop          []string `json:"stop,omitempty"`
 }
 
 // ChatResponse represents an Ollama chat response
 type ChatResponse struct {
-	Model     string        `json:"model"`
-	CreatedAt string       `json:"created_at,omitempty"`
-	Message   ChatMessage  `json:"message,omitempty"`
-	Done      bool          `json:"done,omitempty"`
-	Error     string        `json:"error,omitempty"`
+	Model     string      `json:"model"`
+	CreatedAt string      `json:"created_at,omitempty"`
+	Message   ChatMessage `json:"message,omitempty"`
+	Done      bool        `json:"done,omitempty"`
+	Error     string      `json:"error,omitempty"`
 }
 
 // HandleChat handles Ollama chat completion requests

@@ -52,11 +52,11 @@ type GPUInfo struct {
 	Index         int     `json:"index"`
 	Name          string  `json:"name"`
 	Vendor        string  `json:"vendor"`
-	TotalMemory   int64   `json:"totalMemory"`   // bytes
-	UsedMemory    int64   `json:"usedMemory"`     // bytes
-	Temperature   float64 `json:"temperature"`    // celsius
-	Utilization   float64 `json:"utilization"`   // percentage 0-100
-	PowerUsage    float64 `json:"powerUsage"`    // watts
+	TotalMemory   int64   `json:"totalMemory"` // bytes
+	UsedMemory    int64   `json:"usedMemory"`  // bytes
+	Temperature   float64 `json:"temperature"` // celsius
+	Utilization   float64 `json:"utilization"` // percentage 0-100
+	PowerUsage    float64 `json:"powerUsage"`  // watts
 	DriverVersion string  `json:"driverVersion,omitempty"`
 }
 
@@ -65,21 +65,21 @@ type GPUInfo struct {
 // NodeInfo contains unified node/client information
 // NodeInfo 包含统一的节点/客户端信息
 type NodeInfo struct {
-	ID           string                 `json:"id"`
-	Name         string                 `json:"name"`
-	Address      string                 `json:"address"`
-	Port         int                    `json:"port"`
-	Role         string                 `json:"role"` // "standalone" | "master" | "client" | "hybrid"
-	Status       NodeState              `json:"status"`
-	Version      string                 `json:"version"`
-	Tags         []string               `json:"tags"`
-	Capabilities *NodeCapabilities      `json:"capabilities,omitempty"`
-	Resources    *NodeResources         `json:"resources,omitempty"`
-	Metadata     map[string]string      `json:"metadata"`
-	CreatedAt    time.Time              `json:"createdAt"`
-	UpdatedAt    time.Time              `json:"updatedAt"`
-	LastSeen     time.Time              `json:"lastSeen"`
-	RegisteredAt time.Time              `json:"registeredAt,omitempty"` // Client registration time
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Address      string            `json:"address"`
+	Port         int               `json:"port"`
+	Role         string            `json:"role"` // "standalone" | "master" | "client" | "hybrid"
+	Status       NodeState         `json:"status"`
+	Version      string            `json:"version"`
+	Tags         []string          `json:"tags"`
+	Capabilities *NodeCapabilities `json:"capabilities,omitempty"`
+	Resources    *NodeResources    `json:"resources,omitempty"`
+	Metadata     map[string]string `json:"metadata"`
+	CreatedAt    time.Time         `json:"createdAt"`
+	UpdatedAt    time.Time         `json:"updatedAt"`
+	LastSeen     time.Time         `json:"lastSeen"`
+	RegisteredAt time.Time         `json:"registeredAt,omitempty"` // Client registration time
 }
 
 // ==================== 心跳消息 ====================
@@ -149,7 +149,6 @@ type CommandResult struct {
 	Duration    int64                  `json:"duration"` // milliseconds
 	Metadata    map[string]string      `json:"metadata,omitempty"`
 }
-
 
 // ==================== 节点配置信息 ====================
 

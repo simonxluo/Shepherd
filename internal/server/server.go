@@ -3,9 +3,9 @@
 package server
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"context"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"net/http"
 	"os"
 	"os/exec"
@@ -24,15 +24,15 @@ import (
 	filesystemapi "github.com/shepherd-project/shepherd/Shepherd/internal/api/filesystem"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/api/ollama"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/api/openai"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/api/paths"
 	storageapi "github.com/shepherd-project/shepherd/Shepherd/internal/api/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/download"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
 	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/modelrepo"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/download"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/types"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/websocket"
 )
@@ -68,20 +68,20 @@ func nonEmptyString(s string) interface{} {
 
 // Server represents the HTTP server
 type Server struct {
-	engine      *gin.Engine
-	httpServer  *http.Server
-	config      *Config
-	handlers    *Handlers
-	wsMgr       *websocket.Manager
-	modelMgr    *model.Manager
-	storageMgr  *storage.Manager
-	downloadMgr *download.Manager           // 下载管理器
-	nodeAdapter *api.NodeAdapter        // Node API 适配器
-	repoClient  *modelrepoclient.Client // 模型仓库客户端
-	langchainHandler *langchain.Handler // LangChainGo API 处理器
+	engine           *gin.Engine
+	httpServer       *http.Server
+	config           *Config
+	handlers         *Handlers
+	wsMgr            *websocket.Manager
+	modelMgr         *model.Manager
+	storageMgr       *storage.Manager
+	downloadMgr      *download.Manager       // 下载管理器
+	nodeAdapter      *api.NodeAdapter        // Node API 适配器
+	repoClient       *modelrepoclient.Client // 模型仓库客户端
+	langchainHandler *langchain.Handler      // LangChainGo API 处理器
 
 	// 新增字段：WebSocket Hub
-	wsHub *WebSocketHub
+	wsHub             *WebSocketHub
 	downloadTasksFile string // 下载任务持久化文件路径
 
 	mu     sync.RWMutex
@@ -482,7 +482,7 @@ func (s *Server) Stop() error {
 			logger.Errorf("下载管理器关闭失败: %v", err)
 		} else {
 			logger.Info("下载管理器已停止")
-	}
+		}
 	}
 
 	// Step 5: Close storage manager
@@ -575,6 +575,7 @@ func (s *Server) RegisterLangChainHandler(handler *langchain.Handler) {
 	logger.Info("LangChainGo API 路由已注册: /api/langchain/*")
 
 }
+
 // Middleware
 
 // corsMiddleware handles CORS
@@ -639,70 +640,52 @@ func (s *Server) handleGetGPUs(c *gin.Context) {
 	deviceStrings := []string{} // 简单设备描述字符串（兼容 LlamacppServer）
 	gpus := []gin.H{}           // 详细 GPU 信息（Shepherd 扩展）
 
-	// 尝试每个可能的路径
+	// 尝试每个可能的路径，使用统一的设备列表解析函数
 	for _, benchPath := range benchPaths {
-		cmd := exec.Command(benchPath, "--list-devices")
-		output, err := cmd.CombinedOutput()
-		if err == nil {
-			// 解析 llama-bench 输出
-			lines := strings.Split(string(output), "\n")
-			inDeviceList := false
-			foundDevices := false
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if line == "" {
-					continue
-				}
-				if strings.Contains(line, "Available devices") {
-					inDeviceList = true
-					continue
-				}
-				if inDeviceList {
-					// 解析设备行，例如: "ROCm0: AMD Radeon Graphics (122880 MiB, 115050 MiB free)"
-					deviceStrings = append(deviceStrings, line)
-					foundDevices = true
+		devices, err := utils.GetLlamacppDeviceList(benchPath)
+		if err == nil && len(devices) > 0 {
+			// 解析每个设备行，提取详细信息
+			for _, deviceLine := range devices {
+				// 解析设备行，例如: "ROCm0: AMD Radeon Graphics (122880 MiB, 115050 MiB free)"
+				parts := strings.SplitN(deviceLine, ":", 2)
+				if len(parts) == 2 {
+					deviceID := strings.TrimSpace(parts[0])
+					rest := strings.TrimSpace(parts[1])
 
-					// 同时提取详细信息
-					parts := strings.SplitN(line, ":", 2)
-					if len(parts) == 2 {
-						deviceID := strings.TrimSpace(parts[0])
-						rest := strings.TrimSpace(parts[1])
+					deviceStrings = append(deviceStrings, deviceLine)
 
-						// 提取 GPU 名称（去掉括号中的内存信息）
-						gpuName := rest
-						var totalMemory, freeMemory string
+					// 提取 GPU 名称（去掉括号中的内存信息）
+					gpuName := rest
+					var totalMemory, freeMemory string
 
-						// 使用正则表达式提取内存信息和分离名称
-						memRe := regexp.MustCompile(`^(.+?)\s*\((\d+)\s+MiB(?:,\s*(\d+)\s+MiB\s+free)?\)`)
-						if memMatches := memRe.FindStringSubmatch(rest); len(memMatches) > 0 {
-							gpuName = strings.TrimSpace(memMatches[1])
-							if totalMiB, err := strconv.ParseInt(memMatches[2], 10, 64); err == nil {
-								// 转换为 GB（保留两位小数）
-								totalGB := float64(totalMiB) / 1024
-								totalMemory = fmt.Sprintf("%.2f GB", totalGB)
-							}
-							if len(memMatches) > 3 && memMatches[3] != "" {
-								if freeMiB, err := strconv.ParseInt(memMatches[3], 10, 64); err == nil {
-									freeGB := float64(freeMiB) / 1024
-									freeMemory = fmt.Sprintf("%.2f GB", freeGB)
-								}
+					// 使用正则表达式提取内存信息和分离名称
+					memRe := regexp.MustCompile(`^(.+?)\s*\((\d+)\s+MiB(?:,\s*(\d+)\s+MiB\s+free)?\)`)
+					if memMatches := memRe.FindStringSubmatch(rest); len(memMatches) > 0 {
+						gpuName = strings.TrimSpace(memMatches[1])
+						if totalMiB, err := strconv.ParseInt(memMatches[2], 10, 64); err == nil {
+							// 转换为 GB（保留两位小数）
+							totalGB := float64(totalMiB) / 1024
+							totalMemory = fmt.Sprintf("%.2f GB", totalGB)
+						}
+						if len(memMatches) > 3 && memMatches[3] != "" {
+							if freeMiB, err := strconv.ParseInt(memMatches[3], 10, 64); err == nil {
+								freeGB := float64(freeMiB) / 1024
+								freeMemory = fmt.Sprintf("%.2f GB", freeGB)
 							}
 						}
-
-						gpus = append(gpus, gin.H{
-							"id":          deviceID,
-							"name":        gpuName,
-							"totalMemory": totalMemory,
-							"freeMemory":  freeMemory,
-							"available":   true,
-						})
 					}
+
+					gpus = append(gpus, gin.H{
+						"id":          deviceID,
+						"name":        gpuName,
+						"totalMemory": totalMemory,
+						"freeMemory":  freeMemory,
+						"available":   true,
+					})
 				}
 			}
 			// 如果成功找到设备，停止尝试其他路径
-			if foundDevices {
-				break
-			}
+			break
 		}
 	}
 
@@ -1063,7 +1046,11 @@ func (s *Server) handleUpdateConfig(c *gin.Context) {
 
 		// 触发重新扫描
 		if req.AutoScan {
-			go func() { if _,err := s.modelMgr.Scan(c.Request.Context()); err != nil { logger.Warn("模型扫描失败", "error", err) } }()
+			go func() {
+				if _, err := s.modelMgr.Scan(c.Request.Context()); err != nil {
+					logger.Warn("模型扫描失败", "error", err)
+				}
+			}()
 		}
 	}
 
@@ -1519,7 +1506,7 @@ func (s *Server) handleGetModelCapabilities(c *gin.Context) {
 // handleSetModelCapabilities 设置模型能力配置
 func (s *Server) handleSetModelCapabilities(c *gin.Context) {
 	var req struct {
-		ModelID      string                 `json:"modelId"`
+		ModelID      string                `json:"modelId"`
 		Capabilities *storage.Capabilities `json:"capabilities"`
 	}
 
@@ -1605,12 +1592,12 @@ func (s *Server) handleGetScanStatus(c *gin.Context) {
 
 func (s *Server) handleListDownloads(c *gin.Context) {
 	tasks := s.downloadMgr.ListTasks()
-	
+
 	downloads := make([]gin.H, 0, len(tasks))
 	for _, t := range tasks {
 		downloads = append(downloads, mapDownloadTask(t))
 	}
-	
+
 	api.Success(c, gin.H{
 		"downloads": downloads,
 		"total":     len(downloads),
@@ -1698,7 +1685,7 @@ func (s *Server) handleCreateDownload(c *gin.Context) {
 		source = string(req.Source)
 		repoId = req.RepoID
 		fileName = req.FileName
-		
+
 		// Determine directory
 		if req.Path != "" {
 			downloadDir = req.Path
@@ -1803,7 +1790,6 @@ func (s *Server) handleDeleteDownload(c *gin.Context) {
 
 	api.SuccessWithMessage(c, "下载任务已删除")
 }
-
 
 // handleListModelFiles handles requests to list model files from a repository
 func (s *Server) handleListModelFiles(c *gin.Context) {
@@ -2059,7 +2045,9 @@ func (s *Server) handleLogStream(c *gin.Context) {
 	fromBeginning := c.DefaultQuery("fromBeginning", "false") == "true"
 	limit := 100
 	if l := c.Query("limit"); l != "" {
-		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil { limit = 100 }
+		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil {
+			limit = 100
+		}
 	}
 
 	// Get log stream
@@ -2159,7 +2147,9 @@ func (s *Server) sendSSE(c *gin.Context, entry *logger.StreamLogEntry) {
 func (s *Server) handleLogEntries(c *gin.Context) {
 	limit := 100
 	if l := c.Query("limit"); l != "" {
-		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil { limit = 100 }
+		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil {
+			limit = 100
+		}
 	}
 
 	logStream := logger.GetLogStream()
@@ -2210,10 +2200,14 @@ func (s *Server) handleLogFileContent(c *gin.Context) {
 	}
 
 	if offset := c.Query("offset"); offset != "" {
-		if _, err := fmt.Sscanf(offset, "%d", &filter.Offset); err != nil { filter.Offset = 0 }
+		if _, err := fmt.Sscanf(offset, "%d", &filter.Offset); err != nil {
+			filter.Offset = 0
+		}
 	}
 	if limit := c.Query("limit"); limit != "" {
-		if _, err := fmt.Sscanf(limit, "%d", &filter.Limit); err != nil { filter.Limit = 100 }
+		if _, err := fmt.Sscanf(limit, "%d", &filter.Limit); err != nil {
+			filter.Limit = 100
+		}
 	}
 
 	// Read log file

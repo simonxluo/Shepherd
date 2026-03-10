@@ -9,14 +9,14 @@ import (
 
 // ClientInfo contains information about this client
 type ClientInfo struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Address      string            `json:"address"`
-	Port         int               `json:"port"`
-	Tags         []string          `json:"tags"`
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	Address      string                `json:"address"`
+	Port         int                   `json:"port"`
+	Tags         []string              `json:"tags"`
 	Capabilities *cluster.Capabilities `json:"capabilities"`
-	Version      string            `json:"version"`
-	Metadata     map[string]string `json:"metadata"`
+	Version      string                `json:"version"`
+	Metadata     map[string]string     `json:"metadata"`
 }
 
 // CommandResult represents the result of a command execution
@@ -31,12 +31,12 @@ type CommandResult struct {
 
 // TaskExecutionContext provides context for task execution
 type TaskExecutionContext struct {
-	TaskID      string
-	TaskType    cluster.TaskType
-	Payload     map[string]interface{}
-	StartTime   time.Time
-	Timeout     time.Duration
-	CondaEnv    string
+	TaskID       string
+	TaskType     cluster.TaskType
+	Payload      map[string]interface{}
+	StartTime    time.Time
+	Timeout      time.Duration
+	CondaEnv     string
 	LlamacppPath string
 }
 

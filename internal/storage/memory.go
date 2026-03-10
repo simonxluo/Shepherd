@@ -10,14 +10,14 @@ import (
 
 // MemoryStore implements Store interface with in-memory storage
 type MemoryStore struct {
-	mu                sync.RWMutex
-	conversations     map[string]*Conversation
-	messages          map[string][]*Message // conversation_id -> messages
-	messagesByID      map[string]*Message
-	benchmarks        map[string]*Benchmark
-	benchmarkConfigs  map[string]*BenchmarkConfig
-	modelLoadConfigs  map[string]*ModelLoadConfig // key: "nodeID:modelID"
-	modelMetadata     map[string]*ModelMetadata    // key: modelID
+	mu               sync.RWMutex
+	conversations    map[string]*Conversation
+	messages         map[string][]*Message // conversation_id -> messages
+	messagesByID     map[string]*Message
+	benchmarks       map[string]*Benchmark
+	benchmarkConfigs map[string]*BenchmarkConfig
+	modelLoadConfigs map[string]*ModelLoadConfig // key: "nodeID:modelID"
+	modelMetadata    map[string]*ModelMetadata   // key: modelID
 }
 
 // NewMemoryStore creates a new in-memory store
