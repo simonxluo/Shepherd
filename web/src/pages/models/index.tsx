@@ -151,9 +151,20 @@ export function ModelsPage() {
   };
 
   // 处理压测确认
-  const handleBenchmarkConfirm = (config: BenchmarkConfig) => {
-    // 构建命令字符串
+  const handleBenchmarkConfirm = async (config: BenchmarkConfig) => {
+    // 1. 获取模型路径
+    const model = models.find(m => m.id === config.modelId);
+    if (!model) {
+      toast.error('模型未找到', '无法获取模型信息');
+      return;
+    }
+
+    // 2. 构建命令字符串和参数数组
     const cmdParts: string[] = [];
+    // 首先添加模型路径参数
+    cmdParts.push('-m', model.path);
+
+    // 然后添加其他参数
     Object.entries(config.params).forEach(([key, value]) => {
       if (value === 'true') {
         cmdParts.push(key);
@@ -170,9 +181,11 @@ export function ModelsPage() {
     createBenchmark.mutate(
       {
         modelId: config.modelId,
-        llamaBinPath: config.llamaCppPath,
+        llamaBinPath: config.llamaCppPath, // 后端会自动查找 llama-bench
         cmd,
+        args: cmdParts,
       },
+
       {
         onSuccess: (data) => {
           if (data) {

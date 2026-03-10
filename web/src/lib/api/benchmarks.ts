@@ -51,32 +51,15 @@ export const benchmarksApi = {
     return apiClient.post<CreateBenchmarkResponse>('/models/benchmark', params);
   },
 
-  /**
-   * 获取压测结果列表
-   */
-  async listResults(modelId: string): Promise<BenchmarkListResponse> {
-    return apiClient.get<BenchmarkListResponse>(`/models/benchmark/list?modelId=${encodeURIComponent(modelId)}`);
-  },
+  // Legacy endpoints removed
 
-  /**
-   * 获取压测结果详情
-   */
-  async getResult(fileName: string): Promise<BenchmarkResultResponse> {
-    return apiClient.get<BenchmarkResultResponse>(`/models/benchmark/get?fileName=${encodeURIComponent(fileName)}`);
-  },
-
-  /**
-   * 删除压测结果
-   */
-  async deleteResult(fileName: string): Promise<{ success: boolean; error?: string }> {
-    return apiClient.post<{ success: boolean; error?: string }>(`/models/benchmark/delete?fileName=${encodeURIComponent(fileName)}`);
-  },
 
   /**
    * 获取压测任务列表
    */
-  async list(): Promise<BenchmarkListDataResponse> {
-    return apiClient.get<BenchmarkListDataResponse>('/models/benchmark/tasks');
+  async list(modelId?: string): Promise<BenchmarkListResponse> {
+    const url = modelId ? `/models/benchmark/tasks?modelId=${encodeURIComponent(modelId)}` : '/models/benchmark/tasks';
+    return apiClient.get<BenchmarkListResponse>(url);
   },
 
   /**

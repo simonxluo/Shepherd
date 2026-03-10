@@ -536,51 +536,25 @@ export function useCancelBenchmark() {
  * 获取压测结果列表 Hook
  */
 export function useBenchmarkResults(modelId: string) {
-  return useQuery<BenchmarkResultFile[]>({
+  return useQuery<Benchmark[]>({
     queryKey: ['benchmark', 'results', modelId],
     queryFn: async () => {
-      const response = await benchmarksApi.listResults(modelId);
-      return response.data?.files || [];
+      const response = await benchmarksApi.list(modelId);
+      return response.data?.benchmarks || [];
     },
     enabled: !!modelId,
     refetchOnWindowFocus: false,
-  });
-}
-
-/**
- * 获取单个压测结果 Hook
- */
-export function useBenchmarkResult(fileName: string) {
-  return useQuery<BenchmarkResult | undefined>({
-    queryKey: ['benchmark', 'results', fileName],
-    queryFn: async () => {
-      const response = await benchmarksApi.getResult(fileName);
-      return response.data;
-    },
-    enabled: !!fileName,
-  });
-}
-
-/**
- * 删除压测结果 Hook
- */
-export function useDeleteBenchmarkResult() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (fileName: string) => {
-      const response = await benchmarksApi.deleteResult(fileName);
-      if (!response.success) {
-        throw new Error(response.error || '删除压测结果失败');
-      }
-      return response;
-    },
-    onSuccess: () => {
-      // 使所有相关查询失效
-      queryClient.invalidateQueries({ queryKey: ['benchmark', 'results'] });
+    refetchInterval: (query) => {
+      // Refresh if any task is running
+      const data = query.state.data;
+      const hasRunning = data?.some(b => b.status === 'running');
+      return hasRunning ? 2000 : false;
     },
   });
 }
+
+// Deleted useBenchmarkResult and useDeleteBenchmarkResult
+
 
 /**
  * 保存压测配置 Hook

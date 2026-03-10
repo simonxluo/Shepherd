@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 )
 
 const (
@@ -134,9 +135,9 @@ func (h *Handler) isValidLlamaBinary(path string) error {
 		return fmt.Errorf("file is not executable")
 	}
 
-	// 可选：检查文件名是否包含预期的名称（如 llama-server, main 等）
+	// 可选：检查文件名是否包含预期的名称（如 llama-server, main, llama-bench 等）
 	baseName := strings.ToLower(filepath.Base(path))
-	validNames := []string{"llama-server", "llama-cli", "main", "llama-model-runner"}
+	validNames := []string{"llama-server", "llama-cli", "llama-bench", "main", "llama-model-runner"}
 	isValidName := false
 	for _, name := range validNames {
 		if strings.Contains(baseName, name) {
@@ -151,35 +152,15 @@ func (h *Handler) isValidLlamaBinary(path string) error {
 	return nil
 }
 
-// findLlamaCli 在指定目录中查找 llama-cli 可执行文件
+// findLlamaCli 在指定路径中查找 llama-cli 可执行文件
+// 使用统一的工具函数 utils.FindLlamacppBinary
 func (h *Handler) findLlamaCli(llamaBinPath string) string {
-	dir := filepath.Dir(llamaBinPath)
-
-	// 尝试常见的 llama-cli 可执行文件名
-	possibleNames := []string{"llama-cli", "main"}
-	for _, name := range possibleNames {
-		candidatePath := filepath.Join(dir, name)
-		info, err := os.Stat(candidatePath)
-		if err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
-			return candidatePath
-		}
-	}
-
-	// 如果未找到，尝试检测是否为目录
-	if info, err := os.Stat(llamaBinPath); err == nil && info.IsDir() {
-		for _, name := range possibleNames {
-			candidatePath := filepath.Join(llamaBinPath, name)
-			if info, err := os.Stat(candidatePath); err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
-				return candidatePath
-			}
-		}
-	}
-
-	return ""
+	return utils.FindLlamacppBinary(llamaBinPath, "cli")
 }
 
 // validatePathForDevices 验证路径是否有效（用于设备列表查询）
 // 允许目录路径或可执行文件路径
+// 使用统一的工具函数来查找二进制文件
 func (h *Handler) validatePathForDevices(path string) error {
 	// 清理路径
 	cleanPath := filepath.Clean(path)
@@ -193,25 +174,26 @@ func (h *Handler) validatePathForDevices(path string) error {
 		return fmt.Errorf("path does not exist: %w", err)
 	}
 
-	// 如果是目录，检查是否可访问
-	if info.IsDir() {
-		// 检查目录是否包含 llama-cli 或 llama-server
-		possibleNames := []string{"llama-cli", "llama-server", "main"}
-		for _, name := range possibleNames {
-			candidatePath := filepath.Join(path, name)
-			if fileInfo, err := os.Stat(candidatePath); err == nil && fileInfo.Mode().IsRegular() {
-				return nil
-			}
-		}
-		return fmt.Errorf("directory does not contain llama-cli or llama-server executable")
-	}
-
 	// 如果是文件，检查是否为常规文件
-	if !info.Mode().IsRegular() {
-		return fmt.Errorf("not a regular file")
+	if info.Mode().IsRegular() {
+		return nil
 	}
 
-	return nil
+	// 如果是目录，使用统一的工具函数检查是否包含可执行文件
+	if info.IsDir() {
+		// 尝试查找 llama-cli（用于设备列表）
+		if cliPath := utils.FindLlamacppBinary(path, "cli"); cliPath != "" {
+			return nil
+		}
+		// 尝试查找 llama-server（用于启动服务）
+		if serverPath := utils.FindLlamacppBinary(path, "server"); serverPath != "" {
+			return nil
+		}
+		return fmt.Errorf("directory does not contain llama-cli or llama-server executable (checked: %s, %s/bin)",
+			path, filepath.Base(path))
+	}
+
+	return fmt.Errorf("invalid path type")
 }
 
 // GetParams 获取压测参数列表
@@ -331,11 +313,10 @@ func (h *Handler) GetDevices(c *gin.Context) {
 		return
 	}
 
-	// 执行 llama-cli --list-devices 获取设备列表
-	cmd := exec.Command(llamaCliPath, "--list-devices")
-	output, err := cmd.CombinedOutput()
+	// 使用统一的设备列表解析函数
+	devices, err := utils.GetLlamacppDeviceList(llamaCliPath)
 	if err != nil {
-		h.log.Errorf("Failed to list devices: %v, output: %s", err, string(output))
+		h.log.Errorf("Failed to list devices: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   fmt.Sprintf("Failed to list devices: %v", err),
@@ -343,94 +324,12 @@ func (h *Handler) GetDevices(c *gin.Context) {
 		return
 	}
 
-	// 解析输出获取设备列表
-	devices := h.parseDeviceList(string(output))
-
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": gin.H{
 			"devices": devices,
 		},
 	})
-}
-
-// parseDeviceList 解析设备列表输出
-// llama-cli --list-devices 输出示例:
-// Available devices:
-//
-//	ROCm0: AMD Radeon Graphics (122880 MiB, 114915 MiB free)
-//	CUDA0: NVIDIA GeForce RTX 3090 (24576 MiB, 20321 MiB free)
-//
-// 注意: 调试信息会输出到 stderr，包含 "found 1 ROCm devices" 等内容
-// 但 CombinedOutput 会混合 stdout 和 stderr，所以需要精确匹配 "Available devices:"
-func (h *Handler) parseDeviceList(output string) []string {
-	var devices []string
-	lines := strings.Split(output, "\n")
-
-	// 查找 "Available devices:" 标记后的设备列表
-	// 必须精确匹配 "Available devices:"，避免匹配调试信息中的 "found"
-	inDeviceList := false
-	for _, line := range lines {
-		trimmedLine := strings.TrimSpace(line)
-
-		// 检测设备列表开始 - 必须包含完整的 "Available devices:" 标记
-		if strings.Contains(trimmedLine, "Available devices:") {
-			inDeviceList = true
-			continue
-		}
-
-		// 空行结束设备列表
-		if inDeviceList && trimmedLine == "" {
-			break
-		}
-
-		// 解析设备行
-		if inDeviceList {
-			// 匹配格式: "ROCm0: AMD Radeon Graphics (122880 MiB, 114915 MiB free)"
-			// 或 "CUDA0: NVIDIA GeForce RTX 3090 (24576 MiB, 20321 MiB free)"
-			// 必须包含设备类型前缀 (ROCm/CUDA 等) 和冒号
-			if strings.Contains(trimmedLine, ":") {
-				parts := strings.SplitN(trimmedLine, ":", 2)
-				if len(parts) == 2 {
-					devicePrefix := strings.TrimSpace(parts[0])
-					// 验证设备前缀格式: ROCm0, CUDA0, Vulkan0, Metal0 等
-					if h.validDevicePrefix(devicePrefix) {
-						// 保留完整的设备信息行，以便前端显示
-						devices = append(devices, trimmedLine)
-					}
-				}
-			}
-		}
-	}
-
-	// 如果没有找到设备，返回默认值
-	if len(devices) == 0 {
-		devices = []string{"auto"}
-	}
-
-	return devices
-}
-
-// validDevicePrefix 验证设备前缀是否有效
-func (h *Handler) validDevicePrefix(prefix string) bool {
-	// 有效的前缀格式: ROCm, CUDA, Vulkan, Metal 后跟数字
-	validPrefixes := []string{"ROCm", "CUDA", "Vulkan", "Metal"}
-	for _, vp := range validPrefixes {
-		if strings.HasPrefix(prefix, vp) {
-			// 检查后面是否有数字
-			suffix := strings.TrimPrefix(prefix, vp)
-			if len(suffix) > 0 {
-				// 验证后缀全是数字
-				for _, r := range suffix {
-					if r < '0' || r > '9' {
-						return false
-					}
-				}
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // GetRunningTasksCount 获取当前运行中的任务数量
@@ -446,7 +345,8 @@ func (h *Handler) Create(c *gin.Context) {
 		ModelID      string            `json:"modelId" binding:"required"`
 		ModelName    string            `json:"modelName"`
 		LlamaBinPath string            `json:"llamaBinPath" binding:"required"`
-		Cmd          string            `json:"cmd" binding:"required"`
+		Cmd          string            `json:"cmd"`
+		Args         []string          `json:"args"`
 		Config       map[string]string `json:"config"`
 	}
 
@@ -458,8 +358,19 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	// 验证二进制路径
-	if err := h.isValidLlamaBinary(req.LlamaBinPath); err != nil {
+	// 验证并查找 llama-bench 可执行文件
+	benchPath := utils.FindLlamacppBinary(req.LlamaBinPath, "bench")
+	if benchPath == "" {
+		h.log.Errorf("llama-bench not found in: %s", req.LlamaBinPath)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("llama-bench not found in %s", req.LlamaBinPath),
+		})
+		return
+	}
+
+	// 验证二进制路径是否有效
+	if err := h.isValidLlamaBinary(benchPath); err != nil {
 		h.log.Errorf("Invalid llama binary path: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -492,9 +403,13 @@ func (h *Handler) Create(c *gin.Context) {
 		ModelID:   req.ModelID,
 		ModelName: req.ModelName,
 		Status:    "running",
-		Command:   req.Cmd,
+		Command:   req.Cmd, // Store for display
 		Config:    config,
 		CreatedAt: time.Now(),
+	}
+
+	if task.Command == "" && len(req.Args) > 0 {
+		task.Command = strings.Join(req.Args, " ")
 	}
 
 	// 保存到存储层
@@ -508,7 +423,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	// 异步执行压测任务
-	go h.runBenchmark(task, req.LlamaBinPath)
+	go h.runBenchmark(task, benchPath, req.Args)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -519,7 +434,8 @@ func (h *Handler) Create(c *gin.Context) {
 }
 
 // runBenchmark 执行压测任务
-func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string) {
+func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string, args []string) {
+
 	// 获取信号量（限制并发）
 	select {
 	case h.semaphore <- struct{}{}:
@@ -542,7 +458,11 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string) {
 	taskCtx, cancel := context.WithCancel(h.ctx)
 
 	// 构建命令
-	cmdParts := strings.Fields(task.Command)
+	cmdParts := args
+	if len(cmdParts) == 0 && task.Command != "" {
+		cmdParts = strings.Fields(task.Command)
+	}
+
 	if len(cmdParts) == 0 {
 		task.Status = "failed"
 		task.Error = "Empty command"

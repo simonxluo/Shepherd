@@ -193,10 +193,13 @@ export function BenchmarkResultsDialog({
 
         {/* 内容区域 - 两列布局 */}
         <div className="flex-1 flex min-h-0">
-          {/* 左侧：结果文件列表 */}
+          {/* 左侧：测试任务列表 */}
           <div className="w-80 border-r border-border flex flex-col bg-muted/50">
-            <div className="p-3 border-b border-border bg-muted">
-              <h3 className="text-sm font-medium text-foreground">测试结果文件</h3>
+            <div className="flex items-center justify-between p-3 border-b border-border bg-muted">
+              <h3 className="text-sm font-medium text-foreground">测试历史记录</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => refetch()} title="刷新记录">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </div>
             <div className="flex-1 overflow-y-auto">
               {listLoading ? (
@@ -204,48 +207,40 @@ export function BenchmarkResultsDialog({
                   <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
                   <span className="ml-2 text-sm text-muted-foreground">加载中...</span>
                 </div>
-              ) : resultFiles.length === 0 ? (
+              ) : benchmarks.length === 0 ? (
                 <div className="text-sm text-muted-foreground text-center py-8 px-4">
-                  未找到测试结果文件
+                  暂无测试记录
                 </div>
               ) : (
                 <div className="divide-y divide-border">
-                  {resultFiles.map((file) => (
+                  {benchmarks.map((task) => (
                     <div
-                      key={file.name}
+                      key={task.id}
                       className="p-3 hover:bg-accent transition-colors"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-foreground truncate" title={file.name}>
-                            {file.name}
+                          <div className="text-sm font-medium text-foreground truncate" title={task.command}>
+                            {task.status === 'running' ? '⏳ 测试中...' : task.status === 'failed' ? '❌ 失败' : '✅ 完成'}
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">
-                            修改时间: {file.modified}
+                            时间: {new Date(task.createdAt).toLocaleString('zh-CN')}
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            大小: {formatFileSize(file.size)}
-                          </div>
+                          {task.metrics?.tokens_per_second && (
+                            <div className="text-xs font-semibold text-green-600 mt-1">
+                              TPS: {Number(task.metrics.tokens_per_second).toFixed(2)}
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-col gap-1">
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => handleAppendResult(file.name)}
+                            onClick={() => handleAppendResult(task)}
                             className="px-2 py-1 text-xs h-7"
                           >
                             追加
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteResult(file.name)}
-                            disabled={deleteResult.isPending}
-                            className="px-2 py-1 text-xs h-7 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
                       </div>

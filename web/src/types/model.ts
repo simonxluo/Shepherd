@@ -353,12 +353,18 @@ export interface Benchmark {
   modelId: string;         // 模型 ID
   modelName: string;       // 模型名称
   status: BenchmarkStatus; // 状态
-  config: BenchmarkConfig; // 压测配置
+  command: string;         // 执行命令
+  config: Record<string, any>; // 压测配置
   createdAt: string;       // 创建时间
   startedAt?: string;      // 开始时间
-  completedAt?: string;    // 完成时间
-  result?: BenchmarkResult; // 压测结果
+  finishedAt?: string;     // 完成时间
   error?: string;          // 错误信息
+  metrics?: {
+    total_time_ms?: number;
+    tokens_per_second?: number;
+    raw_output?: string;
+    [key: string]: any;
+  };
 }
 
 /**
@@ -401,7 +407,7 @@ export interface BenchmarkResultFile {
 export interface BenchmarkListResponse {
   success: boolean;
   data?: {
-    files: BenchmarkResultFile[];
+    benchmarks: Benchmark[]; // 后端返回的是 benchmarks 数组
   };
   error?: string;
 }
@@ -421,7 +427,8 @@ export interface BenchmarkResultResponse {
 export interface CreateBenchmarkRequest {
   modelId: string;
   llamaBinPath: string;
-  cmd: string;             // 压测命令字符串
+  cmd?: string;            // 压测命令字符串
+  args?: string[];         // 压测命令参数数组
   configName?: string;     // 可选的配置名称
 }
 
