@@ -66,11 +66,13 @@ func NewHandler(log *logger.Logger, store storage.Store) *Handler {
 // BenchmarkParam 压测参数定义
 type BenchmarkParam struct {
 	FullName     string   `json:"fullName"`
-	ShortName    string   `json:"shortName"`
+	Name         string   `json:"name"`
+	Abbreviation string   `json:"abbreviation"`
 	Description  string   `json:"description"`
 	DefaultValue string   `json:"defaultValue"`
 	Type         string   `json:"type"`
-	Options      []string `json:"options,omitempty"`
+	Values       []string `json:"values,omitempty"`
+	Sort         int      `json:"sort"`
 }
 
 // BenchmarkConfig 压测配置
@@ -201,74 +203,86 @@ func (h *Handler) GetParams(c *gin.Context) {
 	// 返回常见的 llama.cpp 压测参数
 	params := []BenchmarkParam{
 		{
+			FullName:     "-p",
+			Name:         "Prompt Tokens",
+			Abbreviation: "-p",
+			Description:  "提示词 token 数量 (默认 512, 设为 0 表示只测生成)",
+			DefaultValue: "512",
+			Type:         "INTEGER",
+			Sort:         1,
+		},
+		{
 			FullName:     "-n",
-			ShortName:    "n",
-			Description:  "提示词输入后生成的 token 数量",
+			Name:         "生成 Tokens",
+			Abbreviation: "-n",
+			Description:  "生成的 token 数量 (默认 128, 设为 0 表示只测提示词)",
 			DefaultValue: "128",
-			Type:         "number",
-		},
-		{
-			FullName:     "-t",
-			ShortName:    "t",
-			Description:  "线程数",
-			DefaultValue: "-1",
-			Type:         "number",
-		},
-		{
-			FullName:     "-ngl",
-			ShortName:    "ngl",
-			Description:  "卸载到 GPU 的层数",
-			DefaultValue: "999",
-			Type:         "number",
+			Type:         "INTEGER",
+			Sort:         2,
 		},
 		{
 			FullName:     "-c",
-			ShortName:    "c",
-			Description:  "上下文大小",
-			DefaultValue: "2048",
-			Type:         "number",
+			Name:         "上下文大小",
+			Abbreviation: "-c",
+			Description:  "上下文容量大小 (0 = 从模型加载)",
+			DefaultValue: "0",
+			Type:         "INTEGER",
+			Sort:         3,
 		},
 		{
 			FullName:     "-b",
-			ShortName:    "b",
-			Description:  "批处理大小",
+			Name:         "Batch Size",
+			Abbreviation: "-b",
+			Description:  "逻辑批处理大小",
 			DefaultValue: "512",
-			Type:         "number",
+			Type:         "INTEGER",
+			Sort:         4,
 		},
 		{
-			FullName:     "-m",
-			ShortName:    "m",
-			Description:  "批处理最大大小",
-			DefaultValue: "2048",
-			Type:         "number",
+			FullName:     "-ub",
+			Name:         "UBatch Size",
+			Abbreviation: "-ub",
+			Description:  "物理批处理大小",
+			DefaultValue: "512",
+			Type:         "INTEGER",
+			Sort:         5,
+		},
+		{
+			FullName:     "-t",
+			Name:         "线程数",
+			Abbreviation: "-t",
+			Description:  "CPU 线程数",
+			DefaultValue: "-1",
+			Type:         "INTEGER",
+			Sort:         6,
+		},
+		{
+			FullName:     "-ngl",
+			Name:         "GPU层数",
+			Abbreviation: "-ngl",
+			Description:  "卸载到 GPU 的层数 (99 卸载全部)",
+			DefaultValue: "99",
+			Type:         "INTEGER",
+			Sort:         7,
 		},
 		{
 			FullName:     "-fa",
-			ShortName:    "fa",
-			Description:  "启用 Flash Attention",
-			DefaultValue: "true",
-			Type:         "boolean",
+			Name:         "Flash Attention",
+			Abbreviation: "-fa",
+			Description:  "启用 Flash Attention 加速",
+			DefaultValue: "1",
+			Type:         "LOGIC",
+			Values:       []string{"0", "1"},
+			Sort:         8,
 		},
 		{
-			FullName:     "-p",
-			ShortName:    "p",
-			Description:  "提示词（用于测试）",
-			DefaultValue: "Hello, how are you?",
-			Type:         "text",
-		},
-		{
-			FullName:     "-np",
-			ShortName:    "np",
-			Description:  "流水线并行度",
-			DefaultValue: "false",
-			Type:         "boolean",
-		},
-		{
-			FullName:     "-uv",
-			ShortName:    "uv",
-			Description:  "统一内存缓存",
-			DefaultValue: "false",
-			Type:         "boolean",
+			FullName:     "-r",
+			Name:         "测试次数",
+			Abbreviation: "-r",
+			Description:  "重复测试的次数 (提高结果稳定性)",
+			DefaultValue: "3",
+			Type:         "INTEGER",
+			Sort:         9,
 		},
 	}
 

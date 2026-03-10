@@ -490,32 +490,7 @@ export function BenchmarkDialog({
                 <label className="block text-sm font-medium text-foreground">
                   计算设备 (-dev)
                 </label>
-                {availableDevices.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedDevices(availableDevices)}
-                      disabled={isLoading}
-                      className="h-7 text-xs"
-                    >
-                      <Check className="w-3.5 h-3.5 mr-1" />
-                      全选
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedDevices([])}
-                      disabled={isLoading}
-                      className="h-7 text-xs"
-                    >
-                      <XIcon className="w-3.5 h-3.5 mr-1" />
-                      清空
-                    </Button>
-                  </div>
-                )}
+                {/* Removed redundant buttons as requested */}
               </div>
               <p className="text-xs text-muted-foreground mb-2">
                 默认已勾选全部设备；取消勾选可排除设备；未选择设备时，使用 auto
@@ -586,123 +561,99 @@ export function BenchmarkDialog({
               )}
             </div>
 
-            {/* 保存/加载配置 */}
-            <div>
-              <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border mb-3">
-                配置管理
-              </h3>
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* 保存配置 */}
+          </div>
+        </form>
+
+        {/* 按钮区域 */}
+        <div className="flex justify-between items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
+          {/* 左侧：配置管理 */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center">
+              {showSaveConfig ? (
+                <div className="flex items-center gap-2 bg-muted p-1 rounded-md">
+                  <input
+                    type="text"
+                    value={configName}
+                    onChange={(e) => setConfigName(e.target.value)}
+                    placeholder="配置名称"
+                    className={cn(
+                      "w-32 px-2 py-1 text-xs",
+                      "border border-border",
+                      "rounded bg-input",
+                      "text-foreground",
+                      "focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    )}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveConfig();
+                      } else if (e.key === 'Escape') {
+                        setShowSaveConfig(false);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={handleSaveConfig}
+                    disabled={saveConfig.isPending || !configName.trim()}
+                  >
+                    {saveConfig.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : '确定'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => {
+                      setShowSaveConfig(false);
+                      setConfigName('');
+                    }}
+                  >
+                    取消
+                  </Button>
+                </div>
+              ) : (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowSaveConfig(!showSaveConfig)}
+                  onClick={() => setShowSaveConfig(true)}
                   disabled={isLoading}
                 >
                   <Save className="w-4 h-4 mr-1" />
                   保存配置
                 </Button>
-
-                {/* 加载配置 */}
-                {savedConfigs.length > 0 && (
-                  <div className="relative">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowLoadConfig(true)}
-                      disabled={isLoading}
-                    >
-                      <FolderOpen className="w-4 h-4 mr-1" />
-                      加载配置
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* 保存配置表单 */}
-              {showSaveConfig && (
-                <div className="mt-3 p-3 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={configName}
-                      onChange={(e) => setConfigName(e.target.value)}
-                      placeholder="配置名称"
-                      className={cn(
-                        "flex-1 px-2 py-1.5 text-sm",
-                        "border-2 border-border",
-                        "rounded-md bg-input",
-                        "text-foreground",
-                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      )}
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleSaveConfig}
-                      disabled={saveConfig.isPending || !configName.trim()}
-                    >
-                      {saveConfig.isPending ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                          保存中...
-                        </>
-                      ) : (
-                        '保存'
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowSaveConfig(false);
-                        setConfigName('');
-                      }}
-                    >
-                      取消
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* 已保存配置列表 */}
-              {savedConfigs.length > 0 && (
-                <div className="mt-3">
-                  <p className="text-xs text-muted-foreground mb-2">已保存的配置:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {savedConfigs.map((config) => (
-                      <Button
-                        key={config.name}
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleLoadConfig(config.name)}
-                        disabled={isLoading}
-                      >
-                        {config.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
               )}
             </div>
-          </div>
-        </form>
 
-        {/* 按钮区域 */}
-        <div className="flex justify-end items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onClose}
-            disabled={isLoading}
-          >
-            取消
-          </Button>
-          <Button
+            {!showSaveConfig && savedConfigs.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLoadConfig(true)}
+                disabled={isLoading}
+              >
+                <FolderOpen className="w-4 h-4 mr-1" />
+                加载配置
+              </Button>
+            )}
+          </div>
+
+          {/* 右侧：操作按钮 */}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              取消
+            </Button>
+            <Button
+
             type="submit"
             onClick={(e) => {
               e.preventDefault();
@@ -723,6 +674,7 @@ export function BenchmarkDialog({
               </>
             )}
           </Button>
+          </div>
         </div>
       </div>
 
