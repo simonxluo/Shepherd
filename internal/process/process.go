@@ -3,16 +3,17 @@
 package process
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -25,25 +26,26 @@ type Process struct {
 	BinPath string
 
 	// Runtime state
-	PID         int
-	Running     bool
-	CtxSize     int
-	Port        int
+	PID     int
+	Running bool
+	CtxSize int
+	Port    int
 
 	// Internal fields
-	cmd         *exec.Cmd
-	stdoutPipe  io.ReadCloser
-	stderrPipe  io.ReadCloser
-	stdinPipe   io.WriteCloser
-	outputChan  chan string
-	ctx         context.Context
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
+	cmd        *exec.Cmd
+	stdoutPipe io.ReadCloser
+	stderrPipe io.ReadCloser
+	stdinPipe  io.WriteCloser
+	outputChan chan string
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
 
 	// Logging
 	outputHandler func(string)
 
-	mu sync.Mutex
+	mu          sync.Mutex
+	readersDone int32 // counter for finished output readers (0, 1, or 2)
 }
 
 // Handler is a callback function for process output
@@ -54,12 +56,12 @@ func NewProcess(id, name, cmd, binPath string) *Process {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Process{
-		ID:      id,
-		Name:    name,
-		Cmd:     cmd,
-		BinPath: binPath,
-		ctx:     ctx,
-		cancel:  cancel,
+		ID:         id,
+		Name:       name,
+		Cmd:        cmd,
+		BinPath:    binPath,
+		ctx:        ctx,
+		cancel:     cancel,
 		outputChan: make(chan string, 100),
 	}
 }
@@ -107,6 +109,10 @@ func (p *Process) Start() error {
 	if p.Running {
 		return fmt.Errorf("process already running")
 	}
+
+	// Reset state for fresh start
+	atomic.StoreInt32(&p.readersDone, 0)
+	p.outputChan = make(chan string, 100)
 
 	// Parse command line arguments
 	args, err := splitCommandLineArgs(p.Cmd)
@@ -178,14 +184,14 @@ func (p *Process) Start() error {
 
 	p.mu.Lock() // 重新获取锁，保持函数语义一致
 
-	// Start output readers
+	// Start output processor first (it will drain any remaining lines)
+	p.wg.Add(1)
+	go p.processOutput()
+
+	// Start output readers (they close the channel when done)
 	p.wg.Add(2)
 	go p.readOutput(p.stdoutPipe, "stdout")
 	go p.readOutput(p.stderrPipe, "stderr")
-
-	// Start output processor
-	p.wg.Add(1)
-	go p.processOutput()
 
 	return nil
 }
@@ -222,9 +228,17 @@ func (p *Process) setupEnvironment(cmd *exec.Cmd, binPath string) error {
 }
 
 // readOutput reads from a pipe and sends lines to the output channel
+// Each readOutput goroutine is responsible for closing its pipe.
+// The last readOutput to finish closes the output channel.
 func (p *Process) readOutput(pipe io.ReadCloser, name string) {
 	defer p.wg.Done()
-	defer utils.CloseQuietly(pipe)
+	defer func() {
+		utils.CloseQuietly(pipe)
+		// Decrement reader count and close channel if we're the last reader
+		if atomic.AddInt32(&p.readersDone, 1) == 2 {
+			close(p.outputChan)
+		}
+	}()
 
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
@@ -240,7 +254,6 @@ func (p *Process) readOutput(pipe io.ReadCloser, name string) {
 // processOutput processes output lines from the channel
 func (p *Process) processOutput() {
 	defer p.wg.Done()
-	defer close(p.outputChan)
 
 	for {
 		select {
@@ -250,6 +263,10 @@ func (p *Process) processOutput() {
 			}
 			p.handleOutputLine(line)
 		case <-p.ctx.Done():
+			// Drain remaining lines before exiting
+			for line := range p.outputChan {
+				p.handleOutputLine(line)
+			}
 			return
 		}
 	}

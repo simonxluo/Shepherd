@@ -5,6 +5,15 @@ All notable changes to Shepherd will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **进程管理竞态条件修复**: 修复进程停止时的 "send on closed channel" panic
+  - 问题: 当健康检查失败终止进程时，`readOutput` goroutine 可能仍在向已关闭的 channel 发送数据
+  - 解决: 将 channel 关闭责任从 `processOutput` 转移到 `readOutput` goroutines
+  - 使用 `atomic.AddInt32` 计数器跟踪完成的 reader 数量
+  - 最后一个 reader 负责关闭 channel，避免竞态条件
+
 ## [v0.6.0] - 2026-03-06
 
 ### Breaking Changes
