@@ -409,12 +409,12 @@ export interface EstimateVRAMData {
  */
 export function useEstimateVRAM() {
   return useMutation({
-    mutationFn: async (params: EstimateVRAMParams) => {
-      const response = await apiClient.post<{ success: boolean; data: EstimateVRAMData }>(
+    mutationFn: async (params: EstimateVRAMParams): Promise<EstimateVRAMData> => {
+      const response = await apiClient.post<EstimateVRAMData>(
         '/models/vram/estimate',
         params
       );
-      return response.data;
+      return response;
     },
   });
 }
@@ -687,6 +687,8 @@ export function useModelLoadConfig(modelId: string) {
  * 保存模型加载配置 Hook
  */
 export function useSaveModelLoadConfig() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async ({ modelId, config }: { modelId: string; config: Record<string, any> }) => {
       const response = await apiClient.put<{ success: boolean }>(
@@ -694,6 +696,11 @@ export function useSaveModelLoadConfig() {
         { config }
       );
       return response;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['models', variables.modelId, 'load-config']
+      });
     },
   });
 }

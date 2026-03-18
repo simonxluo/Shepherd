@@ -89,6 +89,422 @@ export interface Slot {
  * 加载模型参数
  */
 export interface LoadModelParams {
+  capabilities?: ModelCapabilities;
+  enabled?: Record<string, boolean>;
+  modelId: string;
+  nodeId?: string;
+  llamaCppPath?: string;
+  mainGpu?: number | string;
+  threads?: number;
+  threadsBatch?: number;
+  gpuLayers?: number;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  repeatPenalty?: number;
+  seed?: number;
+  nPredict?: number;
+  minP?: number;
+  minP?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+  typicalP?: number;
+  repeatLastN?: number;
+  repeatLastN?: number;
+  logitsAll?: boolean;
+  reranking?: boolean;
+  flashAttention?: boolean;
+  noMmap?: boolean;
+  lockMemory?: boolean;
+  uBatchSize?: number;
+  parallelSlots?: number;
+  kvCacheSize?: number;
+  kvCacheUnified?: boolean;
+  kvCacheTypeK?: string;
+  kvCacheTypeV?: string;
+  directIo?: string;
+  mainGpu?: number | string;
+  llamaCppPath?: string;
+  mainGpu?: number | string;
+  devices?: string[];
+  splitMode?: string;
+  tensorSplit?: string;
+  contBatching?: boolean;
+  cachePrompt?: boolean;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  chatTemplate?: string;
+  extraArgs?: string;
+  enabled?: Record<string, boolean>;
+  modelId: string;
+  nodeId?: string;
+  modelName: string;
+  ctxSize?: number;
+  batchSize?: number;
+  threads?: number;
+  threadsBatch?: number;
+  gpuLayers?: number;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  repeatPenalty?: number;
+  repeatLastN?: number;
+  seed?: number;
+  nPredict?: number;
+  minP?: number;
+  allowNegative?: boolean;
+  allowMinusOne?: boolean;
+  gpuLayers?: number;
+  uBatchSize?: number;
+  parallelSlots?: number;
+  kvCacheSize?: number;
+  kvCacheUnified?: boolean;
+  kvCacheTypeK?: string;
+  kvCacheTypeV?: string;
+  directIo?: string;
+  mainGpu?: number | string;
+  devices?: string[];
+  splitMode?: string;
+  tensorSplit?: string;
+  contBatching?: boolean;
+  cachePrompt?: boolean;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  extraArgs?: string;
+  timeout?: number;
+  alias?: string;
+  logitsAll?: boolean;
+  reranking?: boolean;
+  capabilities?: {
+    thinking: boolean;
+    tools: boolean;
+    translation: boolean;
+    rerank?: boolean;
+    embedding?: boolean;
+    mmprojPath?: string;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  extraArgs?: string;
+  logitsAll?: boolean;
+  reranking?: boolean;
+  flashAttention?: boolean;
+  noMmap?: boolean;
+  lockMemory?: boolean;
+  uBatchSize?: number;
+  parallelSlots?: number;
+  kvCacheSize?: number;
+  kvCacheUnified?: boolean;
+  kvCacheTypeK?: string;
+  kvCacheTypeV?: string;
+  directIo?: string;
+  mainGpu?: number | string;
+  devices?: string[];
+  splitMode?: string;
+  tensorSplit?: string;
+  grammar?: string;
+  grammarFile?: string;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  extraArgs?: string;
+  lora?: string;
+  loraScaled?: string;
+  chatTemplateKwargs?: string;
+  ropeScaling?: string;
+  ropeScale?: number;
+  ropeFreqBase?: number;
+  ropeFreqScale?: number;
+  seed?: number;
+  nPredict?: number;
+  minP?: number;
+  allowNegative?: boolean;
+  allowMinusOne?: boolean;
+  gpuLayers?: number;
+  threads?: number;
+  threadsBatch?: number;
+  gpuLayers?: number;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  repeatPenalty?: number;
+  repeatLastN?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  ignoreEos?: boolean;
+  logitsAll?: boolean;
+  reranking?: boolean;
+  contBatching?: boolean;
+  parallelSlots?: number;
+  kvCacheSize?: number;
+  kvCacheUnified?: boolean;
+  kvCacheTypeK?: string;
+  kvCacheTypeV?: string;
+  directIo?: string;
+  mainGpu?: number | string;
+  devices?: string[];
+  splitMode?: string;
+  tensorSplit?: string;
+  grammar?: string;
+  grammarFile?: string;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  extraArgs?: string;
+  logitsAll?: boolean;
+  reranking?: boolean;
+  mmprojPath?: string;
+  lora?: string;
+  loraScaled?: string;
+  chatTemplateKwargs?: string;
+  ropeScaling?: string;
+  ropeScale?: number;
+  ropeFreqBase?: number;
+  ropeFreqScale?: number;
+  seed?: number;
+  nPredict?: number;
+  minP?: number;
+  allowNegative?: boolean;
+  allowMinusOne?: boolean;
+  gpuLayers?: number;
+  threads?: number;
+  threadsBatch?: number;
+  gpuLayers?: number;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  repeatPenalty?: number;
+  repeatLastN?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  ignoreEos?: boolean
+  logitsAll?: boolean;
+  reranking?: boolean;
+  contBatching?: boolean;
+  parallelSlots?: number;
+  kvCacheSize?: number;
+  kvCacheUnified?: boolean;
+  kvCacheTypeK?: string;
+  kvCacheTypeV?: string;
+  directIo?: string;
+  mainGpu?: number | string;
+  devices?: string[];
+  splitMode?: string;
+  tensorSplit?: string;
+  grammar?: string;
+  grammarFile?: string;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  extraArgs?: string;
+  lora?: string;
+  loraScaled?: string;
+  chatTemplateKwargs?: string;
+  ropeScaling?: string;
+  ropeScale?: number;
+  ropeFreqBase?: number;
+  ropeFreqScale?: number;
+  seed?: number;
+  nPredict?: number;
+  minP?: number;
+  allowNegative?: boolean;
+  allowMinusOne?: boolean;
+  gpuLayers?: number;
+  threads?: number;
+  threadsBatch?: number;
+  gpuLayers?: number;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  repeatPenalty?: number;
+  repeatLastN?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  ignoreEos?: boolean
+  logitsAll?: boolean;
+  reranking?: boolean;
+  contBatching?: boolean;
+  parallelSlots?: number;
+  kvCacheSize?: number;
+  kvCacheUnified?: boolean;
+  kvCacheTypeK?: string;
+  kvCacheTypeV?: string;
+  directIo?: string;
+  mainGpu?: number | string;
+  devices?: string[];
+  splitMode?: string;
+  tensorSplit?: string;
+  grammar?: string;
+  grammarFile?: string;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  extraArgs?: string;
+  lora?: string;
+  loraScaled?: string;
+  chatTemplateKwargs?: string;
+  ropeScaling?: string;
+  ropeScale?: number;
+  ropeFreqBase?: number;
+  ropeFreqScale?: number;
+  seed?: number;
+  nPredict?: number;
+  minP?: number;
+  allowNegative?: boolean;
+  allowMinusOne?: boolean;
+  gpuLayers?: number;
+  threads?: number;
+  threadsBatch?: number;
+  gpuLayers?: number;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  repeatPenalty?: number;
+  repeatLastN?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  ignoreEos?: boolean
+  logitsAll?: boolean;
+  reranking?: boolean;
+  contBatching?: boolean;
+  parallelSlots?: number;
+  kvCacheSize?: number;
+  kvCacheUnified?: boolean;
+  kvCacheTypeK?: string;
+  kvCacheTypeV?: string;
+  directIo?: string;
+  mainGpu?: number | string;
+  devices?: string[];
+  splitMode?: string;
+  tensorSplit?: string;
+  grammar?: string;
+  grammarFile?: string;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  extraArgs?: string;
+  lora?: string;
+  loraScaled?: string;
+  chatTemplateKwargs?: string;
+  ropeScaling?: string;
+  ropeScale?: number;
+  ropeFreqBase?: number;
+  ropeFreqScale?: number;
+  seed?: number;
+  nPredict?: number;
+  minP?: number;
+  allowNegative?: boolean;
+  allowMinusOne?: boolean;
+  gpuLayers?: number;
+  threads?: number;
+  threadsBatch?: number;
+  gpuLayers?: number;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  repeatPenalty?: number;
+  repeatLastN?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  ignoreEos?: boolean
+  logitsAll?: boolean;
+  reranking?: boolean;
+  contBatching?: boolean;
+  parallelSlots?: number;
+  kvCacheSize?: number;
+  kvCacheUnified?: boolean;
+  kvCacheTypeK?: string;
+  kvCacheTypeV?: string;
+  directIo?: string;
+  mainGpu?: number | string;
+  devices?: string[];
+  splitMode?: string;
+  tensorSplit?: string;
+  grammar?: string;
+  grammarFile?: string;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  extraArgs?: string;
+  logitsAll?: boolean;
+  reranking?: boolean;
+  contBatching?: boolean;
+  parallelSlots?: number;
+  kvCacheSize?: number;
+  kvCacheUnified?: boolean;
+  kvCacheTypeK?: string;
+  kvCacheTypeV?: string;
+  directIo?: string;
+  mainGpu?: number | string;
+  devices?: string[];
+  splitMode?: string;
+  tensorSplit?: string;
+  grammar?: string;
+  grammarFile?: string;
+  chatTemplate?: string;
+  contextShift?: boolean;
+  disableJinja?: boolean;
+  extraArgs?: string;
+  lora?: string;
+  loraScaled?: string;
+  chatTemplateKwargs?: string;
+  ropeScaling?: string;
+  ropeScale?: number;
+  ropeFreqBase?: number;
+  ropeFreqScale?: number;
+  seed?: number;
+  nPredict?: number;
+  minP?: number;
+  allowNegative?: boolean;
+  allowMinusOne?: boolean;
+  gpuLayers?: number;
+  threads?: number;
+  threadsBatch?: number;
+  gpuLayers?: number;
+  temperature?: number;
+  topP?: number;
+  topK?: number;
+  repeatPenalty?: number;
+  repeatLastN?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  ignoreEos?: boolean
+  logitsAll?: boolean;
+  reranking?: boolean;
+  contBatching?: boolean;
+  parallelSlots?: number;
+            kvCacheSize?: number;
+            kvCacheUnified?: boolean
+            kvCacheTypeK?: string;
+            kvCacheTypeV?: string;
+          }
+        }
+      />
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
+                      <span className="shrink-0">|</span>
+                      <span className="shrink-0">{quantizationLabel}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* 显示估算的显存 */}
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">
+                        约{'vramGB} GB} 显存)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+};
+
+)；
   // 基础参数
   modelId: string;
   nodeId?: string;              // 指定运行节点 ID，undefined 表示自动调度
@@ -145,6 +561,9 @@ export interface LoadModelParams {
   chatTemplate?: string;          // 内置聊天模板
   contextShift?: boolean;         // 上下文移位
   extraArgs?: string;             // 额外命令行参数
+
+  // 显存估算
+  vramEstimate?: string;          // 估算的显存（如 "59.15 GB"）
 
   // 线程配置
   threadsBatch?: number;          // 批处理线程数

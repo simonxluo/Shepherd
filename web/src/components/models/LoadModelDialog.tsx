@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, HelpCircle, Loader2, ChevronDown, Info, RotateCcw, ToggleLeft, ToggleRight, Save, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { LoadModelParams, ModelCapabilities } from '@/types';
 import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models/hooks';
 import { useOnlineNodes } from '@/features/cluster/hooks';
@@ -739,19 +740,26 @@ export function LoadModelDialog({
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTooltip, paramKey]);
 
-    const handleMouseEnter = () => {
-      handleTooltipEnter(paramKey);
-    };
+    useEffect(() => {
+      if (activeTooltip !== paramKey) return;
 
-    const handleMouseLeave = (e: React.MouseEvent) => {
-      const relatedTarget = e.relatedTarget as HTMLElement;
-      if (relatedTarget &&
-          relatedTarget.nodeType === Node.ELEMENT_NODE &&
+      const handleClickOutside = (e: MouseEvent) => {
+        if (
+          buttonRef.current &&
+          !buttonRef.current.contains(e.target as Node) &&
           tooltipRef.current &&
-          tooltipRef.current.contains(relatedTarget)) {
-        return;
-      }
-      handleTooltipLeave();
+          !tooltipRef.current.contains(e.target as Node)
+        ) {
+          setActiveTooltip(null);
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [activeTooltip, paramKey]);
+
+    const handleToggleTooltip = () => {
+      setActiveTooltip(prev => prev === paramKey ? null : paramKey);
     };
 
     const handleToggleEnabled = () => {
@@ -823,18 +831,12 @@ export function LoadModelDialog({
           <button
             ref={buttonRef}
             type="button"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-            onFocus={() => handleTooltipEnter(paramKey)}
-            onBlur={(e) => {
-              const relatedTarget = e.relatedTarget as HTMLElement;
-              if (relatedTarget &&
-                  relatedTarget.nodeType === Node.ELEMENT_NODE &&
-                  tooltipRef.current &&
-                  tooltipRef.current.contains(relatedTarget)) {
-                return;
+            onClick={handleToggleTooltip}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggleTooltip();
               }
-              handleTooltipLeave();
             }}
             className={cn(
               "w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium",
@@ -844,10 +846,12 @@ export function LoadModelDialog({
               "hover:text-blue-600 dark:hover:text-blue-400",
               "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1",
               "transition-all duration-200 cursor-help shadow-sm hover:shadow",
+              activeTooltip === paramKey && "from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 text-blue-600 dark:text-blue-400",
               !isEnabled && "opacity-50"
             )}
             aria-label={`查看 ${paramKey} 的帮助说明`}
-            aria-describedby={`tooltip-${paramKey}`}
+            aria-expanded={activeTooltip === paramKey}
+            aria-controls={`tooltip-${paramKey}`}
           >
             ?
           </button>
@@ -865,8 +869,6 @@ export function LoadModelDialog({
                 transform: 'translateX(-50%) translateY(-100%)',
                 animation: 'tooltipFadeIn 0.2s ease-out forwards',
               }}
-              onMouseEnter={() => handleTooltipEnter(paramKey)}
-              onMouseLeave={handleMouseLeave}
             >
               <style>{`
                 @keyframes tooltipFadeIn {
@@ -1331,9 +1333,9 @@ export function LoadModelDialog({
                       value={params.ctxSize}
                       onChange={(v) => setParams({ ...params, ctxSize: v })}
                       disabled={getInputDisabled('ctxSize')}
-                      min={512}
+                      min={0}
                       max={131072}
-                      step={512}
+                      step={1}
                       placeholder="8192"
                     />
                   </div>
@@ -1594,9 +1596,9 @@ export function LoadModelDialog({
                       value={params.kvCacheSize}
                       onChange={(v) => setParams({ ...params, kvCacheSize: v })}
                       disabled={getInputDisabled('kvCacheSize')}
-                      min={512}
+                      min={0}
                       max={131072}
-                      step={512}
+                      step={1}
                       placeholder="8192"
                     />
                   </div>
@@ -1625,10 +1627,15 @@ export function LoadModelDialog({
                       onChange={(e) => setParams({ ...params, kvCacheTypeK: e.target.value })}
                       disabled={getInputDisabled('kvCacheTypeK')}
                     >
-                      <option value="f16">f16</option>
                       <option value="f32">f32</option>
+                      <option value="f16">f16 (默认)</option>
+                      <option value="bf16">bf16</option>
                       <option value="q8_0">q8_0</option>
+                      <option value="q5_0">q5_0</option>
+                      <option value="q5_1">q5_1</option>
                       <option value="q4_0">q4_0</option>
+                      <option value="q4_1">q4_1</option>
+                      <option value="iq4_nl">iq4_nl</option>
                     </SelectInput>
                   </div>
 
@@ -1641,10 +1648,15 @@ export function LoadModelDialog({
                       onChange={(e) => setParams({ ...params, kvCacheTypeV: e.target.value })}
                       disabled={getInputDisabled('kvCacheTypeV')}
                     >
-                      <option value="f16">f16</option>
                       <option value="f32">f32</option>
+                      <option value="f16">f16 (默认)</option>
+                      <option value="bf16">bf16</option>
                       <option value="q8_0">q8_0</option>
+                      <option value="q5_0">q5_0</option>
+                      <option value="q5_1">q5_1</option>
                       <option value="q4_0">q4_0</option>
+                      <option value="q4_1">q4_1</option>
+                      <option value="iq4_nl">iq4_nl</option>
                     </SelectInput>
                   </div>
                 </div>
@@ -1727,26 +1739,60 @@ export function LoadModelDialog({
 
           {/* 按钮区域 - 固定在底部 */}
           <div className="flex justify-end items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="px-4 py-2 text-foreground hover:bg-accent rounded transition-colors disabled:opacity-50"
-            >
+            {/* 取消按钮 - 右侧最左 */}
+            <Button variant="outline" onClick={onClose} disabled={isLoading}>
               取消
-            </button>
+            </Button>
 
-            <button
-              type="button"
+            {/* 估算显存 + 结果 */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  setEstimateResult('计算中...');
+
+                  try {
+                    const result = await estimateVRAM.mutateAsync({
+                      modelId,
+                      llamaBinPath: params.llamaCppPath || '/home/user/workspace/llama.cpp/build-rocm/bin',
+                      ctxSize: params.ctxSize,
+                      batchSize: params.batchSize,
+                      uBatchSize: params.uBatchSize,
+                      parallel: params.parallelSlots,
+                      flashAttention: params.flashAttention,
+                      kvUnified: params.kvCacheUnified,
+                      cacheTypeK: params.kvCacheTypeK,
+                      cacheTypeV: params.kvCacheTypeV,
+                    });
+
+                    if (result.vramGB) {
+                      setEstimateResult(`约需 ${result.vramGB} GB 显存`);
+                    } else if (result.error) {
+                      setEstimateResult(`估算失败: ${result.error}`);
+                    } else {
+                      setEstimateResult('估算失败');
+                    }
+                  } catch (error) {
+                    setEstimateResult(`估算出错: ${error instanceof Error ? error.message : '未知错误'}`);
+                  }
+                }}
+                disabled={isLoading || estimateVRAM.isPending}
+              >
+                {estimateVRAM.isPending ? '计算中...' : '估算显存'}
+              </Button>
+              {estimateResult && (
+                <span className="text-sm text-muted-foreground px-2 py-1 bg-muted rounded">{estimateResult}</span>
+              )}
+            </div>
+
+            {/* 保存配置 */}
+            <Button
+              variant="secondary"
               onClick={handleSaveConfig}
               disabled={isLoading || saveStatus === 'saving'}
               className={cn(
-                'px-4 py-2 rounded transition-colors disabled:opacity-50 flex items-center gap-2',
-                saveStatus === 'saved'
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : saveStatus === 'error'
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-gray-600 text-white hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600'
+                saveStatus === 'saved' && 'bg-green-600 text-white hover:bg-green-700',
+                saveStatus === 'error' && 'bg-red-600 text-white hover:bg-red-700'
               )}
             >
               {saveStatus === 'saving' ? (
@@ -1768,64 +1814,19 @@ export function LoadModelDialog({
                   保存配置
                 </>
               )}
-            </button>
+            </Button>
 
-            <button
-              type="button"
-              onClick={async () => {
-                setEstimateResult('计算中...');
-
-                try {
-                  const result = await estimateVRAM.mutateAsync({
-                    modelId,
-                    llamaBinPath: params.llamaCppPath || '/home/user/workspace/llama.cpp/build-rocm/bin',
-                    ctxSize: params.ctxSize,
-                    batchSize: params.batchSize,
-                    uBatchSize: params.uBatchSize,
-                    parallel: params.parallelSlots,
-                    flashAttention: params.flashAttention,
-                    kvUnified: params.kvCacheUnified,
-                    cacheTypeK: params.kvCacheTypeK,
-                    cacheTypeV: params.kvCacheTypeV,
-                  });
-
-                  if (result.vramGB) {
-                    setEstimateResult(`约需 ${result.vramGB} GB 显存`);
-                  } else if (result.error) {
-                    setEstimateResult(`估算失败: ${result.error}`);
-                  } else {
-                    setEstimateResult('估算失败');
-                  }
-                } catch (error) {
-                  setEstimateResult(`估算出错: ${error instanceof Error ? error.message : '未知错误'}`);
-                }
-              }}
-              disabled={isLoading || estimateVRAM.isPending}
-              className="px-4 py-2 text-sm border border-border rounded hover:bg-accent disabled:opacity-50"
-            >
-              {estimateVRAM.isPending ? '计算中...' : '估算显存'}
-            </button>
-            {estimateResult && (
-              <span className="text-sm text-muted-foreground">{estimateResult}</span>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={cn(
-                'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors',
-                isLoading && 'opacity-50 cursor-not-allowed'
-              )}
-            >
+            {/* 开始加载 - 主操作 */}
+            <Button type="submit" disabled={isLoading}>
               {isLoading ? (
-                <span className="flex items-center gap-2">
+                <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   加载中...
-                </span>
+                </>
               ) : (
                 '开始加载'
               )}
-            </button>
+            </Button>
           </div>
       </form>
     </div>
