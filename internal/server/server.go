@@ -273,6 +273,7 @@ func (s *Server) setupRoutes() {
 			// 模型能力管理（必须在 :id 路由之前）
 			models.GET("/capabilities/get", s.handleGetModelCapabilities)
 			models.POST("/capabilities/set", s.handleSetModelCapabilities)
+			models.GET("/capabilities/auto-detect", s.handleAutoDetectCapabilities)
 
 			// 显存估算（必须在 :id 路由之前）
 			models.POST("/vram/estimate", s.handleEstimateVRAM)
@@ -1560,6 +1561,26 @@ func (s *Server) handleSetModelCapabilities(c *gin.Context) {
 	api.Success(c, gin.H{
 		"modelId":      req.ModelID,
 		"capabilities": req.Capabilities,
+	})
+}
+
+// handleAutoDetectCapabilities 自动检测模型能力
+func (s *Server) handleAutoDetectCapabilities(c *gin.Context) {
+	modelID := c.Query("modelId")
+	if modelID == "" {
+		api.BadRequest(c, "缺少 modelId 参数")
+		return
+	}
+
+	caps, err := s.modelMgr.AutoDetectCapabilities(modelID)
+	if err != nil {
+		api.BadRequest(c, err.Error())
+		return
+	}
+
+	api.Success(c, gin.H{
+		"modelId":      modelID,
+		"capabilities": caps,
 	})
 }
 

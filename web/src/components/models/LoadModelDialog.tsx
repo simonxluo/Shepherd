@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, HelpCircle, Loader2, ChevronDown, Info, RotateCcw, ToggleLeft, ToggleRight, Save } from 'lucide-react';
+import { X, HelpCircle, Loader2, ChevronDown, Info, RotateCcw, ToggleLeft, ToggleRight, Save, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LoadModelParams, ModelCapabilities } from '@/types';
-import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, type SystemGPUInfo, type LlamacppBackend } from '@/features/models/hooks';
+import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models/hooks';
 import { useOnlineNodes } from '@/features/cluster/hooks';
 import type { UnifiedNode } from '@/types';
+import { useToast } from '@/hooks/useToast';
 
 // NumberInput 组件 - 数字输入框
 interface NumberInputProps {
@@ -250,6 +251,10 @@ export function LoadModelDialog({
   const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
   const saveModelLoadConfig = useSaveModelLoadConfig();
   const deleteModelLoadConfig = useDeleteModelLoadConfig();
+
+  const autoDetectCapabilities = useAutoDetectCapabilities();
+
+  const toast = useToast();
 
   // 初始化参数状态
   const [params, setParams] = useState<LoadModelParams>({
@@ -1079,9 +1084,55 @@ export function LoadModelDialog({
 
                 {/* 能力开关 */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    能力
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      能力
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        autoDetectCapabilities.mutateAsync(modelId)
+                          .then((result) => {
+                            if (result?.capabilities) {
+                              setParams(prev => ({
+                                ...prev,
+                                capabilities: result.capabilities
+                              }));
+                              const detectedList: string[] = [];
+                              if (result.capabilities.thinking) detectedList.push('思考能力');
+                              if (result.capabilities.tools) detectedList.push('工具调用');
+                              if (result.capabilities.embedding) detectedList.push('嵌入');
+                              if (result.capabilities.rerank) detectedList.push('重排序');
+
+                              if (detectedList.length > 0) {
+                                toast.success('检测完成', detectedList.join(', '));
+                              } else {
+                                toast.info('检测完成', '未检测到特殊能力');
+                              }
+                            }
+                          })
+                          .catch((error) => {
+                            toast.error('检测失败', error instanceof Error ? error.message : '未知错误');
+                          });
+                      }}
+                      disabled={!modelId || autoDetectCapabilities.isPending}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+                        "border shadow-sm",
+                        "hover:shadow-md hover:-translate-y-px active:translate-y-0",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        "bg-muted text-muted-foreground border-border hover:bg-muted/80",
+                        "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm"
+                      )}
+                    >
+                      {autoDetectCapabilities.isPending ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Wand2 className="w-3.5 h-3.5" />
+                      )}
+                      自动检测
+                    </button>
+                  </div>
                   <div className="border border-border rounded-lg p-3 bg-card">
                     <div className="space-y-2">
                       {/* 聊天能力 */}

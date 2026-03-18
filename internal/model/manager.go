@@ -1304,6 +1304,38 @@ func (m *Manager) SetFavourite(modelID string, favourite bool) error {
 	return nil
 }
 
+// AutoDetectCapabilities detects model capabilities from GGUF metadata and saves them to the database.
+func (m *Manager) AutoDetectCapabilities(modelId string) (*storage.Capabilities, error) {
+	model, exists := m.GetModel(modelId)
+	if !exists {
+		return nil, fmt.Errorf("model not found: %s", modelId)
+	}
+
+	if model.Metadata == nil {
+		return &storage.Capabilities{}, nil
+	}
+
+	detectedCaps := DetectCapabilities(model.Metadata)
+
+	ctx := context.Background()
+	existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, modelId)
+	if err == nil && existingMeta != nil {
+		existingMeta.Capabilities = detectedCaps
+		if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); err != nil {
+			logger.Warn("保存模型能力失败", "modelId", modelId, "error", err)
+		}
+	} else {
+		if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
+			ModelID:      modelId,
+			Capabilities: detectedCaps,
+		}); err != nil {
+			logger.Warn("保存模型能力失败", "modelId", modelId, "error", err)
+		}
+	}
+
+	return detectedCaps, nil
+}
+
 // loadModels loads models from config
 func (m *Manager) loadModels() {
 	if m.configMgr == nil {

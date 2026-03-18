@@ -353,6 +353,29 @@ export function useSetModelCapabilities() {
 }
 
 /**
+ * 自动检测模型能力 Hook
+ */
+export function useAutoDetectCapabilities() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (modelId: string) => {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: { modelId: string; capabilities: ModelCapabilities };
+      }>(`/models/capabilities/auto-detect?modelId=${modelId}`);
+      return response.data;
+    },
+    onSuccess: (data, modelId) => {
+      // 使能力查询失效，触发 UI 刷新
+      queryClient.invalidateQueries({
+        queryKey: ['models', 'capabilities', modelId]
+      });
+    },
+  });
+}
+
+/**
  * 显存估算请求参数
  */
 export interface EstimateVRAMParams {
