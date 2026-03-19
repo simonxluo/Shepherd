@@ -231,6 +231,19 @@ const PARAM_HELP = {
   ropeScale: 'RoPE扩展因子，大于1.0扩展上下文长度',
   ropeFreqBase: 'RoPE基础频率，调整NTK感知缩放',
   ropeFreqScale: 'RoPE频率缩放因子，小于1.0扩展上下文',
+  seed: '随机种子，-1表示随机，固定值可复现结果',
+  nPredict: '最大生成token数，-1表示无限',
+  directIo: 'DirectIO模式，提升磁盘IO性能',
+  disableJinja: '禁用Jinja模板处理',
+  chatTemplate: '内置聊天模板名称或自定义模板',
+  contextShift: '启用上下文移位，支持超长对话',
+  extraArgs: '额外命令行参数',
+  embedding: '嵌入向量模式，仅用于嵌入模型',
+  noWebUI: '禁用内置Web界面',
+  reasoning: '推理/思考模式：on启用，off禁用，auto自动检测',
+  reasoningFormat: '推理输出格式：deepseek、auto等',
+  reasoningBudget: '推理token预算，-1无限制，0立即结束',
+  mmprojOffload: 'mmproj投影层GPU卸载',
 };
 
 export function LoadModelDialog({
@@ -315,6 +328,13 @@ export function LoadModelDialog({
     ropeScale: 0,
     ropeFreqBase: 0,
     ropeFreqScale: 0,
+    // 新增 llama-server 参数
+    embedding: false,
+    noWebUI: true,
+    reasoning: 'auto',
+    reasoningFormat: 'auto',
+    reasoningBudget: -1,
+    mmprojOffload: true,
     // 参数启用状态（默认全部启用，用户可以选择禁用以使用默认值）
     enabled: {
       ctxSize: true,
@@ -327,8 +347,8 @@ export function LoadModelDialog({
       topK: true,
       repeatPenalty: true,
       repeatLastN: false,
-      seed: false,
-      nPredict: false,
+      seed: true,
+      nPredict: true,
       minP: true,
       typicalP: false,
       presencePenalty: false,
@@ -351,19 +371,25 @@ export function LoadModelDialog({
       grammarFile: false,
       lora: false,
       loraScaled: false,
-      chatTemplate: false,
+      chatTemplate: true,
       chatTemplateKwargs: false,
-      disableJinja: false,
+      disableJinja: true,
       ropeScaling: false,
       ropeScale: false,
       ropeFreqBase: false,
       ropeFreqScale: false,
-      contextShift: false,
-      directIo: false,
+      contextShift: true,
+      directIo: true,
       logitsAll: false,
       reranking: false,
       timeout: false,
       alias: false,
+      embedding: false,
+      noWebUI: true,
+      reasoning: true,
+      reasoningFormat: true,
+      reasoningBudget: true,
+      mmprojOffload: true,
     },
   });
 
@@ -525,7 +551,7 @@ export function LoadModelDialog({
       'temperature', 'topP', 'topK', 'repeatPenalty', 'repeatLastN',
       'seed', 'nPredict',
       'llamaCppPath', 'mainGpu',
-      'flashAttention', 'noMmap', 'lockMemory',
+      'flashAttention', 'noMmap', 'lockMemory', 'embedding',
       'logitsAll', 'reranking', 'minP',
       'presencePenalty', 'frequencyPenalty',
       'uBatchSize', 'parallelSlots',
@@ -538,6 +564,7 @@ export function LoadModelDialog({
       'lora', 'loraScaled',
       'chatTemplateKwargs',
       'ropeScaling', 'ropeScale', 'ropeFreqBase', 'ropeFreqScale',
+      'noWebUI', 'reasoning', 'reasoningFormat', 'reasoningBudget', 'mmprojOffload',
     ];
 
     for (const key of paramKeys) {
@@ -646,6 +673,13 @@ export function LoadModelDialog({
       ropeScale: 0,
       ropeFreqBase: 0,
       ropeFreqScale: 0,
+      // 新增 llama-server 参数
+      embedding: false,
+      noWebUI: true,
+      reasoning: 'auto',
+      reasoningFormat: 'auto',
+      reasoningBudget: -1,
+      mmprojOffload: true,
       // 参数启用状态
       enabled: {
         ctxSize: true,
@@ -658,8 +692,8 @@ export function LoadModelDialog({
         topK: true,
         repeatPenalty: true,
         repeatLastN: false,
-        seed: false,
-        nPredict: false,
+        seed: true,
+        nPredict: true,
         minP: true,
         typicalP: false,
         presencePenalty: false,
@@ -682,19 +716,26 @@ export function LoadModelDialog({
         grammarFile: false,
         lora: false,
         loraScaled: false,
-        chatTemplate: false,
+        chatTemplate: true,
         chatTemplateKwargs: false,
-        disableJinja: false,
+        disableJinja: true,
         ropeScaling: false,
         ropeScale: false,
         ropeFreqBase: false,
         ropeFreqScale: false,
-        contextShift: false,
-        directIo: false,
+        contextShift: true,
+        directIo: true,
+        extraArgs: true,
         logitsAll: false,
         reranking: false,
         timeout: false,
         alias: false,
+        embedding: false,
+        noWebUI: true,
+        reasoning: true,
+        reasoningFormat: true,
+        reasoningBudget: true,
+        mmprojOffload: true,
       },
     });
   };
@@ -956,7 +997,7 @@ export function LoadModelDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-card rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-card rounded-lg shadow-xl max-w-5xl w-full max-h-[85vh] flex flex-col">
         {/* 标题栏 */}
         <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-semibold text-foreground">
@@ -1024,10 +1065,10 @@ export function LoadModelDialog({
 
         {/* 表单内容 */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 overflow-y-auto p-4 min-h-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="flex-1 min-h-0 p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
             {/* 左列：基础配置 */}
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto pr-2">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 基础配置
               </h3>
@@ -1313,7 +1354,7 @@ export function LoadModelDialog({
             </div>
 
             {/* 右列：高级参数 */}
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto pr-2">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 高级参数
               </h3>
@@ -1326,7 +1367,7 @@ export function LoadModelDialog({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      上下文窗口
+                      --ctx-size
                       {renderHelpButton('ctxSize')}
                     </label>
                     <NumberInput
@@ -1357,7 +1398,7 @@ export function LoadModelDialog({
 
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      禁用内存映射
+                      --no-mmap
                       {renderHelpButton('noMmap')}
                     </label>
                     <SelectInput
@@ -1387,7 +1428,37 @@ export function LoadModelDialog({
 
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      GPU层数
+                      --embedding
+                      {renderHelpButton('embedding')}
+                    </label>
+                    <SelectInput
+                      value={params.embedding ? 'true' : 'false'}
+                      onChange={(e) => setParams({ ...params, embedding: e.target.value === 'true' })}
+                      disabled={getInputDisabled('embedding')}
+                    >
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </SelectInput>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --reranking
+                      {renderHelpButton('reranking')}
+                    </label>
+                    <SelectInput
+                      value={params.reranking ? 'true' : 'false'}
+                      onChange={(e) => setParams({ ...params, reranking: e.target.value === 'true' })}
+                      disabled={getInputDisabled('reranking')}
+                    >
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </SelectInput>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --gpu-layers
                       {renderHelpButton('gpuLayers')}
                     </label>
                     <NumberInput
@@ -1412,7 +1483,7 @@ export function LoadModelDialog({
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      温度
+                      --temp
                       {renderHelpButton('temperature')}
                     </label>
                     <NumberInput
@@ -1476,7 +1547,7 @@ export function LoadModelDialog({
 
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      重复惩罚
+                      --repeat-penalty
                       {renderHelpButton('repeatPenalty')}
                     </label>
                     <NumberInput
@@ -1492,13 +1563,29 @@ export function LoadModelDialog({
 
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      存在惩罚
+                      --presence-penalty
                       {renderHelpButton('presencePenalty')}
                     </label>
                     <NumberInput
                       value={params.presencePenalty}
                       onChange={(v) => setParams({ ...params, presencePenalty: v })}
                       disabled={getInputDisabled('presencePenalty')}
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      placeholder="0.0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --frequency-penalty
+                      {renderHelpButton('frequencyPenalty')}
+                    </label>
+                    <NumberInput
+                      value={params.frequencyPenalty}
+                      onChange={(v) => setParams({ ...params, frequencyPenalty: v })}
+                      disabled={getInputDisabled('frequencyPenalty')}
                       min={0}
                       max={2}
                       step={0.1}
@@ -1516,7 +1603,7 @@ export function LoadModelDialog({
                 <div className="grid grid-cols-4 gap-2">
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      批次大小
+                      --batch-size
                       {renderHelpButton('batchSize')}
                     </label>
                     <NumberInput
@@ -1532,7 +1619,7 @@ export function LoadModelDialog({
 
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      微批大小
+                      --ubatch-size
                       {renderHelpButton('uBatchSize')}
                     </label>
                     <NumberInput
@@ -1548,7 +1635,7 @@ export function LoadModelDialog({
 
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      并发槽位
+                      --parallel(并发槽数)
                       {renderHelpButton('parallelSlots')}
                     </label>
                     <NumberInput
@@ -1589,7 +1676,7 @@ export function LoadModelDialog({
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      缓存大小
+                      --cache-ram
                       {renderHelpButton('kvCacheSize')}
                     </label>
                     <NumberInput
@@ -1605,7 +1692,7 @@ export function LoadModelDialog({
 
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
-                      统一缓存
+                      --kv-unified
                       {renderHelpButton('kvCacheUnified')}
                     </label>
                     <SelectInput
@@ -1620,7 +1707,7 @@ export function LoadModelDialog({
 
                   <div>
                     <label className="text-xs font-medium text-foreground mb-1">
-                      KV类型K
+                      -ctk
                     </label>
                     <SelectInput
                       value={params.kvCacheTypeK || 'f16'}
@@ -1641,7 +1728,7 @@ export function LoadModelDialog({
 
                   <div>
                     <label className="text-xs font-medium text-foreground mb-1">
-                      KV类型V
+                      -ctv
                     </label>
                     <SelectInput
                       value={params.kvCacheTypeV || 'f16'}
@@ -1669,8 +1756,9 @@ export function LoadModelDialog({
                 </h4>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-xs font-medium text-foreground mb-1">
-                      随机种子
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --seed
+                      {renderHelpButton('seed')}
                     </label>
                     <NumberInput
                       value={params.seed}
@@ -1685,13 +1773,14 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-foreground mb-1">
-                      Max Tokens
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --n-predict
+                      {renderHelpButton('nPredict')}
                     </label>
                     <NumberInput
                       value={params.nPredict}
                       onChange={(v) => setParams({ ...params, nPredict: v })}
-                      disabled={isLoading}
+                      disabled={getInputDisabled('nPredict')}
                       min={-1}
                       max={65536}
                       step={64}
@@ -1701,13 +1790,14 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-foreground mb-1">
-                      DirectIO
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --direct-io
+                      {renderHelpButton('directIo')}
                     </label>
                     <SelectInput
                       value={params.directIo || 'default'}
                       onChange={(e) => setParams({ ...params, directIo: e.target.value })}
-                      disabled={isLoading}
+                      disabled={getInputDisabled('directIo')}
                     >
                       <option value="default">default</option>
                       <option value="true">true</option>
@@ -1715,14 +1805,197 @@ export function LoadModelDialog({
                     </SelectInput>
                   </div>
 
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --no-webui
+                      {renderHelpButton('noWebUI')}
+                    </label>
+                    <SelectInput
+                      value={params.noWebUI ? 'true' : 'false'}
+                      onChange={(e) => setParams({ ...params, noWebUI: e.target.value === 'true' })}
+                      disabled={getInputDisabled('noWebUI')}
+                    >
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </SelectInput>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --no-jinja
+                      {renderHelpButton('disableJinja')}
+                    </label>
+                    <SelectInput
+                      value={params.disableJinja ? 'true' : 'false'}
+                      onChange={(e) => setParams({ ...params, disableJinja: e.target.value === 'true' })}
+                      disabled={getInputDisabled('disableJinja')}
+                    >
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </SelectInput>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --chat-template
+                      {renderHelpButton('chatTemplate')}
+                    </label>
+                    <SelectInput
+                      value={params.chatTemplate || ''}
+                      onChange={(e) => setParams({ ...params, chatTemplate: e.target.value })}
+                      disabled={getInputDisabled('chatTemplate')}
+                    >
+                      <option value="">(自动 - 使用模型元数据)</option>
+                      {/* Bailing 系列 */}
+                      <option value="bailing">bailing</option>
+                      <option value="bailing-think">bailing-think</option>
+                      <option value="bailing2">bailing2</option>
+                      {/* ChatGLM 系列 */}
+                      <option value="chatglm3">chatglm3</option>
+                      <option value="chatglm4">chatglm4</option>
+                      {/* DeepSeek 系列 */}
+                      <option value="deepseek">deepseek</option>
+                      <option value="deepseek2">deepseek2</option>
+                      <option value="deepseek3">deepseek3</option>
+                      {/* Exaone 系列 */}
+                      <option value="exaone-moe">exaone-moe</option>
+                      <option value="exaone3">exaone3</option>
+                      <option value="exaone4">exaone4</option>
+                      {/* Hunyuan 系列 */}
+                      <option value="hunyuan-dense">hunyuan-dense</option>
+                      <option value="hunyuan-moe">hunyuan-moe</option>
+                      {/* Llama 系列 */}
+                      <option value="llama2">llama2</option>
+                      <option value="llama2-sys">llama2-sys</option>
+                      <option value="llama2-sys-bos">llama2-sys-bos</option>
+                      <option value="llama2-sys-strip">llama2-sys-strip</option>
+                      <option value="llama3">llama3</option>
+                      <option value="llama4">llama4</option>
+                      {/* Mistral 系列 */}
+                      <option value="mistral-v1">mistral-v1</option>
+                      <option value="mistral-v3">mistral-v3</option>
+                      <option value="mistral-v3-tekken">mistral-v3-tekken</option>
+                      <option value="mistral-v7">mistral-v7</option>
+                      <option value="mistral-v7-tekken">mistral-v7-tekken</option>
+                      {/* Phi 系列 */}
+                      <option value="phi3">phi3</option>
+                      <option value="phi4">phi4</option>
+                      {/* Vicuna 系列 */}
+                      <option value="vicuna">vicuna</option>
+                      <option value="vicuna-orca">vicuna-orca</option>
+                      {/* 其他模板 */}
+                      <option value="chatml">chatml</option>
+                      <option value="command-r">command-r</option>
+                      <option value="falcon3">falcon3</option>
+                      <option value="gemma">gemma</option>
+                      <option value="gigachat">gigachat</option>
+                      <option value="glmedge">glmedge</option>
+                      <option value="gpt-oss">gpt-oss</option>
+                      <option value="granite">granite</option>
+                      <option value="grok-2">grok-2</option>
+                      <option value="kimi-k2">kimi-k2</option>
+                      <option value="megrez">megrez</option>
+                      <option value="minicpm">minicpm</option>
+                      <option value="monarch">monarch</option>
+                      <option value="openchat">openchat</option>
+                      <option value="orion">orion</option>
+                      <option value="pangu-embedded">pangu-embedded</option>
+                      <option value="rwkv-world">rwkv-world</option>
+                      <option value="seed_oss">seed_oss</option>
+                      <option value="smolvlm">smolvlm</option>
+                      <option value="solar-open">solar-open</option>
+                      <option value="yandex">yandex</option>
+                      <option value="zephyr">zephyr</option>
+                    </SelectInput>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --context-shift
+                      {renderHelpButton('contextShift')}
+                    </label>
+                    <SelectInput
+                      value={params.contextShift ? 'true' : 'false'}
+                      onChange={(e) => setParams({ ...params, contextShift: e.target.value === 'true' })}
+                      disabled={getInputDisabled('contextShift')}
+                    >
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </SelectInput>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --reasoning
+                      {renderHelpButton('reasoning')}
+                    </label>
+                    <SelectInput
+                      value={params.reasoning || 'auto'}
+                      onChange={(e) => setParams({ ...params, reasoning: e.target.value })}
+                      disabled={getInputDisabled('reasoning')}
+                    >
+                      <option value="auto">auto</option>
+                      <option value="on">on</option>
+                      <option value="off">off</option>
+                    </SelectInput>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --reasoning-format
+                      {renderHelpButton('reasoningFormat')}
+                    </label>
+                    <SelectInput
+                      value={params.reasoningFormat || 'auto'}
+                      onChange={(e) => setParams({ ...params, reasoningFormat: e.target.value })}
+                      disabled={getInputDisabled('reasoningFormat')}
+                    >
+                      <option value="auto">auto</option>
+                      <option value="deepseek">deepseek</option>
+                    </SelectInput>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --reasoning-budget
+                      {renderHelpButton('reasoningBudget')}
+                    </label>
+                    <NumberInput
+                      value={params.reasoningBudget}
+                      onChange={(v) => setParams({ ...params, reasoningBudget: v })}
+                      disabled={getInputDisabled('reasoningBudget')}
+                      min={-1}
+                      max={100000}
+                      step={256}
+                      placeholder="-1 无限制"
+                      allowMinusOne={true}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      --no-mmproj-offload
+                      {renderHelpButton('mmprojOffload')}
+                    </label>
+                    <SelectInput
+                      value={params.mmprojOffload ? 'true' : 'false'}
+                      onChange={(e) => setParams({ ...params, mmprojOffload: e.target.value === 'true' })}
+                      disabled={getInputDisabled('mmprojOffload')}
+                    >
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </SelectInput>
+                  </div>
+
                   <div className="col-span-2">
-                    <label className="text-xs font-medium text-foreground mb-1">
-                      额外参数
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      其他参数
+                      {renderHelpButton('extraArgs')}
                     </label>
                     <textarea
                       value={params.extraArgs || ''}
                       onChange={(e) => setParams({ ...params, extraArgs: e.target.value })}
-                      disabled={isLoading}
+                      disabled={getInputDisabled('extraArgs')}
                       rows={2}
                       placeholder="例如: --timeout 30 --grp-attn-n 8"
                       className="w-full px-2 py-1.5 text-sm border-2 border-border rounded-md bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"

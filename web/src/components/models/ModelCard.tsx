@@ -95,7 +95,7 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
 
         {/* 模型名称和元数据 */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-base text-foreground truncate">
+          <h3 className="font-bold text-base text-foreground truncate">
             {model.alias || model.displayName || model.name}
           </h3>
           <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
