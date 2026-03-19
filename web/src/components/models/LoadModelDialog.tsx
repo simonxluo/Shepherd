@@ -1024,7 +1024,7 @@ export function LoadModelDialog({
                   onClick={() => applyPreset(preset.params)}
                   disabled={isLoading}
                   className={cn(
-                    "px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+                    "h-[34px] px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
                     "border shadow-sm",
                     "hover:shadow-md hover:-translate-y-px active:translate-y-0",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -1048,7 +1048,7 @@ export function LoadModelDialog({
               onClick={handleResetConfig}
               disabled={isLoading}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+                "flex items-center justify-center gap-1.5 h-[34px] px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
                 "border shadow-sm",
                 "hover:shadow-md hover:-translate-y-px active:translate-y-0",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -1066,9 +1066,10 @@ export function LoadModelDialog({
         {/* 表单内容 */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 min-h-0 p-4 overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+            <div className="flex flex-col lg:flex-row gap-6 h-full min-h-0">
             {/* 左列：基础配置 */}
-            <div className="space-y-4 overflow-y-auto pr-2 min-h-0">
+            
+            <div className="flex-1 space-y-4 overflow-y-auto pr-2 min-h-0" aria-label="基础配置区域">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 基础配置
               </h3>
@@ -1160,7 +1161,7 @@ export function LoadModelDialog({
                       }}
                       disabled={!modelId || autoDetectCapabilities.isPending}
                       className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+                        "flex items-center justify-center gap-1.5 h-[34px] px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
                         "border shadow-sm",
                         "hover:shadow-md hover:-translate-y-px active:translate-y-0",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -1354,7 +1355,7 @@ export function LoadModelDialog({
             </div>
 
             {/* 右列：高级参数 */}
-            <div className="space-y-4 overflow-y-auto pr-2 min-h-0">
+            <div className="flex-1 space-y-4 overflow-y-auto pr-2 min-h-0" aria-label="高级参数区域">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 高级参数
               </h3>
