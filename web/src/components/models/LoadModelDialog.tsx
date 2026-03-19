@@ -997,7 +997,7 @@ export function LoadModelDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-card rounded-lg shadow-xl max-w-5xl w-full max-h-[85vh] flex flex-col">
+      <div className="bg-card rounded-lg shadow-xl border border-border max-w-5xl w-full max-h-[85vh] flex flex-col">
         {/* 标题栏 */}
         <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-semibold text-foreground">
@@ -1065,10 +1065,10 @@ export function LoadModelDialog({
 
         {/* 表单内容 */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 min-h-0 p-4">
+          <div className="flex-1 min-h-0 p-4 overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
             {/* 左列：基础配置 */}
-            <div className="space-y-4 overflow-y-auto pr-2">
+            <div className="space-y-4 overflow-y-auto pr-2 min-h-0">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 基础配置
               </h3>
@@ -1354,7 +1354,7 @@ export function LoadModelDialog({
             </div>
 
             {/* 右列：高级参数 */}
-            <div className="space-y-4 overflow-y-auto pr-2">
+            <div className="space-y-4 overflow-y-auto pr-2 min-h-0">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 高级参数
               </h3>
@@ -1480,7 +1480,7 @@ export function LoadModelDialog({
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase">
                   采样参数
                 </h4>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
                       --temp
@@ -1600,7 +1600,7 @@ export function LoadModelDialog({
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase">
                   批处理与并发
                 </h4>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-3">
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
                       --batch-size
@@ -1668,12 +1668,12 @@ export function LoadModelDialog({
                 </div>
               </div>
 
-              {/* KV缓存 */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase">
-                  KV缓存
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
+                {/* KV缓存 */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase">
+                    KV缓存
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
                       --cache-ram
@@ -1749,12 +1749,12 @@ export function LoadModelDialog({
                 </div>
               </div>
 
-              {/* 其他参数 */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase">
-                  其他参数
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
+                {/* 其他参数 */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase">
+                    其他参数
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="flex items-center text-xs font-medium text-foreground mb-1">
                       --seed
