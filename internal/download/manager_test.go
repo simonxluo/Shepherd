@@ -2,8 +2,6 @@ package download
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -160,62 +158,7 @@ func TestManagerDelete(t *testing.T) {
 	assert.False(t, exists)
 }
 
-func TestManagerSaveLoadTasks(t *testing.T) {
-	manager := NewManager(DownloadConfig{})
-	tmpDir := t.TempDir()
-
-	// Create some tasks
-	taskID1, _ := manager.CreateTask("https://example.com/file1.txt", tmpDir, "file1.txt")
-	taskID2, _ := manager.CreateTask("https://example.com/file2.txt", tmpDir, "file2.txt")
-
-	// Save tasks
-	savePath := filepath.Join(tmpDir, "tasks.json")
-	err := manager.SaveTasks(savePath)
-	require.NoError(t, err)
-
-	// Verify file exists
-	_, err = os.Stat(savePath)
-	assert.NoError(t, err)
-
-	// Create new manager and load tasks
-	manager2 := NewManager(DownloadConfig{})
-	err = manager2.LoadTasks(savePath)
-	require.NoError(t, err)
-
-	// Verify tasks were loaded
-	task1, exists := manager2.GetTask(taskID1)
-	assert.True(t, exists)
-	assert.Equal(t, "https://example.com/file1.txt", task1.URL)
-
-	task2, exists := manager2.GetTask(taskID2)
-	assert.True(t, exists)
-	assert.Equal(t, "https://example.com/file2.txt", task2.URL)
-}
-
-func TestManagerProgressListener(t *testing.T) {
-	manager := NewManager(DownloadConfig{})
-	tmpDir := t.TempDir()
-
-	// Add progress listener
-	received := make(chan Progress, 10)
-	manager.AddProgressListener(func(progress Progress) {
-		received <- progress
-	})
-
-	// Create task (should trigger progress notification)
-	taskID, _ := manager.CreateTask("https://example.com/file.txt", tmpDir, "file.txt")
-
-	// Check if we received progress notification
-	select {
-	case progress := <-received:
-		assert.Equal(t, taskID, progress.TaskID)
-		assert.Equal(t, StateIdle, progress.State)
-	case <-time.After(1 * time.Second):
-		t.Fatal("Timeout waiting for progress notification")
-	}
-}
-
-func TestManagerClose(t *testing.T) {
+func TestManagerDelete(t *testing.T) {
 	manager := NewManager(DownloadConfig{})
 	tmpDir := t.TempDir()
 
@@ -329,15 +272,12 @@ func TestDownloadStateTransitions(t *testing.T) {
 }
 
 func TestProgressCalculation(t *testing.T) {
-	manager := NewManager(DownloadConfig{})
-
 	d := &downloader{
 		task: &Task{
 			StartedAt:       time.Now().Add(-10 * time.Second),
 			TotalBytes:      1000,
 			DownloadedBytes: 500,
 		},
-		manager: manager,
 	}
 
 	d.calculateSpeed()

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/api"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
@@ -46,7 +46,7 @@ type App struct {
 
 	// 分布式节点组件
 	node        *node.Node       // 统一节点实例
-	nodeAdapter *api.NodeAdapter // Node API 适配器
+	nodeAdapter *handler.NodeAdapter // Node API 适配器
 
 	// LangChainGo 组件
 	langchainMgr     *langchain.Manager // LangChainGo 管理器
@@ -228,6 +228,9 @@ func (app *App) Initialize(configPath string) error {
 			app.srv.RegisterNodeAdapter(app.nodeAdapter)
 		}
 	}
+
+	// Finalize route registration (middleware + all routes in one place)
+	app.srv.SetupRoutes()
 
 	// 创建优雅关闭管理器
 	app.shutdownMgr = shutdown.NewManager(10 * time.Second)
@@ -444,7 +447,7 @@ func (app *App) buildNodeConfig() *node.NodeConfig {
 func (app *App) initNodeAdapter() error {
 	if app.node != nil {
 		schedulerCfg := &app.cfg.Master.Scheduler
-		app.nodeAdapter = api.NewNodeAdapter(app.node, logger.GetLogger(), schedulerCfg)
+		app.nodeAdapter = handler.NewNodeAdapter(app.node, logger.GetLogger(), schedulerCfg)
 		logger.Info("Node API 适配器已创建")
 		return nil
 	}

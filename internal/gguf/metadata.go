@@ -2,9 +2,52 @@ package gguf
 
 import (
 	"fmt"
-
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 )
+
+var ggufFileTypeMap = map[uint32]string{
+	0:  "F32",
+	1:  "F16",
+	2:  "Q4_0",
+	3:  "Q4_1",
+	4:  "Q4_2",
+	5:  "Q4_3",
+	6:  "Q5_0",
+	7:  "Q5_1",
+	8:  "Q8_0",
+	9:  "Q8_1",
+	10: "Q2_K",
+	11: "Q3_K_S",
+	12: "Q3_K_M",
+	13: "Q3_K_L",
+	14: "Q4_K_S",
+	15: "Q4_K_M",
+	16: "Q5_K_S",
+	17: "Q5_K_M",
+	18: "Q6_K",
+	19: "Q1_K",
+	20: "Q4_K_S",
+	21: "Q3_K_S_XL",
+	22: "Q2_K_XL",
+	23: "IQ2_XXS",
+	24: "IQ2_XS",
+	25: "IQ3_XS",
+	26: "IQ3_XXS",
+	27: "IQ1_S",
+	28: "IQ4_NL",
+	29: "IQ3_S",
+	30: "IQ3_M",
+	31: "IQ2_S",
+	32: "IQ2_M",
+	33: "IQ4_XS",
+	34: "IQ1_M",
+	35: "BF16",
+	36: "Q4_0_4_4",
+	37: "Q4_0_4_8",
+	38: "Q4_0_8_8",
+	39: "TQ1_0",
+	40: "TQ2_0",
+	41: "MXFP4",
+}
 
 // Metadata represents the parsed GGUF model metadata
 // It contains the most important fields needed for model management
@@ -178,9 +221,6 @@ var FileTypeMap = map[uint32]string{
 // GetQuantizationString returns the human-readable quantization string
 // 优先使用 FileTypeDescriptor（更准确），如果为空则使用 FileType 编号映射
 func (m *Metadata) GetQuantizationString() string {
-	logger.Infof("here get the Quante Type:%s,with model name:%s", m.FileTypeDescriptor, m.Name)
-	// 优先使用 FileTypeDescriptor（如果存在）
-	// 这通常包含更准确的量化类型描述，如 "Q6_K_XL"
 	if m.FileTypeDescriptor != "" {
 		return m.FileTypeDescriptor
 	}
@@ -189,57 +229,10 @@ func (m *Metadata) GetQuantizationString() string {
 		return "F32"
 	}
 
-	// GGUFFileType 到字符串的完整映射（与 gguf-parser-go 保持一致）
-	typeMap := map[uint32]string{
-		0:  "F32",       // MOSTLY_F32
-		1:  "F16",       // MOSTLY_F16
-		2:  "Q4_0",      // MOSTLY_Q4_0
-		3:  "Q4_1",      // MOSTLY_Q4_1
-		4:  "Q4_2",      // MOSTLY_Q4_2 (已废弃)
-		5:  "Q4_3",      // MOSTLY_Q4_3 (已废弃)
-		6:  "Q5_0",      // MOSTLY_Q5_0
-		7:  "Q5_1",      // MOSTLY_Q5_1
-		8:  "Q8_0",      // MOSTLY_Q8_0
-		9:  "Q8_1",      // MOSTLY_Q8_1
-		10: "Q2_K",      // MOSTLY_Q2_K
-		11: "Q3_K_S",    // MOSTLY_Q3_K_S
-		12: "Q3_K_M",    // MOSTLY_Q3_K_M
-		13: "Q3_K_L",    // MOSTLY_Q3_K_L
-		14: "Q4_K_S",    // MOSTLY_Q4_K_S
-		15: "Q4_K_M",    // MOSTLY_Q4_K_M
-		16: "Q5_K_S",    // MOSTLY_Q5_K_S
-		17: "Q5_K_M",    // MOSTLY_Q5_K_M
-		18: "Q6_K",      // MOSTLY_Q6_K
-		19: "Q1_K",      // MOSTLY_Q1_K (已废弃)
-		20: "Q4_K_S",    // MOSTLY_Q4_K_S (重复)
-		21: "Q3_K_S_XL", // MOSTLY_Q3_K_S_XL
-		22: "Q2_K_XL",   // MOSTLY_Q2_K_XL
-		23: "IQ2_XXS",   // MOSTLY_IQ2_XXS
-		24: "IQ2_XS",    // MOSTLY_IQ2_XS
-		25: "IQ3_XS",    // MOSTLY_IQ3_XS
-		26: "IQ3_XXS",   // MOSTLY_IQ3_XXS
-		27: "IQ1_S",     // MOSTLY_IQ1_S
-		28: "IQ4_NL",    // MOSTLY_IQ4_NL
-		29: "IQ3_S",     // MOSTLY_IQ3_S
-		30: "IQ3_M",     // MOSTLY_IQ3_M
-		31: "IQ2_S",     // MOSTLY_IQ2_S
-		32: "IQ2_M",     // MOSTLY_IQ2_M
-		33: "IQ4_XS",    // MOSTLY_IQ4_XS
-		34: "IQ1_M",     // MOSTLY_IQ1_M
-		35: "BF16",      // MOSTLY_BF16
-		36: "Q4_0_4_4",  // MOSTLY_Q4_0_4_4 (已废弃)
-		37: "Q4_0_4_8",  // MOSTLY_Q4_0_4_8 (已废弃)
-		38: "Q4_0_8_8",  // MOSTLY_Q4_0_8_8 (已废弃)
-		39: "TQ1_0",     // MOSTLY_TQ1_0
-		40: "TQ2_0",     // MOSTLY_TQ2_0
-		41: "MXFP4",     // MOSTLY_MXFP4
-	}
-
-	if name, ok := typeMap[m.FileType]; ok {
+	if name, ok := ggufFileTypeMap[m.FileType]; ok {
 		return name
 	}
 
-	// 对于未知类型，返回通用格式
 	return fmt.Sprintf("Type_%d", m.FileType)
 }
 

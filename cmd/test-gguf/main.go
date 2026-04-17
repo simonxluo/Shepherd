@@ -46,7 +46,11 @@ func main() {
 		// 显示结果
 		fmt.Printf("\n📄 基本信息:\n")
 		fmt.Printf("  文件名: %s\n", filepath.Base(path))
-		fmt.Printf("  文件大小: %s\n", formatBytes(parser.GetFileSize()))
+		fileSize := int64(0)
+		if info, err := os.Stat(path); err == nil {
+			fileSize = info.Size()
+		}
+		fmt.Printf("  文件大小: %s\n", formatBytes(fileSize))
 
 		fmt.Printf("\n🏗️  模型架构:\n")
 		fmt.Printf("  名称: %s\n", nonEmpty(meta.Name, "(未设置)"))

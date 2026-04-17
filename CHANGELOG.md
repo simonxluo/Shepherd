@@ -516,7 +516,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `internal/node/types.go`: `NodeInfo` → `types.NodeInfo`
   - `internal/cluster/types.go`: `Client` → `types.NodeInfo`
 - **前端统一类型**: `web/src/types/node.ts` 新增 `UnifiedNode` 接口
-- **API 响应辅助函数**: `internal/api/response.go` 提供统一响应格式
+- **API 响应辅助函数**: `internal/handler/response.go` 提供统一响应格式
   - `Success()`, `Error()`, `ValidationError()`, `NotFound()` 等
 - **任务类型定义**: `web/src/types/task.ts` 新增任务相关类型
 

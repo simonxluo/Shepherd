@@ -209,7 +209,7 @@ var WebSocketUpgrader = websocket.Upgrader{
 }
 
 // handleWebSocket handles WebSocket connection requests
-func (s *Server) handleWebSocket(c *gin.Context) {
+func (s *Server) HandleWebSocket(c *gin.Context) {
 	conn, err := WebSocketUpgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		return

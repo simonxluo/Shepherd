@@ -127,35 +127,6 @@ func TestConcurrentAllocation(t *testing.T) {
 	assert.Equal(t, portCount, len(ports))
 }
 
-// TestStats tests allocation statistics
-func TestStats(t *testing.T) {
-	allocator := NewPortAllocator(8081, 8090) // 10 个端口
-
-	// 初始状态
-	stats := allocator.Stats()
-	assert.Equal(t, 10, stats["total"])
-	assert.Equal(t, 0, stats["allocated"])
-	assert.Equal(t, 10, stats["available"])
-
-	// 分配 3 个端口
-	for i := 0; i < 3; i++ {
-		allocator.NextPort()
-	}
-
-	stats = allocator.Stats()
-	assert.Equal(t, 10, stats["total"])
-	assert.Equal(t, 3, stats["allocated"])
-	assert.Equal(t, 7, stats["available"])
-
-	// 释放 1 个端口
-	allocator.Release(8081)
-
-	stats = allocator.Stats()
-	assert.Equal(t, 10, stats["total"])
-	assert.Equal(t, 2, stats["allocated"])
-	assert.Equal(t, 8, stats["available"])
-}
-
 // TestIsPortInUse tests port availability checking
 func TestIsPortInUse(t *testing.T) {
 	allocator := NewPortAllocator(10000, 10010)

@@ -1,8 +1,8 @@
-# internal/api vs LangChainGo 对比分析
+# internal/handler vs LangChainGo 对比分析
 
 ## 架构定位对比
 
-### `internal/api` - OpenAI/Anthropic/Ollama 兼容层
+### `internal/handler` - OpenAI/Anthropic/Ollama 兼容层
 
 **定位**: API 协议代理，专注于与现有 OpenAI 客户端的兼容性
 
@@ -30,7 +30,7 @@
 
 ### 1. 请求流程
 
-#### `internal/api/openai`
+#### `internal/handler/openai`
 ```
 客户端请求
     ↓
@@ -60,7 +60,7 @@ HTTP 请求到 llama.cpp:{port}/v1/chat/completions
 
 ### 2. 功能对比
 
-| 功能 | internal/api | internal/langchain |
+| 功能 | internal/handler | internal/langchain |
 |------|--------------|-------------------|
 | **简单文本生成** | ✅ (通过 Completions API) | ✅ (SimplePrompt) |
 | **聊天完成** | ✅ (Chat Completions) | ✅ (ChatPrompt) |
@@ -137,7 +137,7 @@ HTTP 请求到 llama.cpp:{port}/v1/chat/completions
 
 ### 4. 适用场景
 
-#### 使用 `internal/api` 的场景
+#### 使用 `internal/handler` 的场景
 - 需要与 OpenAI SDK 兼容
 - 使用现有的 OpenAI 客户端库
 - 简单的聊天/补全请求
@@ -152,7 +152,7 @@ HTTP 请求到 llama.cpp:{port}/v1/chat/completions
 
 ### 5. 技术实现对比
 
-| 方面 | internal/api | internal/langchain |
+| 方面 | internal/handler | internal/langchain |
 |------|--------------|-------------------|
 | **HTTP 客户端** | Go `http.Client` | Go `http.Client` |
 | **消息转换** | OpenAI → llama.cpp | LangChainGo → llama.cpp |
@@ -163,15 +163,15 @@ HTTP 请求到 llama.cpp:{port}/v1/chat/completions
 ## 集成建议
 
 ### 1. 互补共存
-- **保留** `internal/api` 作为 OpenAI 兼容层
+- **保留** `internal/handler` 作为 OpenAI 兼容层
 - **新增** `internal/langchain` 作为 LangChainGo 集成
 - 两者共存，服务不同使用场景
 
 ### 2. 路由分配
 ```
-/v1/*                          → OpenAI API (internal/api)
-/api/ollama/*                  → Ollama API (internal/api)
-/v1/messages                   → Anthropic API (internal/api)
+/v1/*                          → OpenAI API (internal/handler)
+/api/ollama/*                  → Ollama API (internal/handler)
+/v1/messages                   → Anthropic API (internal/handler)
 /api/langchain/*               → LangChainGo API (internal/langchain)
 ```
 
@@ -213,7 +213,7 @@ curl -X POST http://localhost:8080/api/langchain/prompt \
 
 ## 总结
 
-| 维度 | internal/api | internal/langchain |
+| 维度 | internal/handler | internal/langchain |
 |------|--------------|-------------------|
 | **主要目标** | OpenAI 兼容 | LangChainGo 框架集成 |
 | **抽象层次** | 低（协议转发） | 高（框架集成） |

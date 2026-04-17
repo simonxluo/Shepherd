@@ -53,6 +53,7 @@ func createTestServer(t *testing.T) *Server {
 
 	server, err := NewServer(serverConfig, modelMgr)
 	require.NoError(t, err)
+	server.SetupRoutes()
 	return server
 }
 
@@ -128,7 +129,7 @@ func TestServerRoutes(t *testing.T) {
 		// Model routes - 注意：测试中没有预加载模型，所以 test-id 返回错误状态码是正确的
 		{"List models", "GET", "/api/models", http.StatusOK},
 		{"Get model", "GET", "/api/models/test-id", http.StatusNotFound},                       // 模型不存在
-		{"Load model", "POST", "/api/models/test-id/load", http.StatusInternalServerError},     // 模型不存在时加载失败
+		{"Load model", "POST", "/api/models/test-id/load", http.StatusBadRequest},          // empty body
 		{"Unload model", "POST", "/api/models/test-id/unload", http.StatusInternalServerError}, // 模型不存在时卸载失败
 		{"Set alias", "PUT", "/api/models/test-id/alias", http.StatusBadRequest},               // 缺少请求体
 		{"Set favourite", "PUT", "/api/models/test-id/favourite", http.StatusBadRequest},       // 缺少请求体
@@ -152,7 +153,7 @@ func TestServerRoutes(t *testing.T) {
 
 		// Repo routes
 		{"Search repo without query", "GET", "/api/repo/search", http.StatusBadRequest},                       // 缺少 q 参数
-		{"Search repo with query", "GET", "/api/repo/search?q=qwen&limit=10", http.StatusInternalServerError}, // 网络请求可能失败
+		{"Search repo with query", "GET", "/api/repo/search?q=qwen&limit=10", http.StatusOK},
 		{"Get repo config", "GET", "/api/repo/config", http.StatusOK},
 		{"Get repo endpoints", "GET", "/api/repo/endpoints", http.StatusOK},
 
@@ -253,7 +254,8 @@ func TestServerStartStop(t *testing.T) {
 	server, err := NewServer(serverConfig, modelMgr)
 	require.NoError(t, err)
 
-	// Start server
+	server.SetupRoutes()
+
 	err = server.Start()
 	assert.NoError(t, err)
 

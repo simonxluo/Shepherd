@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/version"
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
@@ -76,7 +75,7 @@ func NewNode(config *NodeConfig) (*Node, error) {
 		status:    NodeStatusOffline,
 		address:   config.Address,
 		port:      config.Port,
-		version:   version.GetVersion(),
+		version:   config.Version,
 		tags:      config.Tags,
 		metadata:  config.Metadata,
 		config:    config,

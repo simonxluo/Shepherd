@@ -162,48 +162,6 @@ func (m *Manager) IsRunning(modelID string) bool {
 	return false
 }
 
-// IsLoading returns true if a model is currently loading
-func (m *Manager) IsLoading(modelID string) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	if process, exists := m.loading[modelID]; exists {
-		return process.IsRunning()
-	}
-	return false
-}
-
-// GetProcessByPort finds a process by its port number
-func (m *Manager) GetProcessByPort(port int) (*Process, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	for _, process := range m.processes {
-		if process.GetPort() == port {
-			return process, true
-		}
-	}
-
-	return nil, false
-}
-
-// Cleanup removes stopped processes from the manager
-func (m *Manager) Cleanup() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	var removed []string
-
-	for modelID, process := range m.processes {
-		if !process.IsRunning() {
-			delete(m.processes, modelID)
-			removed = append(removed, modelID)
-		}
-	}
-
-	return removed
-}
-
 // StopAll stops all running processes
 func (m *Manager) StopAll() []error {
 	m.mu.Lock()
@@ -228,65 +186,6 @@ func (m *Manager) StopAll() []error {
 	}
 
 	return errs
-}
-
-// BuildCommand builds the llama-server command line
-// This is a helper to construct the command string
-func BuildCommand(binPath, modelPath string, port int, opts map[string]interface{}) (string, error) {
-	if binPath == "" {
-		return "", fmt.Errorf("binary path cannot be empty")
-	}
-	if modelPath == "" {
-		return "", fmt.Errorf("model path cannot be empty")
-	}
-
-	// Find the llama-server executable using unified utility function
-	serverBin := utils.FindLlamacppBinary(binPath, "server")
-	if serverBin == "" {
-		return "", fmt.Errorf("llama-server not found in path: %s", binPath)
-	}
-
-	// Build command arguments
-	args := []string{
-		serverBin,
-		"-m", modelPath,
-		"--port", strconv.Itoa(port),
-	}
-
-	// Add optional parameters
-	if ctxSize, ok := opts["ctx_size"].(int); ok && ctxSize > 0 {
-		args = append(args, "-c", strconv.Itoa(ctxSize))
-	}
-	if batchSize, ok := opts["batch_size"].(int); ok && batchSize > 0 {
-		args = append(args, "-b", strconv.Itoa(batchSize))
-	}
-	if threads, ok := opts["threads"].(int); ok && threads > 0 {
-		args = append(args, "-t", strconv.Itoa(threads))
-	}
-	if gpuLayers, ok := opts["gpu_layers"].(int); ok && gpuLayers > 0 {
-		args = append(args, "-ngl", strconv.Itoa(gpuLayers))
-	}
-	if temperature, ok := opts["temperature"].(float64); ok {
-		args = append(args, "--temp", fmt.Sprintf("%.2f", temperature))
-	}
-	if topP, ok := opts["top_p"].(float64); ok {
-		args = append(args, "--top-p", fmt.Sprintf("%.2f", topP))
-	}
-	if topK, ok := opts["top_k"].(int); ok && topK > 0 {
-		args = append(args, "--top-k", strconv.Itoa(topK))
-	}
-	if repeatPenalty, ok := opts["repeat_penalty"].(float64); ok {
-		args = append(args, "--repeat-penalty", fmt.Sprintf("%.2f", repeatPenalty))
-	}
-	if nPredict, ok := opts["n_predict"].(int); ok && nPredict > 0 {
-		args = append(args, "-n", strconv.Itoa(nPredict))
-	}
-
-	// Add host parameter
-	args = append(args, "--host", "0.0.0.0")
-
-	// Join arguments into command string
-	return quoteAndJoin(args), nil
 }
 
 // quoteAndJoin joins arguments into a command string with proper quoting

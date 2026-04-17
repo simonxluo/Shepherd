@@ -68,16 +68,4 @@ func (a *PortAllocator) isPortInUse(port int) bool {
 	return true
 }
 
-// Stats returns allocation statistics
-func (a *PortAllocator) Stats() map[string]interface{} {
-	a.mu.Lock()
-	defer a.mu.Unlock()
 
-	return map[string]interface{}{
-		"total":     a.maxPort - a.basePort + 1,
-		"allocated": len(a.allocated),
-		"available": (a.maxPort - a.basePort + 1) - len(a.allocated),
-		"base_port": a.basePort,
-		"max_port":  a.maxPort,
-	}
-}

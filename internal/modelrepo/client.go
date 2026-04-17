@@ -5,7 +5,6 @@
 package modelrepo
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
@@ -18,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	hfdownloader "github.com/bodaay/HuggingFaceModelDownloader/pkg/hfdownloader"
 	hfhub "github.com/gomlx/go-huggingface/hub"
 )
 
@@ -99,44 +97,10 @@ func NewClientWithConfig(endpoint, token string, timeout time.Duration) *Client 
 			Timeout:   timeout,
 			Transport: transport,
 		},
-		hfToken:      token,
-		endpoint:     endpoint,
-		cacheDir:     cacheDir,
-		downloadMode: DownloadModeBasic, // Default to basic mode
+		hfToken:  token,
+		endpoint: endpoint,
+		cacheDir: cacheDir,
 	}
-}
-
-// SetEndpoint sets the HuggingFace endpoint
-func (c *Client) SetEndpoint(endpoint string) {
-	if endpoint != "" {
-		c.endpoint = endpoint
-	}
-}
-
-// SetHFToken sets the HuggingFace authentication token
-func (c *Client) SetHFToken(token string) {
-	c.hfToken = token
-}
-
-// SetDownloadMode sets the download mode (basic or advanced)
-func (c *Client) SetDownloadMode(mode DownloadMode) {
-	c.downloadMode = mode
-}
-
-// GetEndpoint returns the current endpoint
-func (c *Client) GetEndpoint() string {
-	return c.endpoint
-}
-
-// GetHFToken returns the current token (masked)
-func (c *Client) GetHFToken() string {
-	if c.hfToken == "" {
-		return ""
-	}
-	if len(c.hfToken) <= 4 {
-		return "***"
-	}
-	return c.hfToken[:len(c.hfToken)-4] + "****"
 }
 
 // GetAvailableEndpoints returns available HuggingFace endpoints
@@ -153,18 +117,6 @@ type FileInfo struct {
 	Size        int64  `json:"size"`
 	DownloadURL string `json:"download_url"`
 }
-
-// Progress represents download progress information
-type Progress struct {
-	DownloadedBytes int64   `json:"downloaded_bytes"`
-	TotalBytes      int64   `json:"total_bytes"`
-	Percentage      float64 `json:"percentage"`
-	Speed           int64   `json:"speed,omitempty"` // bytes per second
-	ETA             int64   `json:"eta,omitempty"`   // seconds remaining
-}
-
-// ProgressCallback is called during download to report progress
-type ProgressCallback func(progress Progress)
 
 // GenerateDownloadURL generates a download URL from repository information
 func (c *Client) GenerateDownloadURL(source Source, repoID, fileName string) (string, error) {
@@ -250,15 +202,6 @@ func isGGUFFile(path string) bool {
 	return strings.HasSuffix(strings.ToLower(path), ".gguf")
 }
 
-// ParseRepoID validates and parses a repository ID
-func ParseRepoID(repoID string) (owner, model string, err error) {
-	parts := strings.Split(repoID, "/")
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid repo ID format (expected 'owner/model'): %s", repoID)
-	}
-	return parts[0], parts[1], nil
-}
-
 // HuggingFaceModel represents a model from HuggingFace search results
 type HuggingFaceModel struct {
 	ID           string   `json:"id"`
@@ -329,15 +272,6 @@ func (c *Client) SearchHuggingFaceModels(query string, limit int, formatFilter s
 	return result, nil
 }
 
-// HasGGUFFiles checks if a repository contains GGUF files
-func (c *Client) HasGGUFFiles(repoID string) (bool, error) {
-	files, err := c.ListGGUFFiles(repoID)
-	if err != nil {
-		return false, err
-	}
-	return len(files) > 0, nil
-}
-
 // ============================================
 // Advanced features using SDK integrations
 // ============================================
@@ -372,175 +306,6 @@ func (c *Client) ListModelFiles(repoID string, revision string) ([]FileInfo, err
 	}
 
 	return files, nil
-}
-
-// DownloadFile downloads a single file from HuggingFace
-func (c *Client) DownloadFile(ctx context.Context, repoID, fileName, targetPath string, progress ProgressCallback) error {
-	return c.DownloadFileWithRevision(ctx, repoID, "main", fileName, targetPath, progress)
-}
-
-// DownloadFileWithRevision downloads a file with specific revision
-func (c *Client) DownloadFileWithRevision(ctx context.Context, repoID, revision, fileName, targetPath string, progress ProgressCallback) error {
-	if revision == "" {
-		revision = "main"
-	}
-
-	if c.downloadMode == DownloadModeAdvanced {
-		return c.downloadFileAdvanced(ctx, repoID, revision, fileName, targetPath, progress)
-	}
-
-	return c.downloadFileBasic(ctx, repoID, revision, fileName, targetPath, progress)
-}
-
-// downloadFileBasic uses go-huggingface/hub for simple download
-func (c *Client) downloadFileBasic(ctx context.Context, repoID, revision, fileName, targetPath string, progress ProgressCallback) error {
-	repo := hfhub.New(repoID).
-		WithRevision(revision).
-		WithEndpoint("https://" + c.endpoint).
-		WithAuth(c.hfToken).
-		WithCacheDir(c.cacheDir)
-	repo.Verbosity = 0
-	repo.MaxParallelDownload = 1
-
-	// Create target directory
-	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-		return fmt.Errorf("failed to create target directory: %w", err)
-	}
-
-	// Download file to cache first
-	downloadedFiles, err := repo.DownloadFiles(fileName)
-	if err != nil {
-		return fmt.Errorf("failed to download file: %w", err)
-	}
-
-	// Copy from cache to target location
-	if len(downloadedFiles) > 0 {
-		if progress != nil {
-			progress(Progress{
-				DownloadedBytes: 100, // Completed
-				TotalBytes:      100,
-				Percentage:      100,
-			})
-		}
-		return copyFile(downloadedFiles[0], targetPath)
-	}
-
-	return fmt.Errorf("no files downloaded")
-}
-
-// downloadFileAdvanced uses bodaay/HuggingFaceModelDownloader for advanced features
-func (c *Client) downloadFileAdvanced(ctx context.Context, repoID, revision, fileName, targetPath string, progress ProgressCallback) error {
-	settings := hfdownloader.Settings{
-		CacheDir:           c.cacheDir,
-		Concurrency:        8,
-		MaxActiveDownloads: 4,
-		MultipartThreshold: "32MiB",
-		Verify:             "sha256",
-		Retries:            4,
-		Token:              c.hfToken,
-		Endpoint:           "https://" + c.endpoint,
-	}
-
-	job := hfdownloader.Job{
-		Repo:     repoID,
-		Revision: revision,
-		Filters:  []string{fileName},
-	}
-
-	// Create progress callback
-	var progressFunc hfdownloader.ProgressFunc
-	if progress != nil {
-		progressFunc = func(event hfdownloader.ProgressEvent) {
-			if event.Event == "file_progress" {
-				progress(Progress{
-					DownloadedBytes: event.Downloaded,
-					TotalBytes:      event.Total,
-					Percentage:      float64(event.Downloaded) / float64(event.Total) * 100,
-				})
-			}
-		}
-	}
-
-	// Execute download
-	if err := hfdownloader.Download(ctx, job, settings, progressFunc); err != nil {
-		return fmt.Errorf("failed to download: %w", err)
-	}
-
-	// Find and copy the downloaded file from cache
-	matches, _ := filepath.Glob(filepath.Join(c.cacheDir, "hub", "**", fileName))
-	if len(matches) > 0 {
-		return copyFile(matches[0], targetPath)
-	}
-
-	return fmt.Errorf("downloaded file not found in cache")
-}
-
-// DownloadRepository downloads an entire repository with optional filters
-func (c *Client) DownloadRepository(ctx context.Context, repoID, revision string, filters, excludes []string, progress ProgressCallback) error {
-	if revision == "" {
-		revision = "main"
-	}
-
-	settings := hfdownloader.Settings{
-		CacheDir:           c.cacheDir,
-		Concurrency:        8,
-		MaxActiveDownloads: 4,
-		MultipartThreshold: "32MiB",
-		Verify:             "sha256",
-		Retries:            4,
-		Token:              c.hfToken,
-		Endpoint:           "https://" + c.endpoint,
-	}
-
-	job := hfdownloader.Job{
-		Repo:     repoID,
-		Revision: revision,
-		Filters:  filters,
-		Excludes: excludes,
-	}
-
-	var progressFunc hfdownloader.ProgressFunc
-	if progress != nil {
-		progressFunc = func(event hfdownloader.ProgressEvent) {
-			if event.Event == "file_progress" {
-				progress(Progress{
-					DownloadedBytes: event.Downloaded,
-					TotalBytes:      event.Total,
-					Percentage:      float64(event.Downloaded) / float64(event.Total) * 100,
-				})
-			}
-		}
-	}
-
-	return hfdownloader.Download(ctx, job, settings, progressFunc)
-}
-
-// GetModelInfo retrieves metadata about a model repository
-func (c *Client) GetModelInfo(repoID string, revision string) (*hfhub.RepoInfo, error) {
-	if revision == "" {
-		revision = "main"
-	}
-
-	repo := hfhub.New(repoID).
-		WithRevision(revision).
-		WithEndpoint("https://" + c.endpoint).
-		WithAuth(c.hfToken).
-		WithCacheDir(c.cacheDir)
-	repo.Verbosity = 0
-
-	if err := repo.DownloadInfo(false); err != nil {
-		return nil, fmt.Errorf("failed to fetch model info: %w", err)
-	}
-
-	return repo.Info(), nil
-}
-
-// NewHuggingFaceRepo creates a new HuggingFace repository reference for advanced usage
-func (c *Client) NewHuggingFaceRepo(repoID string) *hfhub.Repo {
-	return hfhub.New(repoID).
-		WithEndpoint("https://" + c.endpoint).
-		WithAuth(c.hfToken).
-		WithCacheDir(c.cacheDir)
 }
 
 // copyFile copies a file from src to dst

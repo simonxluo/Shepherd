@@ -12,9 +12,6 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
 )
 
-// ShutdownHook represents a function that can be called during shutdown
-type ShutdownHook func(ctx context.Context) error
-
 // HookPriority defines the order in which hooks are executed
 type HookPriority int
 
@@ -32,7 +29,7 @@ const (
 // shutdownHook represents a registered shutdown hook with priority
 type shutdownHook struct {
 	name     string
-	hook     ShutdownHook
+	hook     func(ctx context.Context) error
 	priority HookPriority
 }
 
@@ -42,7 +39,6 @@ type Manager struct {
 	hooks       []shutdownHook
 	timeout     time.Duration
 	sigChan     chan os.Signal
-	stopChan    chan struct{}
 	shutdownCtx context.Context
 	cancel      context.CancelFunc
 	wg          sync.WaitGroup
@@ -57,14 +53,13 @@ func NewManager(timeout time.Duration) *Manager {
 		hooks:       make([]shutdownHook, 0),
 		timeout:     timeout,
 		sigChan:     make(chan os.Signal, 1),
-		stopChan:    make(chan struct{}, 1),
 		shutdownCtx: ctx,
 		cancel:      cancel,
 	}
 }
 
 // Register registers a new shutdown hook with the given name and priority
-func (m *Manager) Register(name string, hook ShutdownHook, priority HookPriority) {
+func (m *Manager) Register(name string, hook func(ctx context.Context) error, priority HookPriority) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -105,9 +100,6 @@ func (m *Manager) waitForShutdown() {
 	select {
 	case sig := <-m.sigChan:
 		logger.Infof("收到关闭信号: %v", sig)
-		m.performShutdown()
-	case <-m.stopChan:
-		logger.Info("收到程序停止请求")
 		m.performShutdown()
 	case <-m.shutdownCtx.Done():
 		logger.Info("收到上下文取消请求")
@@ -168,21 +160,6 @@ func (m *Manager) performShutdown() {
 
 	// Cancel the shutdown context to signal completion
 	m.cancel()
-}
-
-// Stop triggers graceful shutdown programmatically
-func (m *Manager) Stop() {
-	m.mu.Lock()
-	if !m.started {
-		m.mu.Unlock()
-		return
-	}
-	m.mu.Unlock()
-
-	select {
-	case m.stopChan <- struct{}{}:
-	default:
-	}
 }
 
 // Context returns the shutdown context

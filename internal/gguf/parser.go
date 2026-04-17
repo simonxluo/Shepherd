@@ -2,7 +2,6 @@ package gguf
 
 import (
 	"fmt"
-	"os"
 
 	ggufparser "github.com/gpustack/gguf-parser-go"
 )
@@ -215,15 +214,6 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 	meta.Quantization = meta.GetQuantizationString()
 
 	return meta, nil
-}
-
-// GetFileSize 获取文件大小
-func (p *Parser) GetFileSize() int64 {
-	info, err := os.Stat(p.path)
-	if err == nil {
-		return info.Size()
-	}
-	return 0
 }
 
 // GetArchitecture 获取架构名称

@@ -2,16 +2,15 @@ package download
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 	"io"
-	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
 )
 
 // Manager manages download tasks
@@ -19,8 +18,6 @@ type Manager struct {
 	config          DownloadConfig
 	tasks           map[string]*Task
 	activeDownloads int32
-	listeners       []ProgressListener
-	progressChan    chan Progress
 
 	mu     sync.RWMutex
 	ctx    context.Context
@@ -55,25 +52,13 @@ func NewManager(config DownloadConfig) *Manager {
 	}
 
 	m := &Manager{
-		config:       config,
-		tasks:        make(map[string]*Task),
-		progressChan: make(chan Progress, 100),
-		ctx:          ctx,
-		cancel:       cancel,
+		config: config,
+		tasks:  make(map[string]*Task),
+		ctx:    ctx,
+		cancel: cancel,
 	}
 
-	// Start progress broadcaster
-	m.wg.Add(1)
-	go m.progressBroadcaster()
-
 	return m
-}
-
-// AddProgressListener adds a listener for progress updates
-func (m *Manager) AddProgressListener(listener ProgressListener) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.listeners = append(m.listeners, listener)
 }
 
 // CreateTask creates a new download task
@@ -104,12 +89,6 @@ func (m *Manager) CreateTask(url, path, fileName, source, repoId string) (string
 	m.mu.Lock()
 	m.tasks[taskID] = task
 	m.mu.Unlock()
-
-	// Notify task created
-	m.notifyProgress(Progress{
-		TaskID: taskID,
-		State:  StateIdle,
-	})
 
 	// Try to start download immediately
 	if m.canStartDownload() {
@@ -276,36 +255,6 @@ func (m *Manager) executeDownload(task *Task) {
 	}
 }
 
-// notifyProgress sends progress notification
-func (m *Manager) notifyProgress(progress Progress) {
-	select {
-	case m.progressChan <- progress:
-	case <-time.After(100 * time.Millisecond):
-		// Don't block if channel is full
-	}
-}
-
-// progressBroadcaster broadcasts progress to all listeners
-func (m *Manager) progressBroadcaster() {
-	defer m.wg.Done()
-
-	for {
-		select {
-		case <-m.ctx.Done():
-			return
-		case progress := <-m.progressChan:
-			m.mu.RLock()
-			listeners := make([]ProgressListener, len(m.listeners))
-			copy(listeners, m.listeners)
-			m.mu.RUnlock()
-
-			for _, listener := range listeners {
-				listener(progress)
-			}
-		}
-	}
-}
-
 // Close closes the manager and waits for all downloads to finish
 func (m *Manager) Close() error {
 	m.cancel()
@@ -323,79 +272,6 @@ func (m *Manager) Close() error {
 	case <-time.After(30 * time.Second):
 		return fmt.Errorf("timeout waiting for downloads to finish")
 	}
-}
-
-// SaveTasks saves all tasks to a JSON file for persistence
-func (m *Manager) SaveTasks(filePath string) error {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	// Create directory if needed
-	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	// Marshal to JSON
-	data, err := json.MarshalIndent(m.tasks, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal tasks: %w", err)
-	}
-
-	// Write to temp file first
-	tempPath := filePath + ".tmp"
-	if err := os.WriteFile(tempPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write tasks: %w", err)
-	}
-
-	// Atomic rename
-	if err := os.Rename(tempPath, filePath); err != nil {
-		utils.RemoveQuietly(tempPath)
-		return fmt.Errorf("failed to rename file: %w", err)
-	}
-
-	return nil
-}
-
-// LoadTasks loads tasks from a JSON file
-func (m *Manager) LoadTasks(filePath string) error {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // No saved tasks
-		}
-		return fmt.Errorf("failed to read tasks: %w", err)
-	}
-
-	var tasks map[string]*Task
-	if err := json.Unmarshal(data, &tasks); err != nil {
-		return fmt.Errorf("failed to parse tasks: %w", err)
-	}
-
-	m.mu.Lock()
-	m.tasks = tasks
-	m.mu.Unlock()
-
-	return nil
-}
-
-// ResumePendingTasks resumes all incomplete tasks
-func (m *Manager) ResumePendingTasks() error {
-	tasks := m.ListTasks()
-
-	for _, task := range tasks {
-		if task.State == StateIdle || task.State == StatePaused {
-			if task.DownloadedBytes > 0 {
-				// Can resume
-				if m.canStartDownload() {
-					m.wg.Add(1)
-					go m.executeDownload(task)
-				}
-			}
-		}
-	}
-
-	return nil
 }
 
 // closeQuietly closes a file and ignores the error (used in defer)

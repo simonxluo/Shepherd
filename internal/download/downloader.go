@@ -12,11 +12,18 @@ import (
 )
 
 // downloader handles the actual download logic
+type partDownload struct {
+	ID              int
+	StartPos        int64
+	EndPos          int64
+	DownloadedBytes int64
+	FileName        string
+}
+
 type downloader struct {
-	config  DownloadConfig
-	task    *Task
-	client  *http.Client
-	manager *Manager
+	config DownloadConfig
+	task   *Task
+	client *http.Client
 }
 
 // newDownloader creates a new downloader
@@ -249,7 +256,7 @@ func (d *downloader) downloadParallel(ctx context.Context) error {
 	}
 
 	// Create parts
-	var parts []PartDownload
+	var parts []partDownload
 	numParts := int(d.task.TotalBytes / partSize)
 	if int(d.task.TotalBytes)%int(partSize) != 0 {
 		numParts++
@@ -268,7 +275,7 @@ func (d *downloader) downloadParallel(ctx context.Context) error {
 			endPos = d.task.TotalBytes - 1
 		}
 
-		part := PartDownload{
+		part := partDownload{
 			ID:       i,
 			StartPos: startPos,
 			EndPos:   endPos,
@@ -282,7 +289,7 @@ func (d *downloader) downloadParallel(ctx context.Context) error {
 	errChan := make(chan error, len(parts))
 
 	for i := range parts {
-		go func(part *PartDownload) {
+		go func(part *partDownload) {
 			errChan <- d.downloadPart(ctx, part)
 		}(&parts[i])
 	}
@@ -309,7 +316,7 @@ func (d *downloader) downloadParallel(ctx context.Context) error {
 }
 
 // downloadPart downloads a single part
-func (d *downloader) downloadPart(ctx context.Context, part *PartDownload) error {
+func (d *downloader) downloadPart(ctx context.Context, part *partDownload) error {
 	// Check if paused
 	if d.task.Paused || d.task.StopRequested {
 		return nil
@@ -439,18 +446,6 @@ func (d *downloader) calculateSpeed() {
 		remaining := d.task.TotalBytes - d.task.DownloadedBytes
 		d.task.ETA = remaining / d.task.Speed
 	}
-
-	// Notify progress
-	d.manager.notifyProgress(Progress{
-		TaskID:          d.task.ID,
-		State:           d.task.State,
-		DownloadedBytes: d.task.DownloadedBytes,
-		TotalBytes:      d.task.TotalBytes,
-		Speed:           d.task.Speed,
-		ETA:             d.task.ETA,
-		PartsTotal:      d.task.PartsTotal,
-		PartsCompleted:  d.task.PartsCompleted,
-	})
 }
 
 // extractFileNameFromURL extracts filename from URL

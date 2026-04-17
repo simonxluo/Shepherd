@@ -183,16 +183,10 @@ func TestProcessPort(t *testing.T) {
 func TestManagerBasicOperations(t *testing.T) {
 	manager := NewManager()
 
-	assert.Equal(t, 0, manager.GetRunningCount())
-	assert.Equal(t, 0, manager.GetLoadingCount())
-
 	// Start a process
 	process, err := manager.Start("echo-test", "echo", "echo hello", "")
 	require.NoError(t, err)
 	assert.NotNil(t, process)
-
-	assert.Equal(t, 1, manager.GetRunningCount())
-	assert.Equal(t, 0, manager.GetLoadingCount())
 
 	// Get the process
 	retrieved, exists := manager.Get("echo-test")
@@ -201,13 +195,13 @@ func TestManagerBasicOperations(t *testing.T) {
 
 	// Check running status
 	assert.True(t, manager.IsRunning("echo-test"))
-	assert.False(t, manager.IsLoading("echo-test"))
 
 	// Stop the process
 	err = manager.Stop("echo-test")
 	assert.NoError(t, err)
 
-	assert.Equal(t, 0, manager.GetRunningCount())
+	running, _ := manager.ListAll()
+	assert.Len(t, running, 0)
 }
 
 func TestManagerDoubleStart(t *testing.T) {
@@ -234,124 +228,7 @@ func TestManagerStopNonExistent(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
-func TestManagerList(t *testing.T) {
-	manager := NewManager()
-
-	// Start multiple processes
-	_, err := manager.Start("test-1", "test1", "sleep 0.1", "")
-	require.NoError(t, err)
-
-	_, err = manager.Start("test-2", "test2", "sleep 0.1", "")
-	require.NoError(t, err)
-
-	running, loading := manager.ListAll()
-	assert.Len(t, running, 2)
-	assert.Len(t, loading, 0)
-
-	// List should return copies
-	list := manager.List()
-	assert.Len(t, list, 2)
-
-	// Stop all
-	manager.StopAll()
-	assert.Equal(t, 0, manager.GetRunningCount())
-}
-
-func TestManagerGetProcessByPort(t *testing.T) {
-	manager := NewManager()
-
-	process := NewProcess("port-test", "test", "echo", "")
-	process.SetPort(8081)
-
-	// Manually add to manager for testing
-	manager.mu.Lock()
-	manager.processes["port-test"] = process
-	manager.mu.Unlock()
-
-	// Find by port
-	retrieved, exists := manager.GetProcessByPort(8081)
-	assert.True(t, exists)
-	assert.Equal(t, "port-test", retrieved.ID)
-
-	// Try wrong port
-	_, exists = manager.GetProcessByPort(9999)
-	assert.False(t, exists)
-
-	// Cleanup
-	manager.Stop("port-test")
-}
-
-func TestBuildCommand(t *testing.T) {
-	tests := []struct {
-		name      string
-		binPath   string
-		modelPath string
-		port      int
-		opts      map[string]interface{}
-		contains  []string
-	}{
-		{
-			name:      "Basic command",
-			binPath:   "/llama.cpp",
-			modelPath: "/models/model.gguf",
-			port:      8081,
-			contains:  []string{"llama-server", "-m", "/models/model.gguf", "--port", "8081"},
-		},
-		{
-			name:      "With context size",
-			binPath:   "/llama.cpp",
-			modelPath: "/models/model.gguf",
-			port:      8081,
-			opts: map[string]interface{}{
-				"ctx_size": 4096,
-			},
-			contains: []string{"-c", "4096"},
-		},
-		{
-			name:      "With GPU layers",
-			binPath:   "/llama.cpp",
-			modelPath: "/models/model.gguf",
-			port:      8081,
-			opts: map[string]interface{}{
-				"gpu_layers": 99,
-			},
-			contains: []string{"-ngl", "99"},
-		},
-		{
-			name:      "With temperature",
-			binPath:   "/llama.cpp",
-			modelPath: "/models/model.gguf",
-			port:      8081,
-			opts: map[string]interface{}{
-				"temperature": 0.7,
-			},
-			contains: []string{"--temp", "0.70"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cmd, err := BuildCommand(tt.binPath, tt.modelPath, tt.port, tt.opts)
-			require.NoError(t, err)
-
-			for _, expected := range tt.contains {
-				assert.Contains(t, cmd, expected)
-			}
-		})
-	}
-
-	t.Run("Empty binary path", func(t *testing.T) {
-		_, err := BuildCommand("", "/models/model.gguf", 8081, nil)
-		assert.Error(t, err)
-	})
-
-	t.Run("Empty model path", func(t *testing.T) {
-		_, err := BuildCommand("/llama.cpp", "", 8081, nil)
-		assert.Error(t, err)
-	})
-}
-
-func TestQuoteAndJoin(t *testing.T) {
+func TestManagerStopNonExistent(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     []string

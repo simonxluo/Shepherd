@@ -215,6 +215,7 @@ type NodeConfig struct {
 	Tags                []string          `json:"tags"`           // 节点标签
 	Metadata            map[string]string `json:"metadata"`       // 节点元数据
 	Capabilities        *NodeCapabilities `json:"capabilities"`   // 节点能力
+	Version             string            `json:"version"`
 }
 
 // NodeConnection represents a connection between nodes
