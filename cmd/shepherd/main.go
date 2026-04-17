@@ -12,17 +12,17 @@ import (
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/langchain"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/netutil"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/node"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/netutil"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/port"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/server"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/shutdown"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/shutdown"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 )
 
 // 版本信息（编译时注入）

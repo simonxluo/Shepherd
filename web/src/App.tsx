@@ -1,6 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { queryClient } from './lib/query-client';
+import { queryClient } from './lib/query';
 import { MainLayout } from './components/layout/MainLayout';
 import { DashboardPage } from './pages/dashboard';
 import { ModelsPage } from './pages/models';
@@ -10,7 +10,8 @@ import { ClusterPage } from './pages/cluster';
 import { LogsPage } from './pages/logs';
 import { SettingsPage } from './pages/settings';
 import { useSSE } from './hooks/useSSE';
-import { AlertDialogProvider, AlertDialog } from './components/ui/alert-dialog';
+import { AlertDialogProvider } from './providers/AlertDialog';
+import { AlertDialog } from './components/ui/alert-dialog';
 import { Toaster } from './components/ui/toaster';
 import { WebSocketProvider } from './providers/WebSocketProvider';
 

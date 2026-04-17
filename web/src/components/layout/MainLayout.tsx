@@ -1,8 +1,8 @@
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { UserProfileDialog } from '@/components/user/UserProfileDialog';
-import { UserSettingsDialog } from '@/components/user/UserSettingsDialog';
+import { UserProfileDialog } from '@/components/layout/UserProfileDialog';
+import { UserSettingsDialog } from '@/components/layout/UserSettingsDialog';
 
 export function MainLayout() {
   return (

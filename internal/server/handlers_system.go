@@ -13,9 +13,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/types"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 )
 
 // Middleware

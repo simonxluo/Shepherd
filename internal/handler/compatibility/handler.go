@@ -3,15 +3,15 @@ package compatibility
 
 import (
 	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 	"net"
 	"net/http"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 )
 
 // Handler handles compatibility configuration requests

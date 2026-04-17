@@ -8,8 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/types"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 )
 
 // Handler handles path configuration requests

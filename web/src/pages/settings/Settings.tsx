@@ -9,8 +9,8 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { PathConfigPanel } from '@/components/settings/PathConfigPanel';
-import { ApiConfigCard, type ApiConfig } from '@/components/settings/ApiConfigCard';
+import { PathConfigPanel } from '@/features/settings/components/PathConfigPanel';
+import { ApiConfigCard, type ApiConfig } from '@/features/settings/components/ApiConfigCard';
 import { compatibilityApi } from '@/lib/api/compatibility';
 import { systemApi } from '@/lib/api/system';
 import { useToast } from '@/hooks/useToast';

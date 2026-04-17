@@ -12,12 +12,12 @@ import {
   useFilteredDownloads,
   useDownloadStats,
 } from '@/features/downloads/hooks';
-import { DownloadCard } from '@/components/downloads/DownloadCard';
-import { CreateDownloadDialog } from '@/components/downloads/CreateDownloadDialog';
-import { HuggingFaceSearchPanel } from '@/components/downloads/HuggingFaceSearchPanel';
+import { DownloadCard } from '@/features/downloads/components/DownloadCard';
+import { CreateDownloadDialog } from '@/features/downloads/components/CreateDownloadDialog';
+import { HuggingFaceSearchPanel } from '@/features/downloads/components/HuggingFaceSearchPanel';
 import type { DownloadState, DownloadSource } from '@/types';
 import type { HuggingFaceModel } from '@/lib/api/downloads';
-import { useAlertDialog } from '@/hooks/useAlertDialog';
+import { useAlertDialog } from '@/providers/AlertDialog';
 import { cn } from '@/lib/utils';
 
 export function DownloadsPage() {

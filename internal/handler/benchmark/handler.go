@@ -15,9 +15,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 )
 
 const (

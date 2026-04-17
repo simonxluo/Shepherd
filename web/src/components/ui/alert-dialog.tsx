@@ -1,6 +1,6 @@
 import { AlertTriangle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAlertDialog } from '@/hooks/useAlertDialog';
+import { useAlertDialog } from '@/providers/AlertDialog';
 import { Button } from '@/components/ui/button';
 
 export function AlertDialog() {
@@ -72,4 +72,4 @@ export function AlertDialog() {
   );
 }
 
-export { AlertDialogProvider, type AlertDialogOptions } from '@/hooks/useAlertDialog';
+export { AlertDialogProvider, type AlertDialogOptions } from '@/providers/AlertDialog';

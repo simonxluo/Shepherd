@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useModels } from '@/features/models/hooks';
+import { useModels } from '@/features/models';
 import { useDownloads, useDownloadStats } from '@/features/downloads/hooks';
 import { useClients, useFilteredClients } from '@/features/cluster/hooks';
 import { formatBytes } from '@/lib/utils';

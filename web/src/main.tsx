@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { i18nReady } from './lib/i18n'
-import { configLoader } from './lib/configLoader'
+import { configLoader } from './lib/config'
 import { updateApiClientUrl } from './lib/api/client'
 
 // 初始化应用

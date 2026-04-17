@@ -5,13 +5,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
 // Handler handles Anthropic API requests

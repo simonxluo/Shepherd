@@ -7,7 +7,7 @@ import type {
   LlamaCppPathConfig,
   ModelPathConfig,
   PathListResponse,
-} from '@/lib/configTypes';
+} from '@/lib/config';
 
 /**
  * 路径添加/更新响应

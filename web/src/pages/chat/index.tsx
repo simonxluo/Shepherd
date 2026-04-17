@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Plus, Trash2 } from 'lucide-react';
-import { ChatMessage } from '@/components/chat/ChatMessage';
-import { ChatInput } from '@/components/chat/ChatInput';
+import { ChatMessage } from '@/features/chat/components/ChatMessage';
+import { ChatInput } from '@/features/chat/components/ChatInput';
 import { useStreamingChat, getLoadedModels, createChatSession, saveChatHistory, loadChatHistory, deleteChatSession } from '@/features/chat/hooks';
 import type { ChatMessage as ChatMessageType } from '@/features/chat';
 import { useToast } from '@/hooks/useToast';
-import { useAlertDialog } from '@/hooks/useAlertDialog';
+import { useAlertDialog } from '@/providers/AlertDialog';
 
 /**
  * 聊天页面

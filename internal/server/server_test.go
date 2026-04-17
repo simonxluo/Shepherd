@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/port"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/process"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/port"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

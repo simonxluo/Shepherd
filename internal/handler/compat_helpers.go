@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
 // ModelLookupIndex accelerates model lookups across API compatibility handlers.

@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/node"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

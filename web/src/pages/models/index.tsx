@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { Search, RefreshCw, Filter, Grid3X3, List, Gauge, FileText } from 'lucide-react';
-import { useModels, useLoadModel, useUnloadModel, useSetModelFavourite, useUpdateModelAlias, useScanModels, useFilteredModels, useCreateBenchmark } from '@/features/models/hooks';
-import { ModelCard } from '@/components/models/ModelCard';
-import { LoadModelDialog } from '@/components/models/LoadModelDialog';
-import { EditAliasDialog } from '@/components/models/EditAliasDialog';
-import { BenchmarkDialog } from '@/components/models/BenchmarkDialog';
-import { BenchmarkResultsDialog } from '@/components/models/BenchmarkResultsDialog';
-import { ModelDetailDialog } from '@/components/models/ModelDetailDialog';
+import { useModels, useLoadModel, useUnloadModel, useSetModelFavourite, useUpdateModelAlias, useScanModels, useFilteredModels, useCreateBenchmark } from '@/features/models';
+import { ModelCard } from '@/features/models/components/ModelCard';
+import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
+import { EditAliasDialog } from '@/features/models/components/EditAliasDialog';
+import { BenchmarkDialog } from '@/features/models/components/BenchmarkDialog';
+import { BenchmarkResultsDialog } from '@/features/models/components/BenchmarkResultsDialog';
+import { ModelDetailDialog } from '@/features/models/components/ModelDetailDialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Model, ModelStatus, BenchmarkConfig, LoadModelParams } from '@/types';
-import { useAlertDialog } from '@/hooks/useAlertDialog';
+import { useAlertDialog } from '@/providers/AlertDialog';
 import { useToast } from '@/hooks/useToast';
 import { useUIStore } from '@/stores/uiStore';
 

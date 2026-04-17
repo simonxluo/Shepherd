@@ -9,9 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/download"
-	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/modelrepo"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/types"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/download"
+	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/infra/modelrepo"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 )
 
 func (s *Server) HandleListDownloads(c *gin.Context) {

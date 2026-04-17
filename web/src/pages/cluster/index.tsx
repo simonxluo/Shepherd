@@ -10,10 +10,10 @@ import {
   useFilteredTasks,
   useServerConfig,
 } from '@/features/cluster/hooks';
-import { ClientCard } from '@/components/cluster/ClientCard';
+import { ClientCard } from '@/features/cluster/components/ClientCard';
 import { cn } from '@/lib/utils';
 import type { ClientStatus, TaskStatus, ClusterTask } from '@/types';
-import { useAlertDialog } from '@/hooks/useAlertDialog';
+import { useAlertDialog } from '@/providers/AlertDialog';
 
 /**
  * 集群管理页面

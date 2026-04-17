@@ -11,11 +11,11 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/openai"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/paths"
 	storageapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/langchain"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/middleware"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 )
 
 // Handlers contains all injected handler instances.

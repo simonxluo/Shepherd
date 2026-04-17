@@ -3,7 +3,7 @@ package compatibility
 import (
 	"context"
 	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/utils"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 	"net/http"
 	"sync"
 	"time"
@@ -11,8 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/ollama"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/openai"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/model"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
 type ServerManager struct {
