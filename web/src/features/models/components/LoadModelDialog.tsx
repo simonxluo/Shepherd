@@ -244,6 +244,8 @@ const PARAM_HELP = {
   reasoningFormat: '推理输出格式：deepseek、auto等',
   reasoningBudget: '推理token预算，-1无限制，0立即结束',
   mmprojOffload: 'mmproj投影层GPU卸载',
+  unloadAfterMinutes: '空闲自动卸载时间（分钟）。0=永不自动卸载，>0=自定义分钟数',
+  concurrencyLimit: '最大并发请求数。0=不限，>0=自定义限制',
 };
 
 export function LoadModelDialog({
@@ -335,6 +337,8 @@ export function LoadModelDialog({
     reasoningFormat: 'auto',
     reasoningBudget: -1,
     mmprojOffload: true,
+    unloadAfterMinutes: 0,
+    concurrencyLimit: 0,
     // 参数启用状态（默认全部启用，用户可以选择禁用以使用默认值）
     enabled: {
       ctxSize: true,
@@ -390,6 +394,8 @@ export function LoadModelDialog({
       reasoningFormat: true,
       reasoningBudget: true,
       mmprojOffload: true,
+      unloadAfterMinutes: true,
+      concurrencyLimit: true,
     },
   });
 
@@ -564,6 +570,7 @@ export function LoadModelDialog({
       'chatTemplateKwargs',
       'ropeScaling', 'ropeScale', 'ropeFreqBase', 'ropeFreqScale',
       'noWebUI', 'reasoning', 'reasoningFormat', 'reasoningBudget', 'mmprojOffload',
+      'unloadAfterMinutes', 'concurrencyLimit',
     ];
 
     for (const key of paramKeys) {
@@ -679,6 +686,8 @@ export function LoadModelDialog({
       reasoningFormat: 'auto',
       reasoningBudget: -1,
       mmprojOffload: true,
+      unloadAfterMinutes: 0,
+      concurrencyLimit: 0,
       // 参数启用状态
       enabled: {
         ctxSize: true,
@@ -735,6 +744,8 @@ export function LoadModelDialog({
         reasoningFormat: true,
         reasoningBudget: true,
         mmprojOffload: true,
+        unloadAfterMinutes: true,
+        concurrencyLimit: true,
       },
     });
   };
@@ -1654,6 +1665,46 @@ export function LoadModelDialog({
                       step={1}
                       placeholder="-1 表示自动"
                       allowMinusOne={true}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 运行时管理 */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase">
+                  运行时管理
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      空闲卸载时间 (分钟)
+                      {renderHelpButton('unloadAfterMinutes')}
+                    </label>
+                    <NumberInput
+                      value={params.unloadAfterMinutes}
+                      onChange={(v) => setParams({ ...params, unloadAfterMinutes: v })}
+                      disabled={getInputDisabled('unloadAfterMinutes')}
+                      min={0}
+                      max={10080}
+                      step={1}
+                      placeholder="0为永不自动卸载"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                      最大并发数
+                      {renderHelpButton('concurrencyLimit')}
+                    </label>
+                    <NumberInput
+                      value={params.concurrencyLimit}
+                      onChange={(v) => setParams({ ...params, concurrencyLimit: v })}
+                      disabled={getInputDisabled('concurrencyLimit')}
+                      min={0}
+                      max={10000}
+                      step={1}
+                      placeholder="0为不限"
                     />
                   </div>
                 </div>

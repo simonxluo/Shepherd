@@ -179,6 +179,10 @@ export interface LoadModelParams {
   ropeFreqBase?: number;          // RoPE基础频率
   ropeFreqScale?: number;         // RoPE频率缩放
 
+  // 运行时管理
+  unloadAfterMinutes?: number;   // 空闲自动卸载时间（分钟）。0=永不卸载，>0=自定义分钟数
+  concurrencyLimit?: number;     // 最大并发请求数。0=不限，>0=自定义限制
+
   // 参数启用状态：标记哪些参数需要手动配置（false表示使用llama-server默认值）
   enabled?: {
     // 基础参数
@@ -249,6 +253,10 @@ export interface LoadModelParams {
     reranking?: boolean;
     timeout?: boolean;
     alias?: boolean;
+
+    // 运行时管理
+    unloadAfterMinutes?: boolean;
+    concurrencyLimit?: boolean;
   };
 }
 
