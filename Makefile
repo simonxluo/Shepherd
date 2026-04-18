@@ -1,7 +1,7 @@
 # Shepherd Makefile
 # 快速编译和开发命令
 
-.PHONY: all build build-all test clean release run
+.PHONY: all build build-all test clean release run swag
 
 # 默认目标
 all: build
@@ -117,6 +117,12 @@ version:
 	@echo "Go 版本:"
 	@$(GO) version
 
+# 生成 Swagger API 文档
+swag:
+	@echo "生成 Swagger 文档..."
+	@/home/user/go/bin/swag init -g cmd/shepherd/main.go -o api-docs --parseDependency --parseInternal --exclude internal/comm/gpu 2>&1
+	@echo "✓ Swagger 文档已生成到 api-docs/"
+
 # 帮助信息
 help:
 	@echo "Shepherd Makefile"
@@ -135,6 +141,7 @@ help:
 	@echo "  tidy          - 整理依赖"
 	@echo "  clean         - 清理构建文件"
 	@echo "  run           - 编译并运行"
+	@echo "  swag          - 生成 Swagger API 文档"
 	@echo "  install       - 安装到 /usr/local/bin"
 	@echo "  uninstall     - 从 /usr/local/bin 卸载"
 	@echo "  docker-build  - 构建 Docker 镜像"
