@@ -1,5 +1,24 @@
 // Shepherd - llama.cpp 模型管理系统
 // 这是主程序入口文件
+
+// @title           Shepherd API
+// @version         1.0
+// @description     Shepherd - 分布式 llama.cpp 模型管理系统 API
+// @description     提供模型管理、进程管理、配置管理、兼容性API等功能
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   Shepherd Project
+// @contact.url    https://github.com/shepherd-project/shepherd
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:9190
+// @BasePath  /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
@@ -11,18 +30,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/netutil"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/shutdown"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/server"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/shutdown"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/server"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
 )
 
 // 版本信息（编译时注入）
@@ -45,7 +64,7 @@ type App struct {
 	srv           *server.Server
 
 	// 分布式节点组件
-	node        *node.Node       // 统一节点实例
+	node        *node.Node           // 统一节点实例
 	nodeAdapter *handler.NodeAdapter // Node API 适配器
 
 	// LangChainGo 组件
