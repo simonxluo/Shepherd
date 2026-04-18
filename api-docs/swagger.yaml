@@ -1,0 +1,540 @@
+basePath: /api
+definitions:
+  internal_handler_anthropic.ContentBlock:
+    properties:
+      text:
+        type: string
+      type:
+        type: string
+    type: object
+  internal_handler_anthropic.ErrorDetail:
+    properties:
+      message:
+        type: string
+      type:
+        type: string
+    type: object
+  internal_handler_anthropic.Message:
+    properties:
+      content:
+        type: string
+      role:
+        type: string
+    type: object
+  internal_handler_anthropic.MessageRequest:
+    properties:
+      max_tokens:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/internal_handler_anthropic.Message'
+        type: array
+      model:
+        type: string
+      stop_sequences:
+        items:
+          type: string
+        type: array
+      stream:
+        type: boolean
+      system:
+        type: string
+      temperature:
+        type: number
+      top_k:
+        type: integer
+      top_p:
+        type: number
+    type: object
+  internal_handler_anthropic.MessageResponse:
+    properties:
+      content:
+        items:
+          $ref: '#/definitions/internal_handler_anthropic.ContentBlock'
+        type: array
+      error:
+        $ref: '#/definitions/internal_handler_anthropic.ErrorDetail'
+      id:
+        type: string
+      model:
+        type: string
+      role:
+        type: string
+      stop_reason:
+        type: string
+      type:
+        type: string
+      usage:
+        $ref: '#/definitions/internal_handler_anthropic.Usage'
+    type: object
+  internal_handler_anthropic.Usage:
+    properties:
+      input_tokens:
+        type: integer
+      output_tokens:
+        type: integer
+    type: object
+  internal_handler_ollama.ChatMessage:
+    properties:
+      content:
+        type: string
+      role:
+        type: string
+    type: object
+  internal_handler_ollama.ChatRequest:
+    properties:
+      format:
+        type: string
+      messages:
+        items:
+          $ref: '#/definitions/internal_handler_ollama.ChatMessage'
+        type: array
+      model:
+        type: string
+      options:
+        $ref: '#/definitions/internal_handler_ollama.GenerationParams'
+      stream:
+        type: boolean
+    type: object
+  internal_handler_ollama.GenerationParams:
+    properties:
+      num_predict:
+        type: integer
+      repeat_penalty:
+        type: number
+      stop:
+        items:
+          type: string
+        type: array
+      temperature:
+        type: number
+      top_k:
+        type: integer
+      top_p:
+        type: number
+    type: object
+  internal_handler_openai.ChatCompletionChoice:
+    properties:
+      finish_reason:
+        type: string
+      index:
+        type: integer
+      logprobs:
+        $ref: '#/definitions/internal_handler_openai.LogProbs'
+      message:
+        $ref: '#/definitions/internal_handler_openai.ChatMessage'
+    type: object
+  internal_handler_openai.ChatCompletionRequest:
+    properties:
+      frequency_penalty:
+        type: number
+      max_tokens:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/internal_handler_openai.ChatMessage'
+        type: array
+      model:
+        type: string
+      "n":
+        type: integer
+      presence_penalty:
+        type: number
+      repeat_penalty:
+        type: number
+      response_format:
+        $ref: '#/definitions/internal_handler_openai.ChatCompletionResponseFormat'
+      seed:
+        type: integer
+      stop:
+        items:
+          type: string
+        type: array
+      stream:
+        type: boolean
+      temperature:
+        type: number
+      top_k:
+        type: integer
+      top_p:
+        type: number
+    type: object
+  internal_handler_openai.ChatCompletionResponse:
+    properties:
+      choices:
+        items:
+          $ref: '#/definitions/internal_handler_openai.ChatCompletionChoice'
+        type: array
+      created:
+        type: integer
+      id:
+        type: string
+      model:
+        type: string
+      object:
+        type: string
+      system_fingerprint:
+        type: string
+      usage:
+        $ref: '#/definitions/internal_handler_openai.Usage'
+    type: object
+  internal_handler_openai.ChatCompletionResponseFormat:
+    properties:
+      type:
+        type: string
+    type: object
+  internal_handler_openai.ChatMessage:
+    properties:
+      content:
+        type: string
+      function_call:
+        $ref: '#/definitions/internal_handler_openai.FunctionCall'
+      name:
+        type: string
+      role:
+        type: string
+      tool_calls:
+        items:
+          $ref: '#/definitions/internal_handler_openai.ToolCall'
+        type: array
+    type: object
+  internal_handler_openai.CompletionChoice:
+    properties:
+      finish_reason:
+        type: string
+      index:
+        type: integer
+      logprobs:
+        $ref: '#/definitions/internal_handler_openai.LogProbs'
+      text:
+        type: string
+    type: object
+  internal_handler_openai.CompletionRequest:
+    properties:
+      echo:
+        type: boolean
+      frequency_penalty:
+        type: number
+      logprobs:
+        type: integer
+      max_tokens:
+        type: integer
+      model:
+        type: string
+      "n":
+        type: integer
+      presence_penalty:
+        type: number
+      prompt: {}
+      repeat_penalty:
+        type: number
+      seed:
+        type: integer
+      stop:
+        items:
+          type: string
+        type: array
+      stream:
+        type: boolean
+      suffix:
+        type: string
+      temperature:
+        type: number
+      top_k:
+        type: integer
+      top_p:
+        type: number
+    type: object
+  internal_handler_openai.CompletionResponse:
+    properties:
+      choices:
+        items:
+          $ref: '#/definitions/internal_handler_openai.CompletionChoice'
+        type: array
+      created:
+        type: integer
+      id:
+        type: string
+      model:
+        type: string
+      object:
+        type: string
+      system_fingerprint:
+        type: string
+      usage:
+        $ref: '#/definitions/internal_handler_openai.Usage'
+    type: object
+  internal_handler_openai.ErrorDetail:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+      param:
+        type: string
+      type:
+        type: string
+    type: object
+  internal_handler_openai.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/internal_handler_openai.ErrorDetail'
+    type: object
+  internal_handler_openai.FunctionCall:
+    properties:
+      arguments:
+        type: string
+      name:
+        type: string
+    type: object
+  internal_handler_openai.LogProbs:
+    properties:
+      text_offset:
+        items:
+          type: integer
+        type: array
+      token_logprobs:
+        items:
+          type: number
+        type: array
+      tokens:
+        items:
+          type: string
+        type: array
+      top_logprobs:
+        items:
+          $ref: '#/definitions/internal_handler_openai.TopLogprob'
+        type: array
+    type: object
+  internal_handler_openai.Model:
+    properties:
+      created:
+        type: integer
+      id:
+        type: string
+      object:
+        type: string
+      owned_by:
+        type: string
+    type: object
+  internal_handler_openai.ModelsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_handler_openai.Model'
+        type: array
+      object:
+        type: string
+    type: object
+  internal_handler_openai.ToolCall:
+    properties:
+      function:
+        $ref: '#/definitions/internal_handler_openai.FunctionCall'
+      id:
+        type: string
+      type:
+        type: string
+    type: object
+  internal_handler_openai.TopLogprob:
+    properties:
+      bytes:
+        items:
+          type: integer
+        type: array
+      logprob:
+        type: number
+      token:
+        type: string
+    type: object
+  internal_handler_openai.Usage:
+    properties:
+      completion_tokens:
+        type: integer
+      prompt_tokens:
+        type: integer
+      total_tokens:
+        type: integer
+    type: object
+host: localhost:9190
+info:
+  contact:
+    name: Shepherd Project
+    url: https://github.com/shepherd-project/shepherd
+  description: |-
+    Shepherd - 分布式 llama.cpp 模型管理系统 API
+    提供模型管理、进程管理、配置管理、兼容性API等功能
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Shepherd API
+  version: "1.0"
+paths:
+  /api/chat:
+    post:
+      consumes:
+      - application/json
+      description: Ollama 兼容的聊天接口，内部转换为 OpenAI 格式转发
+      parameters:
+      - description: Ollama chat request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler_ollama.ChatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Ollama Chat
+      tags:
+      - Ollama
+  /api/tags:
+    post:
+      description: 获取模型标签列表（Ollama 格式）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Ollama Tags
+      tags:
+      - Ollama
+  /v1/chat/completions:
+    post:
+      consumes:
+      - application/json
+      description: OpenAI 兼容的聊天补全接口，支持流式和非流式响应
+      parameters:
+      - description: Chat completion request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler_openai.ChatCompletionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler_openai.ChatCompletionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler_openai.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler_openai.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/internal_handler_openai.ErrorResponse'
+      summary: OpenAI Chat Completions
+      tags:
+      - OpenAI
+  /v1/completions:
+    post:
+      consumes:
+      - application/json
+      description: OpenAI 兼容的文本补全接口
+      parameters:
+      - description: Completion request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler_openai.CompletionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler_openai.CompletionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler_openai.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler_openai.ErrorResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/internal_handler_openai.ErrorResponse'
+      summary: OpenAI Completions
+      tags:
+      - OpenAI
+  /v1/messages:
+    post:
+      consumes:
+      - application/json
+      description: Anthropic 兼容的消息接口，内部转换为 OpenAI 格式转发并转换响应
+      parameters:
+      - description: Anthropic message request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler_anthropic.MessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler_anthropic.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_handler_anthropic.MessageResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_handler_anthropic.MessageResponse'
+        "502":
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/internal_handler_anthropic.MessageResponse'
+      summary: Anthropic Messages
+      tags:
+      - Anthropic
+  /v1/models:
+    get:
+      description: 获取已加载的模型列表（OpenAI 格式）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_handler_openai.ModelsResponse'
+      summary: List Models
+      tags:
+      - OpenAI
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
