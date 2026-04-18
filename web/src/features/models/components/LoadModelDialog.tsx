@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, HelpCircle, Loader2, ChevronDown, Info, RotateCcw, ToggleLeft, ToggleRight, Save, Wand2 } from 'lucide-react';
+import { X, Loader2, ChevronDown, Info, RotateCcw, ToggleLeft, ToggleRight, Save, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import type { LoadModelParams, ModelCapabilities } from '@/types';
+import type { LoadModelParams } from '@/types';
 import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
 import { useOnlineNodes } from '@/features/cluster/hooks';
 import type { UnifiedNode } from '@/types';
@@ -418,7 +418,6 @@ export function LoadModelDialog({
   // 获取 GPU 列表（依赖 params.llamaCppPath）
   const { data: gpuData } = useGPUs(params.llamaCppPath);
   const gpus = gpuData?.gpus || [];
-  const gpuDevices = gpuData?.devices || [];
 
   // 获取模型能力配置
   const { data: savedCapabilities } = useModelCapabilities(isOpen ? modelId : '');
@@ -738,15 +737,6 @@ export function LoadModelDialog({
         mmprojOffload: true,
       },
     });
-  };
-
-  // Tooltip 交互
-  const handleTooltipEnter = (key: string) => {
-    setActiveTooltip(key);
-  };
-
-  const handleTooltipLeave = () => {
-    setActiveTooltip(null);
   };
 
   // 参数控制组件 - 包含帮助按钮和启用/禁用开关

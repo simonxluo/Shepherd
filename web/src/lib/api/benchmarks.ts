@@ -2,19 +2,13 @@ import { apiClient } from './client';
 import type {
   Benchmark,
   BenchmarkConfig,
-  BenchmarkResult,
-  BenchmarkResultFile,
-  BenchmarkListDataResponse,
   BenchmarkListResponse,
-  BenchmarkResultResponse,
   CreateBenchmarkRequest,
   CreateBenchmarkResponse,
   SaveBenchmarkConfigRequest,
   SaveBenchmarkConfigResponse,
   LoadBenchmarkConfigResponse,
   BenchmarkParamsResponse,
-  LlamaCppVersion,
-  ComputeDevice,
 } from '@/types';
 
 /**

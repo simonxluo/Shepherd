@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, RefreshCw, Radar, Server, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Search, Radar, Server, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   useClients,
@@ -7,12 +7,11 @@ import {
   useNetworkScan,
   useClusterOverview,
   useFilteredClients,
-  useFilteredTasks,
   useServerConfig,
 } from '@/features/cluster/hooks';
 import { ClientCard } from '@/features/cluster/components/ClientCard';
 import { cn } from '@/lib/utils';
-import type { ClientStatus, TaskStatus, ClusterTask } from '@/types';
+import type { ClientStatus, ClusterTask } from '@/types';
 import { useAlertDialog } from '@/providers/AlertDialog';
 
 /**
@@ -21,7 +20,7 @@ import { useAlertDialog } from '@/providers/AlertDialog';
 export function ClusterPage() {
   // 所有 hooks 必须在条件返回之前调用
   const alertDialog = useAlertDialog();
-  const { data: serverConfig, isLoading: configLoading } = useServerConfig();
+  const { data: serverConfig } = useServerConfig();
   const { data: clients, isLoading: clientsLoading } = useClients();
   const { data: tasks, isLoading: tasksLoading } = useClusterTasks() as { data: ClusterTask[] | undefined, isLoading: boolean };
   const { data: overview } = useClusterOverview();

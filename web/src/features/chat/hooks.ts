@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api/client';
 
 /**
  * 聊天消息
@@ -23,27 +22,6 @@ export interface ChatCompletionParams {
   maxTokens?: number;
   repeatPenalty?: number;
   stop?: string[];
-}
-
-/**
- * 聊天完成响应
- */
-export interface ChatCompletionResponse {
-  id: string;
-  model: string;
-  choices: Array<{
-    index: number;
-    message: {
-      role: string;
-      content: string;
-    };
-    finishReason: string;
-  }>;
-  usage: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
 }
 
 /**
@@ -123,32 +101,6 @@ export function useStreamingChat() {
         onError?.(err);
         throw err;
       }
-    },
-  });
-}
-
-/**
- * 非流式聊天完成 Hook
- */
-export function useChatCompletion() {
-  return useMutation({
-    mutationFn: async (params: ChatCompletionParams): Promise<ChatCompletionResponse> => {
-      const response = await fetch('/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...params,
-          stream: false,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return response.json();
     },
   });
 }
@@ -238,9 +190,4 @@ export function deleteChatSession(sessionId: string): void {
   saveChatHistory(filtered);
 }
 
-/**
- * 清空所有聊天历史
- */
-export function clearChatHistory(): void {
-  localStorage.removeItem(CHAT_HISTORY_KEY);
-}
+

@@ -269,6 +269,3 @@ export class WebSocketClient {
   }
 }
 
-export function createWebSocketClient(options: WebSocketClientOptions): WebSocketClient {
-  return new WebSocketClient(options);
-}

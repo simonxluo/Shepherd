@@ -8,9 +8,8 @@ export * from './download';
 export * from './events';
 export * from './logs';
 export * from './websocket';
-export * from './common';
 
-// 统一导出节点类型（推荐使用）
+// 统一导出节点类型（推荐）
 // Export unified node types (recommended)
 export type * from './node';
 
@@ -28,7 +27,6 @@ export type {
 // Cluster-specific types (ScanStatus, ClusterOverview, etc.)
 export type {
   ScanStatus,
-  DiscoveredClient,
   ClusterOverview,
   ClientListResponse,
 } from './cluster';

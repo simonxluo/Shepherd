@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, UserSettings, UserProfile, UpdateProfileRequest, UpdateSettingsRequest } from '@/types/user';
+import type { User, UserSettings, UpdateProfileRequest } from '@/types/user';
 
 interface UserState {
   // 当前用户

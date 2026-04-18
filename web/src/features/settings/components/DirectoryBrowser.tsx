@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, Folder, File, Home, HardDrive, Loader2 } from 'lucide-react';
+import { ChevronRight, Folder, File, HardDrive, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,

@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
  * Button 组件
  */
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'icon-button' | 'toggle' | 'submit';
-  size?: 'default' | 'sm' | 'lg' | 'icon' | 'xs';
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'icon-button';
+  size?: 'default' | 'sm' | 'icon' | 'xs';
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -46,16 +46,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             // Icon Button variant - 图标操作,明显边框 (2px)
             'border-2 border-border/50 bg-transparent hover:bg-accent/80 hover:border-border hover:shadow-sm active:bg-accent/70': variant === 'icon-button',
 
-            // Toggle variant - 开关按钮,状态驱动
-            'border-2 border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=off]:bg-background data-[state=off]:text-foreground hover:bg-accent/80': variant === 'toggle',
 
-            // Submit variant - 表单提交,强调样式
-            'bg-primary text-primary-foreground border-2 border-primary/30 hover:bg-primary/90 hover:border-primary/40 active:bg-primary/80 shadow-md hover:shadow-lg': variant === 'submit',
           },
           {
             'h-10 px-4 py-2': size === 'default',
             'h-9 rounded-md px-3 text-xs': size === 'sm',
-            'h-11 rounded-md px-8 text-base': size === 'lg',
             'h-10 w-10': size === 'icon',
             'h-7 px-2 text-xs': size === 'xs',
           },

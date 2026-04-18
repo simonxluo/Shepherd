@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Download, ExternalLink, Loader2, Settings, Key, Globe, File, Filter } from 'lucide-react';
+import { Search, Download, ExternalLink, Loader2, Settings, Key, Globe, File } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useHuggingFaceSearch, useModelRepoConfig, useAvailableEndpoints, useUpdateModelRepoConfig, useModelFiles } from '@/features/downloads/hooks';
 import type { HuggingFaceModel } from '@/lib/api/downloads';

@@ -28,7 +28,6 @@ export function UserMenu({ sidebarOpen }: UserMenuProps) {
   
   const { 
     user, 
-    isAuthenticated, 
     settings,
     logout,
     setShowProfileDialog,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Server, Cpu, HardDrive, Wifi, WifiOff, AlertCircle, Clock, Info } from 'lucide-react';
+import { Server, Cpu, HardDrive, Clock, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ClientInfoDialog } from './ClientInfoDialog';

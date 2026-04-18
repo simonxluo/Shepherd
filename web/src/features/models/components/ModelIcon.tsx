@@ -1,4 +1,3 @@
-import { type ComponentType } from 'react';
 import { Brain } from 'lucide-react';
 
 interface ModelIconProps {

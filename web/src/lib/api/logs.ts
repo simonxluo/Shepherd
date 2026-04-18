@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client';
-import type { LogFileInfo, LogFileContent, ParsedLogEntry, LogFileFilter } from '@/types/logs';
+import type { LogFileInfo, LogFileContent, LogFileFilter } from '@/types/logs';
 
 /**
  * API 响应包装类型

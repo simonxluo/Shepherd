@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Brain, Star, Loader2, Play, Square, Info, Share2, List, Settings } from 'lucide-react';
+import { Star, Loader2, Play, Square, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModelIcon } from '@/features/models/components/ModelIcon';
 import { cn } from '@/lib/utils';

@@ -2,11 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { downloadsApi } from '@/lib/api/downloads';
 import type {
   DownloadTask,
-  DownloadListResponse,
   CreateDownloadParams,
   DownloadState,
 } from '@/types';
-import type { ModelFileInfo } from '@/lib/api/downloads';
 
 /**
  * 下载任务列表 Hook
@@ -26,25 +24,6 @@ export function useDownloads() {
       const activeStates: DownloadState[] = ['preparing', 'downloading', 'merging', 'verifying'];
       const hasActiveTasks = data.some(task => activeStates.includes(task.state));
       return hasActiveTasks ? 1000 : false; // 活跃任务 1 秒刷新,否则不刷新
-    },
-  });
-}
-
-/**
- * 单个下载任务 Hook
- */
-export function useDownload(taskId: string) {
-  return useQuery({
-    queryKey: ['downloads', taskId],
-    queryFn: async () => {
-      const response = await downloadsApi.get(taskId);
-      return response.data;
-    },
-    enabled: !!taskId,
-    refetchInterval: (query) => {
-      const data = query.state.data as DownloadTask | undefined;
-      const activeStates: DownloadState[] = ['preparing', 'downloading', 'merging', 'verifying'];
-      return data && activeStates.includes(data.state) ? 1000 : false;
     },
   });
 }

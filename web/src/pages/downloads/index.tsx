@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Filter, CloudDownload, Search, Download } from 'lucide-react';
+import { Plus, Trash2, CloudDownload, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   useDownloads,

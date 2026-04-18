@@ -4,7 +4,7 @@ import { apiClient } from '@/lib/api/client';
 /**
  * 模型加载配置响应类型
  */
-export interface ModelLoadConfigResponse {
+interface ModelLoadConfigResponse {
   exists: boolean;
   config?: {
     id: string;

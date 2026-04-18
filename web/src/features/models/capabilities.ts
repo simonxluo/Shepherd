@@ -20,7 +20,7 @@ export interface SystemGPUInfo {
 /**
  * 系统 GPU 列表响应
  */
-export interface SystemGPUListResponse {
+interface SystemGPUListResponse {
   gpus: SystemGPUInfo[];      // 详细 GPU 信息（Shepherd 扩展）
   devices: string[];    // 简单设备字符串列表（兼容 LlamacppServer 格式）
   count: number;
@@ -53,7 +53,7 @@ export interface LlamacppBackend {
   available: boolean;
 }
 
-export interface LlamacppBackendListResponse {
+interface LlamacppBackendListResponse {
   backends: LlamacppBackend[];
   count: number;
 }
@@ -145,7 +145,7 @@ export function useAutoDetectCapabilities() {
 /**
  * 显存估算请求参数
  */
-export interface EstimateVRAMParams {
+interface EstimateVRAMParams {
   modelId: string;
   llamaBinPath: string;
   ctxSize?: number;
@@ -162,7 +162,7 @@ export interface EstimateVRAMParams {
 /**
  * 显存估算响应数据
  */
-export interface EstimateVRAMData {
+interface EstimateVRAMData {
   success: boolean;
   vram?: string;      // "60565"
   vramMB?: number;    // 60565

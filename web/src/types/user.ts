@@ -36,7 +36,3 @@ export interface UpdateSettingsRequest {
   defaultModel?: string;
 }
 
-export interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
-}

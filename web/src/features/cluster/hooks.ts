@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
-import { useConfig } from '@/lib/config';
 import type {
   Client,
   ClusterTask,
@@ -124,23 +123,6 @@ export function useClient(clientId: string, options?: { enabled?: boolean }) {
 }
 
 /**
- * 断开客户端 Hook
- */
-export function useDisconnectClient() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (clientId: string) => {
-      const response = await apiClient.delete<{ success: boolean }>(`/master/clients/${clientId}`);
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cluster'] });
-    },
-  });
-}
-
-/**
  * 任务列表 Hook
  */
 export function useClusterTasks() {
@@ -155,61 +137,6 @@ export function useClusterTasks() {
     staleTime: 5 * 1000,
     refetchInterval: 2000,
     enabled: mode === 'master', // 仅在 Master 模式下启用
-  });
-}
-
-/**
- * 创建任务 Hook
- */
-export function useCreateClusterTask() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (task: {
-      type: string;
-      payload: Record<string, unknown>;
-      assignTo?: string;
-    }) => {
-      const response = await apiClient.post<{ success: boolean; data: { task: ClusterTask } }>('/master/tasks', task);
-      return response.data.task;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cluster', 'tasks'] });
-    },
-  });
-}
-
-/**
- * 取消任务 Hook
- */
-export function useCancelClusterTask() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (taskId: string) => {
-      const response = await apiClient.delete<{ success: boolean }>(`/master/tasks/${taskId}`);
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cluster', 'tasks'] });
-    },
-  });
-}
-
-/**
- * 重试任务 Hook
- */
-export function useRetryClusterTask() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (taskId: string) => {
-      const response = await apiClient.post<{ success: boolean }>(`/master/tasks/${taskId}/retry`);
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cluster', 'tasks'] });
-    },
   });
 }
 
@@ -230,42 +157,6 @@ export function useNetworkScan() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cluster', 'scan'] });
-    },
-  });
-}
-
-/**
- * 扫描状态 Hook
- */
-export function useScanStatus() {
-  return useQuery({
-    queryKey: ['cluster', 'scan'],
-    queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: ScanStatus }>('/master/scan/status');
-      return response.data;
-    },
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      return data?.running ? 1000 : false;
-    },
-  });
-}
-
-/**
- * 设置调度策略 Hook
- */
-export function useSetScheduleStrategy() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (strategy: ScheduleStrategy) => {
-      const response = await apiClient.put<{ success: boolean }>('/master/schedule/strategy', {
-        strategy,
-      });
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cluster'] });
     },
   });
 }

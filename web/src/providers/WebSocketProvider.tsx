@@ -211,14 +211,4 @@ export function WebSocketProvider({
   );
 }
 
-export function useWebSocketContext(): WebSocketContextValue {
-  const context = useContext(WebSocketContext);
 
-  if (!context) {
-    throw new Error('useWebSocketContext must be used within a WebSocketProvider');
-  }
-
-  return context;
-}
-
-export { WebSocketContext };
