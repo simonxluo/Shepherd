@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 
 /**
- * 模型加载配置响应类型
+ * Model load config response type
  */
 interface ModelLoadConfigResponse {
   exists: boolean;
@@ -18,7 +18,7 @@ interface ModelLoadConfigResponse {
 }
 
 /**
- * 获取模型加载配置 Hook
+ * Fetch model load config hook
  */
 export function useModelLoadConfig(modelId: string) {
   return useQuery<ModelLoadConfigResponse>({
@@ -30,13 +30,13 @@ export function useModelLoadConfig(modelId: string) {
       return response.data;
     },
     enabled: !!modelId,
-    staleTime: 10 * 60 * 1000, // 10 分钟缓存
+    staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 }
 
 /**
- * 保存模型加载配置 Hook
+ * Save model load config hook
  */
 export function useSaveModelLoadConfig() {
   const queryClient = useQueryClient();
@@ -58,7 +58,7 @@ export function useSaveModelLoadConfig() {
 }
 
 /**
- * 删除模型加载配置 Hook
+ * Delete model load config hook
  */
 export function useDeleteModelLoadConfig() {
   const queryClient = useQueryClient();
@@ -71,7 +71,6 @@ export function useDeleteModelLoadConfig() {
       return response;
     },
     onSuccess: (_, modelId) => {
-      // 使配置查询失效
       queryClient.invalidateQueries({ queryKey: ['models', modelId, 'load-config'] });
     },
   });

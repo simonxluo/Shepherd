@@ -7,7 +7,7 @@ import type {
 } from '@/types';
 
 /**
- * 下载任务列表 Hook
+ * Download task list hook
  */
 export function useDownloads() {
   return useQuery({
@@ -16,20 +16,19 @@ export function useDownloads() {
       const response = await downloadsApi.list();
       return response.data?.downloads || [];
     },
-    staleTime: 5 * 1000, // 5 秒
-    // ✅ 动态调整刷新频率: 只在有活跃任务时轮询
+    staleTime: 5 * 1000,
     refetchInterval: (query) => {
       const data = query.state.data as DownloadTask[] | undefined;
-      if (!data || data.length === 0) return false; // 无任务时不刷新
+      if (!data || data.length === 0) return false;
       const activeStates: DownloadState[] = ['preparing', 'downloading', 'merging', 'verifying'];
       const hasActiveTasks = data.some(task => activeStates.includes(task.state));
-      return hasActiveTasks ? 1000 : false; // 活跃任务 1 秒刷新,否则不刷新
+      return hasActiveTasks ? 1000 : false;
     },
   });
 }
 
 /**
- * 创建下载任务 Hook
+ * Create download task hook
  */
 export function useCreateDownload() {
   const queryClient = useQueryClient();
@@ -49,7 +48,7 @@ export function useCreateDownload() {
 }
 
 /**
- * 暂停下载 Hook
+ * Pause download hook
  */
 export function usePauseDownload() {
   const queryClient = useQueryClient();
@@ -65,7 +64,7 @@ export function usePauseDownload() {
 }
 
 /**
- * 恢复下载 Hook
+ * Resume download hook
  */
 export function useResumeDownload() {
   const queryClient = useQueryClient();
@@ -81,7 +80,7 @@ export function useResumeDownload() {
 }
 
 /**
- * 取消下载 Hook
+ * Cancel download hook
  */
 export function useCancelDownload() {
   const queryClient = useQueryClient();
@@ -97,7 +96,7 @@ export function useCancelDownload() {
 }
 
 /**
- * 重试下载 Hook
+ * Retry download hook
  */
 export function useRetryDownload() {
   const queryClient = useQueryClient();
@@ -113,7 +112,7 @@ export function useRetryDownload() {
 }
 
 /**
- * 清理已完成下载 Hook
+ * Clear completed downloads hook
  */
 export function useClearCompletedDownloads() {
   const queryClient = useQueryClient();
@@ -129,7 +128,7 @@ export function useClearCompletedDownloads() {
 }
 
 /**
- * 过滤下载任务 Hook
+ * Filter download tasks hook
  */
 export function useFilteredDownloads(
   downloads: DownloadTask[] | undefined,
@@ -150,10 +149,8 @@ export function useFilteredDownloads(
       if (!matchRepo && !matchFile) return false;
     }
 
-    // 状态过滤
     if (filters.state && task.state !== filters.state) return false;
 
-    // 来源过滤
     if (filters.source && task.source !== filters.source) return false;
 
     return true;
@@ -161,7 +158,7 @@ export function useFilteredDownloads(
 }
 
 /**
- * 下载统计 Hook
+ * Download statistics hook
  */
 export function useDownloadStats(downloads: DownloadTask[] | undefined) {
   if (!downloads) {
@@ -193,7 +190,7 @@ export function useDownloadStats(downloads: DownloadTask[] | undefined) {
 }
 
 /**
- * 获取模型文件列表 Hook
+ * Model file list hook
  */
 export function useModelFiles(source: 'huggingface' | 'modelscope', repoId: string) {
   return useQuery({
@@ -212,10 +209,7 @@ export function useModelFiles(source: 'huggingface' | 'modelscope', repoId: stri
 }
 
 /**
- * 搜索 HuggingFace 模型 Hook
- * @param query 搜索关键词
- * @param limit 返回数量限制
- * @param format 格式过滤器 (gguf, safetensors, onnx, bin, all)
+ * Search HuggingFace models hook
  */
 export function useHuggingFaceSearch(query: string, limit?: number, format?: string) {
   return useQuery({
@@ -240,7 +234,7 @@ interface ModelRepoConfig {
 }
 
 /**
- * 获取模型仓库配置 Hook
+ * Model repo config hook
  */
 export function useModelRepoConfig() {
   return useQuery({
@@ -257,7 +251,7 @@ export function useModelRepoConfig() {
 }
 
 /**
- * 获取可用端点列表 Hook
+ * Available endpoints hook
  */
 export function useAvailableEndpoints() {
   return useQuery({
@@ -274,7 +268,7 @@ export function useAvailableEndpoints() {
 }
 
 /**
- * 更新模型仓库配置 Hook
+ * Update model repo config hook
  */
 export function useUpdateModelRepoConfig() {
   const queryClient = useQueryClient();

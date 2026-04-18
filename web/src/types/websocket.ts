@@ -1,30 +1,30 @@
 /**
- * WebSocket 类型定义
- * 用于实时通信的类型安全接口
+ * WebSocket type definitions.
+ * Type-safe interfaces for real-time communication.
  */
 
 /**
- * WebSocket 连接状态
+ * WebSocket connection status
  */
 export type WebSocketConnectionStatus =
-  | 'connecting'    // 连接中
-  | 'connected'     // 已连接
-  | 'disconnected'  // 已断开
-  | 'reconnecting'  // 重连中
-  | 'error';        // 连接错误
+  | 'connecting'    // Connecting
+  | 'connected'     // Connected
+  | 'disconnected'  // Disconnected
+  | 'reconnecting'  // Reconnecting
+  | 'error';        // Connection error
 
 /**
- * WebSocket 消息类型
+ * WebSocket message types
  */
 export type WebSocketMessageType =
-  | 'ping'          // 心跳请求
-  | 'pong'          // 心跳响应
-  | 'event'         // 事件消息
-  | 'notification'  // 通知消息
-  | 'error';        // 错误消息
+  | 'ping'          // Heartbeat request
+  | 'pong'          // Heartbeat response
+  | 'event'         // Event message
+  | 'notification'  // Notification
+  | 'error';        // Error message
 
 /**
- * WebSocket 基础消息接口
+ * Base WebSocket message interface
  */
 export interface WebSocketMessage<T = unknown> {
   type: WebSocketMessageType;
@@ -33,21 +33,21 @@ export interface WebSocketMessage<T = unknown> {
 }
 
 /**
- * 心跳消息
+ * Ping message
  */
 export interface PingMessage extends WebSocketMessage {
   type: 'ping';
 }
 
 /**
- * 心跳响应消息
+ * Pong message
  */
 export interface PongMessage extends WebSocketMessage {
   type: 'pong';
 }
 
 /**
- * 事件消息
+ * Event message
  */
 export interface EventMessage<T = unknown> extends Omit<WebSocketMessage<T>, 'payload'> {
   type: 'event';
@@ -58,7 +58,7 @@ export interface EventMessage<T = unknown> extends Omit<WebSocketMessage<T>, 'pa
 }
 
 /**
- * 通知消息
+ * Notification message
  */
 export interface NotificationMessage extends WebSocketMessage {
   type: 'notification';
@@ -70,7 +70,7 @@ export interface NotificationMessage extends WebSocketMessage {
 }
 
 /**
- * 错误消息
+ * Error message
  */
 export interface ErrorMessage extends WebSocketMessage {
   type: 'error';
@@ -82,31 +82,31 @@ export interface ErrorMessage extends WebSocketMessage {
 }
 
 /**
- * WebSocket 客户端配置
+ * WebSocket client options
  */
 export interface WebSocketClientOptions {
-  /** WebSocket 服务器 URL */
+  /** WebSocket server URL */
   url: string;
-  /** 心跳间隔（毫秒），默认 30000 */
+  /** Heartbeat interval (ms), default 30000 */
   heartbeatInterval?: number;
-  /** 心跳超时（毫秒），默认 10000 */
+  /** Heartbeat timeout (ms), default 10000 */
   heartbeatTimeout?: number;
-  /** 最大重连次数，默认 5 */
+  /** Max reconnect attempts, default 5 */
   maxReconnectAttempts?: number;
-  /** 初始重连延迟（毫秒），默认 1000 */
+  /** Initial reconnect delay (ms), default 1000 */
   initialReconnectDelay?: number;
-  /** 最大重连延迟（毫秒），默认 30000 */
+  /** Max reconnect delay (ms), default 30000 */
   maxReconnectDelay?: number;
-  /** 是否自动重连，默认 true */
+  /** Auto reconnect, default true */
   autoReconnect?: boolean;
-  /** 是否在连接时发送认证信息 */
+  /** Send auth payload on connect */
   authPayload?: Record<string, unknown>;
-  /** 调试模式 */
+  /** Debug mode */
   debug?: boolean;
 }
 
 /**
- * WebSocket 客户端事件处理器
+ * WebSocket event handlers
  */
 export interface WebSocketEventHandlers {
   onOpen?: (event: Event) => void;
@@ -119,39 +119,39 @@ export interface WebSocketEventHandlers {
 }
 
 /**
- * WebSocket Hook 返回值
+ * WebSocket hook return value
  */
 export interface UseWebSocketReturn {
-  /** 当前连接状态 */
+  /** Current connection status */
   connectionStatus: WebSocketConnectionStatus;
-  /** 最后接收到的消息 */
+  /** Last received message */
   lastMessage: WebSocketMessage | null;
-  /** 发送消息 */
+  /** Send message */
   sendMessage: <T = unknown>(message: WebSocketMessage<T>) => void;
-  /** 发送原始数据 */
+  /** Send raw data */
   sendRaw: (data: string | ArrayBuffer | Blob) => void;
-  /** 手动连接 */
+  /** Manual connect */
   connect: () => void;
-  /** 手动断开 */
+  /** Manual disconnect */
   disconnect: () => void;
-  /** 重连次数 */
+  /** Reconnect attempts */
   reconnectAttempts: number;
-  /** 是否已连接 */
+  /** Connected */
   isConnected: boolean;
-  /** 是否正在连接 */
+  /** Connecting */
   isConnecting: boolean;
 }
 
 /**
- * WebSocket Context 值
+ * WebSocket context value
  */
 export interface WebSocketContextValue extends UseWebSocketReturn {
-  /** 订阅特定事件类型 */
+  /** Subscribe to specific event type */
   subscribe: <T = unknown>(
     eventType: string,
     handler: (data: T) => void
   ) => () => void;
-  /** 取消所有订阅 */
+  /** Unsubscribe all */
   unsubscribeAll: () => void;
 }
 
@@ -159,18 +159,18 @@ export interface WebSocketContextValue extends UseWebSocketReturn {
  * WebSocket Provider Props
  */
 export interface WebSocketProviderProps {
-  /** 子组件 */
+  /** Child components */
   children: React.ReactNode;
-  /** WebSocket 服务器 URL（可选，默认从配置读取） */
+  /** WebSocket server URL (optional; read from config by default) */
   url?: string;
-  /** 是否自动连接，默认 true */
+  /** Auto connect, default true */
   autoConnect?: boolean;
-  /** 自定义配置 */
+  /** Custom options */
   options?: Partial<WebSocketClientOptions>;
-  /** 连接成功回调 */
+  /** Connection success callback */
   onConnect?: () => void;
-  /** 断开连接回调 */
+  /** Disconnection callback */
   onDisconnect?: () => void;
-  /** 错误回调 */
+  /** Error callback */
   onError?: (error: Error) => void;
 }

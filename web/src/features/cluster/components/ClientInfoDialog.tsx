@@ -47,7 +47,7 @@ interface ClientInfoDialogProps {
 }
 
 /**
- * 格式化字节大小
+ * Format byte size
  */
 function formatSize(bytes: number): string {
   if (bytes === 0 || bytes === undefined) return '0 B';
@@ -64,7 +64,7 @@ function formatSize(bytes: number): string {
 }
 
 /**
- * 获取状态颜色配置
+ * Get status color configuration
  */
 function getStatusConfig(status: string) {
   switch (status) {
@@ -112,7 +112,7 @@ function getStatusConfig(status: string) {
 }
 
 /**
- * 环形进度条组件
+ * Circular progress bar component
  */
 function CircularProgress({
   value,
@@ -178,7 +178,7 @@ function CircularProgress({
 }
 
 /**
- * 资源指标卡片
+ * Resource metric card
  */
 function MetricCard({
   icon: Icon,
@@ -215,7 +215,7 @@ function MetricCard({
 }
 
 /**
- * 头部统计卡片 - 精致简约风格
+ * Header stat card
  */
 interface HeaderStatCardProps {
   icon: React.ElementType;
@@ -246,7 +246,7 @@ function HeaderStatCard({ icon: Icon, label, value, color }: HeaderStatCardProps
 }
 
 /**
- * GPU 详情卡片
+ * GPU detail card
  */
 function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
   const vramPercent = gpu.totalMemory > 0 ? (gpu.usedMemory / gpu.totalMemory) * 100 : 0;
@@ -341,8 +341,7 @@ function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
 }
 
 /**
- * 客户端详细信息对话框
- * 现代化卡片式设计，实时显示客户端系统信息
+ * Client detail dialog with real-time system information
  */
 export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProps) {
   const { data: liveClient } = useClient(client?.id || '', {
@@ -674,8 +673,7 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
 
 
 /**
- * 节点配置面板组件
- * 显示节点配置信息和 llama.cpp 测试功能
+ * Node configuration panel with llama.cpp testing
  */
 function NodeConfigPanel({ clientId }: { clientId: string }) {
   const { data: config, isLoading } = useNodeConfig(clientId, { enabled: !!clientId });
@@ -716,7 +714,6 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
 
   return (
     <div className="space-y-6">
-      {/* llama.cpp 测试按钮 */}
       <div className="flex items-center justify-between p-4 bg-card rounded-xl border border-border">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 dark:bg-primary/20 rounded-lg">
@@ -741,7 +738,6 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
         </Button>
       </div>
 
-      {/* 测试结果 */}
       {testResult && (
         <div
           className={cn(
@@ -782,7 +778,6 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
         </div>
       )}
 
-      {/* llama.cpp 路径 */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-border flex items-center gap-2">
           <FileCode className="w-4 h-4 text-primary" />
@@ -828,7 +823,6 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
         </div>
       </div>
 
-      {/* 模型路径 */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-border flex items-center gap-2">
           <FolderOpen className="w-4 h-4 text-primary" />
@@ -871,7 +865,6 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
         </div>
       </div>
 
-      {/* 环境信息 */}
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -938,7 +931,6 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
         </div>
       </div>
 
-      {/* Conda 配置 */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-border flex items-center gap-2">
           <Layers className="w-4 h-4 text-primary" />
@@ -968,7 +960,6 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
         )}
       </div>
 
-      {/* 收集时间 */}
       <div className="text-xs text-muted-foreground text-right">
         配置收集时间: {new Date(config.collectedAt).toLocaleString('zh-CN')}
       </div>

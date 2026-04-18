@@ -12,7 +12,7 @@ interface ClientCardProps {
 }
 
 /**
- * 客户端状态颜色映射
+ * Client status color mapping
  */
 const STATUS_COLORS: Record<ClientStatus, string> = {
   online: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
@@ -24,7 +24,7 @@ const STATUS_COLORS: Record<ClientStatus, string> = {
 };
 
 /**
- * 客户端状态标签
+ * Client status labels
  */
 const STATUS_LABELS: Record<ClientStatus, string> = {
   online: '在线',
@@ -36,7 +36,7 @@ const STATUS_LABELS: Record<ClientStatus, string> = {
 };
 
 /**
- * 格式化字节大小
+ * Format byte size
  */
 function formatSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -52,7 +52,7 @@ function formatSize(bytes: number): string {
 }
 
 /**
- * 格式化最后见到时间
+ * Format last seen time
  */
 function formatLastSeen(timestamp: string): string {
   const date = new Date(timestamp);
@@ -71,7 +71,6 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
   const statusLabel = STATUS_LABELS[client.status];
   const isConnected = client.status === 'online' || client.status === 'busy';
 
-  // 资源使用百分比
   const cpuPercent = client.resources?.cpuPercent ?? 0;
   const memoryPercent = client.resources?.memoryUsed
     ? (client.resources.memoryUsed / (client.resources.memoryTotal ?? 1)) * 100
@@ -89,7 +88,6 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
         onClose={() => setDialogOpen(false)}
       />
     <div className="bg-card rounded-lg border border-border p-4 hover:shadow-lg transition-shadow">
-      {/* 标题栏 */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
@@ -119,7 +117,6 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
         </span>
       </div>
 
-      {/* 能力信息 */}
       {client.capabilities && (
         <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-muted rounded-lg">
           <div className="flex items-center gap-2 text-sm">
@@ -153,7 +150,6 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
         </div>
       )}
 
-      {/* 标签 */}
       {client.tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {client.tags.map((tag) => (
@@ -167,10 +163,8 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
         </div>
       )}
 
-      {/* 资源使用 */}
       {client.resources && isConnected && (
         <div className="space-y-2 mb-4">
-          {/* CPU */}
           <div>
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
               <span>CPU</span>
@@ -191,7 +185,6 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
             </div>
           </div>
 
-          {/* 内存 */}
           <div>
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
               <span>内存</span>
@@ -214,7 +207,6 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
             </div>
           </div>
 
-          {/* GPU */}
           {(client.resources?.gpuInfo?.length ?? 0) > 0 && (
             <>
               <div>
@@ -259,7 +251,6 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
         </div>
       )}
 
-      {/* 最后见到时间和操作 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="w-3 h-3" />
@@ -288,7 +279,6 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
         </div>
       </div>
 
-      {/* 元数据 */}
       {Object.keys(client.metadata).length > 0 && (
         <details className="mt-3">
           <summary className="cursor-pointer text-xs text-muted-foreground">

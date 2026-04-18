@@ -18,7 +18,7 @@ interface ToastStore {
   clearToasts: () => void;
 }
 
-// 生成唯一 ID
+// Generate unique ID
 let toastId = 0;
 const generateId = () => `toast-${++toastId}`;
 
@@ -29,7 +29,7 @@ export const useToastStore = create<ToastStore>((set) => ({
     const newToast: Toast = { ...toast, id };
     set((state) => ({ toasts: [...state.toasts, newToast] }));
 
-    // 自动关闭
+    // Auto-dismiss
     const duration = toast.duration ?? 3000;
     if (duration > 0) {
       setTimeout(() => {
@@ -41,7 +41,7 @@ export const useToastStore = create<ToastStore>((set) => ({
   clearToasts: () => set({ toasts: [] }),
 }));
 
-// Toast 类型对应的图标
+// Icons by toast type
 export const ToastIcons = {
   success: CheckCircle,
   error: XCircle,
@@ -49,7 +49,7 @@ export const ToastIcons = {
   info: Info,
 };
 
-// Toast 类型对应的样式
+// Styles by toast type
 export const ToastStyles = {
   success: {
     container: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200',

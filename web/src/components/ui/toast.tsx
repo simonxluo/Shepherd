@@ -20,10 +20,10 @@ export function Toast({ type, title, description, onClose }: ToastProps) {
         styles.container
       )}
     >
-      {/* 图标 */}
+      {/* Icon */}
       <IconComponent className={cn('w-5 h-5 shrink-0 mt-0.5', styles.icon)} />
 
-      {/* 内容 */}
+      {/* Content */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold">{title}</p>
         {description && (
@@ -31,7 +31,7 @@ export function Toast({ type, title, description, onClose }: ToastProps) {
         )}
       </div>
 
-      {/* 关闭按钮 */}
+      {/* Close button */}
       {onClose && (
         <button
           onClick={onClose}

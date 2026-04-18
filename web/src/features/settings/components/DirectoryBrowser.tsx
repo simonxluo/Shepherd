@@ -31,7 +31,6 @@ export function DirectoryBrowser({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPath, setSelectedPath] = useState('');
 
-  // 加载目录内容
   const loadDirectory = async (path: string) => {
     setIsLoading(true);
     try {
@@ -46,42 +45,36 @@ export function DirectoryBrowser({
         }
       }
     } catch (error) {
-      console.error('加载目录失败:', error);
+      console.error('Failed to load directory:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 初始化加载
   useEffect(() => {
     if (open) {
       loadDirectory(initialPath || '');
     }
   }, [open]);
 
-  // 选择文件夹
   const handleSelectFolder = (folder: DirectoryItem) => {
     setSelectedPath(folder.path);
   };
 
-  // 双击进入文件夹
   const handleFolderDoubleClick = (folder: DirectoryItem) => {
     loadDirectory(folder.path);
   };
 
-  // 向上导航
   const handleGoUp = () => {
     if (parentPath && parentPath !== currentPath) {
       loadDirectory(parentPath);
     }
   };
 
-  // 返回根目录
   const handleGoRoots = () => {
     loadDirectory('');
   };
 
-  // 确认选择
   const handleConfirm = () => {
     if (selectedPath) {
       onSelect(selectedPath);
@@ -92,11 +85,9 @@ export function DirectoryBrowser({
     }
   };
 
-  // 格式化路径显示
   const formatPath = (path: string) => {
     if (!path) return '根目录';
     if (path === '/') return '根目录';
-    // 缩短过长的路径
     if (path.length > 50) {
       const parts = path.split('/');
       return '.../' + parts.slice(-2).join('/');
@@ -115,7 +106,7 @@ export function DirectoryBrowser({
         </DialogHeader>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {/* 导航栏 */}
+          {/* Navigation bar */}
           <div className="px-6 py-3 border-b flex items-center gap-2 bg-muted/30">
             <Button
               variant="outline"
@@ -142,7 +133,7 @@ export function DirectoryBrowser({
             </div>
           </div>
 
-          {/* 加载状态 */}
+          {/* Loading state */}
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -150,10 +141,10 @@ export function DirectoryBrowser({
             </div>
           )}
 
-          {/* 内容区域 */}
+          {/* Content area */}
           {!isLoading && (
             <div className="flex-1 flex overflow-hidden">
-              {/* 文件夹面板 */}
+              {/* Folders panel */}
               <div className="flex-1 border-r overflow-auto p-4">
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b text-sm font-medium text-muted-foreground">
                   <Folder className="w-4 h-4" />
@@ -185,7 +176,7 @@ export function DirectoryBrowser({
                 )}
               </div>
 
-              {/* 文件面板 */}
+              {/* Files panel */}
               <div className="flex-1 overflow-auto p-4">
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b text-sm font-medium text-muted-foreground">
                   <File className="w-4 h-4" />
@@ -228,7 +219,7 @@ export function DirectoryBrowser({
             </div>
           )}
 
-          {/* 根目录列表 */}
+          {/* Root listing */}
           {!isLoading && !currentPath && roots.length > 0 && (
             <div className="flex-1 overflow-auto p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -250,7 +241,7 @@ export function DirectoryBrowser({
           )}
         </div>
 
-        {/* 底部按钮 */}
+        {/* Footer */}
         <div className="px-6 py-4 border-t flex items-center justify-end gap-2 bg-muted/30">
           <Button
             variant="outline"

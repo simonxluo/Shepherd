@@ -1,9 +1,6 @@
 import { type ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
-/**
- * Button 组件
- */
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'icon-button';
   size?: 'default' | 'sm' | 'icon' | 'xs';
@@ -25,25 +22,25 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           // Shadow for depth
           'shadow-sm hover:shadow-md transition-shadow',
           {
-            // Default variant - 主要操作,细微边框
+            // Default variant
             'bg-primary text-primary-foreground border border-primary/20 hover:bg-primary/90 hover:border-primary/30 active:bg-primary/80': variant === 'default',
 
-            // Destructive variant - 危险操作,细微边框
+            // Destructive variant
             'bg-destructive text-destructive-foreground border border-destructive/20 hover:bg-destructive/90 hover:border-destructive/30 active:bg-destructive/80': variant === 'destructive',
 
-            // Outline variant - 次要操作,明显边框 (2px)
+            // Outline variant (2px border)
             'border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-border/70 active:bg-accent/80': variant === 'outline',
 
-            // Secondary variant - 辅助操作,细微边框
+            // Secondary variant
             'bg-secondary text-secondary-foreground border border-secondary/50 hover:bg-secondary/80 hover:border-secondary/60 active:bg-secondary/70': variant === 'secondary',
 
-            // Ghost variant - 低权重操作,无边框
+            // Ghost variant
             'hover:bg-accent/80 hover:text-accent-foreground active:bg-accent/60': variant === 'ghost',
 
-            // Link variant - 文字链接,无边框
+            // Link variant
             'text-primary underline-offset-4 hover:underline active:text-primary/80': variant === 'link',
 
-            // Icon Button variant - 图标操作,明显边框 (2px)
+            // Icon button variant (2px border)
             'border-2 border-border/50 bg-transparent hover:bg-accent/80 hover:border-border hover:shadow-sm active:bg-accent/70': variant === 'icon-button',
 
 

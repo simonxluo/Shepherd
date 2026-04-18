@@ -16,10 +16,10 @@ import type {
 } from '@/types';
 
 /**
- * 服务器配置响应类型
+ * Server config response type
  */
 interface ServerConfigResponse {
-  role: 'master' | 'client' | 'hybrid';  // 使用 role 代替 mode
+  role: 'master' | 'client' | 'hybrid';
   server: {
     host: string;
     web_port: number;
@@ -46,7 +46,7 @@ interface ServerConfigResponse {
 }
 
 /**
- * 获取服务器配置 Hook
+ * Server config hook
  */
 export function useServerConfig() {
   return useQuery({
@@ -55,24 +55,22 @@ export function useServerConfig() {
       const response = await apiClient.get<{ success: boolean; data: ServerConfigResponse }>('/config');
       return response.data;
     },
-    staleTime: 5 * 60 * 1000, // 5 分钟
+    staleTime: 5 * 60 * 1000,
     refetchInterval: false,
   });
 }
 
 /**
- * 获取当前运行模式
- * 集群相关功能仅在 Master 模式下可用
+ * Get current cluster mode. Cluster features only available in master mode.
  */
 function useClusterMode(): 'master' | 'client' | 'hybrid' {
   const { data: serverConfig } = useServerConfig();
 
-  // 从后端 API 获取节点角色，如果未获取到则默认为 hybrid
   return serverConfig?.role || 'hybrid';
 }
 
 /**
- * 集群概览 Hook
+ * Cluster overview hook
  */
 export function useClusterOverview() {
   const mode = useClusterMode();
@@ -83,14 +81,14 @@ export function useClusterOverview() {
       const response = await apiClient.get<{ success: boolean; data: ClusterOverview }>('/master/overview');
       return response.data;
     },
-    staleTime: 10 * 1000, // 10 秒
-    refetchInterval: 5000, // 每 5 秒刷新
-    enabled: mode === 'master', // 仅在 Master 模式下启用
+    staleTime: 10 * 1000,
+    refetchInterval: 5000,
+    enabled: mode === 'master',
   });
 }
 
 /**
- * 客户端列表 Hook
+ * Client list hook
  */
 export function useClients() {
   const mode = useClusterMode();
@@ -103,12 +101,12 @@ export function useClients() {
     },
     staleTime: 10 * 1000,
     refetchInterval: 5000,
-    enabled: mode === 'master', // 仅在 Master 模式下启用
+    enabled: mode === 'master',
   });
 }
 
 /**
- * 单个客户端 Hook
+ * Single client hook
  */
 export function useClient(clientId: string, options?: { enabled?: boolean }) {
   return useQuery({
@@ -123,7 +121,7 @@ export function useClient(clientId: string, options?: { enabled?: boolean }) {
 }
 
 /**
- * 任务列表 Hook
+ * Cluster task list hook
  */
 export function useClusterTasks() {
   const mode = useClusterMode();
@@ -136,12 +134,12 @@ export function useClusterTasks() {
     },
     staleTime: 5 * 1000,
     refetchInterval: 2000,
-    enabled: mode === 'master', // 仅在 Master 模式下启用
+    enabled: mode === 'master',
   });
 }
 
 /**
- * 扫描网络 Hook
+ * Network scan hook
  */
 export function useNetworkScan() {
   const queryClient = useQueryClient();
@@ -162,7 +160,7 @@ export function useNetworkScan() {
 }
 
 /**
- * 过滤客户端 Hook
+ * Filter clients hook
  */
 export function useFilteredClients(
   clients: Client[] | undefined,
@@ -183,10 +181,8 @@ export function useFilteredClients(
       if (!matchName && !matchAddress) return false;
     }
 
-    // 状态过滤
     if (filters.status && client.status !== filters.status) return false;
 
-    // 标签过滤
     if (filters.hasTag && !client.tags.includes(filters.hasTag)) return false;
 
     return true;
@@ -194,7 +190,7 @@ export function useFilteredClients(
 }
 
 /**
- * 过滤任务 Hook
+ * Filter tasks hook
  */
 export function useFilteredTasks(
   tasks: ClusterTask[] | undefined,
@@ -215,13 +211,10 @@ export function useFilteredTasks(
       if (!matchId) return false;
     }
 
-    // 状态过滤
     if (filters.status && task.status !== filters.status) return false;
 
-    // 类型过滤
     if (filters.type && task.type !== filters.type) return false;
 
-    // 分配过滤
     if (filters.assignedTo && task.assignedTo !== filters.assignedTo) return false;
 
     return true;
@@ -230,8 +223,7 @@ export function useFilteredTasks(
 
 
 /**
- * 获取在线节点列表 Hook（用于节点选择）
- * 返回所有在线状态的节点，包含资源信息
+ * Online nodes hook for node selection
  */
 export function useOnlineNodes() {
   const mode = useClusterMode();
@@ -239,28 +231,26 @@ export function useOnlineNodes() {
   return useQuery<UnifiedNode[]>({
     queryKey: ['cluster', 'nodes', 'online'],
     queryFn: async () => {
-      // 使用 /nodes 端点获取所有节点
       const response = await apiClient.get<{
         success: boolean;
         data: {
           nodes: UnifiedNode[];
         };
       }>('/nodes');
-      // 只返回在线节点
       return response.data.nodes.filter(
         (node) => node.status === ('online' as NodeStatus)
       );
     },
-    staleTime: 10 * 1000, // 10 秒缓存
-    refetchInterval: 5000, // 每 5 秒刷新
-    enabled: mode === 'master', // 仅在 Master 模式下启用
+    staleTime: 10 * 1000,
+    refetchInterval: 5000,
+    enabled: mode === 'master',
   });
 }
 
 
 
 /**
- * 获取节点配置信息 Hook
+ * Node config hook
  */
 export function useNodeConfig(nodeId: string, options?: { enabled?: boolean }) {
   return useQuery<NodeConfigInfo>({
@@ -273,12 +263,12 @@ export function useNodeConfig(nodeId: string, options?: { enabled?: boolean }) {
       return response.data;
     },
     enabled: !!nodeId && options?.enabled !== false,
-    staleTime: 60 * 1000, // 1 分钟缓存
+    staleTime: 60 * 1000,
   });
 }
 
 /**
- * 测试节点 llama.cpp Hook
+ * Test node llama.cpp hook
  */
 export function useTestNodeLlamacpp() {
   const queryClient = useQueryClient();
@@ -292,7 +282,6 @@ export function useTestNodeLlamacpp() {
       return response.data;
     },
     onSuccess: (_, nodeId) => {
-      // 使节点配置缓存失效，以便获取最新状态
       queryClient.invalidateQueries({
         queryKey: ['cluster', 'nodes', nodeId, 'config'],
       });

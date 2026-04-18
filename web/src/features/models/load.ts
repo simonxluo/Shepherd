@@ -9,7 +9,7 @@ import type {
 } from '@/types';
 
 /**
- * 模型列表 Hook
+ * Model list hook
  */
 export function useModels() {
   return useQuery<Model[]>({
@@ -19,10 +19,9 @@ export function useModels() {
       const data = response.data;
       return data.models;
     },
-    staleTime: 2000, // 2秒后数据视为过期
-    refetchOnWindowFocus: true, // 窗口获得焦点时刷新
+    staleTime: 2000,
+    refetchOnWindowFocus: true,
     refetchInterval: (query) => {
-      // 如果有模型正在加载或卸载，每2秒刷新一次
       const data = query.state.data;
       const hasLoadingOrUnloading = data?.some(m => m.status === 'loading' || m.status === 'unloading');
       return hasLoadingOrUnloading ? 2000 : false;
@@ -31,7 +30,7 @@ export function useModels() {
 }
 
 /**
- * 单个模型 Hook
+ * Single model hook
  */
 export function useModel(modelId: string) {
   return useQuery({
@@ -45,7 +44,7 @@ export function useModel(modelId: string) {
 }
 
 /**
- * 加载模型 Hook
+ * Load model hook
  */
 export function useLoadModel() {
   const queryClient = useQueryClient();
@@ -59,14 +58,13 @@ export function useLoadModel() {
       return response;
     },
     onSuccess: async () => {
-      // 使模型列表查询失效并强制重新获取
       await queryClient.invalidateQueries({ queryKey: ['models'], refetchType: 'all' });
     },
   });
 }
 
 /**
- * 卸载模型 Hook
+ * Unload model hook
  */
 export function useUnloadModel() {
   const queryClient = useQueryClient();
@@ -79,14 +77,13 @@ export function useUnloadModel() {
       return response;
     },
     onSuccess: async () => {
-      // 使模型列表查询失效并强制重新获取
       await queryClient.invalidateQueries({ queryKey: ['models'], refetchType: 'all' });
     },
   });
 }
 
 /**
- * 更新模型别名 Hook
+ * Update model alias hook
  */
 export function useUpdateModelAlias() {
   const queryClient = useQueryClient();
@@ -106,7 +103,7 @@ export function useUpdateModelAlias() {
 }
 
 /**
- * 设置模型收藏 Hook
+ * Set model favourite hook
  */
 export function useSetModelFavourite() {
   const queryClient = useQueryClient();
@@ -126,8 +123,7 @@ export function useSetModelFavourite() {
 }
 
 /**
- * 过滤模型 Hook（包含排序）
- * 使用 useMemo 确保排序稳定且只依赖项变化时重新计算
+ * Filter models hook (with sorting)
  */
 export function useFilteredModels(
   models: Model[] | undefined,
@@ -140,9 +136,7 @@ export function useFilteredModels(
   return useMemo(() => {
     if (!models) return [];
 
-    // 过滤模型
     const filtered = models.filter((model) => {
-      // 搜索过滤
       if (filters.search) {
         const search = filters.search.toLowerCase();
         const matchName = model.name ? model.name.toLowerCase().includes(search) : false;
@@ -151,37 +145,30 @@ export function useFilteredModels(
         if (!matchName && !matchAlias && !matchArch) return false;
       }
 
-      // 状态过滤
       if (filters.status && model.status !== filters.status) return false;
 
-      // 收藏过滤
       if (filters.favourite && !model.favourite) return false;
 
       return true;
     });
 
-    // 排序模型：稳定的排序，确保每次刷新后顺序一致
-    // 排序优先级：架构 > 名称（字母）> 扫描时间 > 路径
+    // Sort: architecture > display name > scan time > path
     return [...filtered].sort((a: Model, b: Model) => {
-      // 优先按架构排序
       const aArch = (a.metadata?.architecture || '').toLowerCase();
       const bArch = (b.metadata?.architecture || '').toLowerCase();
       const archCompare = aArch.localeCompare(bArch);
       if (archCompare !== 0) return archCompare;
 
-      // 架构相同时，按显示名称（别名或模型名）排序
       const aName = (a.alias || a.displayName || a.name).toLowerCase();
       const bName = (b.alias || b.displayName || b.name).toLowerCase();
 
       const nameCompare = aName.localeCompare(bName, 'zh-CN');
       if (nameCompare !== 0) return nameCompare;
 
-      // 名称相同时，按扫描时间降序排序（最新的在前）
       const aTime = new Date(a.scannedAt).getTime();
       const bTime = new Date(b.scannedAt).getTime();
       if (aTime !== bTime) return bTime - aTime;
 
-      // 扫描时间也相同时，按路径排序
       return a.path.localeCompare(b.path);
     });
   }, [models, filters.search, filters.status, filters.favourite]);

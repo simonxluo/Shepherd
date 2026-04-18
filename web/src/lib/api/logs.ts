@@ -2,7 +2,7 @@ import { apiClient } from '@/lib/api/client';
 import type { LogFileInfo, LogFileContent, LogFileFilter } from '@/types/logs';
 
 /**
- * API 响应包装类型
+ * API response wrapper type
  */
 interface ApiResponse<T> {
   success: boolean;
@@ -14,7 +14,7 @@ interface ApiResponse<T> {
 }
 
 /**
- * 获取所有日志文件列表
+ * List all log files
  */
 export async function listLogFiles(): Promise<LogFileInfo[]> {
   const response = await apiClient.get<ApiResponse<{ files: LogFileInfo[]; count: number }>>('/logs/files');
@@ -22,7 +22,7 @@ export async function listLogFiles(): Promise<LogFileInfo[]> {
 }
 
 /**
- * 获取日志文件内容
+ * Get log file content
  */
 export async function getLogFileContent(
   filename: string,
@@ -43,7 +43,7 @@ export async function getLogFileContent(
 }
 
 /**
- * 获取日志文件统计信息
+ * Get log file statistics
  */
 export async function getLogFileStats(filename: string): Promise<Record<string, number>> {
   const response = await apiClient.get<ApiResponse<Record<string, number>>>(
@@ -53,7 +53,7 @@ export async function getLogFileStats(filename: string): Promise<Record<string, 
 }
 
 /**
- * 删除日志文件
+ * Delete log file
  */
 export async function deleteLogFile(filename: string): Promise<{ message: string }> {
   const response = await apiClient.delete<ApiResponse<{ message: string }>>(
@@ -63,7 +63,7 @@ export async function deleteLogFile(filename: string): Promise<{ message: string
 }
 
 /**
- * 格式化文件大小
+ * Format file size
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -77,7 +77,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
- * 格式化日期
+ * Format date
  */
 export function formatDate(dateString: string): string {
   const date = new Date(dateString);

@@ -3,7 +3,7 @@ import { apiClient } from '@/lib/api/client';
 import type { Model } from '@/types';
 
 /**
- * 扫描模型 Hook
+ * Scan models hook
  */
 export function useScanModels() {
   const queryClient = useQueryClient();
@@ -24,7 +24,6 @@ export function useScanModels() {
       return response.data;
     },
     onSuccess: () => {
-      // 扫描完成后强制刷新模型列表，清除缓存
       queryClient.invalidateQueries({ queryKey: ['models'], refetchType: 'all' });
     },
   });

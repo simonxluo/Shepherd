@@ -22,7 +22,6 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // 自动调整高度
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
@@ -37,7 +36,6 @@ export function ChatInput({
     onSend(trimmed);
     setContent('');
 
-    // 重置高度
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -69,7 +67,6 @@ export function ChatInput({
             style={{ minHeight: '48px', maxHeight: '200px' }}
           />
 
-          {/* 字符计数 */}
           {content.length > 0 && (
             <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
               {content.length.toLocaleString()}
@@ -77,7 +74,6 @@ export function ChatInput({
           )}
         </div>
 
-        {/* 发送/停止按钮 */}
         {isStreaming ? (
           <Button
             type="button"
@@ -101,7 +97,6 @@ export function ChatInput({
         )}
       </div>
 
-      {/* 提示信息 */}
       <div className="mt-2 text-xs text-muted-foreground">
         按 Enter 发送，Shift + Enter 换行
       </div>

@@ -1,46 +1,43 @@
 /**
- * 任务相关类型定义
- * Task-related type definitions
- * 
- * 从 cluster.ts 迁移至此，避免循环依赖
- * Migrated from cluster.ts to avoid circular dependencies
+ * Task-related type definitions.
+ * Migrated from cluster.ts to avoid circular dependencies.
  */
 
 /**
- * 任务类型 - 匹配后端 cluster.TaskType
+ * Task type — matches backend cluster.TaskType
  */
 export type TaskType = 'load_model' | 'unload_model' | 'run_python' | 'run_llamacpp' | 'custom';
 
 /**
- * 任务状态 - 匹配后端 cluster.TaskStatus
+ * Task status — matches backend cluster.TaskStatus
  */
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
 /**
- * 调度策略 - 匹配后端 scheduler.SchedulingStrategy
+ * Schedule strategy — matches backend scheduler.SchedulingStrategy
  */
 export type ScheduleStrategy = 'round_robin' | 'least_loaded' | 'resource_aware';
 
 /**
- * 调度任务 - 匹配后端 cluster.Task 结构
+ * Cluster task — matches backend cluster.Task struct
  */
 export interface ClusterTask {
   id: string;
   type: TaskType;
   payload: Record<string, unknown>;
-  assignedTo?: string;  // 分配的客户端 ID
+  assignedTo?: string;  // Assigned client ID
   status: TaskStatus;
-  createdAt: string;  // ISO 8601 格式
-  startedAt?: string;  // ISO 8601 格式
-  completedAt?: string;  // ISO 8601 格式
+  createdAt: string;    // ISO 8601
+  startedAt?: string;   // ISO 8601
+  completedAt?: string; // ISO 8601
   result?: Record<string, unknown>;
   error?: string;
-  retryCount?: number;  // 可选，后端 Task 结构体未包含此字段
-  maxRetries?: number;  // 可选，后端 Task 结构体未包含此字段
+  retryCount?: number;  // Optional; not in backend Task struct
+  maxRetries?: number;  // Optional; not in backend Task struct
 }
 
 /**
- * 任务列表响应
+ * Task list response
  */
 export interface TaskListResponse {
   tasks: ClusterTask[];

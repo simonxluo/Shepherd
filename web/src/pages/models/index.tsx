@@ -12,10 +12,11 @@ import { cn } from '@/lib/utils';
 import type { Model, ModelStatus, BenchmarkConfig, LoadModelParams } from '@/types';
 import { useAlertDialog } from '@/providers/AlertDialog';
 import { useToast } from '@/hooks/useToast';
+import { APIError } from '@/lib/api/client';
 import { useUIStore } from '@/stores/uiStore';
 
 /**
- * 模型管理页面
+ * Model management page
  */
 export function ModelsPage() {
   const alertDialog = useAlertDialog();
@@ -28,35 +29,28 @@ export function ModelsPage() {
   const scanModels = useScanModels();
   const createBenchmark = useCreateBenchmark();
 
-  // UI 状态
+  // UI state
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ModelStatus | ''>('');
   const [favouriteFilter, setFavouriteFilter] = useState(false);
   const { modelViewMode: viewMode, setModelViewMode: setViewMode } = useUIStore();
 
-  // 加载对话框状态
   const [dialogModel, setDialogModel] = useState<Model | null>(null);
 
-  // 编辑别名对话框状态
   const [editAliasModel, setEditAliasModel] = useState<Model | null>(null);
 
-  // 压测对话框状态
   const [benchmarkModel, setBenchmarkModel] = useState<Model | null>(null);
 
-  // 压测结果对话框状态
   const [benchmarkResultsModel, setBenchmarkResultsModel] = useState<Model | null>(null);
 
-  // 模型详情对话框状态
   const [detailModel, setDetailModel] = useState<Model | null>(null);
 
-  // 过滤模型
   const filteredModels = useFilteredModels(models, {
     search,
     status: statusFilter || undefined,
     favourite: favouriteFilter || undefined,
   });
 
-  // 处理加载模型
   const handleLoadClick = (model: Model) => {
     setDialogModel(model);
   };
@@ -68,12 +62,12 @@ export function ModelsPage() {
         setDialogModel(null);
       },
       onError: (error) => {
+        (error as APIError).handled = true;
         toast.error('模型加载失败', error.message || '未知错误');
       },
     });
   };
 
-  // 处理卸载模型
   const handleUnloadClick = async (modelId: string) => {
     const confirmed = await alertDialog.confirm({
       title: '卸载模型',
@@ -85,13 +79,13 @@ export function ModelsPage() {
           toast.success('模型卸载成功', `${modelId} 已成功停止`);
         },
         onError: (error) => {
+          (error as APIError).handled = true;
           toast.error('模型卸载失败', error.message || '未知错误');
         },
       });
     }
   };
 
-  // 处理收藏切换
   const handleToggleFavourite = (modelId: string, favourite: boolean) => {
     setFavourite.mutate(
       { modelId, favourite: !favourite },
@@ -104,13 +98,13 @@ export function ModelsPage() {
           );
         },
         onError: (error) => {
+          (error as APIError).handled = true;
           toast.error('操作失败', error.message || '未知错误');
         },
       }
     );
   };
 
-  // 处理扫描
   const handleScan = () => {
     scanModels.mutate(undefined, {
       onSuccess: (data) => {
@@ -118,12 +112,12 @@ export function ModelsPage() {
         toast.success('模型扫描成功', message);
       },
       onError: (error) => {
+        (error as APIError).handled = true;
         toast.error('模型扫描失败', error.message || '未知错误');
       },
     });
   };
 
-  // 处理编辑别名
   const handleEditAlias = (model: Model) => {
     setEditAliasModel(model);
   };
@@ -138,6 +132,7 @@ export function ModelsPage() {
             setEditAliasModel(null);
           },
           onError: (error) => {
+            (error as APIError).handled = true;
             toast.error('别名更新失败', error.message || '未知错误');
           },
         }
@@ -145,26 +140,24 @@ export function ModelsPage() {
     }
   };
 
-  // 处理压测模型
   const handleBenchmarkModel = (model: Model) => {
     setBenchmarkModel(model);
   };
 
-  // 处理压测确认
   const handleBenchmarkConfirm = async (config: BenchmarkConfig) => {
-    // 1. 获取模型路径
+    // 1. Get model path
     const model = models.find(m => m.id === config.modelId);
     if (!model) {
       toast.error('模型未找到', '无法获取模型信息');
       return;
     }
 
-    // 2. 构建命令字符串和参数数组
+    // 2. Build command string and arguments array
     const cmdParts: string[] = [];
-    // 首先添加模型路径参数
+    // Add model path argument first
     cmdParts.push('-m', model.path);
 
-    // 然后添加其他参数
+    // Add remaining arguments
     Object.entries(config.params).forEach(([key, value]) => {
       if (value === 'true') {
         cmdParts.push(key);
@@ -172,7 +165,7 @@ export function ModelsPage() {
         cmdParts.push(key, String(value));
       }
     });
-    // 添加设备参数
+    // Add device argument
     if (config.devices && config.devices.length > 0 && config.devices.length < 999) {
       cmdParts.push('-dev', config.devices.join('/'));
     }
@@ -181,7 +174,7 @@ export function ModelsPage() {
     createBenchmark.mutate(
       {
         modelId: config.modelId,
-        llamaBinPath: config.llamaCppPath, // 后端会自动查找 llama-bench
+        llamaBinPath: config.llamaCppPath, // Backend auto-finds llama-bench
         cmd,
         args: cmdParts,
       },
@@ -191,7 +184,7 @@ export function ModelsPage() {
           if (data) {
             toast.success('压测任务已创建', '正在运行...');
             setBenchmarkModel(null);
-            // 打开结果查看对话框
+            // Open results dialog
             const currentModel = models.find(m => m.id === config.modelId);
             if (currentModel) {
               setBenchmarkResultsModel(currentModel);
@@ -199,25 +192,24 @@ export function ModelsPage() {
           }
         },
         onError: (error) => {
+          (error as APIError).handled = true;
           toast.error('创建压测任务失败', error.message);
         },
       }
     );
   };
 
-  // 处理查看压测结果
   const handleViewBenchmarkResults = (model: Model) => {
     setBenchmarkResultsModel(model);
   };
 
-  // 处理查看模型详情
   const handleShowDetail = (model: Model) => {
     setDetailModel(model);
   };
 
   return (
     <div className="space-y-6">
-      {/* 标题和操作 */}
+      {/* Title and actions */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">模型管理</h1>
@@ -239,9 +231,8 @@ export function ModelsPage() {
         </div>
       </div>
 
-      {/* 搜索和过滤 */}
+      {/* Search and filter */}
       <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-lg border border-border">
-        {/* 搜索框 */}
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
@@ -253,7 +244,6 @@ export function ModelsPage() {
           />
         </div>
 
-        {/* 状态过滤 */}
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as ModelStatus | '')}
@@ -266,7 +256,6 @@ export function ModelsPage() {
           <option value="error">错误</option>
         </select>
 
-        {/* 收藏过滤 */}
         <Button
           onClick={() => setFavouriteFilter(!favouriteFilter)}
           variant={favouriteFilter ? 'default' : 'outline'}
@@ -279,7 +268,6 @@ export function ModelsPage() {
           只看收藏
         </Button>
 
-        {/* 视图切换 */}
         <div className="flex items-center rounded-lg overflow-hidden border border-border/50">
           <Button
             onClick={() => setViewMode('grid')}
@@ -300,7 +288,6 @@ export function ModelsPage() {
         </div>
       </div>
 
-      {/* 模型列表 */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
@@ -358,7 +345,6 @@ export function ModelsPage() {
         </div>
       )}
 
-      {/* 加载对话框 */}
       {dialogModel && (
         <LoadModelDialog
           isOpen={!!dialogModel}

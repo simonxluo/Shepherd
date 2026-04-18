@@ -1,7 +1,7 @@
 import type { UnifiedNode } from './node';
 
 /**
- * 扫描状态
+ * Scan status
  */
 export interface ScanStatus {
   running: boolean;
@@ -9,7 +9,7 @@ export interface ScanStatus {
 }
 
 /**
- * 发现的客户端
+ * Discovered client
  */
 export interface DiscoveredClient {
   address: string;
@@ -18,7 +18,7 @@ export interface DiscoveredClient {
 }
 
 /**
- * 集群概览 - 匹配后端 GET /api/master/overview 响应格式
+ * Cluster overview — matches backend GET /api/master/overview
  */
 export interface ClusterOverview {
   totalClients: number;
@@ -41,7 +41,7 @@ export interface ClusterOverview {
 }
 
 /**
- * 客户端列表响应 - 匹配后端 GET /api/master/clients 响应格式
+ * Client list response — matches backend GET /api/master/clients
  */
 export interface ClientListResponse {
   clients: UnifiedNode[];

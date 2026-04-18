@@ -12,18 +12,18 @@ import type {
 } from '@/types';
 
 /**
- * 压测 API
+ * Benchmark API
  */
 export const benchmarksApi = {
   /**
-   * 获取压测参数列表
+   * Get benchmark parameter list
    */
   async getParams(): Promise<BenchmarkParamsResponse> {
     return apiClient.get<BenchmarkParamsResponse>('/models/param/benchmark/list');
   },
 
   /**
-   * 获取可用计算设备
+   * Get available compute devices
    */
   async getDevices(llamaBinPath: string): Promise<{ success: boolean; data?: { devices: string[] }; error?: string }> {
     return apiClient.get<{ success: boolean; data?: { devices: string[] }; error?: string }>(
@@ -32,14 +32,14 @@ export const benchmarksApi = {
   },
 
   /**
-   * 获取 Llama.cpp 版本列表
+   * Get llama.cpp version list
    */
   async getLlamaCppVersions(): Promise<{ success: boolean; data?: { items: Array<{ path: string; name?: string; description?: string }> } }> {
     return apiClient.get('/llamacpp/list');
   },
 
   /**
-   * 创建压测任务
+   * Create benchmark task
    */
   async create(params: CreateBenchmarkRequest): Promise<CreateBenchmarkResponse> {
     return apiClient.post<CreateBenchmarkResponse>('/models/benchmark', params);
@@ -49,7 +49,7 @@ export const benchmarksApi = {
 
 
   /**
-   * 获取压测任务列表
+   * List benchmark tasks
    */
   async list(modelId?: string): Promise<BenchmarkListResponse> {
     const url = modelId ? `/models/benchmark/tasks?modelId=${encodeURIComponent(modelId)}` : '/models/benchmark/tasks';
@@ -57,35 +57,35 @@ export const benchmarksApi = {
   },
 
   /**
-   * 获取单个压测任务
+   * Get a single benchmark task
    */
   async get(benchmarkId: string): Promise<{ success: boolean; data?: Benchmark; error?: string }> {
     return apiClient.get<{ success: boolean; data?: Benchmark; error?: string }>(`/models/benchmark/tasks/${benchmarkId}`);
   },
 
   /**
-   * 取消压测任务
+   * Cancel benchmark task
    */
   async cancel(benchmarkId: string): Promise<{ success: boolean; error?: string }> {
     return apiClient.post<{ success: boolean; error?: string }>(`/models/benchmark/tasks/${benchmarkId}/cancel`);
   },
 
   /**
-   * 保存压测配置
+   * Save benchmark config
    */
   async saveConfig(params: SaveBenchmarkConfigRequest): Promise<SaveBenchmarkConfigResponse> {
     return apiClient.post<SaveBenchmarkConfigResponse>('/models/benchmark/configs', params);
   },
 
   /**
-   * 获取压测配置列表
+   * List benchmark configs
    */
   async listConfigs(): Promise<LoadBenchmarkConfigResponse> {
     return apiClient.get<LoadBenchmarkConfigResponse>('/models/benchmark/configs');
   },
 
   /**
-   * 获取单个压测配置
+   * Get a single benchmark config
    */
   async getConfig(name: string): Promise<{ success: boolean; data?: BenchmarkConfig; error?: string }> {
     return apiClient.get<{ success: boolean; data?: BenchmarkConfig; error?: string }>(
@@ -94,7 +94,7 @@ export const benchmarksApi = {
   },
 
   /**
-   * 删除压测配置
+   * Delete benchmark config
    */
   async deleteConfig(name: string): Promise<{ success: boolean; error?: string }> {
     return apiClient.delete<{ success: boolean; error?: string }>(

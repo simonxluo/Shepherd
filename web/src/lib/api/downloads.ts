@@ -1,12 +1,12 @@
 /**
- * 下载管理 API 客户端
+ * Download management API client
  */
 
 import { apiClient } from './client';
 import type { CreateDownloadParams, DownloadTask, DownloadListResponse } from '@/types';
 
 /**
- * 模型文件信息
+ * Model file info
  */
 export interface ModelFileInfo {
   name: string;
@@ -15,7 +15,7 @@ export interface ModelFileInfo {
 }
 
 /**
- * 模型文件列表响应
+ * Model file list response
  */
 export interface ModelFilesResponse {
   success: boolean;
@@ -24,7 +24,7 @@ export interface ModelFilesResponse {
 }
 
 /**
- * HuggingFace 模型信息
+ * HuggingFace model info
  */
 export interface HuggingFaceModel {
   id: string;
@@ -41,7 +41,7 @@ export interface HuggingFaceModel {
 }
 
 /**
- * HuggingFace 搜索结果响应
+ * HuggingFace search response
  */
 export interface HuggingFaceSearchResponse {
   success: boolean;
@@ -54,7 +54,7 @@ export interface HuggingFaceSearchResponse {
 }
 
 /**
- * 下载列表 API 响应（统一格式）
+ * Download list API response
  */
 export interface DownloadListApiResponse {
   success: boolean;
@@ -66,7 +66,7 @@ export interface DownloadListApiResponse {
 }
 
 /**
- * 单个下载任务 API 响应（统一格式）
+ * Single download task API response
  */
 export interface DownloadTaskApiResponse {
   success: boolean;
@@ -75,89 +75,89 @@ export interface DownloadTaskApiResponse {
 }
 
 /**
- * 下载管理 API
+ * Download management API
  */
 export const downloadsApi = {
   /**
-   * 获取下载任务列表
+   * List download tasks
    */
   list: (): Promise<DownloadListApiResponse> =>
     apiClient.get<DownloadListApiResponse>('/downloads'),
 
   /**
-   * 创建下载任务
+   * Create download task
    */
   create: (params: CreateDownloadParams): Promise<{ success: boolean; message?: string; data?: DownloadTask; error?: string }> =>
     apiClient.post('/downloads', params),
 
   /**
-   * 获取单个下载任务
+   * Get a single download task
    */
   get: (id: string): Promise<DownloadTaskApiResponse> =>
     apiClient.get<DownloadTaskApiResponse>(`/downloads/${id}`),
 
   /**
-   * 暂停下载
+   * Pause download
    */
   pause: (id: string): Promise<{ success: boolean; message?: string; error?: string }> =>
     apiClient.post(`/downloads/${id}/pause`),
 
   /**
-   * 恢复下载
+   * Resume download
    */
   resume: (id: string): Promise<{ success: boolean; message?: string; error?: string }> =>
     apiClient.post(`/downloads/${id}/resume`),
 
   /**
-   * 取消下载
+   * Cancel download
    */
   cancel: (id: string): Promise<{ success: boolean; message?: string; error?: string }> =>
     apiClient.delete<{ success: boolean; message?: string; error?: string }>(`/downloads/${id}`),
 
   /**
-   * 重试下载
+   * Retry download
    */
   retry: (id: string): Promise<{ success: boolean; message?: string; error?: string }> =>
     apiClient.post(`/downloads/${id}/retry`),
 
   /**
-   * 清理已完成的下载
+   * Clear completed downloads
    */
   clearCompleted: (): Promise<{ success: boolean; message?: string; error?: string }> =>
     apiClient.delete<{ success: boolean; message?: string; error?: string }>('/downloads/completed'),
 
   /**
-   * 获取模型文件列表
-   * 使用查询参数以支持 repoId 中包含斜杠 (如 Qwen/Qwen2-7B-Instruct)
-   * 支持 AbortSignal 用于取消请求
+   * List model files.
+   * Uses query params to support repoId with slashes (e.g. Qwen/Qwen2-7B-Instruct).
+   * Supports AbortSignal for request cancellation.
    */
   listModelFiles: (source: 'huggingface' | 'modelscope', repoId: string, signal?: AbortSignal): Promise<ModelFilesResponse> =>
     apiClient.get<ModelFilesResponse>('/repo/files', { source, repoId }, signal),
 
   /**
-   * 搜索 HuggingFace 模型
-   * @param query 搜索关键词
-   * @param limit 返回数量限制
-   * @param format 格式过滤器 (gguf, safetensors, onnx, bin, all)
-   * @param signal 取消信号
+   * Search HuggingFace models
+   * @param query Search keyword
+   * @param limit Result count limit
+   * @param format Format filter (gguf, safetensors, onnx, bin, all)
+   * @param signal Abort signal
    */
   searchHuggingFace: (query: string, limit?: number, format?: string, signal?: AbortSignal): Promise<HuggingFaceSearchResponse> =>
     apiClient.get<HuggingFaceSearchResponse>('/repo/search', { q: query, limit: limit || 20, format: format || 'all' }, signal),
 
   /**
-   * 获取模型仓库配置
+   * Get model repo config
    */
   getModelRepoConfig: (): Promise<{ success: boolean; data: { endpoint: string; token: string; timeout: number }; error?: string }> =>
     apiClient.get('/repo/config'),
 
   /**
-   * 更新模型仓库配置
+   * Update model repo config
    */
   updateModelRepoConfig: (config: { endpoint?: string; token?: string; timeout?: number }): Promise<{ success: boolean; data: { endpoint: string; token: string; timeout: number }; error?: string }> =>
     apiClient.put('/repo/config', config),
 
   /**
-   * 获取可用端点列表
+   * Get available endpoints
    */
   getAvailableEndpoints: (): Promise<{ success: boolean; data: Record<string, string>; error?: string }> =>
     apiClient.get('/repo/endpoints'),

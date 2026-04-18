@@ -15,10 +15,10 @@ import type { ClientStatus, ClusterTask } from '@/types';
 import { useAlertDialog } from '@/providers/AlertDialog';
 
 /**
- * 集群管理页面
+ * Cluster management page
  */
 export function ClusterPage() {
-  // 所有 hooks 必须在条件返回之前调用
+  // All hooks must be called before conditional returns
   const alertDialog = useAlertDialog();
   const { data: serverConfig } = useServerConfig();
   const { data: clients, isLoading: clientsLoading } = useClients();
@@ -26,18 +26,17 @@ export function ClusterPage() {
   const { data: overview } = useClusterOverview();
   const networkScan = useNetworkScan();
 
-  // UI 状态
+  // UI state
   const [activeTab, setActiveTab] = useState<'clients' | 'tasks'>('clients');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | ''>('');
 
-  // 过滤客户端
   const filteredClients = useFilteredClients(clients, {
     search,
     status: statusFilter || undefined,
   });
 
-  // 非 Master/Hybrid 模式下显示提示信息
+  // Show notice when not in Master/Hybrid mode
   if (serverConfig && serverConfig.role !== 'master' && serverConfig.role !== 'hybrid') {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)]">
@@ -53,7 +52,6 @@ export function ClusterPage() {
     );
   }
 
-  // 处理网络扫描
   const handleScan = async () => {
     const confirmed = await alertDialog.confirm({
       title: '扫描网络',
@@ -66,7 +64,7 @@ export function ClusterPage() {
 
   return (
     <div className="space-y-6">
-      {/* 标题和操作 */}
+      {/* Title and actions */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">集群管理</h1>
@@ -86,7 +84,7 @@ export function ClusterPage() {
         </Button>
       </div>
 
-      {/* 统计卡片 */}
+      {/* Statistics cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 bg-card rounded-lg border border-border">
           <div className="flex items-center gap-3">
@@ -145,7 +143,7 @@ export function ClusterPage() {
         </div>
       </div>
 
-      {/* 标签切换 */}
+      {/* Tabs */}
       <div className="border-b border-border">
         <nav className="flex gap-6">
           <Button
@@ -177,7 +175,7 @@ export function ClusterPage() {
         </nav>
       </div>
 
-      {/* 搜索和过滤 */}
+      {/* Search and filter */}
       {activeTab === 'clients' && (
         <div className="flex items-center gap-3 p-4 bg-card rounded-lg border border-border">
           <div className="relative flex-1">
@@ -205,7 +203,7 @@ export function ClusterPage() {
         </div>
       )}
 
-      {/* 客户端列表 */}
+      {/* Client list */}
       {activeTab === 'clients' && (
         <>
           {clientsLoading ? (
@@ -228,7 +226,7 @@ export function ClusterPage() {
         </>
       )}
 
-      {/* 任务列表 */}
+      {/* Task list */}
       {activeTab === 'tasks' && (
         <>
           {tasksLoading ? (

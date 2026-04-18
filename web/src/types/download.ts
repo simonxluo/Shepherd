@@ -1,5 +1,5 @@
 /**
- * 下载状态
+ * Download state
  */
 export type DownloadState =
   | 'idle'
@@ -12,12 +12,12 @@ export type DownloadState =
   | 'paused';
 
 /**
- * 下载来源
+ * Download source
  */
 export type DownloadSource = 'huggingface' | 'modelscope';
 
 /**
- * 下载任务
+ * Download task
  */
 export interface DownloadTask {
   id: string;
@@ -39,7 +39,7 @@ export interface DownloadTask {
 }
 
 /**
- * 创建下载任务参数
+ * Create download task parameters
  */
 export interface CreateDownloadParams {
   source: DownloadSource;
@@ -51,7 +51,7 @@ export interface CreateDownloadParams {
 }
 
 /**
- * 下载列表响应
+ * Download list response
  */
 export interface DownloadListResponse {
   downloads: DownloadTask[];

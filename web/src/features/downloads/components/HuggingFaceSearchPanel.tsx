@@ -75,7 +75,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
 
   return (
     <div className="space-y-4">
-      {/* 搜索框和筛选器 */}
       <div className="flex items-center gap-2">
         <form onSubmit={handleSearch} className="flex gap-2 flex-1 items-center">
           <div className="relative flex-1">
@@ -89,7 +88,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
             />
           </div>
           
-          {/* 每页条数筛选器 */}
           <select
             value={pageSize}
             onChange={(e) => {
@@ -107,7 +105,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
             <option value={100}>100 条</option>
           </select>
           
-          {/* 格式筛选器 */}
           <select
             value={searchFormat}
             onChange={(e) => {
@@ -145,7 +142,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
           </Button>
         </form>
 
-        {/* 设置按钮 */}
         <Button
           variant="ghost"
           size="sm"
@@ -156,7 +152,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
         </Button>
       </div>
 
-      {/* 设置面板 */}
       {showSettings && (
         <div className="p-4 bg-card rounded-lg border border-border space-y-4">
           <div className="flex items-center justify-between">
@@ -172,7 +167,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
             </button>
           </div>
           
-          {/* 端点选择 */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
               <Globe className="w-4 h-4" />
@@ -201,7 +195,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
             </p>
           </div>
 
-          {/* Token 配置 */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-1">
               <Key className="w-4 h-4" />
@@ -238,7 +231,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
         </div>
       )}
 
-      {/* 搜索结果 */}
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
           搜索失败: {error.message}
@@ -278,7 +270,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
                     作者: {model.author}
                   </p>
                   
-                  {/* 标签 */}
                   {model.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {model.tags.slice(0, 5).map((tag) => (
@@ -297,14 +288,12 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
                     </div>
                   )}
 
-                  {/* 统计 */}
                   <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                     <span>下载: {formatNumber(model.downloads)}</span>
                     <span>点赞: {formatNumber(model.likes)}</span>
                   </div>
                 </div>
 
-                {/* 操作按钮 */}
                 <div className="flex flex-col gap-2">
                   <Button
                     onClick={() => setExpandedModelId(expandedModelId === model.modelId ? null : model.modelId)}
@@ -330,7 +319,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
                 </div>
               </div>
 
-              {/* 展开的文件列表 */}
               {expandedModelId === model.modelId && (
                 <ModelFilesList 
                   model={model} 
@@ -359,7 +347,6 @@ function ModelFilesList({
   const [fileFormat, setFileFormat] = useState<string>('gguf'); // Default to GGUF
 
 
-  // 根据文件格式筛选
   const filteredFiles = files?.filter((file) => {
     if (fileFormat === 'all') return true;
     if (fileFormat === 'gguf') return file.name.toLowerCase().endsWith('.gguf');
@@ -420,7 +407,7 @@ function ModelFilesList({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
           {filteredFiles.map((file) => {
-            // 尝试从文件名中提取量化精度 (如 Q4_K_M, Q8_0)
+            // Extract quantization level from filename (e.g., Q4_K_M, Q8_0)
             const quantMatch = file.name.match(/(q[1-8]_[0-1k_a-z]+|f16|f32)/i);
             const quant = quantMatch ? quantMatch[1].toUpperCase() : null;
             

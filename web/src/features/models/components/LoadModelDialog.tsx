@@ -8,7 +8,7 @@ import { useOnlineNodes } from '@/features/cluster/hooks';
 import type { UnifiedNode } from '@/types';
 import { useToast } from '@/hooks/useToast';
 
-// NumberInput 组件 - 数字输入框
+// NumberInput component
 interface NumberInputProps {
   value: number | undefined;
   onChange: (value: number) => void;
@@ -37,7 +37,6 @@ const NumberInput = ({
   const [inputValue, setInputValue] = useState(String(value ?? ''));
   const [error, setError] = useState('');
 
-  // 同步外部 value 变化
   useEffect(() => {
     if (value !== undefined && String(value) !== inputValue) {
       setInputValue(String(value));
@@ -49,20 +48,17 @@ const NumberInput = ({
     const newValue = e.target.value;
     setInputValue(newValue);
 
-    // 空值处理
     if (newValue === '') {
       setError('');
       return;
     }
 
-    // 验证数字
     const num = Number(newValue);
     if (isNaN(num)) {
       setError('请输入有效数字');
       return;
     }
 
-    // 验证范围
     if (min !== undefined && num < min && !(allowMinusOne && num === -1) && !(allowNegative && num < 0)) {
       setError(`最小值为 ${min}`);
       return;
@@ -72,7 +68,6 @@ const NumberInput = ({
       return;
     }
 
-    // 特殊值验证
     if (allowMinusOne && num === -1) {
       setError('');
       onChange(-1);
@@ -143,7 +138,7 @@ interface LoadModelDialogProps {
   isLoading?: boolean;
 }
 
-// 预设配置
+// Presets
 const PRESETS = {
   fast: {
     name: '快速加载',
@@ -193,7 +188,7 @@ const PRESETS = {
   }
 };
 
-// 参数帮助说明
+// Parameter help descriptions
 const PARAM_HELP = {
   ctxSize: '模型一次能处理的文本最大长度，单位token，值越大内存占用越高',
   batchSize: '每次推理处理的样本数量，影响吞吐量',
@@ -257,13 +252,10 @@ export function LoadModelDialog({
   modelPath,
   isLoading = false,
 }: LoadModelDialogProps) {
-  // 获取在线节点列表（用于节点选择）
   const { data: onlineNodes = [] } = useOnlineNodes();
 
-  // 获取 llama.cpp 后端列表
   const { data: llamacppBackends = [] } = useLlamacppBackends();
 
-  // 模型加载配置相关 hooks
   const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
   const saveModelLoadConfig = useSaveModelLoadConfig();
   const deleteModelLoadConfig = useDeleteModelLoadConfig();
@@ -272,7 +264,6 @@ export function LoadModelDialog({
 
   const toast = useToast();
 
-  // 初始化参数状态
   const [params, setParams] = useState<LoadModelParams>({
     modelId,
     ctxSize: 8192,
@@ -312,7 +303,6 @@ export function LoadModelDialog({
     chatTemplate: '',
     contextShift: false,
     extraArgs: '',
-    // 新增参数默认值
     threadsBatch: 0,
     repeatLastN: 0,
     typicalP: 1.0,
@@ -330,7 +320,6 @@ export function LoadModelDialog({
     ropeScale: 0,
     ropeFreqBase: 0,
     ropeFreqScale: 0,
-    // 新增 llama-server 参数
     embedding: false,
     noWebUI: true,
     reasoning: 'auto',
@@ -339,7 +328,6 @@ export function LoadModelDialog({
     mmprojOffload: true,
     unloadAfterMinutes: 0,
     concurrencyLimit: 0,
-    // 参数启用状态（默认全部启用，用户可以选择禁用以使用默认值）
     enabled: {
       ctxSize: true,
       batchSize: true,
@@ -402,18 +390,14 @@ export function LoadModelDialog({
   const [estimateResult, setEstimateResult] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState<string>('就绪');
 
-  // 保存配置状态
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  // Tooltip 状态
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
-  // 调试：监控 params.enabled 的变化
   useEffect(() => {
     console.log('[LoadModelDialog] params.enabled changed:', params.enabled);
   }, [params.enabled]);
 
-  // 当对话框打开时，重置保存状态和估算结果
   useEffect(() => {
     if (isOpen) {
       setSaveStatus('idle');
@@ -421,20 +405,15 @@ export function LoadModelDialog({
     }
   }, [isOpen]);
 
-  // 获取 GPU 列表（依赖 params.llamaCppPath）
   const { data: gpuData } = useGPUs(params.llamaCppPath);
   const gpus = gpuData?.gpus || [];
 
-  // 获取模型能力配置
   const { data: savedCapabilities } = useModelCapabilities(isOpen ? modelId : '');
 
-  // 设置模型能力的 mutation
   const setModelCapabilities = useSetModelCapabilities();
 
-  // 显存估算 mutation
   const estimateVRAM = useEstimateVRAM();
 
-  // 当对话框打开时，加载已保存的能力配置
   useEffect(() => {
     if (isOpen && savedCapabilities) {
       setParams(prev => ({
@@ -450,37 +429,30 @@ export function LoadModelDialog({
     }
   }, [isOpen, savedCapabilities]);
 
-  // 当对话框打开时，加载已保存的模型加载配置
   useEffect(() => {
     if (isOpen && loadConfigData && !isLoadingConfig) {
       if (loadConfigData.exists && loadConfigData.config) {
-        // 从保存的配置中恢复参数
         const savedConfig = loadConfigData.config.config;
         setParams(prev => {
-          // 提取 enabled，如果没有则使用默认值
           const savedEnabled = (savedConfig as any).enabled;
           return {
             ...prev,
             ...(savedConfig as Partial<LoadModelParams>),
-            // 确保 enabled 字段总是存在
             enabled: savedEnabled || prev.enabled,
           };
         });
       }
-      // 如果不存在保存的配置，使用默认值（不改变当前状态）
     }
   }, [isOpen, loadConfigData, isLoadingConfig]);
 
-  // 处理能力变化，应用约束规则并保存
   const handleCapabilityChange = (key: string, value: boolean) => {
     setParams(prev => {
       const currentCaps = prev.capabilities || {};
 
-      // 应用约束规则
       let newCaps = { ...currentCaps, [key]: value };
       let newReranking = prev.reranking || false;
 
-      // 规则 1: embedding 和 reranking 互斥（embedding 是非聊天能力）
+      // embedding and reranking are mutually exclusive with thinking/tools
       if (key === 'embedding' && value) {
         newReranking = false;
         newCaps.thinking = false;
@@ -491,13 +463,11 @@ export function LoadModelDialog({
         newCaps.tools = false;
       }
 
-      // 规则 2: thinking 或 tools 启用时，禁用 embedding 和 reranking
       if ((key === 'thinking' || key === 'tools') && value) {
         newCaps.embedding = false;
         newReranking = false;
       }
 
-      // 保存到服务器（只保存聊天相关的能力）
       const capabilitiesToSave = {
         thinking: newCaps.thinking || false,
         tools: newCaps.tools || false,
@@ -518,39 +488,33 @@ export function LoadModelDialog({
     });
   };
 
-  // 处理保存配置
   const handleSaveConfig = async () => {
     setSaveStatus('saving');
     try {
-      // 保存当前参数到服务器
       await saveModelLoadConfig.mutateAsync({
         modelId,
         config: params,
       });
       setSaveStatus('saved');
-      // 3秒后重置状态
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
-      console.error('保存配置失败:', error);
+      console.error('Failed to save config:', error);
       setSaveStatus('error');
-      // 3秒后重置状态
       setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
   if (!isOpen) return null;
 
-  // 参数过滤函数：根据 enabled 状态过滤掉未启用的参数
   const filterEnabledParams = (allParams: LoadModelParams): Partial<LoadModelParams> => {
     const enabled = allParams.enabled;
-    if (!enabled) return allParams; // 如果没有 enabled 字段，返回全部参数
+    if (!enabled) return allParams;
 
     const filtered: Partial<LoadModelParams> = {
-      modelId: allParams.modelId, // 始终包含 modelId
-      nodeId: allParams.nodeId,   // 始终包含 nodeId
+      modelId: allParams.modelId,
+      nodeId: allParams.nodeId,
     };
 
-    // 遍历所有可能的参数，如果启用则添加到 filtered 中
     const paramKeys: (keyof LoadModelParams)[] = [
       'ctxSize', 'batchSize', 'threads', 'threadsBatch', 'gpuLayers',
       'temperature', 'topP', 'topK', 'repeatPenalty', 'repeatLastN',
@@ -580,7 +544,6 @@ export function LoadModelDialog({
       }
     }
 
-    // 始终包含 extraArgs（用户自定义参数）
     if (allParams.extraArgs) {
       filtered.extraArgs = allParams.extraArgs;
     }
@@ -592,18 +555,15 @@ export function LoadModelDialog({
     e.preventDefault();
     setLoadingStatus('加载中...');
 
-    // 保存当前配置
     try {
       await saveModelLoadConfig.mutateAsync({
         modelId,
         config: params,
       });
     } catch (error) {
-      console.error('保存模型加载配置失败:', error);
-      // 保存失败不影响加载操作
+      console.error('Failed to save load config:', error);
     }
 
-    // 过滤参数，只发送启用的参数
     const filteredParams = filterEnabledParams(params);
     onConfirm(filteredParams);
   };
@@ -612,16 +572,13 @@ export function LoadModelDialog({
     setParams(prev => ({ ...prev, ...presetParams }));
   };
 
-  // 重置为默认配置
   const handleResetConfig = async () => {
-    // 删除保存的配置
     try {
       await deleteModelLoadConfig.mutateAsync(modelId);
     } catch (error) {
-      console.error('删除模型加载配置失败:', error);
+      console.error('Failed to delete load config:', error);
     }
 
-    // 重置为默认参数
     setParams({
       modelId,
       ctxSize: 8192,
@@ -661,7 +618,6 @@ export function LoadModelDialog({
       chatTemplate: '',
       contextShift: false,
       extraArgs: '',
-      // 新增参数默认值
       threadsBatch: 0,
       repeatLastN: 0,
       typicalP: 1.0,
@@ -679,7 +635,6 @@ export function LoadModelDialog({
       ropeScale: 0,
       ropeFreqBase: 0,
       ropeFreqScale: 0,
-      // 新增 llama-server 参数
       embedding: false,
       noWebUI: true,
       reasoning: 'auto',
@@ -688,7 +643,6 @@ export function LoadModelDialog({
       mmprojOffload: true,
       unloadAfterMinutes: 0,
       concurrencyLimit: 0,
-      // 参数启用状态
       enabled: {
         ctxSize: true,
         batchSize: true,
@@ -750,7 +704,6 @@ export function LoadModelDialog({
     });
   };
 
-  // 参数控制组件 - 包含帮助按钮和启用/禁用开关
   const ParamControl = ({ paramKey, showToggle = true }: { paramKey: string; showToggle?: boolean }) => {
     const helpText = PARAM_HELP[paramKey as keyof typeof PARAM_HELP];
     const isEnabled = params.enabled?.[paramKey as keyof NonNullable<typeof params.enabled>] ?? false;
@@ -825,7 +778,7 @@ export function LoadModelDialog({
 
     return (
       <div className="relative inline-flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-        {/* 启用/禁用开关 */}
+        {/* Enable/disable toggle */}
         {showToggle && (
           <button
             type="button"
@@ -836,11 +789,9 @@ export function LoadModelDialog({
               console.log('[Toggle Button] isLoading:', isLoading, 'isEnabled:', isEnabled);
               console.log('[Toggle Button] event:', e);
               handleToggleEnabled();
-              // 点击后移除焦点，防止焦点转移到其他元素
               (e.currentTarget as HTMLButtonElement).blur();
             }}
             onMouseDown={(e) => {
-              // 防止焦点转移
               e.preventDefault();
             }}
             disabled={isLoading}
@@ -868,7 +819,7 @@ export function LoadModelDialog({
           </button>
         )}
 
-        {/* 帮助按钮 */}
+        {/* Help button */}
         <div className="relative inline-block">
           <button
             ref={buttonRef}
@@ -934,7 +885,7 @@ export function LoadModelDialog({
                   </div>
                 </div>
 
-                {/* 下方箭头 */}
+                {/* Arrow */}
                 <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2">
                   <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-900/95 backdrop-blur-xl" />
                 </div>
@@ -948,17 +899,15 @@ export function LoadModelDialog({
 
   const renderHelpButton = (paramKey: string, showToggle = true) => <ParamControl paramKey={paramKey} showToggle={showToggle} />;
 
-  // 检查参数是否启用
   const isParamEnabled = (paramKey: string): boolean => {
     return params.enabled?.[paramKey as keyof NonNullable<typeof params.enabled>] ?? false;
   };
 
-  // 获取禁用状态（如果参数未启用，则禁用输入）
   const getInputDisabled = (paramKey: string): boolean => {
     return isLoading || !isParamEnabled(paramKey);
   };
 
-  // 下拉选择组件 - 用于布尔值和固定选项
+  // Dropdown select for booleans and fixed options
   const SelectInput = ({
     value,
     onChange,
@@ -999,7 +948,7 @@ export function LoadModelDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className="bg-card rounded-lg shadow-xl border border-border max-w-5xl w-full max-h-[85vh] flex flex-col">
-        {/* 标题栏 */}
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-semibold text-foreground">
             加载模型配置
@@ -1013,7 +962,7 @@ export function LoadModelDialog({
           </button>
         </div>
 
-        {/* 预设配置按钮 */}
+        {/* Presets */}
         <div className="px-4 py-3 border-b border-border bg-muted/50 flex-shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-wrap">
@@ -1029,7 +978,7 @@ export function LoadModelDialog({
                     "border shadow-sm",
                     "hover:shadow-md hover:-translate-y-px active:translate-y-0",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    // 根据预设类型使用不同的样式
+                    // Different style per preset
                     key === 'fast' && "bg-secondary text-secondary-foreground border-border hover:bg-secondary/80",
                     key === 'balanced' && "bg-primary/10 text-primary border-primary/30 hover:bg-primary/15",
                     key === 'performance' && "bg-accent text-accent-foreground border-border hover:bg-accent/80",
@@ -1043,7 +992,7 @@ export function LoadModelDialog({
               ))}
             </div>
 
-            {/* 重置配置按钮 */}
+            {/* Reset config */}
             <button
               type="button"
               onClick={handleResetConfig}
@@ -1064,18 +1013,18 @@ export function LoadModelDialog({
           </div>
         </div>
 
-        {/* 表单内容 */}
+        {/* Form content */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 min-h-0 p-4 overflow-hidden">
             <div className="flex flex-col lg:flex-row gap-6 h-full min-h-0">
-            {/* 左列：基础配置 */}
-            
+            {/* Left column: basic config */}
+
             <div className="flex-1 space-y-4 overflow-y-auto pr-2 min-h-0" aria-label="基础配置区域">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 基础配置
               </h3>
 
-              {/* 模型信息 */}
+              {/* Model info */}
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
@@ -1091,7 +1040,7 @@ export function LoadModelDialog({
                   )}
                 </div>
 
-                {/* Llama.cpp 版本选择 */}
+                {/* Llama.cpp version */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
                     Llama.cpp 版本
@@ -1127,7 +1076,7 @@ export function LoadModelDialog({
                   )}
                 </div>
 
-                {/* 能力开关 */}
+                {/* Capabilities */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-foreground">
@@ -1180,7 +1129,7 @@ export function LoadModelDialog({
                   </div>
                   <div className="border border-border rounded-lg p-3 bg-card">
                     <div className="space-y-2">
-                      {/* 聊天能力 */}
+                      {/* Chat capabilities */}
                       <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">聊天能力</div>
                       {[
                         { key: 'thinking', label: '思考能力' },
@@ -1198,7 +1147,7 @@ export function LoadModelDialog({
                         </label>
                       ))}
 
-                      {/* 非聊天能力 */}
+                      {/* Non-chat capabilities */}
                       <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1 mt-2">非聊天能力</div>
                       {[
                         {key: 'translation', label: '直译' },
@@ -1222,7 +1171,7 @@ export function LoadModelDialog({
                   </p>
                 </div>
 
-                {/* 主GPU选择 */}
+                {/* Main GPU */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
                     主GPU
@@ -1247,7 +1196,7 @@ export function LoadModelDialog({
                   )}
                 </div>
 
-                {/* 设备选择 */}
+                {/* Devices */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     设备
@@ -1300,7 +1249,7 @@ export function LoadModelDialog({
                   </p>
                 </div>
 
-                {/* 节点选择（仅多节点环境显示） */}
+                {/* Node selection (multi-node only) */}
                 {onlineNodes.length > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">
@@ -1336,7 +1285,7 @@ export function LoadModelDialog({
                   </div>
                 )}
 
-                {/* 设备状态 */}
+                {/* Device status */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
                     加载状态
@@ -1355,13 +1304,13 @@ export function LoadModelDialog({
               </div>
             </div>
 
-            {/* 右列：高级参数 */}
+            {/* Right column: advanced params */}
             <div className="flex-1 space-y-4 overflow-y-auto pr-2 min-h-0" aria-label="高级参数区域">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 高级参数
               </h3>
 
-              {/* 上下文与加速 */}
+              {/* Context & acceleration */}
               <div className="space-y-3">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase">
                   上下文与加速
@@ -1477,7 +1426,7 @@ export function LoadModelDialog({
                 </div>
               </div>
 
-              {/* 采样参数 */}
+              {/* Sampling params */}
               <div className="space-y-3">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase">
                   采样参数
@@ -1597,7 +1546,7 @@ export function LoadModelDialog({
                 </div>
               </div>
 
-              {/* 批处理与并发 */}
+              {/* Batch & concurrency */}
               <div className="space-y-3">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase">
                   批处理与并发
@@ -1670,7 +1619,7 @@ export function LoadModelDialog({
                 </div>
               </div>
 
-              {/* 运行时管理 */}
+              {/* Runtime management */}
               <div className="space-y-3">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase">
                   运行时管理
@@ -1710,7 +1659,7 @@ export function LoadModelDialog({
                 </div>
               </div>
 
-                {/* KV缓存 */}
+                {/* KV cache */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase">
                     KV缓存
@@ -1791,7 +1740,7 @@ export function LoadModelDialog({
                 </div>
               </div>
 
-                {/* 其他参数 */}
+                {/* Other params */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase">
                     其他参数
@@ -1888,44 +1837,44 @@ export function LoadModelDialog({
                       disabled={getInputDisabled('chatTemplate')}
                     >
                       <option value="">(自动 - 使用模型元数据)</option>
-                      {/* Bailing 系列 */}
+                      {/* Bailing */}
                       <option value="bailing">bailing</option>
                       <option value="bailing-think">bailing-think</option>
                       <option value="bailing2">bailing2</option>
-                      {/* ChatGLM 系列 */}
+                      {/* ChatGLM */}
                       <option value="chatglm3">chatglm3</option>
                       <option value="chatglm4">chatglm4</option>
-                      {/* DeepSeek 系列 */}
+                      {/* DeepSeek */}
                       <option value="deepseek">deepseek</option>
                       <option value="deepseek2">deepseek2</option>
                       <option value="deepseek3">deepseek3</option>
-                      {/* Exaone 系列 */}
+                      {/* Exaone */}
                       <option value="exaone-moe">exaone-moe</option>
                       <option value="exaone3">exaone3</option>
                       <option value="exaone4">exaone4</option>
-                      {/* Hunyuan 系列 */}
+                      {/* Hunyuan */}
                       <option value="hunyuan-dense">hunyuan-dense</option>
                       <option value="hunyuan-moe">hunyuan-moe</option>
-                      {/* Llama 系列 */}
+                      {/* Llama */}
                       <option value="llama2">llama2</option>
                       <option value="llama2-sys">llama2-sys</option>
                       <option value="llama2-sys-bos">llama2-sys-bos</option>
                       <option value="llama2-sys-strip">llama2-sys-strip</option>
                       <option value="llama3">llama3</option>
                       <option value="llama4">llama4</option>
-                      {/* Mistral 系列 */}
+                      {/* Mistral */}
                       <option value="mistral-v1">mistral-v1</option>
                       <option value="mistral-v3">mistral-v3</option>
                       <option value="mistral-v3-tekken">mistral-v3-tekken</option>
                       <option value="mistral-v7">mistral-v7</option>
                       <option value="mistral-v7-tekken">mistral-v7-tekken</option>
-                      {/* Phi 系列 */}
+                      {/* Phi */}
                       <option value="phi3">phi3</option>
                       <option value="phi4">phi4</option>
-                      {/* Vicuna 系列 */}
+                      {/* Vicuna */}
                       <option value="vicuna">vicuna</option>
                       <option value="vicuna-orca">vicuna-orca</option>
-                      {/* 其他模板 */}
+                      {/* Other templates */}
                       <option value="chatml">chatml</option>
                       <option value="command-r">command-r</option>
                       <option value="falcon3">falcon3</option>
@@ -2052,14 +2001,14 @@ export function LoadModelDialog({
           </div>
           </div>
 
-          {/* 按钮区域 - 固定在底部 */}
+          {/* Footer */}
           <div className="flex justify-end items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
-            {/* 取消按钮 - 右侧最左 */}
+            {/* Cancel */}
             <Button variant="outline" onClick={onClose} disabled={isLoading}>
               取消
             </Button>
 
-            {/* 估算显存 + 结果 */}
+            {/* VRAM estimate */}
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -2100,7 +2049,7 @@ export function LoadModelDialog({
               )}
             </div>
 
-            {/* 保存配置 */}
+            {/* Save config */}
             <Button
               variant="secondary"
               onClick={handleSaveConfig}
@@ -2131,7 +2080,7 @@ export function LoadModelDialog({
               )}
             </Button>
 
-            {/* 开始加载 - 主操作 */}
+            {/* Load - primary action */}
             <Button type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>

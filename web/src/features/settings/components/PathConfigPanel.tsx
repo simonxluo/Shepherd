@@ -25,7 +25,6 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     LlamaCppPathConfig | ModelPathConfig | undefined
   >(undefined);
 
-  // 加载路径列表
   const loadPaths = async () => {
     setIsLoading(true);
     try {
@@ -38,7 +37,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         setPaths(response.data?.items || []);
       }
     } catch (error) {
-      console.error('加载路径失败:', error);
+      console.error('Failed to load paths:', error);
     } finally {
       setIsLoading(false);
     }
@@ -48,7 +47,6 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     loadPaths();
   }, [type]);
 
-  // 添加路径
   const handleAdd = async (data: LlamaCppPathConfig | ModelPathConfig) => {
     try {
       const response =
@@ -62,12 +60,11 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         throw new Error(response.error || '添加失败');
       }
     } catch (error) {
-      console.error('添加路径失败:', error);
+      console.error('Failed to add path:', error);
       throw error;
     }
   };
 
-  // 更新路径
   const handleUpdate = async (data: LlamaCppPathConfig | ModelPathConfig) => {
     try {
       const response =
@@ -81,12 +78,11 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         throw new Error(response.error || '更新失败');
       }
     } catch (error) {
-      console.error('更新路径失败:', error);
+      console.error('Failed to update path:', error);
       throw error;
     }
   };
 
-  // 删除路径
   const handleRemove = async (path: LlamaCppPathConfig | ModelPathConfig) => {
     const confirmed = await alertDialog.confirm({
       title: '删除路径',
@@ -109,13 +105,12 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         throw new Error(response.error || '删除失败');
       }
     } catch (error) {
-      console.error('删除路径失败:', error);
+      console.error('Failed to delete path:', error);
       const message = error instanceof Error ? error.message : '删除失败';
       toast.error('删除失败', message);
     }
   };
 
-  // 测试路径
   const handleTest = async (path: LlamaCppPathConfig | ModelPathConfig) => {
     if (type !== 'llamacpp') return;
 
@@ -128,18 +123,16 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         toast.error('测试失败', response.data?.error || '未知错误');
       }
     } catch (error) {
-      console.error('测试路径失败:', error);
+      console.error('Failed to test path:', error);
       toast.error('测试错误', '测试路径时发生错误');
     }
   };
 
-  // 打开添加对话框
   const handleOpenAddDialog = () => {
     setEditingPath(undefined);
     setIsDialogOpen(true);
   };
 
-  // 打开编辑对话框
   const handleOpenEditDialog = (path: LlamaCppPathConfig | ModelPathConfig) => {
     setEditingPath(path);
     setIsDialogOpen(true);
@@ -153,7 +146,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
 
   return (
     <div className="space-y-3">
-      {/* 标题和添加按钮 */}
+      {/* Title and add button */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">{title}</h3>
@@ -165,7 +158,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         </Button>
       </div>
 
-      {/* 路径列表 */}
+      {/* Path list */}
       {isLoading ? (
         <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
           加载中...
@@ -192,7 +185,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         </div>
       )}
 
-      {/* 编辑对话框 */}
+      {/* Edit dialog */}
       <PathEditDialog
         open={isDialogOpen}
         type={type}

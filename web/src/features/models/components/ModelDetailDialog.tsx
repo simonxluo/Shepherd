@@ -13,7 +13,7 @@ interface ModelDetailDialogProps {
 }
 
 /**
- * 格式化文件大小
+ * Format file size
  */
 function formatSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -29,7 +29,7 @@ function formatSize(bytes: number): string {
 }
 
 /**
- * 格式化时间
+ * Format time duration
  */
 function formatTime(seconds: number): string {
   if (seconds < 60) {
@@ -46,7 +46,7 @@ function formatTime(seconds: number): string {
 }
 
 /**
- * 详情行组件
+ * Detail row component
  */
 function DetailRow({ label, value, onCopy }: { label: string; value: string | number | undefined; onCopy?: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -82,7 +82,7 @@ function DetailRow({ label, value, onCopy }: { label: string; value: string | nu
 }
 
 /**
- * 详情分组组件
+ * Detail section component
  */
 function DetailSection({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -99,7 +99,7 @@ function DetailSection({ title, icon, children }: { title: string; icon: React.R
 }
 
 /**
- * 模型详情对话框
+ * Model detail dialog
  */
 export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: ModelDetailDialogProps) {
   const { data: model, isLoading } = useModel(modelId);
@@ -111,7 +111,7 @@ export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: Model
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden bg-card rounded-xl shadow-2xl flex flex-col">
-        {/* 头部 */}
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-3">
             <button
@@ -130,7 +130,7 @@ export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: Model
           </button>
         </div>
 
-        {/* 内容区 */}
+        {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -141,7 +141,7 @@ export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: Model
             </div>
           ) : modelData ? (
             <div className="space-y-4">
-              {/* 基本信息 */}
+              {/* Basic info */}
               <DetailSection title="基本信息" icon={<Info className="w-4 h-4 text-blue-500" />}>
                 <DetailRow label="架构" value={modelData.metadata.architecture} />
                 <DetailRow label="量化" value={modelData.metadata.quantization || modelData.metadata.fileTypeDescriptor} />
@@ -156,7 +156,7 @@ export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: Model
                 )}
               </DetailSection>
 
-              {/* 元数据 */}
+              {/* Metadata */}
               {modelData.metadata && (
                 <DetailSection title="元数据" icon={<Info className="w-4 h-4 text-purple-500" />}>
                   <DetailRow label="文件类型描述" value={modelData.metadata.fileTypeDescriptor} />
@@ -187,7 +187,7 @@ export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: Model
                 </DetailSection>
               )}
 
-              {/* 状态信息 */}
+              {/* Status info */}
               <DetailSection title="状态信息" icon={<Info className="w-4 h-4 text-green-500" />}>
                 <DetailRow label="状态" value={
                   modelData.status === 'running' ? '运行中' :
@@ -206,7 +206,7 @@ export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: Model
                 <DetailRow label="收藏" value={modelData.favourite ? '是' : '否'} />
               </DetailSection>
 
-              {/* 标签 */}
+              {/* Tags */}
               {modelData.tags && modelData.tags.length > 0 && (
                 <DetailSection title="标签" icon={<Info className="w-4 h-4 text-orange-500" />}>
                   <div className="flex flex-wrap gap-2 px-4 py-3">
@@ -229,7 +229,7 @@ export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: Model
           )}
         </div>
 
-        {/* 底部操作栏 */}
+        {/* Footer */}
         {modelData && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
             <div className="flex items-center gap-2">

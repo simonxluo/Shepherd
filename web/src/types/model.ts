@@ -1,8 +1,8 @@
 /**
- * 模型元数据 - 完全匹配后端 server.go 返回的字段
+ * Model metadata — matches backend server.go fields
  */
 export interface ModelMetadata {
-  // 基本信息
+  // Basic info
   name?: string;
   architecture: string;
   quantization?: string;
@@ -12,27 +12,27 @@ export interface ModelMetadata {
   description?: string | null;
   license?: string | null;
 
-  // 文件类型信息
+  // File type info
   fileType?: number;
-  fileTypeDescriptor?: string; // 更详细的文件类型描述（如 Q4_K_M, Q5_0_L 等）
+  fileTypeDescriptor?: string; // Detailed file type (e.g. Q4_K_M, Q5_0_L)
   quantizationVersion?: number;
 
-  // 模型参数
+  // Model parameters
   parameters?: number;
   bitsPerWeight?: number;
 
-  // 文件信息
+  // File info
   alignment?: number;
   fileSize?: number;
   modelSize?: number;
 
-  // 模型架构参数（可能为 0）
+  // Model architecture parameters (may be 0)
   contextLength?: number;
   embeddingLength?: number;
   layerCount?: number;
   headCount?: number;
 
-  // 以下字段保留以兼容旧代码（后端不再返回）
+  // Retained for backward compatibility (backend no longer returns these)
   blockSize?: number;
   feedForwardLength?: number;
   attentionHeadCount?: number;
@@ -43,7 +43,7 @@ export interface ModelMetadata {
 }
 
 /**
- * 模型信息
+ * Model info
  */
 export interface Model {
   id: string;
@@ -53,10 +53,10 @@ export interface Model {
   path: string;
   pathPrefix: string;
   size: number;
-  // 分卷模型相关字段
-  totalSize?: number;    // 所有分卷的总大小
-  shardCount?: number;   // 分卷数量
-  shardFiles?: string[]; // 所有分卷文件路径
+  // Shard-related fields
+  totalSize?: number;    // Total size across all shards
+  shardCount?: number;   // Number of shards
+  shardFiles?: string[]; // All shard file paths
   favourite: boolean;
   isLoaded: boolean;
   isLoading: boolean;
@@ -71,12 +71,12 @@ export interface Model {
 }
 
 /**
- * 模型状态
+ * Model status
  */
 export type ModelStatus = 'stopped' | 'loading' | 'running' | 'unloading' | 'error';
 
 /**
- * 处理槽位
+ * Processing slot
  */
 export interface Slot {
   id: number;
@@ -86,12 +86,12 @@ export interface Slot {
 }
 
 /**
- * 加载模型参数
+ * Load model parameters
  */
 export interface LoadModelParams {
-  // 基础参数
+  // Basic parameters
   modelId: string;
-  nodeId?: string;              // 指定运行节点 ID，undefined 表示自动调度
+  nodeId?: string;              // Target node ID; undefined = auto-schedule
   ctxSize?: number;
   batchSize?: number;
   threads?: number;
@@ -103,89 +103,89 @@ export interface LoadModelParams {
   seed?: number;
   nPredict?: number;
 
-  // 后端配置
-  llamaCppPath?: string;      // llama.cpp 可执行文件路径
-  mainGpu?: number | string;  // 主GPU选择
+  // Backend config
+  llamaCppPath?: string;      // llama.cpp executable path
+  mainGpu?: number | string;  // Primary GPU selection
 
-  // 能力开关
+  // Capability toggles
   capabilities?: {
-    thinking?: boolean;    // 思考能力
-    tools?: boolean;       // 工具使用
-    translation?: boolean; // 直译
-    embedding?: boolean;   // 嵌入
+    thinking?: boolean;    // Thinking ability
+    tools?: boolean;       // Tool use / function calling
+    translation?: boolean; // Translation
+    embedding?: boolean;   // Embedding
   };
 
-  // 上下文与加速
-  flashAttention?: boolean;       // Flash Attention 加速
-  noMmap?: boolean;               // 禁用内存映射
-  lockMemory?: boolean;           // 锁定物理内存
+  // Context & acceleration
+  flashAttention?: boolean;       // Flash Attention
+  noMmap?: boolean;               // Disable memory mapping
+  lockMemory?: boolean;           // Lock physical memory
 
-  // 采样参数
-  logitsAll?: boolean;            // 输入向量模式
-  reranking?: boolean;            // 重排序模式
-  minP?: number;                  // Min-P 采样
+  // Sampling parameters
+  logitsAll?: boolean;            // Logits all mode
+  reranking?: boolean;            // Reranking mode
+  minP?: number;                  // Min-P sampling
 
-  // 惩罚参数
-  presencePenalty?: number;       // 存在惩罚
-  frequencyPenalty?: number;      // 频率惩罚
+  // Penalty parameters
+  presencePenalty?: number;       // Presence penalty
+  frequencyPenalty?: number;      // Frequency penalty
 
-  // 批处理参数
-  uBatchSize?: number;            // 微批大小
-  parallelSlots?: number;         // 并发槽位数
+  // Batch parameters
+  uBatchSize?: number;            // Micro-batch size
+  parallelSlots?: number;         // Parallel slots
 
-  // KV缓存
-  kvCacheSize?: number;           // KV缓存内存上限
-  kvCacheUnified?: boolean;       // 统一KV缓存区
-  kvCacheTypeK?: string;          // KV缓存类型K (f16, f32, q8_0)
-  kvCacheTypeV?: string;          // KV缓存类型V
+  // KV cache
+  kvCacheSize?: number;           // KV cache memory limit
+  kvCacheUnified?: boolean;       // Unified KV cache
+  kvCacheTypeK?: string;          // KV cache type K (f16, f32, q8_0)
+  kvCacheTypeV?: string;          // KV cache type V
 
-  // 其他参数
-  directIo?: string;              // DirectIO 模式
-  disableJinja?: boolean;         // 禁用 Jinja 模板
-  chatTemplate?: string;          // 内置聊天模板
-  contextShift?: boolean;         // 上下文移位
-  extraArgs?: string;             // 额外命令行参数
+  // Other parameters
+  directIo?: string;              // DirectIO mode
+  disableJinja?: boolean;         // Disable Jinja templates
+  chatTemplate?: string;          // Built-in chat template
+  contextShift?: boolean;         // Context shift
+  extraArgs?: string;             // Extra CLI arguments
 
-  // 线程配置
-  threadsBatch?: number;          // 批处理线程数
+  // Thread config
+  threadsBatch?: number;          // Batch thread count
 
-  // 扩展采样参数
-  repeatLastN?: number;           // 重复惩罚范围
-  typicalP?: number;              // 典型采样
-  ignoreEos?: boolean;            // 忽略结束token
+  // Extended sampling parameters
+  repeatLastN?: number;           // Repeat penalty range
+  typicalP?: number;              // Typical sampling
+  ignoreEos?: boolean;            // Ignore EOS token
 
-  // 多GPU配置
-  splitMode?: string;             // GPU分割模式 (none, layer, row)
-  tensorSplit?: string;           // 张量分割比例
+  // Multi-GPU config
+  splitMode?: string;             // GPU split mode (none, layer, row)
+  tensorSplit?: string;           // Tensor split ratio
 
-  // 服务器优化
-  contBatching?: boolean;         // 连续批处理
-  cachePrompt?: boolean;          // 提示缓存
+  // Server optimization
+  contBatching?: boolean;         // Continuous batching
+  cachePrompt?: boolean;          // Prompt caching
 
-  // 结构化生成
-  grammar?: string;               // BNF语法
-  grammarFile?: string;           // 语法文件路径
+  // Structured generation
+  grammar?: string;               // BNF grammar
+  grammarFile?: string;           // Grammar file path
 
-  // LoRA适配器
-  lora?: string;                  // LoRA适配器路径
-  loraScaled?: string;            // 带缩放的LoRA
+  // LoRA adapters
+  lora?: string;                  // LoRA adapter path
+  loraScaled?: string;            // Scaled LoRA
 
-  // 聊天模板额外参数
-  chatTemplateKwargs?: string;    // 模板额外JSON参数
+  // Chat template extra parameters
+  chatTemplateKwargs?: string;    // Extra template JSON parameters
 
-  // RoPE扩展
-  ropeScaling?: string;           // RoPE缩放方法
-  ropeScale?: number;             // RoPE缩放因子
-  ropeFreqBase?: number;          // RoPE基础频率
-  ropeFreqScale?: number;         // RoPE频率缩放
+  // RoPE extension
+  ropeScaling?: string;           // RoPE scaling method
+  ropeScale?: number;             // RoPE scaling factor
+  ropeFreqBase?: number;          // RoPE base frequency
+  ropeFreqScale?: number;         // RoPE frequency scaling
 
-  // 运行时管理
-  unloadAfterMinutes?: number;   // 空闲自动卸载时间（分钟）。0=永不卸载，>0=自定义分钟数
-  concurrencyLimit?: number;     // 最大并发请求数。0=不限，>0=自定义限制
+  // Runtime management
+  unloadAfterMinutes?: number;   // Auto-unload idle time (minutes). 0=never, >0=custom
+  concurrencyLimit?: number;     // Max concurrent requests. 0=unlimited, >0=custom limit
 
-  // 参数启用状态：标记哪些参数需要手动配置（false表示使用llama-server默认值）
+  // Parameter enable flags: false = use llama-server defaults
   enabled?: {
-    // 基础参数
+    // Basic parameters
     ctxSize?: boolean;
     batchSize?: boolean;
     threads?: boolean;
@@ -199,35 +199,35 @@ export interface LoadModelParams {
     seed?: boolean;
     nPredict?: boolean;
 
-    // 采样参数
+    // Sampling parameters
     minP?: boolean;
     typicalP?: boolean;
     presencePenalty?: boolean;
     frequencyPenalty?: boolean;
     ignoreEos?: boolean;
 
-    // 批处理和缓存
+    // Batch & cache
     uBatchSize?: boolean;
     parallelSlots?: boolean;
     contBatching?: boolean;
     cachePrompt?: boolean;
 
-    // KV缓存
+    // KV cache
     kvCacheSize?: boolean;
     kvCacheUnified?: boolean;
     kvCacheTypeK?: boolean;
     kvCacheTypeV?: boolean;
 
-    // 性能选项
+    // Performance options
     flashAttention?: boolean;
     noMmap?: boolean;
     lockMemory?: boolean;
 
-    // GPU配置
+    // GPU config
     splitMode?: boolean;
     tensorSplit?: boolean;
 
-    // 结构化生成
+    // Structured generation
     grammar?: boolean;
     grammarFile?: boolean;
 
@@ -235,18 +235,18 @@ export interface LoadModelParams {
     lora?: boolean;
     loraScaled?: boolean;
 
-    // 模板
+    // Template
     chatTemplate?: boolean;
     chatTemplateKwargs?: boolean;
     disableJinja?: boolean;
 
-    // RoPE扩展
+    // RoPE extension
     ropeScaling?: boolean;
     ropeScale?: boolean;
     ropeFreqBase?: boolean;
     ropeFreqScale?: boolean;
 
-    // 其他
+    // Other
     contextShift?: boolean;
     directIo?: boolean;
     logitsAll?: boolean;
@@ -254,14 +254,14 @@ export interface LoadModelParams {
     timeout?: boolean;
     alias?: boolean;
 
-    // 运行时管理
+    // Runtime management
     unloadAfterMinutes?: boolean;
     concurrencyLimit?: boolean;
   };
 }
 
 /**
- * 模型列表响应
+ * Model list response
  */
 export interface ModelListResponse {
   models: Model[];
@@ -270,17 +270,17 @@ export interface ModelListResponse {
 }
 
 /**
- * 模型能力配置
+ * Model capabilities
  */
 export interface ModelCapabilities {
-  thinking?: boolean;    // 思考能力（如 DeepSeek-R1 等）
-  tools?: boolean;       // 工具使用/函数调用
-  rerank?: boolean;      // 重排序能力
-  embedding?: boolean;   // 嵌入向量生成
+  thinking?: boolean;    // Thinking ability (e.g. DeepSeek-R1)
+  tools?: boolean;       // Tool use / function calling
+  rerank?: boolean;      // Reranking
+  embedding?: boolean;   // Embedding generation
 }
 
 /**
- * 模型能力响应
+ * Model capabilities response
  */
 export interface ModelCapabilitiesResponse {
   modelId: string;
@@ -290,26 +290,26 @@ export interface ModelCapabilitiesResponse {
 }
 
 /**
- * 压测参数类型
+ * Benchmark parameter type
  */
 export type BenchmarkParamType = 'STRING' | 'INTEGER' | 'FLOAT' | 'LOGIC';
 
 /**
- * 压测参数定义
+ * Benchmark parameter definition
  */
 export interface BenchmarkParam {
-  fullName: string;        // 完整参数名，如 -t
-  name: string;            // 显示名称
-  abbreviation: string;    // 缩写
-  description: string;     // 描述
-  type: BenchmarkParamType; // 参数类型
-  defaultValue: string;    // 默认值
-  values?: string[];       // 可选值列表（枚举类型）
-  sort?: number;           // 排序序号
+  fullName: string;        // Full parameter name, e.g. -t
+  name: string;            // Display name
+  abbreviation: string;    // Abbreviation
+  description: string;     // Description
+  type: BenchmarkParamType; // Parameter type
+  defaultValue: string;    // Default value
+  values?: string[];       // Allowed values (enum)
+  sort?: number;           // Sort order
 }
 
 /**
- * 压测参数配置响应
+ * Benchmark params response
  */
 export interface BenchmarkParamsResponse {
   success: boolean;
@@ -318,55 +318,55 @@ export interface BenchmarkParamsResponse {
 }
 
 /**
- * 计算设备信息
+ * Compute device info
  */
 export interface ComputeDevice {
-  id: string;              // 设备标识
-  name: string;            // 设备名称
-  type: 'CPU' | 'GPU' | 'Accelerator'; // 设备类型
-  selected?: boolean;      // 是否已选择
+  id: string;              // Device identifier
+  name: string;            // Device name
+  type: 'CPU' | 'GPU' | 'Accelerator'; // Device type
+  selected?: boolean;      // Whether selected
 }
 
 /**
- * Llama.cpp 版本信息
+ * llama.cpp version info
  */
 export interface LlamaCppVersion {
-  path: string;            // 可执行文件路径
-  name?: string;           // 显示名称
-  description?: string;    // 描述
+  path: string;            // Executable path
+  name?: string;           // Display name
+  description?: string;    // Description
 }
 
 /**
- * 压测配置
+ * Benchmark configuration
  */
 export interface BenchmarkConfig {
-  modelId: string;         // 模型 ID
-  modelName: string;       // 模型名称
-  llamaCppPath: string;    // llama.cpp 路径
-  devices?: string[];      // 选择的设备列表（为空表示使用 auto）
-  params: Record<string, string | number | boolean>; // 压测参数键值对
-  configName?: string;     // 配置名称（用于保存配置）
+  modelId: string;         // Model ID
+  modelName: string;       // Model name
+  llamaCppPath: string;    // llama.cpp path
+  devices?: string[];      // Selected devices (empty = auto)
+  params: Record<string, string | number | boolean>; // Benchmark parameter key-value pairs
+  configName?: string;     // Config name (for saving)
 }
 
 /**
- * 压测状态
+ * Benchmark status
  */
 export type BenchmarkStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
 /**
- * 压测任务
+ * Benchmark task
  */
 export interface Benchmark {
-  id: string;              // 压测 ID
-  modelId: string;         // 模型 ID
-  modelName: string;       // 模型名称
-  status: BenchmarkStatus; // 状态
-  command: string;         // 执行命令
-  config: Record<string, any>; // 压测配置
-  createdAt: string;       // 创建时间
-  startedAt?: string;      // 开始时间
-  finishedAt?: string;     // 完成时间
-  error?: string;          // 错误信息
+  id: string;              // Benchmark ID
+  modelId: string;         // Model ID
+  modelName: string;       // Model name
+  status: BenchmarkStatus; // Status
+  command: string;         // Executed command
+  config: Record<string, any>; // Benchmark config
+  createdAt: string;       // Created at
+  startedAt?: string;      // Started at
+  finishedAt?: string;     // Finished at
+  error?: string;          // Error message
   metrics?: {
     total_time_ms?: number;
     tokens_per_second?: number;
@@ -376,21 +376,21 @@ export interface Benchmark {
 }
 
 /**
- * 压测结果
+ * Benchmark result
  */
 export interface BenchmarkResult {
-  id: string;              // 结果 ID
-  benchmarkId: string;     // 关联的压测 ID
-  modelId: string;         // 模型 ID
-  modelName: string;       // 模型名称
-  command: string[];       // 执行的命令
-  commandStr: string;      // 命令字符串
-  exitCode: number;        // 退出码
-  rawOutput: string;       // 原始输出
-  fileName: string;        // 保存的文件名
-  savedPath: string;       // 保存路径
-  timestamp: string;       // 时间戳
-  // 解析后的性能指标
+  id: string;              // Result ID
+  benchmarkId: string;     // Associated benchmark ID
+  modelId: string;         // Model ID
+  modelName: string;       // Model name
+  command: string[];       // Executed command
+  commandStr: string;      // Command string
+  exitCode: number;        // Exit code
+  rawOutput: string;       // Raw output
+  fileName: string;        // Saved file name
+  savedPath: string;       // Saved path
+  timestamp: string;       // Timestamp
+  // Parsed performance metrics
   metrics?: {
     tps?: number;          // Tokens per second
     promptTps?: number;    // Prompt processing speed
@@ -401,27 +401,27 @@ export interface BenchmarkResult {
 }
 
 /**
- * 压测结果列表项
+ * Benchmark result file entry
  */
 export interface BenchmarkResultFile {
-  name: string;            // 文件名
-  size: number;            // 文件大小
-  modified: string;        // 修改时间
+  name: string;            // File name
+  size: number;            // File size
+  modified: string;        // Modified time
 }
 
 /**
- * 压测结果列表响应
+ * Benchmark list response
  */
 export interface BenchmarkListResponse {
   success: boolean;
   data?: {
-    benchmarks: Benchmark[]; // 后端返回的是 benchmarks 数组
+    benchmarks: Benchmark[]; // Backend returns benchmarks array
   };
   error?: string;
 }
 
 /**
- * 压测结果详情响应
+ * Benchmark result detail response
  */
 export interface BenchmarkResultResponse {
   success: boolean;
@@ -430,18 +430,18 @@ export interface BenchmarkResultResponse {
 }
 
 /**
- * 创建压测请求
+ * Create benchmark request
  */
 export interface CreateBenchmarkRequest {
   modelId: string;
   llamaBinPath: string;
-  cmd?: string;            // 压测命令字符串
-  args?: string[];         // 压测命令参数数组
-  configName?: string;     // 可选的配置名称
+  cmd?: string;            // Benchmark command string
+  args?: string[];         // Benchmark command arguments
+  configName?: string;     // Optional config name
 }
 
 /**
- * 创建压测响应
+ * Create benchmark response
  */
 export interface CreateBenchmarkResponse {
   success: boolean;
@@ -450,15 +450,15 @@ export interface CreateBenchmarkResponse {
 }
 
 /**
- * 保存压测配置请求
+ * Save benchmark config request
  */
 export interface SaveBenchmarkConfigRequest {
-  name: string;            // 配置名称
+  name: string;            // Config name
   config: BenchmarkConfig;
 }
 
 /**
- * 保存压测配置响应
+ * Save benchmark config response
  */
 export interface SaveBenchmarkConfigResponse {
   success: boolean;
@@ -466,7 +466,7 @@ export interface SaveBenchmarkConfigResponse {
 }
 
 /**
- * 加载压测配置响应
+ * Load benchmark config response
  */
 export interface LoadBenchmarkConfigResponse {
   success: boolean;
@@ -481,7 +481,7 @@ export interface LoadBenchmarkConfigResponse {
 }
 
 /**
- * 压测列表响应
+ * Benchmark list data response
  */
 export interface BenchmarkListDataResponse {
   success: boolean;

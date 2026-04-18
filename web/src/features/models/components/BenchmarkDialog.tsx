@@ -22,8 +22,8 @@ interface BenchmarkDialogProps {
 }
 
 /**
- * 压测对话框组件
- * 参考 LlamacppServer 的 model-benchmark.js 设计
+ * Benchmark dialog component
+ * Modeled after LlamacppServer's model-benchmark.js
  */
 export function BenchmarkDialog({
   isOpen,
@@ -35,28 +35,21 @@ export function BenchmarkDialog({
 }: BenchmarkDialogProps) {
   const toast = useToast();
 
-  // 获取压测参数列表
   const { data: benchmarkParams = [], isLoading: paramsLoading } = useBenchmarkParams();
 
-  // 获取 Llama.cpp 版本列表
   const { data: llamaCppVersions = [], isLoading: versionsLoading } = useLlamaCppVersions();
 
-  // 使用 useMemo 稳定依赖，避免无限循环
   const benchmarkParamsKeys = useMemo(() => benchmarkParams.map(p => p.fullName).join(','), [benchmarkParams]);
 
-  // 压测配置状态
   const [llamaCppPath, setLlamaCppPath] = useState<string>('');
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [availableDevices, setAvailableDevices] = useState<string[]>([]);
   const [paramValues, setParamValues] = useState<Record<string, string>>({});
   const [devicesLoading, setDevicesLoading] = useState(false);
 
-  // 使用 ref 跟踪上次打开的对话框状态
   const wasOpen = useRef(false);
-  // 使用 ref 跟踪上次的 benchmarkParamsKeys，用于检测参数是否刚刚加载
   const prevParamsKeysRef = useRef<string>('');
 
-  // 初始化默认参数值
   const initializeDefaults = () => {
     const defaults: Record<string, string> = {};
     benchmarkParams.forEach((param) => {
@@ -67,28 +60,24 @@ export function BenchmarkDialog({
     setParamValues(defaults);
   };
 
-  // 重置表单到默认值
   const handleReset = () => {
     initializeDefaults();
-    setSelectedDevices(availableDevices); // 重置为全选设备
+    setSelectedDevices(availableDevices);
   };
 
-  // 当对话框打开且有版本数据时，设置默认的 llama.cpp 路径
   useEffect(() => {
     if (isOpen && !llamaCppPath && llamaCppVersions.length > 0) {
       setLlamaCppPath(llamaCppVersions[0].path);
     }
   }, [isOpen, llamaCppPath, llamaCppVersions]);
 
-  // 当选择 llama.cpp 路径时，加载可用设备
-  // 使用 ref 跟踪是否正在加载设备，防止重复请求
+  // Load available devices when llama.cpp path is selected
+  // Use ref to prevent duplicate requests
   const isLoadingDevicesRef = useRef(false);
 
-  // 当选择 llama.cpp 路径时，加载可用设备
   useEffect(() => {
     if (isOpen && llamaCppPath && !isLoadingDevicesRef.current) {
       const loadDevices = async () => {
-        // 防止重复请求
         if (isLoadingDevicesRef.current) return;
         isLoadingDevicesRef.current = true;
         
@@ -105,7 +94,6 @@ export function BenchmarkDialog({
           if (data.success && data.data?.devices) {
             const devices = data.data.devices;
             setAvailableDevices(devices);
-            // 默认全选所有设备
             setSelectedDevices(devices);
           } else {
             throw new Error(data.error || '无法解析设备列表响应');
@@ -123,40 +111,30 @@ export function BenchmarkDialog({
       };
       loadDevices();
     }
-    // 注意: toast 是稳定的，不需要加入依赖数组
+    // Note: toast is stable and doesn't need to be in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, llamaCppPath]);
 
-  // 当对话框打开时，初始化默认值（仅一次）
   useEffect(() => {
     const paramsJustLoaded = prevParamsKeysRef.current === '' && benchmarkParamsKeys !== '';
-    
-    // 检测从关闭到打开的状态变化，或者参数刚刚加载完成
+
     if (isOpen && (!wasOpen.current || paramsJustLoaded)) {
-      // 初始化参数默认值
       initializeDefaults();
-      // 重置其他状态
       setAvailableDevices([]);
       setSelectedDevices([]);
     }
-    // 更新 refs
     wasOpen.current = isOpen;
     prevParamsKeysRef.current = benchmarkParamsKeys;
   }, [isOpen, benchmarkParamsKeys]);
   useEffect(() => {
-    // 检测从关闭到打开的状态变化
     if (isOpen && !wasOpen.current) {
-      // 初始化参数默认值
       initializeDefaults();
-      // 重置其他状态
       setAvailableDevices([]);
       setSelectedDevices([]);
     }
-    // 更新 ref
     wasOpen.current = isOpen;
   }, [isOpen, benchmarkParamsKeys]);
 
-  // 处理设备选择
   const handleDeviceToggle = (device: string) => {
     setSelectedDevices((prev) =>
       prev.includes(device)
@@ -165,7 +143,6 @@ export function BenchmarkDialog({
     );
   };
 
-  // 处理全选/取消全选设备
   const handleSelectAllDevices = () => {
     if (selectedDevices.length === availableDevices.length) {
       setSelectedDevices([]);
@@ -174,16 +151,13 @@ export function BenchmarkDialog({
     }
   };
 
-  // 处理参数值变化
   const handleParamChange = (fullName: string, value: string) => {
     setParamValues((prev) => ({ ...prev, [fullName]: value }));
   };
 
-  // 构建命令字符串
   const buildCommand = (): string => {
     const parts: string[] = [];
 
-    // 添加参数
     Object.entries(paramValues).forEach(([key, value]) => {
       if (value === 'true') {
         parts.push(key);
@@ -192,7 +166,6 @@ export function BenchmarkDialog({
       }
     });
 
-    // 添加设备参数
     if (selectedDevices.length > 0 && selectedDevices.length < availableDevices.length) {
       parts.push('-dev', selectedDevices.join('/'));
     }
@@ -200,7 +173,6 @@ export function BenchmarkDialog({
     return parts.join(' ');
   };
 
-  // 提交压测
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -223,17 +195,14 @@ export function BenchmarkDialog({
       params: paramValues,
     };
 
-    // 通过 onConfirm 传递配置，由父组件调用 API
     onConfirm(config);
   };
 
-  // 渲染参数输入字段
   const renderParamField = (param: BenchmarkParam) => {
     const value = paramValues[param.fullName] || param.defaultValue || '';
     const id = `param-${param.fullName.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
     if (param.values && param.values.length > 0) {
-      // 枚举类型 - 下拉选择
       return (
         <div key={param.fullName} className="space-y-1">
           <label className="flex items-center text-xs font-medium text-foreground">
@@ -274,7 +243,6 @@ export function BenchmarkDialog({
     }
 
     if (param.type === 'LOGIC') {
-      // 布尔类型 - 下拉选择 true/false
       return (
         <div key={param.fullName} className="space-y-1">
           <label className="flex items-center text-xs font-medium text-foreground">
@@ -312,7 +280,6 @@ export function BenchmarkDialog({
     }
 
     if (param.type === 'INTEGER') {
-      // 整数类型
       return (
         <div key={param.fullName} className="space-y-1">
           <label className="flex items-center text-xs font-medium text-foreground">
@@ -348,7 +315,6 @@ export function BenchmarkDialog({
     }
 
     if (param.type === 'FLOAT') {
-      // 浮点类型
       return (
         <div key={param.fullName} className="space-y-1">
           <label className="flex items-center text-xs font-medium text-foreground">
@@ -384,7 +350,6 @@ export function BenchmarkDialog({
       );
     }
 
-    // 默认字符串类型
     return (
       <div key={param.fullName} className="space-y-1">
         <label className="flex items-center text-xs font-medium text-foreground">
@@ -421,13 +386,12 @@ export function BenchmarkDialog({
 
   if (!isOpen) return null;
 
-  // 排序后的参数列表
   const sortedParams = [...benchmarkParams].sort((a, b) => (a.sort || 0) - (b.sort || 0));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className="bg-card rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
-        {/* 标题栏 */}
+        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <Gauge className="w-5 h-5 text-blue-500" />
@@ -444,11 +408,11 @@ export function BenchmarkDialog({
           </button>
         </div>
 
-        {/* 表单内容 - 两栏布局 */}
+        {/* Form content - two-column layout */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto p-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* 左侧：基础参数 */}
+              {/* Left: basic params */}
               <div className="space-y-4">
                 <div className="bg-muted/30 rounded-lg p-4 space-y-4">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 pb-2 border-b border-border">
@@ -456,7 +420,7 @@ export function BenchmarkDialog({
                     基础参数
                   </h3>
 
-                  {/* 模型信息 */}
+                  {/* Model info */}
                   <div>
                     <label className="block text-xs font-medium text-foreground mb-1">
                       模型
@@ -466,7 +430,7 @@ export function BenchmarkDialog({
                     </div>
                   </div>
 
-                  {/* Llama.cpp 版本选择 */}
+                  {/* Llama.cpp version */}
                   <div>
                     <label className="block text-xs font-medium text-foreground mb-1">
                       Llama.cpp 版本
@@ -495,7 +459,7 @@ export function BenchmarkDialog({
                     </select>
                   </div>
 
-                  {/* 设备选择 */}
+                  {/* Device selection */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-xs font-medium text-foreground">
@@ -523,7 +487,6 @@ export function BenchmarkDialog({
                       ) : availableDevices.length > 0 ? (
                         <div className="space-y-1">
                           {availableDevices.map((device, index) => {
-                            // 解析设备信息: "ROCm0: AMD Radeon Graphics (122880 MiB, 114915 MiB free)"
                             const deviceLine = device.trim();
                             const parts = deviceLine.split(':');
                             const deviceId = parts[0]?.trim() || deviceLine;
@@ -566,7 +529,7 @@ export function BenchmarkDialog({
                 </div>
               </div>
 
-              {/* 右侧：压测参数 */}
+              {/* Right: benchmark params */}
               <div className="space-y-4">
                 <div className="bg-muted/30 rounded-lg p-4 h-full">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 pb-2 border-b border-border mb-4">
@@ -594,7 +557,7 @@ export function BenchmarkDialog({
           </div>
         </form>
 
-        {/* 底部按钮区域 */}
+        {/* Footer */}
         <div className="flex justify-end items-center gap-2 px-4 py-3 border-t border-border bg-card flex-shrink-0">
           <Button
             type="button"

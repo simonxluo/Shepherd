@@ -1,20 +1,20 @@
 /**
- * 文件系统 API 客户端
+ * Filesystem API client
  */
 
 import { apiClient } from './client';
 
 /**
- * 目录项
+ * Directory item
  */
 export interface DirectoryItem {
   name: string;
   path: string;
-  size?: number; // 文件大小(字节),目录为空
+  size?: number; // File size in bytes; empty for directories
 }
 
 /**
- * 目录列表响应
+ * Directory list response
  */
 export interface DirectoryListResponse {
   currentPath: string;
@@ -26,7 +26,7 @@ export interface DirectoryListResponse {
 }
 
 /**
- * 路径验证结果
+ * Path validation result
  */
 export interface PathValidationResult {
   success: boolean;
@@ -39,19 +39,19 @@ export interface PathValidationResult {
 }
 
 /**
- * 文件系统 API
+ * Filesystem API
  */
 export const filesystemApi = {
   /**
-   * 列出目录内容
-   * @param path 目录路径,空值表示根目录
+   * List directory contents
+   * @param path Directory path; empty for root
    */
   listDirectory: (path?: string): Promise<{ success: boolean; data: DirectoryListResponse }> =>
     apiClient.get<{ success: boolean; data: DirectoryListResponse }>('/system/filesystem', path ? { path } : undefined),
 
   /**
-   * 验证路径
-   * @param path 要验证的路径
+   * Validate a path
+   * @param path Path to validate
    */
   validatePath: (path: string): Promise<PathValidationResult> =>
     apiClient.post<PathValidationResult>('/system/filesystem/validate', { path }),

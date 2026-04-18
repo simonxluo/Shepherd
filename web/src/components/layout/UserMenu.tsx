@@ -37,7 +37,7 @@ export function UserMenu({ sidebarOpen }: UserMenuProps) {
   
   const { theme, setTheme } = useUIStore();
 
-  // 点击外部关闭菜单
+  // Close menu on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -83,7 +83,7 @@ export function UserMenu({ sidebarOpen }: UserMenuProps) {
     return null;
   };
 
-  // 未展开状态 - 只显示头像图标
+  // Collapsed state - avatar only
   if (!sidebarOpen) {
     return (
       <div className="relative" ref={menuRef}>
@@ -132,7 +132,7 @@ export function UserMenu({ sidebarOpen }: UserMenuProps) {
     );
   }
 
-  // 展开状态
+  // Expanded state
   return (
     <div className="relative" ref={menuRef}>
       <button

@@ -6,8 +6,7 @@ interface ModelIconProps {
 }
 
 /**
- * 模型图标组件 - 支持从底部到顶部的发光动画
- * 正常状态静态，悬停时播放发光动画
+ * Model icon component with glow animation on hover
  */
 export function ModelIcon({ architecture, className = '' }: ModelIconProps) {
   const arch = architecture.toLowerCase();
@@ -15,7 +14,6 @@ export function ModelIcon({ architecture, className = '' }: ModelIconProps) {
   let path1 = '';
   let path2 = '';
 
-  // 设置颜色和图标路径
   if (arch.includes('qwen')) {
     colorClass = 'text-blue-500';
     path1 = 'M 12 4 A 8 8 0 0 0 4 12 A 8 8 0 0 0 12 20 M 12 10 A 2 2 0 1 0 12 14 A 2 2 0 1 0 12 10';
@@ -68,7 +66,7 @@ export function ModelIcon({ architecture, className = '' }: ModelIconProps) {
         className="glow-path-2"
       />
       <style>{`
-        /* 默认状态：静态显示，无动画 */
+        /* Default: static */
         .model-icon-glow .glow-path-1,
         .model-icon-glow .glow-path-2 {
           stroke-dasharray: 100;
@@ -76,7 +74,7 @@ export function ModelIcon({ architecture, className = '' }: ModelIconProps) {
           transition: all 0.3s ease;
         }
 
-        /* 悬停时：播放发光动画 */
+        /* Hover: glow animation */
         .model-icon-glow:hover .glow-path-1 {
           animation: glowStroke1 2s ease-in-out infinite;
         }
@@ -86,7 +84,7 @@ export function ModelIcon({ architecture, className = '' }: ModelIconProps) {
           animation-delay: 0.4s;
         }
 
-        /* 路径1动画 */
+        /* Path 1 animation */
         @keyframes glowStroke1 {
           0% {
             stroke-dashoffset: 100;
@@ -113,7 +111,7 @@ export function ModelIcon({ architecture, className = '' }: ModelIconProps) {
           }
         }
 
-        /* 路径2动画 */
+        /* Path 2 animation */
         @keyframes glowStroke2 {
           0% {
             stroke-dashoffset: 100;

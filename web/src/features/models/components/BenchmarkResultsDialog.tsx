@@ -14,9 +14,8 @@ interface BenchmarkResultsDialogProps {
 }
 
 /**
- * 测试结果对比对话框
- * 参考 LlamacppServer 的 model-benchmark.js 结果对比功能
- * 左侧显示测试结果文件列表，右侧显示内容对比区域
+ * Benchmark results comparison dialog
+ * Left panel: result file list, Right panel: content comparison area
  */
 export function BenchmarkResultsDialog({
   isOpen,
@@ -32,11 +31,10 @@ export function BenchmarkResultsDialog({
   const [resultContent, setResultContent] = useState<string>('');
   const [loadingFile, setLoadingFile] = useState<string | null>(null);
 
-  // 加载测试结果文件列表
   useEffect(() => {
     if (isOpen && modelId) {
       loadResultFiles();
-      setResultContent(''); // 打开时清空内容
+      setResultContent('');
     }
   }, [isOpen, modelId]);
 
@@ -60,14 +58,12 @@ export function BenchmarkResultsDialog({
     }
   };
 
-  // 格式化文件大小
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // 格式化时间
   const formatTime = (timestamp: string): string => {
     try {
       return new Date(timestamp).toLocaleString('zh-CN');
@@ -76,11 +72,9 @@ export function BenchmarkResultsDialog({
     }
   };
 
-  // 追加测试结果到内容区域
   const appendResult = (result: BenchmarkResult, fileName: string) => {
     let text = '';
 
-    // 如果已有内容，添加分隔线
     if (resultContent.trim().length > 0) {
       text += '\n\n';
     }
@@ -104,7 +98,6 @@ export function BenchmarkResultsDialog({
       text += `\n保存文件: ${result.savedPath}\n`;
     }
 
-    // 显示性能指标
     if (result.metrics) {
       text += `\n性能指标:\n`;
       if (result.metrics.tps != null) {
@@ -131,7 +124,6 @@ export function BenchmarkResultsDialog({
     setResultContent(prev => prev + text);
   };
 
-  // 加载并追加测试结果
   const loadBenchmarkResult = async (fileName: string) => {
     setLoadingFile(fileName);
     try {
@@ -152,7 +144,6 @@ export function BenchmarkResultsDialog({
     }
   };
 
-  // 删除测试结果文件
   const deleteBenchmarkResult = async (fileName: string) => {
     const confirmed = await alertDialog.confirm({
       title: '删除测试结果',
@@ -182,7 +173,6 @@ export function BenchmarkResultsDialog({
     }
   };
 
-  // 清空内容区域
   const clearContent = () => {
     setResultContent('');
   };
@@ -192,7 +182,7 @@ export function BenchmarkResultsDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className="bg-card rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] flex flex-col">
-        {/* 标题栏 */}
+        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-500" />
@@ -208,9 +198,9 @@ export function BenchmarkResultsDialog({
           </button>
         </div>
 
-        {/* 内容区域 - 两栏布局 */}
+        {/* Content - two-column layout */}
         <div className="flex-1 flex gap-4 p-4 min-h-0 overflow-hidden">
-          {/* 左侧：文件列表 */}
+          {/* Left: file list */}
           <div className="w-1/3 min-w-[280px] border border-border rounded-lg overflow-hidden bg-muted/30 flex flex-col">
             <div className="px-3 py-2 border-b border-border text-sm font-medium text-foreground bg-muted/50 flex items-center justify-between">
               <span>测试结果文件</span>
@@ -288,7 +278,7 @@ export function BenchmarkResultsDialog({
             </div>
           </div>
 
-          {/* 右侧：内容显示区域 */}
+          {/* Right: content display */}
           <div className="flex-1 flex flex-col min-w-0 border border-border rounded-lg overflow-hidden">
             <div className="px-3 py-2 border-b border-border flex items-center justify-between bg-muted/50">
               <div className="text-sm text-muted-foreground">
@@ -310,7 +300,7 @@ export function BenchmarkResultsDialog({
           </div>
         </div>
 
-        {/* 底部按钮 */}
+        {/* Footer */}
         <div className="flex justify-end px-4 py-3 border-t border-border bg-card flex-shrink-0">
           <Button variant="secondary" onClick={onClose}>
             关闭

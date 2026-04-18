@@ -41,14 +41,13 @@ export function PathEditDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [pathValidation, setPathValidation] = useState<{
-    valid: boolean | null;  // null = 未验证, true = 有效, false = 无效
+    valid: boolean | null;
     checking: boolean;
     message?: string;
   }>({ valid: null, checking: false });
   const [submitError, setSubmitError] = useState<string | null>(null);
   const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 当 path 变化时更新表单数据
   useEffect(() => {
     if (path) {
       setFormData({
@@ -65,9 +64,8 @@ export function PathEditDialog({
     }
   }, [path, open]);
 
-  // 路径验证（调用后端 API 进行真实验证）
+  // Path validation via backend API
   useEffect(() => {
-    // 清除之前的 timeout
     if (validationTimeoutRef.current) {
       clearTimeout(validationTimeoutRef.current);
     }
@@ -77,7 +75,6 @@ export function PathEditDialog({
       return;
     }
 
-    // 首先进行简单的格式验证
     const isUnixPath = formData.path.startsWith('/');
     const isWindowsPath = /^[a-zA-Z]:\\/.test(formData.path);
 
@@ -90,17 +87,14 @@ export function PathEditDialog({
       return;
     }
 
-    // 延迟验证路径是否存在（避免频繁请求）
     const validatePath = async () => {
       setPathValidation({ valid: null, checking: true, message: '验证路径中...' });
 
       try {
-        // 调用后端 API 验证路径
         let response;
         if (type === 'llamacpp') {
           response = await llamacppPathsApi.test(formData.path);
         } else {
-          // 模型路径暂时只做格式验证（后端没有测试 API）
           setPathValidation({
             valid: true,
             checking: false,
@@ -123,8 +117,7 @@ export function PathEditDialog({
           });
         }
       } catch (error) {
-        // 网络错误或其他错误时，显示为不确定状态
-        console.error('路径验证失败:', error);
+        console.error('Path validation failed:', error);
         setPathValidation({
           valid: null,
           checking: false,
@@ -133,7 +126,7 @@ export function PathEditDialog({
       }
     };
 
-    // 500ms 防抖
+    // 500ms debounce
     validationTimeoutRef.current = setTimeout(validatePath, 500);
 
     return () => {
@@ -143,7 +136,6 @@ export function PathEditDialog({
     };
   }, [formData.path, type]);
 
-  // 处理目录选择
   const handleDirectorySelect = (selectedPath: string) => {
     setFormData({ ...formData, path: selectedPath });
   };
@@ -151,10 +143,8 @@ export function PathEditDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 清除之前的错误
     setSubmitError(null);
 
-    // 验证
     if (!formData.path.trim()) {
       return;
     }
@@ -162,7 +152,6 @@ export function PathEditDialog({
     setIsSaving(true);
     try {
       const dataToSave = {
-        // 编辑时传递原始路径用于匹配
         ...(isEdit && { originalPath: path?.path }),
         path: formData.path.trim(),
         name: formData.name.trim() || undefined,
@@ -170,18 +159,15 @@ export function PathEditDialog({
       };
 
       await onSave(dataToSave);
-      // 成功后才关闭对话框
       onClose();
     } catch (error) {
-      console.error('保存路径失败:', error);
+      console.error('Failed to save path:', error);
 
-      // 解析错误消息
       let errorMessage = '保存失败，请稍后重试';
 
       if (error instanceof Error) {
         const errorText = error.message;
 
-        // 解析常见错误
         if (errorText.includes('path does not exist')) {
           const match = errorText.match(/path does not exist: (.+)/);
           const invalidPath = match ? match[1] : formData.path;
@@ -199,7 +185,6 @@ export function PathEditDialog({
         errorMessage = error;
       }
 
-      // 显示错误
       setSubmitError(errorMessage);
       toast.error('保存失败', errorMessage);
     } finally {
@@ -218,7 +203,7 @@ export function PathEditDialog({
           </DialogHeader>
 
           <div className="space-y-4 p-6">
-            {/* 错误提示 */}
+            {/* Error alert */}
             {submitError && (
               <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
                 <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
@@ -229,7 +214,7 @@ export function PathEditDialog({
               </div>
             )}
 
-            {/* 路径输入（必填） */}
+            {/* Path input (required) */}
             <div className="space-y-2">
               <label htmlFor="path" className="text-xs font-medium flex items-center gap-1.5">
                 <FolderOpen size={12} className="text-muted-foreground" />
@@ -252,7 +237,7 @@ export function PathEditDialog({
                     )}
                     required
                   />
-                  {/* 验证状态图标 */}
+                  {/* Validation status icon */}
                   <div className="absolute right-2 top-1/2 -translate-y-1/2">
                     {pathValidation.checking ? (
                       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -293,7 +278,7 @@ export function PathEditDialog({
               </div>
             </div>
 
-            {/* 名称输入（可选） */}
+            {/* Name input (optional) */}
             <div className="space-y-2">
               <label htmlFor="name" className="text-xs font-medium">
                 名称 <span className="text-muted-foreground">（可选）</span>
@@ -314,7 +299,7 @@ export function PathEditDialog({
               />
             </div>
 
-            {/* 描述输入（可选） */}
+            {/* Description input (optional) */}
             <div className="space-y-2">
               <label htmlFor="description" className="text-xs font-medium">
                 描述 <span className="text-muted-foreground">（可选）</span>
@@ -332,7 +317,7 @@ export function PathEditDialog({
             </div>
           </div>
 
-          {/* 目录浏览器 */}
+          {/* Directory browser */}
           <DirectoryBrowser
             open={isBrowserOpen}
             initialPath={formData.path}

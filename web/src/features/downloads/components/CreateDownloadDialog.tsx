@@ -28,7 +28,6 @@ export function CreateDownloadDialog({
   const [maxRetries, setMaxRetries] = useState('3');
   const [chunkSize, setChunkSize] = useState('');
 
-  // 当 preFill 变化时，更新表单值
   useEffect(() => {
     if (preFill) {
       setSource(preFill.source);
@@ -38,21 +37,17 @@ export function CreateDownloadDialog({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preFill]);
 
-  // 文件列表状态
   const [availableFiles, setAvailableFiles] = useState<ModelFileInfo[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [showFileBrowser, setShowFileBrowser] = useState(false);
 
-  // 使用 hook 获取模型文件列表
   const { data: files, isLoading: loadingFiles, error: filesError } = useModelFiles(
     source,
     repoId
   );
 
-  // 当仓库ID变化时更新可用文件列表
   useEffect(() => {
     if (files) {
-      // 强制过滤，只显示 GGUF 文件
       const ggufFiles = files.filter((f) => f.name.toLowerCase().endsWith('.gguf'));
       setAvailableFiles(ggufFiles);
     } else {
@@ -83,7 +78,7 @@ export function CreateDownloadDialog({
     setSource(src);
     setRepoId(exampleRepo);
     setFileName(exampleFile || '');
-    setAvailableFiles([]); // 清空文件列表
+    setAvailableFiles([]);
   };
 
   const handleSelectFile = (file: ModelFileInfo) => {
@@ -107,7 +102,6 @@ export function CreateDownloadDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* 标题栏 */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">
             创建下载任务
@@ -121,9 +115,7 @@ export function CreateDownloadDialog({
           </button>
         </div>
 
-        {/* 表单内容 */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {/* 来源选择 */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               下载来源
@@ -158,7 +150,6 @@ export function CreateDownloadDialog({
             </div>
           </div>
 
-          {/* 仓库 ID */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               仓库 ID <span className="text-red-500">*</span>
@@ -176,7 +167,6 @@ export function CreateDownloadDialog({
             </p>
           </div>
 
-          {/* 文件选择 */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               文件名
@@ -201,7 +191,6 @@ export function CreateDownloadDialog({
               </Button>
             </div>
 
-            {/* 文件浏览器 */}
             {showFileBrowser && (
               <div className="mt-2 p-3 bg-muted rounded-md border border-border max-h-48 overflow-y-auto">
                 {isLoadingFiles ? (
@@ -248,7 +237,6 @@ export function CreateDownloadDialog({
             )}
           </div>
 
-          {/* 保存路径 */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               保存路径（可选）
@@ -265,7 +253,6 @@ export function CreateDownloadDialog({
             </p>
           </div>
 
-          {/* 高级选项 */}
           <details className="group">
             <summary className="cursor-pointer text-sm font-medium text-foreground list-none flex items-center gap-2">
               <span className="transform group-open:rotate-90 transition-transform">▶</span>
@@ -273,7 +260,6 @@ export function CreateDownloadDialog({
             </summary>
 
             <div className="mt-3 space-y-3 pl-5">
-              {/* 最大重试次数 */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
                   最大重试次数
@@ -288,7 +274,6 @@ export function CreateDownloadDialog({
                 />
               </div>
 
-              {/* 分块大小 */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
                   分块大小（字节）
@@ -306,7 +291,6 @@ export function CreateDownloadDialog({
             </div>
           </details>
 
-          {/* 按钮 */}
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button
               type="button"

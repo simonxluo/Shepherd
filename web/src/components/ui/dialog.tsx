@@ -1,10 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-/**
- * Dialog 组件 - 基础模态对话框
- */
-
 interface DialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -43,9 +39,6 @@ export function Dialog({ open = false, onOpenChange, children }: DialogProps) {
   );
 }
 
-/**
- * DialogContent - 对话框内容容器
- */
 interface DialogContentProps {
   className?: string;
   children: React.ReactNode;
@@ -54,7 +47,7 @@ interface DialogContentProps {
 export function DialogContent({ className, children }: DialogContentProps) {
   const { open, onOpenChange } = React.useContext(DialogContext);
 
-  // ESC 键关闭
+  // Close on Escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -68,7 +61,7 @@ export function DialogContent({ className, children }: DialogContentProps) {
     }
   }, [open, onOpenChange]);
 
-  // 阻止滚动
+  // Prevent body scroll
   React.useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
@@ -82,13 +75,13 @@ export function DialogContent({ className, children }: DialogContentProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* 背景遮罩 */}
+      {/* Backdrop overlay */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in"
         onClick={() => onOpenChange(false)}
       />
 
-      {/* 对话框内容 */}
+      {/* Dialog content */}
       <div
         className={cn(
           'relative bg-card text-card-foreground rounded-xl shadow-2xl border border-border',
@@ -103,9 +96,6 @@ export function DialogContent({ className, children }: DialogContentProps) {
   );
 }
 
-/**
- * DialogHeader - 对话框头部
- */
 interface DialogHeaderProps {
   className?: string;
   children: React.ReactNode;
@@ -119,9 +109,6 @@ export function DialogHeader({ className, children }: DialogHeaderProps) {
   );
 }
 
-/**
- * DialogTitle - 对话框标题
- */
 interface DialogTitleProps {
   className?: string;
   children: React.ReactNode;
@@ -140,9 +127,6 @@ export function DialogTitle({ className, children }: DialogTitleProps) {
   );
 }
 
-/**
- * DialogDescription - 对话框描述
- */
 interface DialogDescriptionProps {
   className?: string;
   children: React.ReactNode;
@@ -156,9 +140,6 @@ export function DialogDescription({ className, children }: DialogDescriptionProp
   );
 }
 
-/**
- * DialogFooter - 对话框底部
- */
 interface DialogFooterProps {
   className?: string;
   children: React.ReactNode;

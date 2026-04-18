@@ -1,11 +1,11 @@
 /**
- * API 兼容性配置 API 客户端
+ * API compatibility client
  */
 
 import { apiClient } from './client';
 
 /**
- * API 兼容性配置
+ * API compatibility configuration
  */
 export interface CompatibilityConfig {
   ollama: {
@@ -19,7 +19,7 @@ export interface CompatibilityConfig {
 }
 
 /**
- * 兼容性配置响应
+ * Compatibility config response
  */
 interface CompatibilityResponse {
   success: boolean;
@@ -28,7 +28,7 @@ interface CompatibilityResponse {
 }
 
 /**
- * 更新配置响应
+ * Update config response
  */
 interface UpdateResponse {
   success: boolean;
@@ -41,7 +41,7 @@ interface UpdateResponse {
 }
 
 /**
- * 连接测试响应
+ * Connection test response
  */
 interface TestConnectionResponse {
   success: boolean;
@@ -51,23 +51,23 @@ interface TestConnectionResponse {
 }
 
 /**
- * API 兼容性配置管理 API
+ * API compatibility management
  */
 export const compatibilityApi = {
   /**
-   * 获取兼容性配置
+   * Get compatibility config
    */
   get: (): Promise<CompatibilityResponse> =>
     apiClient.get<CompatibilityResponse>('/config/compatibility'),
 
   /**
-   * 更新兼容性配置
+   * Update compatibility config
    */
   update: (config: CompatibilityConfig): Promise<UpdateResponse> =>
     apiClient.put<UpdateResponse>('/config/compatibility', config),
 
   /**
-   * 测试端口连接
+   * Test port connection
    */
   testConnection: (port: number, type: 'ollama' | 'lmstudio'): Promise<TestConnectionResponse> =>
     apiClient.post<TestConnectionResponse>('/config/compatibility/test', { port, type }),

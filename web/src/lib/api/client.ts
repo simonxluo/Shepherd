@@ -1,19 +1,25 @@
-/**
- * API 错误类
- */
 export class APIError extends Error {
+  public status: number;
+  public code?: string;
+  public details?: string;
+  public handled?: boolean;
+
   constructor(
-    public status: number,
-    public statusText: string,
-    message?: string
+    status: number,
+    message: string,
+    code?: string,
+    details?: string
   ) {
-    super(message || `HTTP ${status}: ${statusText}`)
-    this.name = 'APIError'
+    super(message);
+    this.name = 'APIError';
+    this.status = status;
+    this.code = code;
+    this.details = details;
   }
 }
 
 /**
- * API 请求配置选项
+ * API request options
  */
 interface RequestInit extends globalThis.RequestInit {
   signal?: AbortSignal
@@ -34,7 +40,7 @@ export class ApiClient {
   }
 
   /**
-   * 通用的 fetch 请求方法，包含统一的错误处理
+   * Generic fetch with unified error handling
    */
   private async fetchRequest<T>(
     url: string,
@@ -48,20 +54,26 @@ export class ApiClient {
       },
     })
 
-    // 检查 HTTP 状态码
     if (!res.ok) {
       let errorMessage = res.statusText
+      let errorCode: string | undefined
+      let errorDetails: string | undefined
       try {
-        // 尝试从响应体获取错误信息
         const errorData = await res.json()
-        errorMessage = errorData.message || errorData.error || errorMessage
+        if (errorData.error && typeof errorData.error === 'object') {
+          errorMessage = errorData.error.message || errorMessage
+          errorCode = errorData.error.code
+          errorDetails = errorData.error.details
+        } else {
+          errorMessage = errorData.message || errorData.error || errorMessage
+        }
       } catch {
-        // 如果解析失败，使用默认错误消息
+        // JSON parse failed, use default
       }
-      throw new APIError(res.status, errorMessage)
+      throw new APIError(res.status, errorMessage, errorCode, errorDetails)
     }
 
-    // 对于 204 No Content，返回空对象
+    // Return empty object for 204 No Content
     if (res.status === 204) {
       return {} as T
     }
@@ -106,15 +118,15 @@ export class ApiClient {
 }
 
 /**
- * API客户端单例实例
- * 使用相对路径通过 Vite 开发服务器代理访问后端 API
- * 在生产环境中，需要在 nginx 或其他反向代理中配置 /api 路由
+ * API client singleton.
+ * Uses relative path proxied through Vite dev server.
+ * In production, configure /api route in nginx or other reverse proxy.
  */
 export const apiClient = new ApiClient('/api');
 
 /**
- * 更新API客户端的基础URL
- * @param baseUrl 新的基础URL
+ * Update the API client base URL.
+ * @param baseUrl New base URL
  */
 export function updateApiClientUrl(baseUrl: string): void {
   apiClient.setBaseUrl(baseUrl);

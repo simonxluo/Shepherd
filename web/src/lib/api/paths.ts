@@ -1,5 +1,5 @@
 /**
- * 路径配置 API 客户端
+ * Path configuration API client
  */
 
 import { apiClient } from './client';
@@ -10,7 +10,7 @@ import type {
 } from '@/lib/config';
 
 /**
- * 路径添加/更新响应
+ * Path add/update response
  */
 interface PathMutationResponse {
   success: boolean;
@@ -25,7 +25,7 @@ interface PathMutationResponse {
 }
 
 /**
- * 路径测试响应
+ * Path test response
  */
 interface PathTestResponse {
   success: boolean;
@@ -37,29 +37,29 @@ interface PathTestResponse {
 }
 
 /**
- * Llama.cpp 路径管理 API
+ * Llama.cpp path management API
  */
 export const llamacppPathsApi = {
   /**
-   * 获取所有 llama.cpp 路径
+   * List all llama.cpp paths
    */
   list: () =>
     apiClient.get<PathListResponse<LlamaCppPathConfig>>('/config/llamacpp/paths'),
 
   /**
-   * 添加 llama.cpp 路径
+   * Add llama.cpp path
    */
   add: (data: LlamaCppPathConfig) =>
     apiClient.post<PathMutationResponse>('/config/llamacpp/paths', data),
 
   /**
-   * 更新 llama.cpp 路径
+   * Update llama.cpp path
    */
   update: (data: LlamaCppPathConfig) =>
     apiClient.put<PathMutationResponse>('/config/llamacpp/paths', data),
 
   /**
-   * 删除 llama.cpp 路径
+   * Remove llama.cpp path
    */
   remove: (path: string) =>
     apiClient.delete<PathMutationResponse>(
@@ -67,36 +67,36 @@ export const llamacppPathsApi = {
     ),
 
   /**
-   * 测试 llama.cpp 路径
+   * Test llama.cpp path
    */
   test: (path: string) =>
     apiClient.post<PathTestResponse>('/config/llamacpp/paths/test', { path }),
 };
 
 /**
- * 模型路径管理 API
+ * Model path management API
  */
 export const modelPathsApi = {
   /**
-   * 获取所有模型路径
+   * List all model paths
    */
   list: () =>
     apiClient.get<PathListResponse<ModelPathConfig>>('/config/models/paths'),
 
   /**
-   * 添加模型路径
+   * Add model path
    */
   add: (data: ModelPathConfig) =>
     apiClient.post<PathMutationResponse>('/config/models/paths', data),
 
   /**
-   * 更新模型路径
+   * Update model path
    */
   update: (data: ModelPathConfig) =>
     apiClient.put<PathMutationResponse>('/config/models/paths', data),
 
   /**
-   * 删除模型路径
+   * Remove model path
    */
   remove: (path: string) =>
     apiClient.delete<PathMutationResponse>(

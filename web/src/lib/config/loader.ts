@@ -3,7 +3,7 @@ import yaml from 'js-yaml';
 import type { AppConfig } from './types';
 
 /**
- * 默认配置
+ * Default configuration
  */
 const DEFAULT_CONFIG: AppConfig = {
   api: {
@@ -69,7 +69,7 @@ const DEFAULT_CONFIG: AppConfig = {
 
 export class ConfigLoader {
   /**
-   * 加载配置文件
+   * Load configuration file
    */
   async load(): Promise<AppConfig> {
     try {
@@ -79,8 +79,8 @@ export class ConfigLoader {
       }
       const yamlText = await response.text()
       const parsed = yaml.load(yamlText) as any
-      
-      // 合并默认配置和解析的配置
+
+      // Merge default config with parsed config
       return this.mergeConfig(DEFAULT_CONFIG, parsed)
     } catch (error) {
       console.warn('Failed to load config.yaml, using default config:', error)
@@ -89,10 +89,10 @@ export class ConfigLoader {
   }
 
   /**
-   * 合并配置
+   * Merge configuration
    */
   private mergeConfig(defaults: AppConfig, loaded: any): AppConfig {
-    // 处理 backend.urls 数组格式 -> api.baseUrl 单值格式
+    // Convert backend.urls array format to api.baseUrl single value
     let apiBaseUrl = defaults.api.baseUrl;
     if (loaded?.backend?.urls && Array.isArray(loaded.backend.urls)) {
       const index = loaded.backend.currentIndex ?? 0;
@@ -120,13 +120,13 @@ export class ConfigLoader {
 }
 
 /**
- * 配置加载器单例实例
+ * Config loader singleton
  */
 export const configLoader = new ConfigLoader();
 
 /**
- * React Hook: 获取配置
- * 
+ * React hook for accessing app configuration.
+ *
  * @example
  * const config = useConfig();
  * console.log(config.api.baseUrl);

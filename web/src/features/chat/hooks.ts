@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 
 /**
- * 聊天消息
+ * Chat message
  */
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -10,7 +10,7 @@ export interface ChatMessage {
 }
 
 /**
- * 聊天完成请求参数
+ * Chat completion request parameters
  */
 export interface ChatCompletionParams {
   model: string;
@@ -25,7 +25,7 @@ export interface ChatCompletionParams {
 }
 
 /**
- * 流式聊天完成 Hook
+ * Streaming chat completion hook
  */
 export function useStreamingChat() {
   return useMutation({
@@ -106,7 +106,7 @@ export function useStreamingChat() {
 }
 
 /**
- * 获取已加载模型列表（用于聊天）
+ * Fetch loaded model list for chat
  */
 export async function getLoadedModels(): Promise<string[]> {
   try {
@@ -125,12 +125,12 @@ export async function getLoadedModels(): Promise<string[]> {
 }
 
 /**
- * 聊天历史存储键
+ * Chat history storage key
  */
 export const CHAT_HISTORY_KEY = 'shepherd_chat_history';
 
 /**
- * 聊天历史项
+ * Chat history item
  */
 export interface ChatHistoryItem {
   id: string;
@@ -142,7 +142,7 @@ export interface ChatHistoryItem {
 }
 
 /**
- * 加载聊天历史
+ * Load chat history
  */
 export function loadChatHistory(): ChatHistoryItem[] {
   try {
@@ -157,7 +157,7 @@ export function loadChatHistory(): ChatHistoryItem[] {
 }
 
 /**
- * 保存聊天历史
+ * Save chat history
  */
 export function saveChatHistory(history: ChatHistoryItem[]): void {
   try {
@@ -168,7 +168,7 @@ export function saveChatHistory(history: ChatHistoryItem[]): void {
 }
 
 /**
- * 创建新聊天会话
+ * Create a new chat session
  */
 export function createChatSession(model: string): ChatHistoryItem {
   return {
@@ -182,7 +182,7 @@ export function createChatSession(model: string): ChatHistoryItem {
 }
 
 /**
- * 删除聊天会话
+ * Delete a chat session
  */
 export function deleteChatSession(sessionId: string): void {
   const history = loadChatHistory();

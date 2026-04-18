@@ -29,7 +29,6 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
         isUser ? 'bg-muted/30' : 'bg-muted/10'
       )}
     >
-      {/* 头像 */}
       <div
         className={cn(
           'flex shrink-0 w-8 h-8 rounded-full items-center justify-center',
@@ -41,7 +40,6 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
         {isUser ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
       </div>
 
-      {/* 内容 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="font-medium">
@@ -96,7 +94,6 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
             )}
           </div>
 
-          {/* 复制按钮 */}
           {!isUser && message.content && (
             <button
               onClick={handleCopy}

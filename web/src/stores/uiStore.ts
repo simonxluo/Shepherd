@@ -2,53 +2,53 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 /**
- * 主题类型
+ * Theme type
  */
 export type Theme = 'light' | 'dark' | 'system';
 
 /**
- * UI 状态接口
+ * UI state interface
  */
 interface UIState {
-  // 侧边栏
+  // Sidebar
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
 
-  // 主题
+  // Theme
   theme: Theme;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
 
-  // 当前视图
+  // Current view
   currentView: string;
   setCurrentView: (view: string) => void;
 
-  // 模态框
+  // Modals
   activeModal: string | null;
   openModal: (modal: string) => void;
   closeModal: () => void;
 
-  // 过滤器
+  // Filters
   modelStatusFilter: string;
   setModelStatusFilter: (status: string) => void;
   showFavouritesOnly: boolean;
   setShowFavouritesOnly: (show: boolean) => void;
 
-  // 模型视图模式
+  // Model view mode
   modelViewMode: 'grid' | 'list';
   setModelViewMode: (mode: 'grid' | 'list') => void;
 }
 
 /**
- * 获取系统主题
+ * Get system theme
  */
 function getSystemTheme(): 'light' | 'dark' {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 /**
- * 应用主题到 DOM
+ * Apply theme to DOM
  */
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
@@ -59,17 +59,17 @@ function applyTheme(theme: Theme) {
 }
 
 /**
- * UI 状态 Store
+ * UI state store
  */
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
-      // 侧边栏
+      // Sidebar
       sidebarOpen: true,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
-      // 主题
+      // Theme
       theme: 'system',
       setTheme: (theme) => {
         set({ theme });
@@ -83,22 +83,22 @@ export const useUIStore = create<UIState>()(
         get().setTheme(nextTheme);
       },
 
-      // 当前视图
+      // Current view
       currentView: 'dashboard',
       setCurrentView: (currentView) => set({ currentView }),
 
-      // 模态框
+      // Modals
       activeModal: null,
       openModal: (activeModal) => set({ activeModal }),
       closeModal: () => set({ activeModal: null }),
 
-      // 过滤器
+      // Filters
       modelStatusFilter: 'all',
       setModelStatusFilter: (modelStatusFilter) => set({ modelStatusFilter }),
       showFavouritesOnly: false,
       setShowFavouritesOnly: (showFavouritesOnly) => set({ showFavouritesOnly }),
 
-      // 模型视图模式
+      // Model view mode
       modelViewMode: 'grid',
       setModelViewMode: (modelViewMode) => set({ modelViewMode }),
     }),
@@ -113,10 +113,10 @@ export const useUIStore = create<UIState>()(
   )
 );
 
-// 初始化主题
+// Initialize theme
 applyTheme(useUIStore.getState().theme);
 
-// 监听系统主题变化
+// Listen for system theme changes
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if (useUIStore.getState().theme === 'system') {
     applyTheme('system');

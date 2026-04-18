@@ -30,7 +30,7 @@ export function DownloadsPage() {
   const retryDownload = useRetryDownload();
   const clearCompleted = useClearCompletedDownloads();
 
-  // UI 状态
+  // UI state
   const [activeTab, setActiveTab] = useState<'local' | 'online'>('local');
   const [search, setSearch] = useState('');
   const [stateFilter, setStateFilter] = useState<DownloadState | ''>('');
@@ -38,17 +38,14 @@ export function DownloadsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [preFillParams, setPreFillParams] = useState<{ source: DownloadSource; repoId: string; fileName?: string } | null>(null);
 
-  // 统计
   const stats = useDownloadStats(downloads);
 
-  // 过滤下载任务
   const filteredDownloads = useFilteredDownloads(downloads, {
     search,
     state: stateFilter || undefined,
     source: sourceFilter || undefined,
   });
 
-  // 处理创建下载
   const handleCreateDownload = (params: { source: DownloadSource; repoId: string }) => {
     createDownload.mutate(params as any, {
       onSuccess: () => {
@@ -58,13 +55,11 @@ export function DownloadsPage() {
     });
   };
 
-  // 处理从 HuggingFace 下载
   const handleHuggingFaceDownload = (model: HuggingFaceModel, fileName?: string) => {
     setPreFillParams({ source: 'huggingface', repoId: model.modelId, fileName });
     setDialogOpen(true);
   };
 
-  // 处理清理已完成
   const handleClearCompleted = async () => {
     const confirmed = await alertDialog.confirm({
       title: '清理已完成',
@@ -77,7 +72,7 @@ export function DownloadsPage() {
 
   return (
     <div className="space-y-6">
-      {/* 标题 */}
+      {/* Title */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">下载管理</h1>
@@ -98,7 +93,7 @@ export function DownloadsPage() {
         )}
       </div>
 
-      {/* 标签切换 */}
+      {/* Tabs */}
       <div className="border-b border-border">
         <nav className="flex gap-6">
           <Button
@@ -132,10 +127,10 @@ export function DownloadsPage() {
         </nav>
       </div>
 
-      {/* 本地下载内容 */}
+      {/* Local downloads content */}
       {activeTab === 'local' && (
         <>
-          {/* 统计卡片 */}
+          {/* Statistics cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 bg-card rounded-lg border border-border">
               <div className="text-2xl font-bold text-foreground">{stats.total}</div>
@@ -157,7 +152,7 @@ export function DownloadsPage() {
             </div>
           </div>
 
-          {/* 搜索和过滤 */}
+          {/* Search and filter */}
           <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-lg border border-border">
             <div className="relative flex-1 min-w-[200px]">
               <CloudDownload className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -193,7 +188,7 @@ export function DownloadsPage() {
             </select>
           </div>
 
-          {/* 下载列表 */}
+          {/* Download list */}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
@@ -235,12 +230,12 @@ export function DownloadsPage() {
         </>
       )}
 
-      {/* 在线搜索内容 */}
+      {/* Online search content */}
       {activeTab === 'online' && (
         <HuggingFaceSearchPanel onDownload={handleHuggingFaceDownload} />
       )}
 
-      {/* 创建下载对话框 */}
+      {/* Create download dialog */}
       <CreateDownloadDialog
         isOpen={dialogOpen}
         onClose={() => {

@@ -1,5 +1,5 @@
 /**
- * SSE 事件类型
+ * SSE event types
  */
 export type SSEEventType =
   | 'heartbeat'
@@ -19,12 +19,10 @@ export type SSEEventType =
   | 'taskUpdate';
 
 /**
- * SSE 事件基础接口
+ * Base SSE event interface
  */
 export interface SSEEvent<T = Record<string, unknown>> {
   type: SSEEventType;
   timestamp: number;
   data: T;
 }
-
-

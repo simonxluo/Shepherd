@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 
 /**
- * 聊天页面
+ * Chat page
  */
 export function ChatPage() {
   const toast = useToast();
@@ -25,26 +25,25 @@ export function ChatPage() {
 
   const streamingChat = useStreamingChat();
 
-  // 加载可用模型
+  // Load available models
   useEffect(() => {
     getLoadedModels().then(setModels).catch(console.error);
   }, []);
 
-  // 自动滚动到底部 - 只在有消息变化时触发,初始化时不滚动
+  // Auto-scroll to bottom — only on message changes, skip initialization
   useEffect(() => {
-    // 跳过初始化阶段
+    // Skip initialization phase
     if (!isInitialized) {
       setIsInitialized(true);
       return;
     }
 
-    // 只在有消息或正在流式传输时滚动
+    // Scroll only when there are messages or streaming
     if (messages.length > 0 || currentResponse) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, currentResponse, isInitialized]);
 
-  // 处理发送消息
   const handleSend = (content: string) => {
     if (!selectedModel) {
       toast.warning('请先选择模型', '请从下拉列表中选择一个已加载的模型');
@@ -95,13 +94,11 @@ export function ChatPage() {
     );
   };
 
-  // 处理停止生成
   const handleStop = () => {
     setIsStreaming(false);
     setCurrentResponse('');
   };
 
-  // 处理新建对话
   const handleNewChat = async () => {
     if (messages.length > 0) {
       const confirmed = await alertDialog.confirm({
@@ -114,7 +111,6 @@ export function ChatPage() {
     setCurrentResponse('');
   };
 
-  // 处理清空对话
   const handleClearHistory = async () => {
     const confirmed = await alertDialog.confirm({
       title: '清空对话',
@@ -129,7 +125,7 @@ export function ChatPage() {
 
   return (
     <div className="h-full flex flex-col bg-background text-foreground">
-      {/* 标题栏 */}
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
         <div className="flex items-center gap-3">
           <MessageSquare className="w-5 h-5 text-primary" />
@@ -137,7 +133,7 @@ export function ChatPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 模型选择 */}
+          {/* Model selector */}
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
@@ -171,7 +167,7 @@ export function ChatPage() {
         </div>
       </div>
 
-      {/* 消息列表 */}
+      {/* Message list */}
       <div
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto"
@@ -188,7 +184,7 @@ export function ChatPage() {
               <ChatMessage key={index} message={message} />
             ))}
 
-            {/* 流式响应 */}
+            {/* Streaming response */}
             {currentResponse && (
               <ChatMessage
                 message={{
@@ -204,7 +200,7 @@ export function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 输入框 */}
+      {/* Input area */}
       <ChatInput
         onSend={handleSend}
         onStop={handleStop}

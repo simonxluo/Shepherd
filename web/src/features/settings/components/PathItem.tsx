@@ -26,12 +26,12 @@ export function PathItem({
 
   return (
     <div className="group flex items-start gap-3 p-3 rounded-lg border bg-card hover:border-border/80 transition-all">
-      {/* 图标 */}
+      {/* Icon */}
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
         <FolderOpen size={16} />
       </div>
 
-      {/* 内容区域 */}
+      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h4 className="text-sm font-medium truncate">{displayName}</h4>
@@ -42,7 +42,7 @@ export function PathItem({
         )}
       </div>
 
-      {/* 操作按钮 */}
+      {/* Actions */}
       <div className="flex items-center gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
         {onTest && (
           <Button

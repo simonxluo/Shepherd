@@ -8,7 +8,7 @@ import { Package, Download, Network, Activity } from 'lucide-react';
 import type { Model } from '@/types';
 
 /**
- * 仪表盘页面
+ * Dashboard page
  */
 export function DashboardPage() {
   const { data: models = [], isLoading } = useModels();
@@ -17,11 +17,11 @@ export function DashboardPage() {
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const onlineClients = useFilteredClients(clients, { status: 'online' });
 
-  // 按扫描时间排序，获取最近 5 个模型（稳定的排序）
+  // Sort by scan time, get 5 most recent models
   const recentModels = useMemo(() => {
     return [...models]
       .sort((a: Model, b: Model) => {
-        // 按扫描时间降序排序（最新的在前）
+        // Sort by scan time descending (newest first)
         const aTime = new Date(a.scannedAt).getTime();
         const bTime = new Date(b.scannedAt).getTime();
         return bTime - aTime;
@@ -62,13 +62,13 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
+      {/* Page title */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">仪表盘</h1>
         <p className="text-muted-foreground font-medium">Shepherd 模型管理系统概览</p>
       </div>
 
-      {/* 统计卡片 */}
+      {/* Statistics cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -87,7 +87,7 @@ export function DashboardPage() {
         })}
       </div>
 
-      {/* 最近模型 */}
+      {/* Recent models */}
       <Card>
         <CardHeader>
           <CardTitle>最近模型</CardTitle>

@@ -1,10 +1,10 @@
 /**
- * 前端配置类型定义
- * 独立的类型文件，避免循环依赖
+ * Frontend configuration type definitions.
+ * Standalone file to avoid circular dependencies.
  */
 
 /**
- * API 配置
+ * API configuration
  */
 export interface ApiConfig {
   baseUrl: string;
@@ -16,7 +16,7 @@ export interface ApiConfig {
 }
 
 /**
- * SSE 配置
+ * SSE configuration
  */
 export interface SseConfig {
   endpoint: string;
@@ -29,7 +29,7 @@ export interface SseConfig {
 }
 
 /**
- * 功能开关配置
+ * Feature flags
  */
 export interface FeaturesConfig {
   models: boolean;
@@ -42,7 +42,7 @@ export interface FeaturesConfig {
 }
 
 /**
- * UI 配置
+ * UI configuration
  */
 export interface UiConfig {
   theme: 'light' | 'dark' | 'auto';
@@ -58,7 +58,7 @@ export interface UiConfig {
 }
 
 /**
- * 日志配置
+ * Logging configuration
  */
 export interface LoggingConfig {
   level: 'debug' | 'info' | 'warn' | 'error';
@@ -70,7 +70,7 @@ export interface LoggingConfig {
 }
 
 /**
- * 缓存配置
+ * Cache configuration
  */
 export interface CacheConfig {
   modelsTTL: number;
@@ -83,7 +83,7 @@ export interface CacheConfig {
 }
 
 /**
- * OpenAI 配置
+ * OpenAI configuration
  */
 export interface OpenAIConfig {
   endpoint: string;
@@ -97,7 +97,7 @@ export interface OpenAIConfig {
 }
 
 /**
- * 性能配置
+ * Performance configuration
  */
 export interface PerformanceConfig {
   monitoring: boolean;
@@ -110,16 +110,16 @@ export interface PerformanceConfig {
 }
 
 /**
- * 服务器运行模式配置
+ * Server mode configuration
  */
 export interface ServerModeConfig {
-  // mode 字段已删除，使用后端的 node.role 字段
+  // mode field removed; use backend node.role instead
   masterAddress?: string;
   clientName?: string;
 }
 
 /**
- * 应用配置接口
+ * Application configuration
  */
 export interface AppConfig {
   api: ApiConfig;
@@ -134,7 +134,7 @@ export interface AppConfig {
 }
 
 /**
- * 服务器配置接口（向后兼容）
+ * Server configuration (backward compatibility)
  */
 export interface ServerConfig {
   host: string;
@@ -150,7 +150,7 @@ export interface ServerConfig {
 }
 
 /**
- * llama.cpp 路径配置
+ * llama.cpp path configuration
  */
 export interface LlamaCppPathConfig {
   name: string;
@@ -159,7 +159,7 @@ export interface LlamaCppPathConfig {
 }
 
 /**
- * 模型路径配置
+ * Model path configuration
  */
 export interface ModelPathConfig {
   path: string;
@@ -168,7 +168,7 @@ export interface ModelPathConfig {
 }
 
 /**
- * 路径列表响应
+ * Path list response
  */
 export interface PathListResponse<T> {
   success: boolean;
@@ -177,4 +177,3 @@ export interface PathListResponse<T> {
     count: number;
   };
 }
-

@@ -16,7 +16,7 @@ interface ModelCardProps {
 }
 
 /**
- * 模型状态颜色映射
+ * Model status color mapping
  */
 const STATUS_COLORS: Record<ModelStatus, string> = {
   stopped: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
@@ -27,7 +27,7 @@ const STATUS_COLORS: Record<ModelStatus, string> = {
 };
 
 /**
- * 模型状态标签
+ * Model status labels
  */
 const STATUS_LABELS: Record<ModelStatus, string> = {
   stopped: '已停止',
@@ -38,7 +38,7 @@ const STATUS_LABELS: Record<ModelStatus, string> = {
 };
 
 /**
- * 格式化文件大小
+ * Format file size
  */
 function formatSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -59,14 +59,13 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
   const isLoading = model.status === 'loading' || model.isLoading;
   const isLoaded = model.status === 'running' || model.isLoaded;
 
-  // 获取量化级别显示文本
   const quantizationLabel = model.metadata.fileTypeDescriptor || model.metadata.quantization || '未知';
 
   return (
     <div className="group flex items-center gap-4 px-4 py-4 bg-card hover:bg-accent/5 rounded-lg border border-border transition-all duration-200">
-      {/* 左侧 - 模型信息区 */}
+      {/* Left - model info */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        {/* 收藏星标 */}
+        {/* Favourite star */}
         <button
           onClick={onToggleFavourite}
           className={cn(
@@ -77,7 +76,7 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
           <Star className={cn('w-5 h-5', model.favourite && 'fill-current')} />
         </button>
 
-        {/* 圆形模型图标 - 点击可编辑别名，悬停时发光 */}
+        {/* Model icon - click to edit alias */}
         <button
           onClick={onEditAlias}
           className={cn(
@@ -93,7 +92,7 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
           />
         </button>
 
-        {/* 模型名称和元数据 */}
+        {/* Model name and metadata */}
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-base text-foreground truncate">
             {model.alias || model.displayName || model.name}
@@ -108,9 +107,9 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
         </div>
       </div>
 
-      {/* 右侧 - 操作区 */}
+      {/* Right - actions */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* 状态指示器 */}
+        {/* Status indicator */}
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <div className={cn(
             'w-2 h-2 rounded-full',
@@ -119,7 +118,7 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
           <span className="whitespace-nowrap">{statusLabel}</span>
         </div>
 
-        {/* 主操作按钮 */}
+        {/* Primary action button */}
         {!isLoaded ? (
           <Button
             onClick={onLoad}
@@ -160,9 +159,9 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
           </Button>
         )}
 
-        {/* 次要操作按钮 */}
+        {/* Secondary actions */}
         <div className="flex items-center gap-1 ml-1">
-          {/* 模型详情按钮 */}
+          {/* Model detail button */}
           <Button
             onClick={onShowDetail}
             variant="ghost"

@@ -12,13 +12,13 @@ export function AlertDialog() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* 背景遮罩 */}
+      {/* Backdrop overlay */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={close}
       />
 
-      {/* 对话框内容 */}
+      {/* Dialog content */}
       <div
         className={cn(
           'relative bg-card text-card-foreground rounded-xl shadow-2xl border border-border',
@@ -27,7 +27,7 @@ export function AlertDialog() {
           'p-6'
         )}
       >
-        {/* 关闭按钮 */}
+        {/* Close button */}
         <button
           onClick={close}
           className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
@@ -35,22 +35,22 @@ export function AlertDialog() {
           <X className="w-5 h-5" />
         </button>
 
-        {/* 图标 */}
+        {/* Icon */}
         <div className={cn('flex items-center justify-center w-12 h-12 rounded-full mb-4', isDestructive ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30')}>
           <AlertTriangle className={cn('w-6 h-6', isDestructive ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400')} />
         </div>
 
-        {/* 标题 */}
+        {/* Title */}
         <h2 className={cn('text-lg font-semibold mb-2', isDestructive ? 'text-destructive' : 'text-foreground')}>
           {state.title}
         </h2>
 
-        {/* 描述 */}
+        {/* Description */}
         <p className="text-sm text-muted-foreground mb-6">
           {state.description}
         </p>
 
-        {/* 按钮组 */}
+        {/* Actions */}
         <div className="flex items-center justify-end gap-3">
           <Button
             variant="outline"

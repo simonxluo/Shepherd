@@ -1,15 +1,15 @@
 /**
- * 日志级别
+ * Log levels
  */
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 /**
- * 日志来源
+ * Log sources
  */
 export type LogSource = 'system' | 'model' | 'download' | 'cluster' | 'client';
 
 /**
- * 日志条目
+ * Log entry
  */
 export interface LogEntry {
   timestamp: number;
@@ -22,7 +22,7 @@ export interface LogEntry {
 }
 
 /**
- * 日志过滤参数
+ * Log filter parameters
  */
 export interface LogFilters {
   level?: LogLevel;
@@ -35,7 +35,7 @@ export interface LogFilters {
 }
 
 /**
- * 日志统计
+ * Log statistics
  */
 export interface LogStats {
   total: number;
@@ -44,7 +44,7 @@ export interface LogStats {
 }
 
 /**
- * 日志文件信息
+ * Log file info
  */
 export interface LogFileInfo {
   name: string;
@@ -57,7 +57,7 @@ export interface LogFileInfo {
 }
 
 /**
- * 日志文件内容响应
+ * Log file content response
  */
 export interface LogFileContent {
   entries: ParsedLogEntry[];
@@ -65,7 +65,7 @@ export interface LogFileContent {
 }
 
 /**
- * 解析后的日志条目（从文件读取）
+ * Parsed log entry (from file)
  */
 export interface ParsedLogEntry {
   timestamp: string;
@@ -77,7 +77,7 @@ export interface ParsedLogEntry {
 }
 
 /**
- * 日志文件过滤器
+ * Log file filter
  */
 export interface LogFileFilter {
   level?: string;

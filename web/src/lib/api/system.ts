@@ -1,11 +1,11 @@
 /**
- * 系统 API 客户端
+ * System API client
  */
 
 import { apiClient } from './client';
 
 /**
- * 服务器信息响应
+ * Server info response
  */
 export interface ServerInfoResponse {
   success: boolean;
@@ -27,11 +27,11 @@ export interface ServerInfoResponse {
 }
 
 /**
- * 系统 API
+ * System API
  */
 export const systemApi = {
   /**
-   * 获取服务器信息（版本、构建时间等）
+   * Get server info (version, build time, etc.)
    */
   getInfo: () => apiClient.get<ServerInfoResponse>('/info'),
 };

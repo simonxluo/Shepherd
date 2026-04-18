@@ -3,9 +3,6 @@ import { useState, useRef, useEffect } from 'react';
 import { useUIStore, type Theme } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 
-/**
- * 主题选项
- */
 interface ThemeOption {
   value: Theme;
   label: string;
@@ -18,15 +15,12 @@ const themeOptions: ThemeOption[] = [
   { value: 'system', label: '跟随系统', icon: Monitor },
 ];
 
-/**
- * 主题切换下拉框组件
- */
 export function ThemeToggle() {
   const { theme, setTheme } = useUIStore();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 点击外部关闭下拉框
+  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -43,7 +37,7 @@ export function ThemeToggle() {
 
   return (
     <div ref={containerRef} className="relative">
-      {/* 触发按钮 - 紧凑的下拉样式 */}
+      {/* Trigger button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -70,7 +64,7 @@ export function ThemeToggle() {
         />
       </button>
 
-      {/* 下拉菜单 */}
+      {/* Dropdown menu */}
       {isOpen && (
         <div
           className={cn(

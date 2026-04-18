@@ -6,7 +6,7 @@ import type {
 } from '@/types';
 
 /**
- * 获取压测参数列表 Hook
+ * Fetch benchmark params list hook
  */
 export function useBenchmarkParams() {
   return useQuery<BenchmarkParam[]>({
@@ -15,12 +15,12 @@ export function useBenchmarkParams() {
       const response = await benchmarksApi.getParams();
       return response.params || [];
     },
-    staleTime: 30 * 60 * 1000, // 30 分钟缓存
+    staleTime: 30 * 60 * 1000,
   });
 }
 
 /**
- * 获取 Llama.cpp 版本列表 Hook
+ * Fetch Llama.cpp versions list hook
  */
 export function useLlamaCppVersions() {
   return useQuery<Array<{ path: string; name?: string; description?: string }>>({
@@ -29,12 +29,12 @@ export function useLlamaCppVersions() {
       const response = await benchmarksApi.getLlamaCppVersions();
       return response.data?.items || [];
     },
-    staleTime: 10 * 60 * 1000, // 10 分钟缓存
+    staleTime: 10 * 60 * 1000,
   });
 }
 
 /**
- * 创建压测任务 Hook
+ * Create benchmark task hook
  */
 export function useCreateBenchmark() {
   const queryClient = useQueryClient();

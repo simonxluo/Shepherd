@@ -1,15 +1,15 @@
 /**
- * 节点角色
+ * Node role
  */
 export type NodeRole = 'master' | 'client' | 'hybrid';
 
 /**
- * 节点状态 - 统一状态定义，与后端 types.NodeState 保持一致
+ * Node status — unified definition matching backend types.NodeState
  */
 export type NodeStatus = 'offline' | 'online' | 'busy' | 'error' | 'degraded' | 'disabled';
 
 /**
- * GPU 信息
+ * GPU info
  */
 export interface GPUInfo {
   index: number;
@@ -24,7 +24,7 @@ export interface GPUInfo {
 }
 
 /**
- * llama.cpp 信息
+ * llama.cpp info
  */
 export interface LlamacppInfo {
   path: string;
@@ -36,7 +36,7 @@ export interface LlamacppInfo {
 }
 
 /**
- * 模型信息
+ * Model info
  */
 export interface NodeModelInfo {
   path: string;
@@ -49,7 +49,7 @@ export interface NodeModelInfo {
 }
 
 /**
- * 节点资源
+ * Node resources
  */
 export interface NodeResources {
   cpuUsed: number;
@@ -63,7 +63,7 @@ export interface NodeResources {
   networkTx: number;
   uptime: number;
   loadAverage: number[];
-  // 兼容性字段（从 ResourceUsage 迁移）
+  // Compatibility fields (migrated from ResourceUsage)
   cpuPercent?: number;
   gpuPercent?: number;
   gpuMemoryUsed?: number;
@@ -73,7 +73,7 @@ export interface NodeResources {
 }
 
 /**
- * 节点能力
+ * Node capabilities
  */
 export interface NodeCapabilities {
   gpu: boolean;
@@ -90,7 +90,7 @@ export interface NodeCapabilities {
 }
 
 /**
- * 心跳消息
+ * Heartbeat message
  */
 export interface HeartbeatMessage {
   nodeId: string;
@@ -104,19 +104,19 @@ export interface HeartbeatMessage {
 }
 
 /**
- * 命令类型
+ * Command type
  */
-export type CommandType = 
-  | 'load_model' 
-  | 'unload_model' 
-  | 'run_llamacpp' 
-  | 'stop_process' 
-  | 'update_config' 
-  | 'collect_logs' 
+export type CommandType =
+  | 'load_model'
+  | 'unload_model'
+  | 'run_llamacpp'
+  | 'stop_process'
+  | 'update_config'
+  | 'collect_logs'
   | 'scan_models';
 
 /**
- * 命令
+ * Command
  */
 export interface NodeCommand {
   id: string;
@@ -132,7 +132,7 @@ export interface NodeCommand {
 }
 
 /**
- * 命令结果
+ * Command result
  */
 export interface CommandResult {
   commandId: string;
@@ -147,7 +147,7 @@ export interface CommandResult {
 }
 
 /**
- * 节点统计信息
+ * Node statistics
  */
 export interface NodeStats {
   total: number;
@@ -157,13 +157,12 @@ export interface NodeStats {
 }
 
 /**
- * ==================== 统一节点类型（v0.2.0+）====================
  * ==================== Unified Node Types (v0.2.0+) ====================
  */
 
 /**
- * 统一节点信息（匹配后端 types.NodeInfo）
- * 这是前端唯一应该使用的节点类型
+ * Unified node info (matches backend types.NodeInfo).
+ * This is the only node type the frontend should use.
  */
 export interface UnifiedNode {
   id: string;
@@ -183,34 +182,33 @@ export interface UnifiedNode {
   registeredAt?: string;
 }
 
-// ==================== 类型别名（向后兼容）====================
 // ==================== Type Aliases (Backward Compatibility) ====================
 
 /**
- * @deprecated 使用 UnifiedNode 代替
+ * @deprecated Use UnifiedNode instead
  */
 export type DistributedNode = UnifiedNode;
 
 /**
- * @deprecated 使用 UnifiedNode 代替
+ * @deprecated Use UnifiedNode instead
  */
 export type Client = UnifiedNode;
 
 /**
- * @deprecated 使用 NodeCapabilities 代替
+ * @deprecated Use NodeCapabilities instead
  */
 export type Capabilities = NodeCapabilities;
 
 /**
- * @deprecated 使用 NodeResources 代替
+ * @deprecated Use NodeResources instead
  */
 export interface ResourceUsage extends NodeResources {
-  cpuPercent?: number; // 保留兼容性
+  cpuPercent?: number; // Retained for compatibility
   gpuPercent?: number;
 }
 
 /**
- * 节点列表响应 - 匹配后端 GET /api/master/nodes 响应格式
+ * Node list response — matches backend GET /api/master/nodes
  */
 export interface NodeListResponse {
   nodes: DistributedNode[];
@@ -218,7 +216,7 @@ export interface NodeListResponse {
 }
 
 /**
- * 节点注册请求
+ * Node register request
  */
 export interface NodeRegisterRequest {
   id: string;
@@ -231,7 +229,7 @@ export interface NodeRegisterRequest {
 }
 
 /**
- * 节点注册响应
+ * Node register response
  */
 export interface NodeRegisterResponse {
   message: string;
@@ -239,7 +237,7 @@ export interface NodeRegisterResponse {
 }
 
 /**
- * 发送命令请求
+ * Send command request
  */
 export interface SendCommandRequest {
   type: CommandType;
@@ -249,7 +247,7 @@ export interface SendCommandRequest {
 }
 
 /**
- * 发送命令响应
+ * Send command response
  */
 export interface SendCommandResponse {
   message: string;
@@ -258,7 +256,7 @@ export interface SendCommandResponse {
 
 
 /**
- * llama.cpp 路径信息
+ * llama.cpp path info
  */
 export interface LlamacppPathInfo {
   path: string;
@@ -268,7 +266,7 @@ export interface LlamacppPathInfo {
 }
 
 /**
- * 模型路径信息
+ * Model path info
  */
 export interface ModelPathInfo {
   path: string;
@@ -277,7 +275,7 @@ export interface ModelPathInfo {
 }
 
 /**
- * 环境信息
+ * Environment info
  */
 export interface EnvironmentInfo {
   os: string;
@@ -290,7 +288,7 @@ export interface EnvironmentInfo {
 }
 
 /**
- * Conda 配置信息
+ * Conda configuration info
  */
 export interface CondaConfigInfo {
   enabled: boolean;
@@ -300,7 +298,7 @@ export interface CondaConfigInfo {
 }
 
 /**
- * 执行器配置信息
+ * Executor configuration info
  */
 export interface ExecutorConfigInfo {
   pythonPath: string;
@@ -309,7 +307,7 @@ export interface ExecutorConfigInfo {
 }
 
 /**
- * 节点配置信息
+ * Node configuration info
  */
 export interface NodeConfigInfo {
   llamaCppPaths: LlamacppPathInfo[];
@@ -321,7 +319,7 @@ export interface NodeConfigInfo {
 }
 
 /**
- * llama.cpp 测试结果
+ * llama.cpp test result
  */
 export interface LlamacppTestResult {
   success: boolean;

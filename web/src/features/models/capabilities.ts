@@ -2,33 +2,33 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import type { ModelCapabilities } from '@/types';
 
-// ========== GPU & llama.cpp 后端相关 ==========
+// ========== GPU & llama.cpp backend ==========
 
 /**
- * 系统端点 GPU 信息类型（Shepherd 扩展格式）
- * 用于 /system/gpus 端点返回的 GPU 信息
+ * System endpoint GPU info type (Shepherd extended format)
+ * Used by /system/gpus endpoint response
  */
 export interface SystemGPUInfo {
-  id: string;          // 设备 ID，如 "ROCm0"
-  name: string;        // GPU 名称
-  totalMemory?: string; // 总内存，如 "122880 MiB"
-  freeMemory?: string;  // 可用内存，如 "115050 MiB"
-  architecture?: string; // 架构信息
-  available: boolean;  // 是否可用
+  id: string;
+  name: string;
+  totalMemory?: string;
+  freeMemory?: string;
+  architecture?: string;
+  available: boolean;
 }
 
 /**
- * 系统 GPU 列表响应
+ * System GPU list response
  */
 interface SystemGPUListResponse {
-  gpus: SystemGPUInfo[];      // 详细 GPU 信息（Shepherd 扩展）
-  devices: string[];    // 简单设备字符串列表（兼容 LlamacppServer 格式）
+  gpus: SystemGPUInfo[];
+  devices: string[];
   count: number;
 }
 
 /**
- * 获取系统 GPU 列表 Hook
- * @param llamaCppPath - 可选的 llama.cpp 路径，用于获取该路径下的 GPU 信息
+ * Fetch system GPU list hook
+ * @param llamaCppPath - Optional llama.cpp path for GPU info
  */
 export function useGPUs(llamaCppPath?: string) {
   return useQuery<SystemGPUListResponse>({
@@ -38,13 +38,13 @@ export function useGPUs(llamaCppPath?: string) {
       const response = await apiClient.get<{ success: boolean; data: SystemGPUListResponse }>(`/system/gpus${params}`);
       return response.data;
     },
-    staleTime: 60 * 1000, // GPU 信息缓存 1 分钟
+    staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
 }
 
 /**
- * llama.cpp 后端信息类型
+ * llama.cpp backend info type
  */
 export interface LlamacppBackend {
   path: string;
@@ -59,7 +59,7 @@ interface LlamacppBackendListResponse {
 }
 
 /**
- * 获取可用的 llama.cpp 后端列表 Hook
+ * Fetch available llama.cpp backends hook
  */
 export function useLlamacppBackends() {
   return useQuery({
@@ -68,15 +68,15 @@ export function useLlamacppBackends() {
       const response = await apiClient.get<{ success: boolean; data: LlamacppBackendListResponse }>('/system/llamacpp-backends');
       return response.data.backends;
     },
-    staleTime: 60 * 1000, // 后端列表缓存 1 分钟
+    staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
 }
 
-// ========== 模型能力相关 ==========
+// ========== Model capabilities ==========
 
 /**
- * 模型能力配置 Hook
+ * Model capabilities config hook
  */
 export function useModelCapabilities(modelId: string) {
   return useQuery({
@@ -86,13 +86,13 @@ export function useModelCapabilities(modelId: string) {
       return response.data.capabilities;
     },
     enabled: !!modelId,
-    staleTime: 10 * 60 * 1000, // 能力配置缓存 10 分钟
+    staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 }
 
 /**
- * 设置模型能力 Hook
+ * Set model capabilities hook
  */
 export function useSetModelCapabilities() {
   const queryClient = useQueryClient();
@@ -109,7 +109,6 @@ export function useSetModelCapabilities() {
       return response;
     },
     onSuccess: (data, variables) => {
-      // 使能力查询失效
       queryClient.invalidateQueries({
         queryKey: ['models', 'capabilities', variables.modelId]
       });
@@ -118,7 +117,7 @@ export function useSetModelCapabilities() {
 }
 
 /**
- * 自动检测模型能力 Hook
+ * Auto-detect model capabilities hook
  */
 export function useAutoDetectCapabilities() {
   const queryClient = useQueryClient();
@@ -132,7 +131,6 @@ export function useAutoDetectCapabilities() {
       return response.data;
     },
     onSuccess: (data, modelId) => {
-      // 使能力查询失效，触发 UI 刷新
       queryClient.invalidateQueries({
         queryKey: ['models', 'capabilities', modelId]
       });
@@ -140,10 +138,10 @@ export function useAutoDetectCapabilities() {
   });
 }
 
-// ========== 显存估算相关 ==========
+// ========== VRAM estimation ==========
 
 /**
- * 显存估算请求参数
+ * VRAM estimation request params
  */
 interface EstimateVRAMParams {
   modelId: string;
@@ -160,19 +158,19 @@ interface EstimateVRAMParams {
 }
 
 /**
- * 显存估算响应数据
+ * VRAM estimation response
  */
 interface EstimateVRAMData {
   success: boolean;
-  vram?: string;      // "60565"
-  vramMB?: number;    // 60565
-  vramGB?: string;    // "59.15"
+  vram?: string;
+  vramMB?: number;
+  vramGB?: string;
   error?: string;
   details?: string;
 }
 
 /**
- * 估算显存 Hook
+ * Estimate VRAM hook
  */
 export function useEstimateVRAM() {
   return useMutation({

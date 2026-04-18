@@ -16,12 +16,12 @@ import { systemApi } from '@/lib/api/system';
 import { useToast } from '@/hooks/useToast';
 
 /**
- * 设置标签类型
+ * Settings tab type
  */
 type SettingsTab = 'general' | 'paths' | 'benchmark' | 'mcp' | 'about';
 
 /**
- * 设置菜单项
+ * Settings menu item
  */
 interface SettingsMenuItem {
   id: SettingsTab;
@@ -38,21 +38,21 @@ const settingsMenuItems: SettingsMenuItem[] = [
 ];
 
 /**
- * 设置页面组件
+ * Settings page
  */
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   return (
     <div className="h-full text-foreground">
-      {/* 顶部标题栏 */}
+      {/* Header */}
       <div className="border-b px-5 py-3">
         <h1 className="text-xl font-semibold">设置</h1>
       </div>
 
-      {/* 设置内容区域 */}
+      {/* Settings content */}
       <div className="flex h-[calc(100%-53px)]">
-        {/* 左侧菜单 */}
+        {/* Sidebar menu */}
         <div className="w-48 border-r bg-background p-3">
           <nav className="space-y-1" role="tablist" aria-label="设置菜单">
             {settingsMenuItems.map((item) => {
@@ -81,7 +81,7 @@ export function SettingsPage() {
           </nav>
         </div>
 
-        {/* 右侧内容 */}
+        {/* Content area */}
         <div className="flex-1 overflow-y-auto p-5">
           {activeTab === 'general' && <GeneralSettingsPanel />}
           {activeTab === 'paths' && <PathsSettingsPanel />}
@@ -95,12 +95,11 @@ export function SettingsPage() {
 }
 
 /**
- * 通用设置面板
+ * General settings panel
  */
 function GeneralSettingsPanel() {
   const toast = useToast();
 
-  // 使用原始状态避免对象引用问题
   const [ollamaEnabled, setOllamaEnabled] = useState(false);
   const [ollamaPort, setOllamaPort] = useState(11434);
   const [lmstudioEnabled, setLmstudioEnabled] = useState(false);
@@ -114,7 +113,7 @@ function GeneralSettingsPanel() {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 加载配置 - 只在组件挂载时执行
+  // Load config on mount
   useEffect(() => {
     const loadConfig = async () => {
       try {
@@ -137,14 +136,13 @@ function GeneralSettingsPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 标记有未保存的更改
   const markChanged = useCallback(() => {
     setHasChanges(true);
   }, []);
 
-  // 自动保存逻辑 (防抖 2 秒)
+  // Auto-save with 2s debounce
   useEffect(() => {
-    // 跳过自动禁用时的保存
+    // Skip save during auto-disable
     if (isLoading || !hasChanges || isAutoDisabling) return;
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -162,14 +160,12 @@ function GeneralSettingsPanel() {
           setSaveStatus('success');
           setHasChanges(false);
         } else {
-          // 处理后端返回的失败
           setSaveStatus('error');
           const errorMsg = response.error || '未知错误';
           const serviceName = response.service === 'ollama' ? 'Ollama API' : 'LM Studio API';
 
           toast.error(`${serviceName} 启动失败`, errorMsg);
 
-          // 如果后端自动禁用了服务，回退状态
           if (response.autoDisabled && response.data) {
             if (response.service === 'ollama') {
               setOllamaEnabled(response.data.ollama.enabled);
@@ -199,7 +195,6 @@ function GeneralSettingsPanel() {
     };
   }, [ollamaEnabled, ollamaPort, lmstudioEnabled, lmstudioPort, isLoading, hasChanges, isAutoDisabling, toast]);
 
-  // 处理配置变化
   const handleOllamaChange = useCallback((config: ApiConfig) => {
     setOllamaEnabled(config.enabled);
     setOllamaPort(config.port);
@@ -212,7 +207,6 @@ function GeneralSettingsPanel() {
     markChanged();
   }, [markChanged]);
 
-  // 测试端口连接
   const handleTestConnection = async (port: number, type: 'ollama' | 'lmstudio'): Promise<boolean> => {
     try {
       const response = await compatibilityApi.testConnection(port, type);
@@ -222,7 +216,6 @@ function GeneralSettingsPanel() {
     }
   };
 
-  // 处理连接失败 - 自动禁用服务
   const handleConnectionFailed = useCallback(async (type: 'ollama' | 'lmstudio', port: number) => {
     const serviceName = type === 'ollama' ? 'Ollama API' : 'LM Studio API';
     toast.error(
@@ -230,11 +223,11 @@ function GeneralSettingsPanel() {
       `端口 ${port} 无响应，服务将自动禁用`
     );
 
-    // 设置标志，防止自动保存被触发
+    // Prevent auto-save from triggering during disable
     setIsAutoDisabling(true);
 
     try {
-      // 立即禁用服务
+      // Disable service immediately
       const response = await compatibilityApi.update({
         ollama: {
           enabled: type === 'ollama' ? false : ollamaEnabled,
@@ -247,13 +240,12 @@ function GeneralSettingsPanel() {
       });
 
       if (response.success) {
-        // 更新本地状态
+        // Update local state
         if (type === 'ollama') {
           setOllamaEnabled(false);
         } else {
           setLmstudioEnabled(false);
         }
-        // 清除更改标志，防止触发自动保存
         setHasChanges(false);
         toast.success(`${serviceName} 已禁用`, '配置已自动还原');
       } else {
@@ -263,7 +255,7 @@ function GeneralSettingsPanel() {
       console.error('自动禁用服务失败:', error);
       toast.error('自动禁用失败', '请手动禁用服务');
     } finally {
-      // 延迟清除标志，确保状态更新完成
+      // Delay clearing flag to ensure state updates complete
       setTimeout(() => {
         setIsAutoDisabling(false);
       }, 100);
@@ -290,7 +282,7 @@ function GeneralSettingsPanel() {
         </p>
       </div>
 
-      {/* Ollama 配置卡片 */}
+      {/* Ollama config card */}
       <ApiConfigCard
         type="ollama"
         config={{ enabled: ollamaEnabled, port: ollamaPort }}
@@ -300,7 +292,7 @@ function GeneralSettingsPanel() {
         onConnectionFailed={handleConnectionFailed}
       />
 
-      {/* LM Studio 配置卡片 */}
+      {/* LM Studio config card */}
       <ApiConfigCard
         type="lmstudio"
         config={{ enabled: lmstudioEnabled, port: lmstudioPort }}
@@ -310,7 +302,7 @@ function GeneralSettingsPanel() {
         onConnectionFailed={handleConnectionFailed}
       />
 
-      {/* 自动保存提示 */}
+      {/* Auto-save notice */}
       <div className="flex items-center justify-center py-2">
         <p className="text-xs text-muted-foreground">
           配置将自动保存
@@ -321,7 +313,7 @@ function GeneralSettingsPanel() {
 }
 
 /**
- * 性能压测面板
+ * Benchmark panel
  */
 function BenchmarkPanel() {
   return (
@@ -338,7 +330,7 @@ function BenchmarkPanel() {
 }
 
 /**
- * MCP 管理面板
+ * MCP management panel
  */
 function McpPanel() {
   return (
@@ -355,7 +347,7 @@ function McpPanel() {
 }
 
 /**
- * 关于面板
+ * About panel
  */
 function AboutPanel() {
   const [serverInfo, setServerInfo] = useState<{
@@ -388,7 +380,6 @@ function AboutPanel() {
     fetchServerInfo();
   }, []);
 
-  // 格式化构建时间
   const formatBuildTime = (buildTime: string | undefined) => {
     if (!buildTime || buildTime === 'unknown') return '未知';
     try {
@@ -399,13 +390,11 @@ function AboutPanel() {
     }
   };
 
-  // 格式化 Git Commit
   const formatGitCommit = (commit: string | undefined) => {
     if (!commit || commit === 'unknown') return '未知';
     return commit.length > 8 ? commit.substring(0, 8) : commit;
   };
 
-  // 格式化运行模式
   const formatMode = (mode: string | undefined) => {
     if (!mode) return '未知';
     const modeMap: Record<string, string> = {
@@ -491,20 +480,19 @@ function AboutPanel() {
 }
 
 /**
- * 路径配置面板
+ * Path configuration panel
  */
 function PathsSettingsPanel() {
   return (
     <div className="max-w-3xl space-y-5 text-foreground">
-      {/* llama.cpp 路径配置 */}
+      {/* llama.cpp path config */}
       <div className="rounded-lg border bg-card p-4">
         <PathConfigPanel type="llamacpp" />
       </div>
 
-      {/* 分隔线 */}
       <div className="border-t" />
 
-      {/* 模型路径配置 */}
+      {/* Model path config */}
       <div className="rounded-lg border bg-card p-4">
         <PathConfigPanel type="models" />
       </div>

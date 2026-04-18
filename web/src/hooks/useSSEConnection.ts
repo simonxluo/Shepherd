@@ -1,41 +1,41 @@
 /**
- * 通用 SSE 连接管理 Hook
+ * Generic SSE connection management hook.
  *
- * 封装 EventSource 的创建、自动重连（指数退避）、连接清理等通用逻辑。
- * useSSE 和 useLogs 共用此 hook，各自只关注事件处理。
+ * Wraps EventSource creation, auto-reconnect (exponential backoff), and cleanup.
+ * Shared by useSSE and useLogs — consumers only handle events.
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { apiClient } from '@/lib/api/client';
 
-/** SSE 连接状态 */
+/** SSE connection state */
 export type SSEConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
-/** useSSEConnection 配置选项 */
+/** useSSEConnection options */
 export interface UseSSEConnectionOptions {
-  /** SSE 端点路径（相对于 API base URL），例如 '/events' 或 '/logs/stream' */
+  /** SSE endpoint path (relative to API base URL), e.g. '/events' or '/logs/stream' */
   url: string;
-  /** URL 查询参数（追加到 url 后面） */
+  /** URL query parameters */
   params?: Record<string, string>;
-  /** 重连基础间隔（毫秒），默认 1000 */
+  /** Base reconnect interval (ms), default 1000 */
   reconnectInterval?: number;
-  /** 最大重连次数，默认 10 */
+  /** Max reconnect attempts, default 10 */
   maxReconnectAttempts?: number;
-  /** 连接打开回调。isReconnect 为 true 表示这是一次重连（非首次连接） */
+  /** Connection open callback. isReconnect is true for reconnections */
   onOpen?: (isReconnect: boolean) => void;
-  /** 收到消息回调 */
+  /** Message received callback */
   onMessage?: (event: MessageEvent) => void;
-  /** 发生错误回调（仅在达到最大重连次数时触发） */
+  /** Error callback (triggered only when max reconnect attempts reached) */
   onError?: (error: Event) => void;
 }
 
-/** useSSEConnection 返回值 */
+/** useSSEConnection return value */
 export interface UseSSEConnectionReturn {
-  /** 当前连接状态 */
+  /** Current connection state */
   connectionState: SSEConnectionState;
-  /** 手动连接/重连（重置重连计数） */
+  /** Manual connect/reconnect (resets reconnect count) */
   connect: () => void;
-  /** 断开连接 */
+  /** Disconnect */
   disconnect: () => void;
 }
 
@@ -55,7 +55,7 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [connectionState, setConnectionState] = useState<SSEConnectionState>('disconnected');
 
-  // 使用 ref 保存回调，避免因回调变化触发重连
+  // Use refs for callbacks to avoid reconnection on callback changes
   const onOpenRef = useRef(onOpen);
   const onMessageRef = useRef(onMessage);
   const onErrorRef = useRef(onError);
@@ -64,7 +64,7 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
   onErrorRef.current = onError;
 
   /**
-   * 清除重连定时器
+   * Clear reconnect timer
    */
   const clearReconnectTimer = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -74,7 +74,7 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
   }, []);
 
   /**
-   * 断开 SSE 连接
+   * Disconnect SSE
    */
   const disconnect = useCallback(() => {
     clearReconnectTimer();
@@ -88,10 +88,10 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
   }, [clearReconnectTimer]);
 
   /**
-   * 连接到 SSE 端点
+   * Connect to SSE endpoint
    */
   const connect = useCallback(() => {
-    // 如果已经连接或正在连接，不重复连接
+    // Skip if already connected or connecting
     if (
       eventSourceRef.current?.readyState === EventSource.OPEN ||
       eventSourceRef.current?.readyState === EventSource.CONNECTING
@@ -99,13 +99,13 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
       return;
     }
 
-    // 清理旧连接
+    // Clean up existing connection
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
 
-    // 清除待处理的重连
+    // Clear pending reconnect
     clearReconnectTimer();
 
     try {
@@ -133,7 +133,7 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
       es.addEventListener('error', (error: Event) => {
         const target = error.target as EventSource;
 
-        // 检查是否为正常关闭
+        // Check if cleanly closed
         if (target.readyState === EventSource.CLOSED) {
           setConnectionState('disconnected');
           return;
@@ -168,7 +168,7 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
   }, [url, params, reconnectInterval, maxReconnectAttempts, clearReconnectTimer]);
 
   /**
-   * 手动重连：重置重连计数后连接
+   * Manual reconnect: reset counter then connect
    */
   const manualReconnect = useCallback(() => {
     reconnectAttemptsRef.current = 0;
@@ -176,7 +176,7 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
     connect();
   }, [connect, disconnect]);
 
-  // 组件挂载时连接，卸载时断开
+  // Connect on mount, disconnect on unmount
   useEffect(() => {
     connect();
     return () => disconnect();
