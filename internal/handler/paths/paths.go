@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 )
 
 // Handler handles path configuration requests

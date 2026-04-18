@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -129,7 +129,7 @@ func TestServerRoutes(t *testing.T) {
 		// Model routes - 注意：测试中没有预加载模型，所以 test-id 返回错误状态码是正确的
 		{"List models", "GET", "/api/models", http.StatusOK},
 		{"Get model", "GET", "/api/models/test-id", http.StatusNotFound},                       // 模型不存在
-		{"Load model", "POST", "/api/models/test-id/load", http.StatusBadRequest},          // empty body
+		{"Load model", "POST", "/api/models/test-id/load", http.StatusBadRequest},              // empty body
 		{"Unload model", "POST", "/api/models/test-id/unload", http.StatusInternalServerError}, // 模型不存在时卸载失败
 		{"Set alias", "PUT", "/api/models/test-id/alias", http.StatusBadRequest},               // 缺少请求体
 		{"Set favourite", "PUT", "/api/models/test-id/favourite", http.StatusBadRequest},       // 缺少请求体
@@ -152,7 +152,7 @@ func TestServerRoutes(t *testing.T) {
 		{"Stop process", "POST", "/api/processes/test-id/stop", http.StatusInternalServerError}, // 进程停止失败（进程不存在是内部错误）
 
 		// Repo routes
-		{"Search repo without query", "GET", "/api/repo/search", http.StatusBadRequest},                       // 缺少 q 参数
+		{"Search repo without query", "GET", "/api/repo/search", http.StatusBadRequest}, // 缺少 q 参数
 		{"Search repo with query", "GET", "/api/repo/search?q=qwen&limit=10", http.StatusOK},
 		{"Get repo config", "GET", "/api/repo/config", http.StatusOK},
 		{"Get repo endpoints", "GET", "/api/repo/endpoints", http.StatusOK},

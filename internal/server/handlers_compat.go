@@ -25,3 +25,15 @@ func (s *Server) HandleOllamaChat(c *gin.Context) {
 func (s *Server) HandleOllamaTags(c *gin.Context) {
 	s.handlers.Ollama.HandleTags(c)
 }
+func (s *Server) HandleLMStudioChat(c *gin.Context) {
+	s.handlers.LMStudio.HandleChatCompletions(c)
+}
+func (s *Server) HandleLMStudioComplete(c *gin.Context) {
+	s.handlers.LMStudio.HandleCompletions(c)
+}
+func (s *Server) HandleLMStudioModels(c *gin.Context) {
+	s.handlers.LMStudio.HandleModels(c)
+}
+func (s *Server) HandleLMStudioEmbeddings(c *gin.Context) {
+	s.handlers.LMStudio.HandleEmbeddings(c)
+}

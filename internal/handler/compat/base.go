@@ -1,0 +1,264 @@
+package compat
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+)
+
+type BaseHandler struct {
+	ModelMgr   *model.Manager
+	Client     *http.Client
+	ModelIndex *ModelLookupIndex
+}
+
+func NewBaseHandler(modelMgr *model.Manager) *BaseHandler {
+	b := &BaseHandler{
+		ModelMgr: modelMgr,
+		Client: &http.Client{
+			Timeout: 0,
+		},
+		ModelIndex: NewModelLookupIndex(),
+	}
+	b.RebuildIndex()
+	return b
+}
+
+func (b *BaseHandler) RebuildIndex() {
+	models := b.ModelMgr.ListModels()
+	b.ModelIndex.Rebuild(models)
+}
+
+func (b *BaseHandler) FindModel(modelName string) (string, error) {
+	return FindModelForAPI(b.ModelMgr, b.ModelIndex, modelName)
+}
+
+func (b *BaseHandler) GetModelPort(modelID string) (int, error) {
+	return GetModelPort(b.ModelMgr, modelID)
+}
+
+func (b *BaseHandler) ForwardRequest(c *gin.Context, port int, path string, modelID string, req interface{}) {
+	if status, exists := b.ModelMgr.GetStatusRef(modelID); exists {
+		if !status.AcquireSlot() {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "model is at concurrent request limit"})
+			return
+		}
+		defer status.ReleaseSlot()
+		status.InflightAdd()
+		defer status.InflightDone()
+	}
+
+	url := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", url, bytes.NewReader(body))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
+
+	resp, err := b.Client.Do(httpReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		logger.Errorf("转发请求到 llama.cpp 失败: %v", err)
+		return
+	}
+	defer utils.CloseQuietly(resp.Body)
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	b.extractTokenUsage(modelID, respBody)
+
+	c.Header("Content-Type", "application/json")
+	for key, values := range resp.Header {
+		for _, value := range values {
+			c.Header(key, value)
+		}
+	}
+	c.Status(resp.StatusCode)
+	utils.WriteQuietly(c.Writer, respBody)
+}
+
+func (b *BaseHandler) ForwardStreamRequest(c *gin.Context, port int, path string, modelID string, req interface{}) {
+	if status, exists := b.ModelMgr.GetStatusRef(modelID); exists {
+		if !status.AcquireSlot() {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "model is at concurrent request limit"})
+			return
+		}
+		defer status.ReleaseSlot()
+		status.InflightAdd()
+		defer status.InflightDone()
+	}
+
+	target, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", port))
+
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = &http.Transport{
+		ResponseHeaderTimeout: 0,
+	}
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		if strings.Contains(strings.ToLower(resp.Header.Get("Content-Type")), "text/event-stream") {
+			resp.Header.Set("X-Accel-Buffering", "no")
+			resp.Header.Set("Cache-Control", "no-cache")
+			resp.Header.Set("Connection", "keep-alive")
+		}
+		return nil
+	}
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		logger.Errorf("转发流式请求到 llama.cpp 失败: %v", err)
+		w.WriteHeader(http.StatusBadGateway)
+		w.Write([]byte(fmt.Sprintf(`{"error":"%s"}`, err.Error())))
+	}
+
+	c.Request.URL.Path = path
+	c.Request.Host = fmt.Sprintf("127.0.0.1:%d", port)
+
+	if req != nil {
+		body, err := json.Marshal(req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.Request.Body = io.NopCloser(bytes.NewReader(body))
+		c.Request.ContentLength = int64(len(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+	}
+	if auth := c.Request.Header.Get("Authorization"); auth != "" {
+		c.Request.Header.Set("Authorization", auth)
+	}
+
+	proxy.ServeHTTP(c.Writer, c.Request)
+}
+
+func (b *BaseHandler) ForwardRequestRaw(c *gin.Context, port int, path string, modelID string, body []byte) ([]byte, *http.Response, error) {
+	if status, exists := b.ModelMgr.GetStatusRef(modelID); exists {
+		if !status.AcquireSlot() {
+			return nil, nil, fmt.Errorf("model is at concurrent request limit")
+		}
+		defer status.ReleaseSlot()
+		status.InflightAdd()
+		defer status.InflightDone()
+	}
+
+	url := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
+
+	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", url, bytes.NewReader(body))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
+
+	resp, err := b.Client.Do(httpReq)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer utils.CloseQuietly(resp.Body)
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return respBody, resp, nil
+}
+
+func (b *BaseHandler) StreamWithLazyLoad(c *gin.Context, modelName string, path string, req interface{}) {
+	actualModelID := ""
+
+	if status, exists := b.ModelMgr.GetStatusRef(modelName); exists {
+		actualModelID = modelName
+		if status.State == model.StateLoaded {
+			port, err := b.GetModelPort(actualModelID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			b.ForwardStreamRequest(c, port, path, actualModelID, req)
+			return
+		}
+	} else if m, ok := b.ModelIndex.Find(modelName); ok {
+		actualModelID = m.ID
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("model not found: %s", modelName)})
+		return
+	}
+
+	status, exists := b.ModelMgr.GetStatusRef(actualModelID)
+	if exists && status.State == model.StateLoaded {
+		port, err := b.GetModelPort(actualModelID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		b.ForwardStreamRequest(c, port, path, actualModelID, req)
+		return
+	}
+
+	loadDone := make(chan struct{})
+	go func() {
+		defer close(loadDone)
+		if exists && status.State == model.StateLoading {
+			status.LoadWait.Wait()
+		} else {
+			b.ModelMgr.EnsureLoaded(actualModelID)
+		}
+	}()
+
+	loadCtx, loadCancel := context.WithCancel(context.Background())
+	go func() {
+		<-loadDone
+		loadCancel()
+	}()
+	sendLoadingSSE(c, actualModelID, loadCtx)
+
+	port, err := b.GetModelPort(actualModelID)
+	if err != nil {
+		c.Writer.Write([]byte(fmt.Sprintf("data: {\"error\":\"%s\"}\n\n", err.Error())))
+		if f, ok := c.Writer.(http.Flusher); ok {
+			f.Flush()
+		}
+		return
+	}
+
+	b.ForwardStreamRequest(c, port, path, actualModelID, req)
+}
+
+func (b *BaseHandler) extractTokenUsage(modelID string, body []byte) {
+	if status, exists := b.ModelMgr.GetStatusRef(modelID); exists {
+		var resp struct {
+			Usage *struct {
+				PromptTokens     int `json:"prompt_tokens"`
+				CompletionTokens int `json:"completion_tokens"`
+				TotalTokens      int `json:"total_tokens"`
+			} `json:"usage"`
+		}
+		if json.Unmarshal(body, &resp) == nil && resp.Usage != nil {
+			status.AddTokens(resp.Usage.PromptTokens, resp.Usage.CompletionTokens)
+		}
+	}
+}

@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/ollama"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/openai"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/lmstudio"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/ollama"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
@@ -113,17 +113,20 @@ func (sm *ServerManager) StartLMStudioServer(port int) error {
 	engine.Use(gin.Recovery())
 
 	// Setup OpenAI compatible routes for LM Studio
-	openaiHandler := openai.NewHandler(sm.modelMgr)
+	lmstudioHandler := lmstudio.NewHandler(sm.modelMgr)
 	v1 := engine.Group("/v1")
 	{
 		v1.GET("/models", func(c *gin.Context) {
-			openaiHandler.HandleModels(c)
+			lmstudioHandler.HandleModels(c)
 		})
 		v1.POST("/chat/completions", func(c *gin.Context) {
-			openaiHandler.HandleChatCompletions(c)
+			lmstudioHandler.HandleChatCompletions(c)
 		})
 		v1.POST("/completions", func(c *gin.Context) {
-			openaiHandler.HandleCompletions(c)
+			lmstudioHandler.HandleCompletions(c)
+		})
+		v1.POST("/embeddings", func(c *gin.Context) {
+			lmstudioHandler.HandleEmbeddings(c)
 		})
 	}
 

@@ -9,9 +9,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 )
 
 func RequestID() gin.HandlerFunc {

@@ -542,16 +542,16 @@ func TestBuildCommandFromRequest(t *testing.T) {
 		{
 			name: "All new fields combined",
 			req: &LoadRequest{
-				ModelPath: "/models/model.gguf",
-				Port:      8081,
-				CtxSize:   4096,
+				ModelPath:        "/models/model.gguf",
+				Port:             8081,
+				CtxSize:          4096,
 				Reranking:        true,
 				MinP:             0.05,
 				PresencePenalty:  0.1,
 				FrequencyPenalty: 0.2,
-				DisableJinja: true,
-				ChatTemplate: "chatml",
-				ContextShift: true,
+				DisableJinja:     true,
+				ChatTemplate:     "chatml",
+				ContextShift:     true,
 			},
 			contains: []string{
 				"llama-server",

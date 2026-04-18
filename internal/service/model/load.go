@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
 )
 
 // prepareAndStartProcess contains the shared preparation logic for both Load and LoadAsync.
@@ -23,21 +23,16 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 	binPath := m.findLlamaCppBinary()
 	if binPath == "" {
 		err := fmt.Errorf("llama.cpp binary not found")
-		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = err
-		m.mu.Unlock()
 		return nil, 0, err
 	}
 
-	// Allocate port
 	allocatedPort, err := m.portAllocator.NextPort()
 	if err != nil {
 		wrappedErr := fmt.Errorf("no available ports: %w", err)
-		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = wrappedErr
-		m.mu.Unlock()
 		return nil, 0, wrappedErr
 	}
 
@@ -53,21 +48,16 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 	cmd, err := process.BuildCommandFromRequest(procReq, binPath)
 	if err != nil {
 		m.portAllocator.Release(allocatedPort)
-		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = err
-		m.mu.Unlock()
 		return nil, 0, err
 	}
 
-	// Start process
 	proc, err := m.processMgr.Start(req.ModelID, model.Name, cmd, binPath)
 	if err != nil {
 		m.portAllocator.Release(allocatedPort)
-		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = err
-		m.mu.Unlock()
 		return nil, 0, err
 	}
 
@@ -114,17 +104,26 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 	}
 	m.mu.RUnlock()
 
-	// 创建初始状态
 	m.mu.Lock()
 	status := &ModelStatus{
-		ID:    req.ModelID,
-		Name:  model.Name,
-		State: StateLoading,
+		ID:   req.ModelID,
+		Name: model.Name,
 	}
+	applyRuntimeConfig(status, req.UnloadAfterMinutes, req.ConcurrencyLimit)
+	status.LoadWait.Add(1)
 	m.statuses[req.ModelID] = status
 	m.mu.Unlock()
 
-	// 启动异步加载（传入已获取的 model，避免在 goroutine 中再次获取锁）
+	m.swapBeforeLoad(req.ModelID)
+
+	if err := status.transitionTo(StateLoading); err != nil {
+		status.LoadWait.Done()
+		m.mu.Lock()
+		delete(m.statuses, req.ModelID)
+		m.mu.Unlock()
+		return nil, fmt.Errorf("failed to transition to loading: %w", err)
+	}
+
 	go m.loadModelAsync(req, status, model)
 
 	return &LoadResult{
@@ -313,7 +312,6 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 	// 等待加载完成或超时
 	select {
 	case <-loadCompleted:
-		// 停止健康检查
 		close(stopHealthCheck)
 		m.mu.Lock()
 		status.State = StateLoaded
@@ -321,30 +319,29 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		status.Port = port
 		status.LoadedAt = time.Now()
 		m.mu.Unlock()
+		status.LoadWait.Done()
 		duration := time.Since(startTime)
 		logger.Info("异步模型加载成功", "modelId", req.ModelID, "port", port, "duration", duration.String())
 
 	case err := <-loadError:
-		// 停止健康检查
 		close(stopHealthCheck)
 		m.mu.Lock()
 		status.State = StateError
 		status.Error = err
 		m.mu.Unlock()
+		status.LoadWait.Done()
 		logger.Error("异步模型加载失败", "modelId", req.ModelID, "error", err)
-		// 清理进程和端口
 		m.processMgr.Stop(req.ModelID) //errcheck:ignore
 		m.portAllocator.Release(port)
 
 	case <-time.After(timeout):
-		// 停止健康检查
 		close(stopHealthCheck)
 		m.mu.Lock()
 		status.State = StateError
 		status.Error = fmt.Errorf("模型加载超时 (%v)", timeout)
 		m.mu.Unlock()
+		status.LoadWait.Done()
 		logger.Error("异步模型加载超时", "modelId", req.ModelID, "timeout", timeout)
-		// 清理进程和端口
 		m.processMgr.Stop(req.ModelID) //errcheck:ignore
 		m.portAllocator.Release(port)
 	}
@@ -392,6 +389,9 @@ func (m *Manager) Unload(modelID string) error {
 	}
 
 	logger.Info("开始卸载模型", "modelId", modelID, "modelName", status.Name, "port", status.Port)
+
+	status.transitionTo(StateUnloading)
+	status.InflightWait()
 
 	// Stop process
 	if err := m.processMgr.Stop(modelID); err != nil {
@@ -520,5 +520,15 @@ func toProcessLoadRequest(req *LoadRequest, modelPath string, port int) *process
 		RopeScale:     req.RopeScale,
 		RopeFreqBase:  req.RopeFreqBase,
 		RopeFreqScale: req.RopeFreqScale,
+	}
+}
+
+func applyRuntimeConfig(status *ModelStatus, unloadAfterMinutes, concurrencyLimit int) {
+	if unloadAfterMinutes > 0 {
+		status.SetUnloadAfter(time.Duration(unloadAfterMinutes) * time.Minute)
+	}
+
+	if concurrencyLimit > 0 {
+		status.InitConcurrency(concurrencyLimit)
 	}
 }

@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
+	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
 func (s *Server) HandleListModels(c *gin.Context) {

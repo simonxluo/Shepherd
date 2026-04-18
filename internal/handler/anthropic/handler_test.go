@@ -9,10 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,8 +38,8 @@ func TestNewHandler(t *testing.T) {
 
 	handler := NewHandler(modelMgr)
 	assert.NotNil(t, handler)
-	assert.NotNil(t, handler.modelMgr)
-	assert.NotNil(t, handler.client)
+	assert.NotNil(t, handler.ModelMgr)
+	assert.NotNil(t, handler.Client)
 }
 
 func TestMessageRequest(t *testing.T) {
@@ -283,13 +283,13 @@ func TestHandler_findModel(t *testing.T) {
 	handler := NewHandler(modelMgr)
 
 	t.Run("no models loaded", func(t *testing.T) {
-		_, err := handler.findModel("test-model")
+		_, err := handler.FindModel("test-model")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "model not found")
 	})
 
 	t.Run("empty model name", func(t *testing.T) {
-		_, err := handler.findModel("")
+		_, err := handler.FindModel("")
 		assert.Error(t, err)
 	})
 }
@@ -305,13 +305,13 @@ func TestHandler_getModelPort(t *testing.T) {
 	handler := NewHandler(modelMgr)
 
 	t.Run("model not loaded", func(t *testing.T) {
-		_, err := handler.getModelPort("nonexistent-model")
+		_, err := handler.GetModelPort("nonexistent-model")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "model not loaded")
 	})
 
 	t.Run("empty model ID", func(t *testing.T) {
-		_, err := handler.getModelPort("")
+		_, err := handler.GetModelPort("")
 		assert.Error(t, err)
 	})
 }

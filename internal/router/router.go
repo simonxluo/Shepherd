@@ -7,15 +7,19 @@ import (
 	benchmarkapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/benchmark"
 	compatibilityapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/compatibility"
 	filesystemapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/filesystem"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/lmstudio"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/ollama"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/openai"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/paths"
 	storageapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/middleware"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/shepherd-project/shepherd/Shepherd/api-docs"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // Handlers contains all injected handler instances.
@@ -23,6 +27,7 @@ type Handlers struct {
 	OpenAI        *openai.Handler
 	Ollama        *ollama.Handler
 	Anthropic     *anthropic.Handler
+	LMStudio      *lmstudio.Handler
 	Paths         *paths.Handler
 	Storage       *storageapi.Handler
 	Compatibility *compatibilityapi.Handler
@@ -83,6 +88,10 @@ type ServerHandlers interface {
 	HandleAnthropicMessages(c *gin.Context)
 	HandleOllamaChat(c *gin.Context)
 	HandleOllamaTags(c *gin.Context)
+	HandleLMStudioChat(c *gin.Context)
+	HandleLMStudioComplete(c *gin.Context)
+	HandleLMStudioModels(c *gin.Context)
+	HandleLMStudioEmbeddings(c *gin.Context)
 }
 
 // Config holds router-level configuration.
@@ -127,6 +136,7 @@ func registerRoutes(
 ) {
 	engine.GET("/api/events", sh.HandleEvents)
 	engine.GET("/ws", sh.HandleWebSocket)
+	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	apiGroup := engine.Group("/api")
 	{
@@ -321,6 +331,17 @@ func registerCompatibilityRoutes(engine *gin.Engine, sh ServerHandlers) {
 	{
 		ollama.POST("/chat", sh.HandleOllamaChat)
 		ollama.POST("/tags", sh.HandleOllamaTags)
+	}
+
+	lmstudioGroup := engine.Group("/lmstudio")
+	{
+		v1 := lmstudioGroup.Group("/v1")
+		{
+			v1.GET("/models", sh.HandleLMStudioModels)
+			v1.POST("/chat/completions", sh.HandleLMStudioChat)
+			v1.POST("/completions", sh.HandleLMStudioComplete)
+			v1.POST("/embeddings", sh.HandleLMStudioEmbeddings)
+		}
 	}
 }
 

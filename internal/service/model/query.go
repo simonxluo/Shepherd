@@ -86,6 +86,14 @@ func (m *Manager) GetStatus(modelID string) (*ModelStatus, bool) {
 	return &statusCopy, true
 }
 
+func (m *Manager) GetStatusRef(modelID string) (*ModelStatus, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	status, exists := m.statuses[modelID]
+	return status, exists
+}
+
 // ListStatus returns all model statuses
 func (m *Manager) ListStatus() map[string]*ModelStatus {
 	m.mu.RLock()
@@ -372,6 +380,17 @@ func (m *Manager) saveModels() {
 }
 
 // GetLoadedModelCount returns the number of currently loaded models
+func (m *Manager) GetModelTokenCounts(modelID string) (prompt, completion int64, found bool) {
+	m.mu.RLock()
+	status, exists := m.statuses[modelID]
+	m.mu.RUnlock()
+	if !exists {
+		return 0, 0, false
+	}
+	p, c := status.GetTokenCounts()
+	return p, c, true
+}
+
 func (m *Manager) GetLoadedModelCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -460,5 +479,3 @@ func (m *Manager) CleanInvalidModels() int {
 
 	return len(result.InvalidModels)
 }
-
-

@@ -25,6 +25,7 @@ type Manager struct {
 	models     map[string]*Model
 	statuses   map[string]*ModelStatus
 	scanStatus *ScanStatus
+	groups     map[string]*ModelGroup
 
 	mu     sync.RWMutex
 	ctx    context.Context
@@ -54,6 +55,7 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 		models:        make(map[string]*Model),
 		statuses:      make(map[string]*ModelStatus),
 		scanStatus:    &ScanStatus{},
+		groups:        make(map[string]*ModelGroup),
 		ctx:           ctx,
 		cancel:        cancel,
 	}
@@ -69,6 +71,8 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 	// Load saved models
 	m.loadModels()
 	logger.Info("ModelManager: 从配置加载模型完成", "modelCount", len(m.models))
+
+	m.StartTTLChecker()
 
 	return m
 }
@@ -101,12 +105,22 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 
 	// Create initial status
 	status = &ModelStatus{
-		ID:    req.ModelID,
-		Name:  model.Name,
-		State: StateLoading,
+		ID:   req.ModelID,
+		Name: model.Name,
 	}
+	applyRuntimeConfig(status, req.UnloadAfterMinutes, req.ConcurrencyLimit)
 	m.statuses[req.ModelID] = status
 	m.mu.Unlock()
+
+	m.swapBeforeLoad(req.ModelID)
+
+	if err := status.transitionTo(StateLoading); err != nil {
+		m.mu.Lock()
+		delete(m.statuses, req.ModelID)
+		m.mu.Unlock()
+		logger.Warn("模型加载失败: 状态转换错误", "modelId", req.ModelID, "error", err)
+		return nil, fmt.Errorf("failed to transition to loading: %w", err)
+	}
 
 	startTime := time.Now()
 
@@ -114,11 +128,8 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	// Find llama.cpp binary
 	binPath := m.findLlamaCppBinary()
 	if binPath == "" {
-		// 更新状态为错误
-		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = fmt.Errorf("llama.cpp binary not found")
-		m.mu.Unlock()
 		logger.Error("模型加载失败: llama.cpp 二进制文件未找到", "modelId", req.ModelID)
 		return &LoadResult{
 			Success: false,
@@ -130,10 +141,8 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	// Allocate port using centralized PortAllocator
 	port, err := m.portAllocator.NextPort()
 	if err != nil {
-		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = fmt.Errorf("no available ports: %w", err)
-		m.mu.Unlock()
 		logger.Error("模型加载失败: 无可用端口", "modelId", req.ModelID, "error", err)
 		return &LoadResult{
 			Success: false,
@@ -153,12 +162,9 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	procReq := toProcessLoadRequest(req, modelPath, port)
 	cmd, err := process.BuildCommandFromRequest(procReq, binPath)
 	if err != nil {
-		// 释放已分配的端口
 		m.portAllocator.Release(port)
-		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = err
-		m.mu.Unlock()
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
@@ -169,12 +175,9 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	// Start process
 	proc, err := m.processMgr.Start(req.ModelID, model.Name, cmd, binPath)
 	if err != nil {
-		// 释放已分配的端口
 		m.portAllocator.Release(port)
-		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = err
-		m.mu.Unlock()
 		logger.Error("模型加载失败: 启动进程失败", "modelId", req.ModelID, "error", err)
 		return &LoadResult{
 			Success: false,
@@ -191,9 +194,8 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}
 	})
 
-	// Phase 3: 更新状态为已加载（加锁）
+	status.transitionTo(StateLoaded)
 	m.mu.Lock()
-	status.State = StateLoaded
 	status.ProcessID = proc.ID
 	status.Port = port
 	status.LoadedAt = time.Now()

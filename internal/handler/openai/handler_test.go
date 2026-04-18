@@ -9,10 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -241,7 +241,7 @@ func TestFindModel(t *testing.T) {
 	handler := NewHandler(modelMgr)
 
 	t.Run("No models loaded", func(t *testing.T) {
-		_, err := handler.findModel("test-model")
+		_, err := handler.FindModel("test-model")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "model not found")
 	})

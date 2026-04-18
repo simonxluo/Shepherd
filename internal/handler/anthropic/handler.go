@@ -1,34 +1,27 @@
-// Package anthropic provides Anthropic API compatibility layer
 package anthropic
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
-	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/compat"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
-// Handler handles Anthropic API requests
 type Handler struct {
-	modelMgr *model.Manager
-	client   *http.Client
+	*compat.BaseHandler
 }
 
-// NewHandler creates a new Anthropic API handler
 func NewHandler(modelMgr *model.Manager) *Handler {
 	return &Handler{
-		modelMgr: modelMgr,
-		client:   &http.Client{},
+		BaseHandler: compat.NewBaseHandler(modelMgr),
 	}
 }
 
-// MessageRequest represents an Anthropic messages API request
 type MessageRequest struct {
 	Model         string    `json:"model"`
 	MaxTokens     int       `json:"max_tokens"`
@@ -41,13 +34,11 @@ type MessageRequest struct {
 	StopSequences []string  `json:"stop_sequences,omitempty"`
 }
 
-// Message represents a message in Anthropic format
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-// MessageResponse represents an Anthropic messages API response
 type MessageResponse struct {
 	ID         string         `json:"id"`
 	Type       string         `json:"type"`
@@ -59,25 +50,32 @@ type MessageResponse struct {
 	Error      *ErrorDetail   `json:"error,omitempty"`
 }
 
-// ContentBlock represents a content block
 type ContentBlock struct {
 	Type string `json:"type"`
 	Text string `json:"text,omitempty"`
 }
 
-// Usage represents token usage
 type Usage struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
 }
 
-// ErrorDetail represents error details
 type ErrorDetail struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
 }
 
-// HandleMessages handles Anthropic messages API requests
+// @Summary      Anthropic Messages
+// @Description  Anthropic 兼容的消息接口，内部转换为 OpenAI 格式转发并转换响应
+// @Tags         Anthropic
+// @Accept       json
+// @Produce      json
+// @Param        request  body  MessageRequest  true  "Anthropic message request"
+// @Success      200  {object}  MessageResponse
+// @Failure      400  {object}  MessageResponse
+// @Failure      404  {object}  MessageResponse
+// @Failure      502  {object}  MessageResponse
+// @Router       /v1/messages [post]
 func (h *Handler) HandleMessages(c *gin.Context) {
 	var req MessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -85,7 +83,6 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 		return
 	}
 
-	// Validate request
 	if req.Model == "" {
 		h.sendError(c, http.StatusBadRequest, "invalid_request", "model is required")
 		return
@@ -101,73 +98,43 @@ func (h *Handler) HandleMessages(c *gin.Context) {
 		return
 	}
 
-	// Find the actual model ID
-	actualModelID, err := h.findModel(req.Model)
+	actualModelID, err := h.FindModel(req.Model)
 	if err != nil {
 		h.sendError(c, http.StatusNotFound, "invalid_request_error", err.Error())
 		return
 	}
 
-	// Get model port
-	port, err := h.getModelPort(actualModelID)
+	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
 		h.sendError(c, http.StatusInternalServerError, "internal_error", err.Error())
 		return
 	}
 
-	// Convert to OpenAI format and forward
-	h.forwardToOpenAI(c, actualModelID, port, req)
+	openaiReq := h.convertToOpenAI(actualModelID, req)
+	body, _ := json.Marshal(openaiReq)
+	respBody, resp, err := h.ForwardRequestRaw(c, port, "/v1/chat/completions", actualModelID, body)
+	if err != nil {
+		h.sendError(c, http.StatusBadGateway, "internal_error", err.Error())
+		logger.Errorf("转发请求到 llama.cpp 失败: %v", err)
+		return
+	}
+
+	var openaiResp map[string]interface{}
+	if err := json.Unmarshal(respBody, &openaiResp); err != nil {
+		c.Header("Content-Type", "application/json")
+		c.Status(resp.StatusCode)
+		utils.WriteQuietly(c.Writer, respBody)
+		return
+	}
+
+	anthropicResp := h.convertResponse(openaiResp, req.Model)
+	c.Header("Content-Type", "application/json")
+	c.JSON(resp.StatusCode, anthropicResp)
 }
 
-// findModel finds a model by name or ID
-func (h *Handler) findModel(modelName string) (string, error) {
-	statuses := h.modelMgr.ListStatus()
-	models := h.modelMgr.ListModels()
-
-	// First try exact match with ID
-	if status, exists := statuses[modelName]; exists && status.State == model.StateLoaded {
-		return modelName, nil
-	}
-
-	// Try to find by name/alias
-	for _, m := range models {
-		status, exists := statuses[m.ID]
-		if !exists || status.State != model.StateLoaded {
-			continue
-		}
-
-		if m.Alias == modelName || m.Name == modelName {
-			return m.ID, nil
-		}
-	}
-
-	return "", fmt.Errorf("model not found: %s", modelName)
-}
-
-// getModelPort returns the port for a loaded model
-func (h *Handler) getModelPort(modelID string) (int, error) {
-	status, exists := h.modelMgr.GetStatus(modelID)
-	if !exists {
-		return 0, fmt.Errorf("model not loaded: %s", modelID)
-	}
-
-	if status.State != model.StateLoaded {
-		return 0, fmt.Errorf("model not in loaded state: %s", modelID)
-	}
-
-	if status.Port == 0 {
-		return 0, fmt.Errorf("model port not available: %s", modelID)
-	}
-
-	return status.Port, nil
-}
-
-// forwardToOpenAI converts Anthropic request to OpenAI format and forwards
-func (h *Handler) forwardToOpenAI(c *gin.Context, modelID string, port int, anthropicReq MessageRequest) {
-	// Convert Anthropic messages to OpenAI format
+func (h *Handler) convertToOpenAI(modelID string, anthropicReq MessageRequest) map[string]interface{} {
 	messages := make([]map[string]interface{}, 0, len(anthropicReq.Messages)+1)
 
-	// Add system message if present
 	if anthropicReq.System != "" {
 		messages = append(messages, map[string]interface{}{
 			"role":    "system",
@@ -175,7 +142,6 @@ func (h *Handler) forwardToOpenAI(c *gin.Context, modelID string, port int, anth
 		})
 	}
 
-	// Add user messages
 	for _, msg := range anthropicReq.Messages {
 		messages = append(messages, map[string]interface{}{
 			"role":    msg.Role,
@@ -200,58 +166,9 @@ func (h *Handler) forwardToOpenAI(c *gin.Context, modelID string, port int, anth
 		openaiReq["top_k"] = anthropicReq.TopK
 	}
 
-	// Marshal request body
-	body, err := json.Marshal(openaiReq)
-	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "internal_error", err.Error())
-		return
-	}
-
-	url := fmt.Sprintf("http://127.0.0.1:%d/v1/chat/completions", port)
-
-	// Create HTTP request
-	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", url, bytes.NewReader(body))
-	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "internal_error", err.Error())
-		return
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	// Send request
-	resp, err := h.client.Do(httpReq)
-	if err != nil {
-		h.sendError(c, http.StatusBadGateway, "internal_error", err.Error())
-		logger.Errorf("转发请求到 llama.cpp 失败: %v", err)
-		return
-	}
-	defer utils.CloseQuietly(resp.Body)
-
-	// Read response
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "internal_error", err.Error())
-		return
-	}
-
-	// Convert OpenAI response to Anthropic format
-	var openaiResp map[string]interface{}
-	if err := json.Unmarshal(respBody, &openaiResp); err != nil {
-		// Forward as-is if conversion fails
-		c.Header("Content-Type", "application/json")
-		c.Status(resp.StatusCode)
-		utils.WriteQuietly(c.Writer, respBody)
-		return
-	}
-
-	// Convert response format
-	anthropicResp := h.convertResponse(openaiResp, anthropicReq.Model)
-
-	c.Header("Content-Type", "application/json")
-	c.JSON(resp.StatusCode, anthropicResp)
+	return openaiReq
 }
 
-// convertResponse converts OpenAI response to Anthropic format
 func (h *Handler) convertResponse(openaiResp map[string]interface{}, model string) *MessageResponse {
 	resp := &MessageResponse{
 		ID:    generateID("msg"),
@@ -260,7 +177,6 @@ func (h *Handler) convertResponse(openaiResp map[string]interface{}, model strin
 		Model: model,
 	}
 
-	// Extract choices
 	if choices, ok := openaiResp["choices"].([]interface{}); ok && len(choices) > 0 {
 		if firstChoice, ok := choices[0].(map[string]interface{}); ok {
 			if message, ok := firstChoice["message"].(map[string]interface{}); ok {
@@ -276,7 +192,6 @@ func (h *Handler) convertResponse(openaiResp map[string]interface{}, model strin
 		}
 	}
 
-	// Extract usage
 	if usage, ok := openaiResp["usage"].(map[string]interface{}); ok {
 		resp.Usage = &Usage{}
 		if inputTokens, ok := usage["prompt_tokens"].(float64); ok {
@@ -290,7 +205,6 @@ func (h *Handler) convertResponse(openaiResp map[string]interface{}, model strin
 	return resp
 }
 
-// sendError sends an error response in Anthropic format
 func (h *Handler) sendError(c *gin.Context, statusCode int, errorType, message string) {
 	resp := &MessageResponse{
 		Error: &ErrorDetail{
@@ -299,7 +213,6 @@ func (h *Handler) sendError(c *gin.Context, statusCode int, errorType, message s
 		},
 	}
 
-	// Set appropriate status code based on error type
 	switch errorType {
 	case "invalid_request":
 		c.JSON(http.StatusBadRequest, resp)
@@ -310,7 +223,6 @@ func (h *Handler) sendError(c *gin.Context, statusCode int, errorType, message s
 	}
 }
 
-// generateID generates a unique ID for Anthropic responses
 func generateID(prefix string) string {
 	return fmt.Sprintf("%s_%s", prefix, "id")
 }

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster"
 )
 
 // Manager manages connected client nodes

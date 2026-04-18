@@ -10,25 +10,26 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/event"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/anthropic"
 	benchmarkapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/benchmark"
 	compatibilityapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/compatibility"
 	filesystemapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/filesystem"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/lmstudio"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/ollama"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/openai"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/paths"
 	storageapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/download"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/infra/modelrepo"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/router"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/event"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/router"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
 // ModelDTO represents a model for API responses
@@ -137,6 +138,7 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.OpenAI = openai.NewHandler(modelMgr)
 	s.handlers.Ollama = ollama.NewHandler(modelMgr)
 	s.handlers.Anthropic = anthropic.NewHandler(modelMgr)
+	s.handlers.LMStudio = lmstudio.NewHandler(modelMgr)
 	s.handlers.Paths = paths.NewHandler(config.ConfigMgr)
 	s.handlers.Storage = storageapi.NewHandler(config.ConfigMgr, storageMgr)
 	s.handlers.Compatibility = compatibilityapi.NewHandler(config.ConfigMgr, compatServerManager)

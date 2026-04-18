@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 )
 
 var (

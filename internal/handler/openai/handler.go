@@ -1,122 +1,34 @@
-// Package openai provides OpenAI API compatibility layer
 package openai
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
-	"io"
 	"net/http"
-	"strings"
-	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/compat"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
-// ModelIndex 加速模型查找的索引结构
-type ModelIndex struct {
-	byID    map[string]*model.Model // 按 ID 索引
-	byAlias map[string]*model.Model // 按别名索引
-	byName  map[string]*model.Model // 按名称索引
-	mu      sync.RWMutex            // 保护索引的读写锁
-}
-
-// NewModelIndex 创建新的模型索引
-func NewModelIndex() *ModelIndex {
-	return &ModelIndex{
-		byID:    make(map[string]*model.Model),
-		byAlias: make(map[string]*model.Model),
-		byName:  make(map[string]*model.Model),
-	}
-}
-
-// Build 构建模型索引
-func (idx *ModelIndex) Build(models []*model.Model) {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	// 清空旧索引
-	idx.byID = make(map[string]*model.Model)
-	idx.byAlias = make(map[string]*model.Model)
-	idx.byName = make(map[string]*model.Model)
-
-	// 构建新索引
-	for _, m := range models {
-		idx.byID[m.ID] = m
-		if m.Alias != "" {
-			idx.byAlias[m.Alias] = m
-		}
-		idx.byName[m.Name] = m
-	}
-}
-
-// Find 查找模型（按优先级：ID > 别名 > 名称）
-func (idx *ModelIndex) Find(identifier string) (*model.Model, bool) {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-
-	// 优先按 ID 查找
-	if m, ok := idx.byID[identifier]; ok {
-		return m, true
-	}
-
-	// 按别名查找
-	if m, ok := idx.byAlias[identifier]; ok {
-		return m, true
-	}
-
-	// 按名称查找（不区分大小写）
-	for id, m := range idx.byName {
-		if strings.EqualFold(id, identifier) {
-			return m, true
-		}
-	}
-
-	// 按名称模糊匹配（ID 包含搜索字符串）
-	lowerIdentifier := strings.ToLower(identifier)
-	for _, m := range idx.byID {
-		if strings.Contains(strings.ToLower(m.ID), lowerIdentifier) {
-			return m, true
-		}
-	}
-
-	return nil, false
-}
-
-// Handler handles OpenAI API requests
 type Handler struct {
-	modelMgr   *model.Manager
-	client     *http.Client
-	modelIndex *ModelIndex
+	*compat.BaseHandler
 }
 
-// NewHandler creates a new OpenAI API handler
 func NewHandler(modelMgr *model.Manager) *Handler {
-	h := &Handler{
-		modelMgr: modelMgr,
-		client: &http.Client{
-			Timeout: 0, // No timeout for streaming responses
-		},
-		modelIndex: NewModelIndex(),
+	return &Handler{
+		BaseHandler: compat.NewBaseHandler(modelMgr),
 	}
-
-	// 初始构建索引
-	h.rebuildIndex()
-
-	return h
 }
 
-// rebuildIndex 重建模型索引
-func (h *Handler) rebuildIndex() {
-	models := h.modelMgr.ListModels()
-	h.modelIndex.Build(models)
-}
-
-// HandleChatCompletions handles chat completion requests
+// @Summary      OpenAI Chat Completions
+// @Description  OpenAI 兼容的聊天补全接口，支持流式和非流式响应
+// @Tags         OpenAI
+// @Accept       json
+// @Produce      json
+// @Param        request  body  ChatCompletionRequest  true  "Chat completion request"
+// @Success      200  {object}  ChatCompletionResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Failure      502  {object}  ErrorResponse
+// @Router       /v1/chat/completions [post]
 func (h *Handler) HandleChatCompletions(c *gin.Context) {
 	var req ChatCompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -124,7 +36,6 @@ func (h *Handler) HandleChatCompletions(c *gin.Context) {
 		return
 	}
 
-	// Validate request
 	if req.Model == "" {
 		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
 		return
@@ -135,29 +46,36 @@ func (h *Handler) HandleChatCompletions(c *gin.Context) {
 		return
 	}
 
-	// Find the actual model ID
-	actualModelID, err := h.findModel(req.Model)
-	if err != nil {
-		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
-		return
-	}
-
-	// Get model port
-	port, err := h.getModelPort(actualModelID)
-	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
-		return
-	}
-
-	// Forward request to llama.cpp
 	if req.Stream {
-		h.forwardStreamRequest(c, actualModelID, port, "/v1/chat/completions", &req)
+		h.StreamWithLazyLoad(c, req.Model, "/v1/chat/completions", &req)
 	} else {
-		h.forwardRequest(c, actualModelID, port, "/v1/chat/completions", &req)
+		actualModelID, err := h.FindModel(req.Model)
+		if err != nil {
+			h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+			return
+		}
+
+		port, err := h.GetModelPort(actualModelID)
+		if err != nil {
+			h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+			return
+		}
+
+		h.ForwardRequest(c, port, "/v1/chat/completions", actualModelID, &req)
 	}
 }
 
-// HandleCompletions handles legacy completion requests
+// @Summary      OpenAI Completions
+// @Description  OpenAI 兼容的文本补全接口
+// @Tags         OpenAI
+// @Accept       json
+// @Produce      json
+// @Param        request  body  CompletionRequest  true  "Completion request"
+// @Success      200  {object}  CompletionResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Failure      502  {object}  ErrorResponse
+// @Router       /v1/completions [post]
 func (h *Handler) HandleCompletions(c *gin.Context) {
 	var req CompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -165,9 +83,8 @@ func (h *Handler) HandleCompletions(c *gin.Context) {
 		return
 	}
 
-	// If model is not specified, use the first loaded model
 	if req.Model == "" {
-		models := h.modelMgr.ListStatus()
+		models := h.ModelMgr.ListStatus()
 		if len(models) == 0 {
 			h.sendError(c, http.StatusNotFound, "model_not_found", "No models are currently loaded", "model")
 			return
@@ -178,36 +95,37 @@ func (h *Handler) HandleCompletions(c *gin.Context) {
 		}
 	}
 
-	// Find the actual model ID
-	actualModelID, err := h.findModel(req.Model)
+	actualModelID, err := h.FindModel(req.Model)
 	if err != nil {
 		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
 		return
 	}
 
-	// Get model port
-	port, err := h.getModelPort(actualModelID)
+	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
 		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 		return
 	}
 
-	// Forward request to llama.cpp
 	if req.Stream {
-		h.forwardStreamRequest(c, actualModelID, port, "/v1/completions", &req)
+		h.ForwardStreamRequest(c, port, "/v1/completions", actualModelID, &req)
 	} else {
-		h.forwardRequest(c, actualModelID, port, "/v1/completions", &req)
+		h.ForwardRequest(c, port, "/v1/completions", actualModelID, &req)
 	}
 }
 
-// HandleModels handles the list models request
+// @Summary      List Models
+// @Description  获取已加载的模型列表（OpenAI 格式）
+// @Tags         OpenAI
+// @Produce      json
+// @Success      200  {object}  ModelsResponse
+// @Router       /v1/models [get]
 func (h *Handler) HandleModels(c *gin.Context) {
-	statuses := h.modelMgr.ListStatus()
-	models := h.modelMgr.ListModels()
+	statuses := h.ModelMgr.ListStatus()
+	models := h.ModelMgr.ListModels()
 
 	var openaiModels []Model
 	for _, m := range models {
-		// Only include loaded models
 		if status, exists := statuses[m.ID]; exists && status.State == model.StateLoaded {
 			openaiModels = append(openaiModels, Model{
 				ID:      m.ID,
@@ -222,166 +140,6 @@ func (h *Handler) HandleModels(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// findModel finds a model by name or ID using index for O(1) lookup
-func (h *Handler) findModel(modelName string) (string, error) {
-	statuses := h.modelMgr.ListStatus()
-
-	// First try exact match with ID
-	if status, exists := statuses[modelName]; exists && status.State == model.StateLoaded {
-		return modelName, nil
-	}
-
-	// 使用索引查找模型
-	if m, ok := h.modelIndex.Find(modelName); ok {
-		// 检查模型是否已加载
-		if status, exists := statuses[m.ID]; exists && status.State == model.StateLoaded {
-			return m.ID, nil
-		}
-	}
-
-	return "", fmt.Errorf("model not found: %s", modelName)
-}
-
-// getModelPort returns the port for a loaded model
-func (h *Handler) getModelPort(modelID string) (int, error) {
-	status, exists := h.modelMgr.GetStatus(modelID)
-	if !exists {
-		return 0, fmt.Errorf("model not loaded: %s", modelID)
-	}
-
-	if status.State != model.StateLoaded {
-		return 0, fmt.Errorf("model not in loaded state: %s", modelID)
-	}
-
-	if status.Port == 0 {
-		return 0, fmt.Errorf("model port not available: %s", modelID)
-	}
-
-	return status.Port, nil
-}
-
-// forwardRequest forwards a non-streaming request to llama.cpp
-func (h *Handler) forwardRequest(c *gin.Context, modelID string, port int, path string, req interface{}) {
-	url := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
-
-	// Marshal request body
-	body, err := json.Marshal(req)
-	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
-		return
-	}
-
-	// Create HTTP request
-	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", url, bytes.NewReader(body))
-	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
-		return
-	}
-
-	// Set headers
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
-
-	// Send request
-	resp, err := h.client.Do(httpReq)
-	if err != nil {
-		h.sendError(c, http.StatusBadGateway, "model_error", err.Error(), "")
-		logger.Errorf("转发请求到 llama.cpp 失败: %v", err)
-		return
-	}
-	defer utils.CloseQuietly(resp.Body)
-
-	// Read response
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
-		return
-	}
-
-	// Forward response
-	c.Header("Content-Type", "application/json")
-	for key, values := range resp.Header {
-		for _, value := range values {
-			c.Header(key, value)
-		}
-	}
-	c.Status(resp.StatusCode)
-	utils.WriteQuietly(c.Writer, respBody)
-}
-
-// forwardStreamRequest forwards a streaming request to llama.cpp
-func (h *Handler) forwardStreamRequest(c *gin.Context, modelID string, port int, path string, req interface{}) {
-	url := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
-
-	// Marshal request body
-	body, err := json.Marshal(req)
-	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
-		return
-	}
-
-	// Create HTTP request
-	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", url, bytes.NewReader(body))
-	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
-		return
-	}
-
-	// Set headers
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
-
-	// Send request
-	resp, err := h.client.Do(httpReq)
-	if err != nil {
-		h.sendError(c, http.StatusBadGateway, "model_error", err.Error(), "")
-		logger.Errorf("转发流式请求到 llama.cpp 失败: %v", err)
-		return
-	}
-	defer utils.CloseQuietly(resp.Body)
-
-	// Set streaming headers
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("Transfer-Encoding", "chunked")
-	c.Header("X-Accel-Buffering", "no") // Disable nginx buffering
-
-	flusher, ok := c.Writer.(http.Flusher)
-	if !ok {
-		h.sendError(c, http.StatusInternalServerError, "server_error", "Streaming not supported", "")
-		return
-	}
-
-	// Stream response
-	c.Status(resp.StatusCode)
-
-	reader := bufio.NewReader(resp.Body)
-
-	for {
-		// Check if client disconnected
-		select {
-		case <-c.Request.Context().Done():
-			return
-		default:
-		}
-
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				return
-			}
-			logger.Errorf("读取流式响应失败: %v", err)
-			return
-		}
-
-		// Write line to client
-		utils.WriteQuietly(c.Writer, []byte(line))
-		flusher.Flush()
-	}
-}
-
-// sendError sends an error response
 func (h *Handler) sendError(c *gin.Context, statusCode int, errorType, message, param string) {
 	response := NewErrorResponse(message, errorType, param, statusCode)
 	c.JSON(statusCode, response)

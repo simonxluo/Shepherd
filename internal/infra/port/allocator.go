@@ -67,5 +67,3 @@ func (a *PortAllocator) isPortInUse(port int) bool {
 	utils.CloseQuietly(conn)
 	return true
 }
-
-

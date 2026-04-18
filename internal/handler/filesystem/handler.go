@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 )
 
 // Handler handles file system browsing requests

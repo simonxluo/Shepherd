@@ -337,5 +337,3 @@ func TestSearchAPIEndpoints(t *testing.T) {
 		})
 	}
 }
-
-

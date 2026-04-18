@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/download"
 	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/infra/modelrepo"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 )
 
 func (s *Server) HandleListDownloads(c *gin.Context) {

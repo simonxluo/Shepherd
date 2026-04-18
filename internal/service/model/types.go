@@ -3,6 +3,9 @@
 package model
 
 import (
+	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
@@ -48,7 +51,6 @@ type Model struct {
 	TotalTokens int64     // Total tokens generated (if tracked)
 }
 
-// ModelStatus represents the loading status of a model
 type ModelStatus struct {
 	ID        string
 	Name      string
@@ -58,9 +60,47 @@ type ModelStatus struct {
 	CtxSize   int
 	LoadedAt  time.Time
 	Error     error
+
+	mu sync.Mutex
+
+	LoadWait         sync.WaitGroup
+	InflightWg       sync.WaitGroup
+	InflightCount    atomic.Int32
+	LastRequestTime  time.Time
+	ConcurrencySem   chan struct{}
+	ConcurrencyLimit int
+	UnloadAfter      time.Duration
+
+	TotalPromptTokens     int64
+	TotalCompletionTokens int64
+	tokenMu               sync.Mutex
 }
 
-// LoadState represents the loading state
+func (s *ModelStatus) swapState(expected, newState LoadState) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.State != expected {
+		return fmt.Errorf("invalid state transition: expected %s but current is %s (target %s)", expected, s.State, newState)
+	}
+	if !isValidTransition(expected, newState) {
+		return fmt.Errorf("forbidden state transition: %s -> %s", expected, newState)
+	}
+	s.State = newState
+	return nil
+}
+
+func (s *ModelStatus) transitionTo(newState LoadState) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if !isValidTransition(s.State, newState) {
+		return fmt.Errorf("forbidden state transition: %s -> %s", s.State, newState)
+	}
+	s.State = newState
+	return nil
+}
+
 type LoadState int
 
 const (
@@ -86,6 +126,27 @@ func (s LoadState) String() string {
 	default:
 		return "unknown"
 	}
+}
+
+var validTransitions = map[LoadState][]LoadState{
+	StateUnloaded:  {StateLoading},
+	StateLoading:   {StateLoaded, StateError, StateUnloading},
+	StateLoaded:    {StateUnloading, StateError},
+	StateUnloading: {StateUnloaded, StateError},
+	StateError:     {StateUnloaded, StateLoading},
+}
+
+func isValidTransition(from, to LoadState) bool {
+	allowed, ok := validTransitions[from]
+	if !ok {
+		return false
+	}
+	for _, s := range allowed {
+		if s == to {
+			return true
+		}
+	}
+	return false
 }
 
 // ScanConfig contains configuration for model scanning
@@ -213,6 +274,10 @@ type LoadRequest struct {
 	RopeScale     float64 `json:"ropeScale"`     // --rope-scale
 	RopeFreqBase  float64 `json:"ropeFreqBase"`  // --rope-freq-base
 	RopeFreqScale float64 `json:"ropeFreqScale"` // --rope-freq-scale
+
+	// Runtime management
+	UnloadAfterMinutes int `json:"unloadAfterMinutes"` // TTL: idle minutes before auto-unload. 0 = never unload, >0 = custom minutes
+	ConcurrencyLimit   int `json:"concurrencyLimit"`   // Max concurrent requests. 0 = unlimited, >0 = custom limit
 }
 
 // LoadResult represents the result of a load operation
