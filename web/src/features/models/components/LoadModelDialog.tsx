@@ -947,7 +947,7 @@ export function LoadModelDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-card rounded-lg shadow-xl border border-border max-w-5xl w-full max-h-[85vh] flex flex-col">
+      <div className="bg-card rounded-lg shadow-xl border border-border max-w-5xl w-full max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-semibold text-foreground">
@@ -1015,11 +1015,11 @@ export function LoadModelDialog({
 
         {/* Form content */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 min-h-0 p-4 overflow-hidden">
-            <div className="flex flex-col lg:flex-row gap-6 h-full min-h-0">
+          <div className="flex flex-col flex-1 min-h-0 p-4 overflow-hidden">
+            <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
             {/* Left column: basic config */}
 
-            <div className="flex-1 space-y-4 overflow-y-auto pr-2 min-h-0" aria-label="基础配置区域">
+            <div className="flex-1 space-y-4 overflow-y-scroll pr-2 min-h-0 dialog-scrollable" aria-label="基础配置区域">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 基础配置
               </h3>
@@ -1305,7 +1305,7 @@ export function LoadModelDialog({
             </div>
 
             {/* Right column: advanced params */}
-            <div className="flex-1 space-y-4 overflow-y-auto pr-2 min-h-0" aria-label="高级参数区域">
+            <div className="flex-1 space-y-4 overflow-y-scroll pr-2 min-h-0 dialog-scrollable" aria-label="高级参数区域">
               <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
                 高级参数
               </h3>
