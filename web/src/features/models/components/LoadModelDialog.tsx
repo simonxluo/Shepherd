@@ -1317,10 +1317,10 @@ export function LoadModelDialog({
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --ctx-size
                       {renderHelpButton('ctxSize')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.ctxSize}
                       onChange={(v) => setParams({ ...params, ctxSize: v })}
@@ -1333,10 +1333,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       Flash Attention
                       {renderHelpButton('flashAttention')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.flashAttention ? 'on' : 'off'}
                       onChange={(e) => setParams({ ...params, flashAttention: e.target.value === 'on' })}
@@ -1348,10 +1348,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --no-mmap
                       {renderHelpButton('noMmap')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.noMmap ? 'true' : 'false'}
                       onChange={(e) => setParams({ ...params, noMmap: e.target.value === 'true' })}
@@ -1363,10 +1363,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       锁定物理内存
                       {renderHelpButton('lockMemory')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.lockMemory ? 'true' : 'false'}
                       onChange={(e) => setParams({ ...params, lockMemory: e.target.value === 'true' })}
@@ -1378,10 +1378,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --embedding
                       {renderHelpButton('embedding')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.embedding ? 'true' : 'false'}
                       onChange={(e) => setParams({ ...params, embedding: e.target.value === 'true' })}
@@ -1393,10 +1393,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --reranking
                       {renderHelpButton('reranking')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.reranking ? 'true' : 'false'}
                       onChange={(e) => setParams({ ...params, reranking: e.target.value === 'true' })}
@@ -1408,10 +1408,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --gpu-layers
                       {renderHelpButton('gpuLayers')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.gpuLayers}
                       onChange={(v) => setParams({ ...params, gpuLayers: v })}
@@ -1433,10 +1433,10 @@ export function LoadModelDialog({
                 </h4>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --temp
                       {renderHelpButton('temperature')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.temperature}
                       onChange={(v) => setParams({ ...params, temperature: v })}
@@ -1449,10 +1449,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       Top-P
                       {renderHelpButton('topP')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.topP}
                       onChange={(v) => setParams({ ...params, topP: v })}
@@ -1465,10 +1465,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       Top-K
                       {renderHelpButton('topK')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.topK}
                       onChange={(v) => setParams({ ...params, topK: v })}
@@ -1481,10 +1481,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       Min-P
                       {renderHelpButton('minP')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.minP}
                       onChange={(v) => setParams({ ...params, minP: v })}
@@ -1497,10 +1497,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --repeat-penalty
                       {renderHelpButton('repeatPenalty')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.repeatPenalty}
                       onChange={(v) => setParams({ ...params, repeatPenalty: v })}
@@ -1513,10 +1513,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --presence-penalty
                       {renderHelpButton('presencePenalty')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.presencePenalty}
                       onChange={(v) => setParams({ ...params, presencePenalty: v })}
@@ -1529,10 +1529,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --frequency-penalty
                       {renderHelpButton('frequencyPenalty')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.frequencyPenalty}
                       onChange={(v) => setParams({ ...params, frequencyPenalty: v })}
@@ -1553,10 +1553,10 @@ export function LoadModelDialog({
                 </h4>
                 <div className="grid grid-cols-4 gap-3">
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --batch-size
                       {renderHelpButton('batchSize')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.batchSize}
                       onChange={(v) => setParams({ ...params, batchSize: v })}
@@ -1569,10 +1569,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --ubatch-size
                       {renderHelpButton('uBatchSize')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.uBatchSize}
                       onChange={(v) => setParams({ ...params, uBatchSize: v })}
@@ -1585,10 +1585,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --parallel(并发槽数)
                       {renderHelpButton('parallelSlots')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.parallelSlots}
                       onChange={(v) => setParams({ ...params, parallelSlots: v })}
@@ -1601,10 +1601,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       线程数
                       {renderHelpButton('threads')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.threads}
                       onChange={(v) => setParams({ ...params, threads: v })}
@@ -1626,10 +1626,10 @@ export function LoadModelDialog({
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       空闲卸载时间 (分钟)
                       {renderHelpButton('unloadAfterMinutes')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.unloadAfterMinutes}
                       onChange={(v) => setParams({ ...params, unloadAfterMinutes: v })}
@@ -1642,10 +1642,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       最大并发数
                       {renderHelpButton('concurrencyLimit')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.concurrencyLimit}
                       onChange={(v) => setParams({ ...params, concurrencyLimit: v })}
@@ -1666,10 +1666,10 @@ export function LoadModelDialog({
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --cache-ram
                       {renderHelpButton('kvCacheSize')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.kvCacheSize}
                       onChange={(v) => setParams({ ...params, kvCacheSize: v })}
@@ -1682,10 +1682,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --kv-unified
                       {renderHelpButton('kvCacheUnified')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.kvCacheUnified ? 'true' : 'false'}
                       onChange={(e) => setParams({ ...params, kvCacheUnified: e.target.value === 'true' })}
@@ -1747,10 +1747,10 @@ export function LoadModelDialog({
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --seed
                       {renderHelpButton('seed')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.seed}
                       onChange={(v) => setParams({ ...params, seed: v })}
@@ -1764,10 +1764,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --n-predict
                       {renderHelpButton('nPredict')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.nPredict}
                       onChange={(v) => setParams({ ...params, nPredict: v })}
@@ -1781,10 +1781,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --direct-io
                       {renderHelpButton('directIo')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.directIo || 'default'}
                       onChange={(e) => setParams({ ...params, directIo: e.target.value })}
@@ -1797,10 +1797,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --no-webui
                       {renderHelpButton('noWebUI')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.noWebUI ? 'true' : 'false'}
                       onChange={(e) => setParams({ ...params, noWebUI: e.target.value === 'true' })}
@@ -1812,10 +1812,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --no-jinja
                       {renderHelpButton('disableJinja')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.disableJinja ? 'true' : 'false'}
                       onChange={(e) => setParams({ ...params, disableJinja: e.target.value === 'true' })}
@@ -1827,10 +1827,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --chat-template
                       {renderHelpButton('chatTemplate')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.chatTemplate || ''}
                       onChange={(e) => setParams({ ...params, chatTemplate: e.target.value })}
@@ -1901,10 +1901,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --context-shift
                       {renderHelpButton('contextShift')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.contextShift ? 'true' : 'false'}
                       onChange={(e) => setParams({ ...params, contextShift: e.target.value === 'true' })}
@@ -1916,10 +1916,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --reasoning
                       {renderHelpButton('reasoning')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.reasoning || 'auto'}
                       onChange={(e) => setParams({ ...params, reasoning: e.target.value })}
@@ -1932,10 +1932,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --reasoning-format
                       {renderHelpButton('reasoningFormat')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.reasoningFormat || 'auto'}
                       onChange={(e) => setParams({ ...params, reasoningFormat: e.target.value })}
@@ -1947,10 +1947,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --reasoning-budget
                       {renderHelpButton('reasoningBudget')}
-                    </label>
+                    </div>
                     <NumberInput
                       value={params.reasoningBudget}
                       onChange={(v) => setParams({ ...params, reasoningBudget: v })}
@@ -1964,10 +1964,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       --no-mmproj-offload
                       {renderHelpButton('mmprojOffload')}
-                    </label>
+                    </div>
                     <SelectInput
                       value={params.mmprojOffload ? 'true' : 'false'}
                       onChange={(e) => setParams({ ...params, mmprojOffload: e.target.value === 'true' })}
@@ -1979,10 +1979,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div className="col-span-2">
-                    <label className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       其他参数
                       {renderHelpButton('extraArgs')}
-                    </label>
+                    </div>
                     <textarea
                       value={params.extraArgs || ''}
                       onChange={(e) => setParams({ ...params, extraArgs: e.target.value })}
