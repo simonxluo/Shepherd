@@ -11,7 +11,7 @@ interface ModelLoadConfigResponse {
     nodeId: string;
     modelId: string;
     modelName: string;
-    config: Record<string, any>;
+    config: Record<string, unknown>;
     createdAt: string;
     updatedAt: string;
   } | null;
@@ -42,7 +42,7 @@ export function useSaveModelLoadConfig() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ modelId, config }: { modelId: string; config: Record<string, any> }) => {
+    mutationFn: async ({ modelId, config }: { modelId: string; config: Record<string, unknown> }) => {
       const response = await apiClient.put<{ success: boolean }>(
         `/models/${modelId}/load-config`,
         { config }

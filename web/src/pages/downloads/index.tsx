@@ -47,7 +47,7 @@ export function DownloadsPage() {
   });
 
   const handleCreateDownload = (params: { source: DownloadSource; repoId: string }) => {
-    createDownload.mutate(params as any, {
+    createDownload.mutate(params, {
       onSuccess: () => {
         setDialogOpen(false);
         setPreFillParams(null);

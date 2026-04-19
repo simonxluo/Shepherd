@@ -175,14 +175,14 @@ export function UserSettingsDialog() {
                             'font-semibold text-sm',
                             isActive && tItem.id === 'dark' ? 'text-white' : ''
                           )}>
-                            {/* @ts-ignore */}
+                            {/* @ts-expect-error dynamic i18n key */}
                             {t(tItem.name)}
                           </p>
                           <p className={cn(
                             'text-xs mt-1',
                             isActive && tItem.id === 'dark' ? 'text-white/70' : 'text-muted-foreground'
                           )}>
-                            {/* @ts-ignore */}
+                            {/* @ts-expect-error dynamic i18n key */}
                             {t(tItem.description)}
                           </p>
                         </div>

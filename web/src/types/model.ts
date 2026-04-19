@@ -362,7 +362,7 @@ export interface Benchmark {
   modelName: string;       // Model name
   status: BenchmarkStatus; // Status
   command: string;         // Executed command
-  config: Record<string, any>; // Benchmark config
+  config: Record<string, unknown>; // Benchmark config
   createdAt: string;       // Created at
   startedAt?: string;      // Started at
   finishedAt?: string;     // Finished at
@@ -371,7 +371,7 @@ export interface Benchmark {
     total_time_ms?: number;
     tokens_per_second?: number;
     raw_output?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

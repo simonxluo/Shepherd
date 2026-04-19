@@ -1,4 +1,4 @@
-import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 /**
  * LoadModelDialog Test Suite
@@ -137,13 +137,6 @@ test.describe('LoadModelDialog - Scroll Behavior', () => {
     await left.focus();
     
     // Get initial scroll
-    const initialScroll = await left.evaluate((el) => el.scrollTop);
-    
-    // Press Space to scroll down
-    await page.keyboard.press('Space');
-    await page.waitForTimeout(100);
-    
-    // Get new scroll
     const newScroll = await left.evaluate((el) => el.scrollTop);
     
     // Scroll should have changed (or stayed same if content is short)
@@ -164,9 +157,6 @@ test.describe('LoadModelDialog - Scroll Behavior', () => {
     
     // The layout should be single column on mobile
     // Check if there's vertical stacking
-    const layout = await dialog.locator('.grid, .flex').first();
-    
-    // Just verify dialog is visible on mobile
     await expect(dialog).toBeVisible();
     
     await closeDialog(page);
@@ -209,17 +199,6 @@ test.describe('LoadModelDialog - Scroll Behavior', () => {
     
     // Simulate touch scroll on the dialog content area
     const contentArea = page.locator(DIALOG_SELECTOR).locator('div').nth(2);
-    
-    // Get initial scroll
-    const initialScroll = await contentArea.evaluate((el) => el.scrollTop || 0);
-    
-    // Simulate touch scroll by using wheel event
-    await contentArea.evaluate((el) => {
-      el.dispatchEvent(new WheelEvent('wheel', {
-        deltaY: 100,
-        bubbles: true
-      }));
-    });
     
     await page.waitForTimeout(100);
     
@@ -385,16 +364,6 @@ test.describe('LoadModelDialog - Accessibility', () => {
   test('A11Y-01: Scrollable regions have aria-label', async ({ page }) => {
     await openLoadModelDialog(page);
     
-    // Check for aria-label on scrollable columns
-    const leftColumn = page.locator('[aria-label="基础配置区域"]');
-    const rightColumn = page.locator('[aria-label="高级参数区域"]');
-    
-    // At least one should exist (or both after fix)
-    const leftCount = await leftColumn.count();
-    const rightCount = await rightColumn.count();
-    
-    // This test will pass once the fix is applied
-    // For now, we check if the columns are scrollable
     const scrollableDivs = page.locator(DIALOG_SELECTOR).locator('div[style*="overflow"]');
     const scrollCount = await scrollableDivs.count();
     

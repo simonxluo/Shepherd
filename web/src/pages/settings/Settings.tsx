@@ -4,8 +4,6 @@ import {
   Zap,
   Toolbox,
   Info,
-  Plug,
-  Save,
   FolderOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

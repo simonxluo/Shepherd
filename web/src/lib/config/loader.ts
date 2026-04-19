@@ -78,7 +78,7 @@ export class ConfigLoader {
         throw new Error(`Failed to load config: ${response.status}`)
       }
       const yamlText = await response.text()
-      const parsed = yaml.load(yamlText) as any
+      const parsed = yaml.load(yamlText) as Record<string, unknown>
 
       // Merge default config with parsed config
       return this.mergeConfig(DEFAULT_CONFIG, parsed)
@@ -91,7 +91,7 @@ export class ConfigLoader {
   /**
    * Merge configuration
    */
-  private mergeConfig(defaults: AppConfig, loaded: any): AppConfig {
+  private mergeConfig(defaults: AppConfig, loaded: Record<string, unknown>): AppConfig {
     // Convert backend.urls array format to api.baseUrl single value
     let apiBaseUrl = defaults.api.baseUrl;
     if (loaded?.backend?.urls && Array.isArray(loaded.backend.urls)) {

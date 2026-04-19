@@ -30,9 +30,24 @@ export function ApiConfigCard({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const testTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failedNotifiedRef = useRef(false);
+  const [prevEnabled, setPrevEnabled] = useState(config.enabled);
+  const [prevPort, setPrevPort] = useState(config.port);
 
   const title = type === 'ollama' ? 'Ollama API' : 'LM Studio API';
   const defaultPort = type === 'ollama' ? 11434 : 1234;
+
+  if (!config.enabled && prevEnabled) {
+    setPrevEnabled(false);
+    setConnectionStatus('unknown');
+  }
+  if (config.enabled && !prevEnabled) {
+    setPrevEnabled(true);
+  }
+
+  if (config.port !== prevPort) {
+    setPrevPort(config.port);
+    setLocalPort(config.port.toString());
+  }
 
   const clearTimers = useCallback(() => {
     if (intervalRef.current) {
@@ -75,8 +90,6 @@ export function ApiConfigCard({
     clearTimers();
 
     if (!config.enabled) {
-      setConnectionStatus('unknown');
-      failedNotifiedRef.current = false;
       return;
     }
 
@@ -87,10 +100,6 @@ export function ApiConfigCard({
 
     return clearTimers;
   }, [config.enabled, config.port, runTest, clearTimers]);
-
-  useEffect(() => {
-    setLocalPort(config.port.toString());
-  }, [config.port]);
 
   const handleToggle = () => {
     const newEnabled = !config.enabled;

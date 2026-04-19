@@ -31,20 +31,6 @@ function formatSize(bytes: number): string {
 /**
  * Format time duration
  */
-function formatTime(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds.toFixed(2)} 秒`;
-  } else if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60);
-    const secs = (seconds % 60).toFixed(0);
-    return `${minutes} 分 ${secs} 秒`;
-  } else {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours} 小时 ${minutes} 分钟`;
-  }
-}
-
 /**
  * Detail row component
  */

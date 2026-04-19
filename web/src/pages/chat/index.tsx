@@ -21,7 +21,8 @@ export function ChatPage() {
   const [selectedModel, setSelectedModel] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const isInitializedRef = useRef(false);
+  const [streamingStartTime, setStreamingStartTime] = useState(0);
 
   const streamingChat = useStreamingChat();
 
@@ -32,17 +33,15 @@ export function ChatPage() {
 
   // Auto-scroll to bottom — only on message changes, skip initialization
   useEffect(() => {
-    // Skip initialization phase
-    if (!isInitialized) {
-      setIsInitialized(true);
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
       return;
     }
 
-    // Scroll only when there are messages or streaming
     if (messages.length > 0 || currentResponse) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, currentResponse, isInitialized]);
+  }, [messages, currentResponse]);
 
   const handleSend = (content: string) => {
     if (!selectedModel) {
@@ -50,14 +49,16 @@ export function ChatPage() {
       return;
     }
 
+    const now = Date.now();
     const userMessage: ChatMessageType = {
       role: 'user',
       content,
-      timestamp: Date.now(),
+      timestamp: now,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setIsStreaming(true);
+    setStreamingStartTime(now);
     setCurrentResponse('');
 
     streamingChat.mutate(
@@ -190,7 +191,7 @@ export function ChatPage() {
                 message={{
                   role: 'assistant',
                   content: currentResponse,
-                  timestamp: Date.now(),
+                  timestamp: streamingStartTime,
                 }}
                 isStreaming
               />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChevronRight, Folder, File, HardDrive, Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -31,7 +31,7 @@ export function DirectoryBrowser({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPath, setSelectedPath] = useState('');
 
-  const loadDirectory = async (path: string) => {
+  const loadDirectory = useCallback(async (path: string) => {
     setIsLoading(true);
     try {
       const response = await filesystemApi.listDirectory(path);
@@ -49,13 +49,13 @@ export function DirectoryBrowser({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (open) {
       loadDirectory(initialPath || '');
     }
-  }, [open]);
+  }, [open, initialPath, loadDirectory]);
 
   const handleSelectFolder = (folder: DirectoryItem) => {
     setSelectedPath(folder.path);

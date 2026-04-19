@@ -3,7 +3,7 @@
  */
 
 import { apiClient } from './client';
-import type { CreateDownloadParams, DownloadTask, DownloadListResponse } from '@/types';
+import type { CreateDownloadParams, DownloadTask } from '@/types';
 
 /**
  * Model file info

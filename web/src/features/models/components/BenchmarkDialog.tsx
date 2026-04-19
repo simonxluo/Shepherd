@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { X, Loader2, Gauge, RotateCcw, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -50,7 +50,7 @@ export function BenchmarkDialog({
   const wasOpen = useRef(false);
   const prevParamsKeysRef = useRef<string>('');
 
-  const initializeDefaults = () => {
+  const initializeDefaults = useCallback(() => {
     const defaults: Record<string, string> = {};
     benchmarkParams.forEach((param) => {
       if (param.defaultValue) {
@@ -58,7 +58,7 @@ export function BenchmarkDialog({
       }
     });
     setParamValues(defaults);
-  };
+  }, [benchmarkParams]);
 
   const handleReset = () => {
     initializeDefaults();
@@ -125,15 +125,7 @@ export function BenchmarkDialog({
     }
     wasOpen.current = isOpen;
     prevParamsKeysRef.current = benchmarkParamsKeys;
-  }, [isOpen, benchmarkParamsKeys]);
-  useEffect(() => {
-    if (isOpen && !wasOpen.current) {
-      initializeDefaults();
-      setAvailableDevices([]);
-      setSelectedDevices([]);
-    }
-    wasOpen.current = isOpen;
-  }, [isOpen, benchmarkParamsKeys]);
+  }, [isOpen, benchmarkParamsKeys, initializeDefaults]);
 
   const handleDeviceToggle = (device: string) => {
     setSelectedDevices((prev) =>

@@ -66,7 +66,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeHighlight, rehypeRaw]}
                 components={{
-                  code: ({ className, children, ...props }: any) => {
+                  code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { inline?: boolean; node?: unknown }) => {
                     return !props.inline ? (
                       <div className="relative">
                         <code className={className} {...props}>

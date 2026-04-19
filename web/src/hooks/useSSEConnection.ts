@@ -53,15 +53,18 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectRef = useRef<() => void>(() => {});
   const [connectionState, setConnectionState] = useState<SSEConnectionState>('disconnected');
 
   // Use refs for callbacks to avoid reconnection on callback changes
   const onOpenRef = useRef(onOpen);
   const onMessageRef = useRef(onMessage);
   const onErrorRef = useRef(onError);
-  onOpenRef.current = onOpen;
-  onMessageRef.current = onMessage;
-  onErrorRef.current = onError;
+  useEffect(() => {
+    onOpenRef.current = onOpen;
+    onMessageRef.current = onMessage;
+    onErrorRef.current = onError;
+  });
 
   /**
    * Clear reconnect timer
@@ -149,7 +152,7 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
 
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttemptsRef.current++;
-            connect();
+            connectRef.current();
           }, delay);
         } else {
           console.error('SSE max reconnection attempts reached');
@@ -167,9 +170,10 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
     }
   }, [url, params, reconnectInterval, maxReconnectAttempts, clearReconnectTimer]);
 
-  /**
-   * Manual reconnect: reset counter then connect
-   */
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
   const manualReconnect = useCallback(() => {
     reconnectAttemptsRef.current = 0;
     disconnect();
@@ -178,9 +182,15 @@ export function useSSEConnection(options: UseSSEConnectionOptions): UseSSEConnec
 
   // Connect on mount, disconnect on unmount
   useEffect(() => {
-    connect();
-    return () => disconnect();
-  }, [connect, disconnect]);
+    connectRef.current();
+    return () => {
+      clearReconnectTimer();
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [clearReconnectTimer]);
 
   return {
     connectionState,

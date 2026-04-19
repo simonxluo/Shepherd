@@ -37,7 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useClient, useNodeConfig, useTestNodeLlamacpp } from '@/features/cluster/hooks';
 import { cn } from '@/lib/utils';
-import type { Client, GPUInfo, NodeConfigInfo, LlamacppTestResult } from '@/types';
+import type { Client, GPUInfo, LlamacppTestResult } from '@/types';
 import { useToast } from '@/hooks/useToast';
 
 interface ClientInfoDialogProps {

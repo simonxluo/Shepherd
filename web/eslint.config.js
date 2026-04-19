@@ -7,13 +7,11 @@ export default [
   {
     ignores: ["dist"],
   },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  reactHooks.configs.flat.recommended,
   {
     files: ["**/*.{ts,tsx}"],
-    extends: [
-      js.configs.recommended,
-      ...tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-    ],
     languageOptions: {
       ecmaVersion: 2022,
       globals: {

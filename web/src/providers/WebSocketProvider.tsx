@@ -1,6 +1,5 @@
 import {
   createContext,
-  useContext,
   useCallback,
   useRef,
   useState,
@@ -167,13 +166,14 @@ export function WebSocketProvider({
       connect();
     }
 
+    const subs = subscriptionsRef.current;
     return () => {
       mountedRef.current = false;
       if (clientRef.current) {
         clientRef.current.disconnect();
         clientRef.current = null;
       }
-      subscriptionsRef.current.clear();
+      subs.clear();
     };
   }, [autoConnect, connect]);
 

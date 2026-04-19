@@ -36,13 +36,15 @@ const NumberInput = ({
 }: NumberInputProps) => {
   const [inputValue, setInputValue] = useState(String(value ?? ''));
   const [error, setError] = useState('');
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (value !== prevValue) {
+    setPrevValue(value);
     if (value !== undefined && String(value) !== inputValue) {
       setInputValue(String(value));
       setError('');
     }
-  }, [value]);
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -434,7 +436,7 @@ export function LoadModelDialog({
       if (loadConfigData.exists && loadConfigData.config) {
         const savedConfig = loadConfigData.config.config;
         setParams(prev => {
-          const savedEnabled = (savedConfig as any).enabled;
+          const savedEnabled = (savedConfig as Partial<LoadModelParams>).enabled;
           return {
             ...prev,
             ...(savedConfig as Partial<LoadModelParams>),
@@ -449,7 +451,7 @@ export function LoadModelDialog({
     setParams(prev => {
       const currentCaps = prev.capabilities || {};
 
-      let newCaps = { ...currentCaps, [key]: value };
+      const newCaps = { ...currentCaps, [key]: value };
       let newReranking = prev.reranking || false;
 
       // embedding and reranking are mutually exclusive with thinking/tools
@@ -540,7 +542,7 @@ export function LoadModelDialog({
     for (const key of paramKeys) {
       const enabledKey = key as keyof NonNullable<LoadModelParams['enabled']>;
       if (enabled[enabledKey] === true && allParams[key] !== undefined) {
-        (filtered as any)[key] = allParams[key];
+        (filtered as Record<string, unknown>)[key] = allParams[key];
       }
     }
 
@@ -736,8 +738,6 @@ export function LoadModelDialog({
     }, [activeTooltip, paramKey]);
 
     useEffect(() => {
-      if (activeTooltip !== paramKey) return;
-
       const handleClickOutside = (e: MouseEvent) => {
         if (
           buttonRef.current &&
@@ -751,7 +751,7 @@ export function LoadModelDialog({
 
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [activeTooltip, paramKey]);
+    }, []);
 
     const handleToggleTooltip = () => {
       setActiveTooltip(prev => prev === paramKey ? null : paramKey);

@@ -5,7 +5,6 @@ import {
   Settings, 
   LogOut, 
   ChevronUp,
-  Shield,
   Moon,
   Sun,
   Monitor,
@@ -64,14 +63,6 @@ export function UserMenu({ sidebarOpen }: UserMenuProps) {
     updateSettings({ notifications: !settings.notifications });
   };
 
-  const getThemeIcon = () => {
-    switch (theme) {
-      case 'light': return <Sun className="w-4 h-4" />;
-      case 'dark': return <Moon className="w-4 h-4" />;
-      default: return <Monitor className="w-4 h-4" />;
-    }
-  };
-
   const getDisplayName = () => {
     if (user?.displayName) return user.displayName;
     if (user?.username) return user.username;
@@ -123,7 +114,7 @@ export function UserMenu({ sidebarOpen }: UserMenuProps) {
               onLogout={handleLogout}
               theme={theme}
               notifications={settings.notifications}
-              // @ts-ignore
+              // @ts-expect-error menu items props typing
               t={t}
             />
           </div>
@@ -178,7 +169,7 @@ export function UserMenu({ sidebarOpen }: UserMenuProps) {
             onLogout={handleLogout}
             theme={theme}
             notifications={settings.notifications}
-            // @ts-ignore
+            // @ts-expect-error menu items props typing
             t={t}
           />
         </div>

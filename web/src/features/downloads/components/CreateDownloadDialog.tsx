@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { X, Cloud, Database, Loader2, File, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -21,24 +21,13 @@ export function CreateDownloadDialog({
   isLoading = false,
   preFill = null,
 }: CreateDownloadDialogProps) {
-  const [source, setSource] = useState<DownloadSource>('huggingface');
-  const [repoId, setRepoId] = useState('');
-  const [fileName, setFileName] = useState('');
+  const [source, setSource] = useState<DownloadSource>(() => preFill?.source || 'huggingface');
+  const [repoId, setRepoId] = useState(() => preFill?.repoId || '');
+  const [fileName, setFileName] = useState(() => preFill?.fileName || '');
   const [path, setPath] = useState('');
   const [maxRetries, setMaxRetries] = useState('3');
   const [chunkSize, setChunkSize] = useState('');
 
-  useEffect(() => {
-    if (preFill) {
-      setSource(preFill.source);
-      setRepoId(preFill.repoId);
-      setFileName(preFill.fileName || '');
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preFill]);
-
-  const [availableFiles, setAvailableFiles] = useState<ModelFileInfo[]>([]);
-  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [showFileBrowser, setShowFileBrowser] = useState(false);
 
   const { data: files, isLoading: loadingFiles, error: filesError } = useModelFiles(
@@ -46,16 +35,10 @@ export function CreateDownloadDialog({
     repoId
   );
 
-  useEffect(() => {
-    if (files) {
-      const ggufFiles = files.filter((f) => f.name.toLowerCase().endsWith('.gguf'));
-      setAvailableFiles(ggufFiles);
-    } else {
-      setAvailableFiles([]);
-    }
-    setIsLoadingFiles(loadingFiles);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files, loadingFiles]);
+  const availableFiles = useMemo(() => {
+    if (!files) return [];
+    return files.filter((f) => f.name.toLowerCase().endsWith('.gguf'));
+  }, [files]);
 
   if (!isOpen) return null;
 
@@ -72,13 +55,6 @@ export function CreateDownloadDialog({
     };
 
     onConfirm(params);
-  };
-
-  const setExample = (src: DownloadSource, exampleRepo: string, exampleFile?: string) => {
-    setSource(src);
-    setRepoId(exampleRepo);
-    setFileName(exampleFile || '');
-    setAvailableFiles([]);
   };
 
   const handleSelectFile = (file: ModelFileInfo) => {
@@ -184,7 +160,7 @@ export function CreateDownloadDialog({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowFileBrowser(!showFileBrowser)}
-                disabled={!repoId || isLoadingFiles}
+                disabled={!repoId || loadingFiles}
                 className="whitespace-nowrap"
               >
                 {showFileBrowser ? '隐藏' : '浏览文件'}
@@ -193,7 +169,7 @@ export function CreateDownloadDialog({
 
             {showFileBrowser && (
               <div className="mt-2 p-3 bg-muted rounded-md border border-border max-h-48 overflow-y-auto">
-                {isLoadingFiles ? (
+                {loadingFiles ? (
                   <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     加载中...

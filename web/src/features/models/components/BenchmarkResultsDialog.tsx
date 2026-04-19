@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, FileText, Loader2, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,14 +31,7 @@ export function BenchmarkResultsDialog({
   const [resultContent, setResultContent] = useState<string>('');
   const [loadingFile, setLoadingFile] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen && modelId) {
-      loadResultFiles();
-      setResultContent('');
-    }
-  }, [isOpen, modelId]);
-
-  const loadResultFiles = async () => {
+  const loadResultFiles = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/models/benchmark/list?modelId=${encodeURIComponent(modelId)}`);
@@ -56,20 +49,19 @@ export function BenchmarkResultsDialog({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [modelId, toast]);
+
+  useEffect(() => {
+    if (isOpen && modelId) {
+      loadResultFiles();
+      setResultContent('');
+    }
+  }, [isOpen, modelId, loadResultFiles]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const formatTime = (timestamp: string): string => {
-    try {
-      return new Date(timestamp).toLocaleString('zh-CN');
-    } catch {
-      return timestamp;
-    }
   };
 
   const appendResult = (result: BenchmarkResult, fileName: string) => {

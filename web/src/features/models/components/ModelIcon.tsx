@@ -1,5 +1,3 @@
-import { Brain } from 'lucide-react';
-
 interface ModelIconProps {
   architecture: string;
   className?: string;

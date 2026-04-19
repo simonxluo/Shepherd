@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PathItem } from './PathItem';
@@ -25,7 +25,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     LlamaCppPathConfig | ModelPathConfig | undefined
   >(undefined);
 
-  const loadPaths = async () => {
+  const loadPaths = useCallback(async () => {
     setIsLoading(true);
     try {
       const response =
@@ -41,11 +41,11 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [type]);
 
   useEffect(() => {
     loadPaths();
-  }, [type]);
+  }, [loadPaths]);
 
   const handleAdd = async (data: LlamaCppPathConfig | ModelPathConfig) => {
     try {

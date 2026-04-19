@@ -12,7 +12,7 @@ import { DirectoryBrowser } from '@/features/settings/components/DirectoryBrowse
 import { cn } from '@/lib/utils';
 import type { LlamaCppPathConfig, ModelPathConfig } from '@/lib/config';
 import { useToast } from '@/hooks/useToast';
-import { llamacppPathsApi, modelPathsApi } from '@/lib/api/paths';
+import { llamacppPathsApi } from '@/lib/api/paths';
 
 interface PathEditDialogProps {
   open: boolean;
