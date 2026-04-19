@@ -13,14 +13,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster"
 )
 
+// ScanConfig contains network scan configuration
+type ScanConfig struct {
+	Subnets      []string
+	PortRange    string
+	Timeout      int
+	AutoDiscover bool
+	Interval     int
+}
+
 // Scanner performs network scans to discover client nodes
 type Scanner struct {
-	config     *config.NetworkScanConfig
+	config     *ScanConfig
 	clients    []*cluster.DiscoveredClient
 	mu         sync.Mutex
 	ctx        context.Context
@@ -64,17 +72,17 @@ func (c *DefaultHTTPClient) Get(url string) (int, []byte, error) {
 }
 
 // NewScanner creates a new network scanner
-func NewScanner(cfg *config.NetworkScanConfig, log *logger.Logger) *Scanner {
+func NewScanner(log *logger.Logger) *Scanner {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Scanner{
-		config:     cfg,
+		config:     &ScanConfig{Timeout: 5},
 		clients:    make([]*cluster.DiscoveredClient, 0),
 		ctx:        ctx,
 		cancel:     cancel,
 		scanning:   false,
 		log:        log,
-		httpClient: NewDefaultHTTPClient(time.Duration(cfg.Timeout) * time.Second),
+		httpClient: NewDefaultHTTPClient(5 * time.Second),
 	}
 }
 

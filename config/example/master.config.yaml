@@ -1,58 +1,31 @@
-# Shepherd Master 模式示例配置
-# Master 模式：作为集群管理中心，管理多个 Client 节点
-# 适合多 GPU 服务器集群部署
-
-# 运行模式
-mode: master
-
-# 节点配置
 node:
-  # 节点ID
   id: master-01
-  # 节点名称
   name: shepherd-master
-  # 节点角色：master
   role: master
-  
-  # Master 角色配置
+  tags: []
+  metadata:
+    arch: amd64
+    os: linux
   master_role:
-    enabled: true
-    port: 9190                    # Master 服务端口
-    api_key: ""                   # API 密钥（生产环境建议设置）
-    ssl:
-      enabled: false              # 启用 HTTPS
-      cert_path: ""               # SSL 证书路径
-      key_path: ""                # SSL 密钥路径
-  
-  # Client 角色配置（Master 模式下禁用）
+    port: 9190
+    scheduler:
+      strategy: round_robin
+      max_queue_size: 100
+      task_timeout: 300
+      retry_on_failure: true
+      max_retries: 3
   client_role:
     enabled: false
     master_address: ""
     register_retry: 3
     heartbeat_interval: 5
     heartbeat_timeout: 15
-  
-  # 资源监控配置
-  resources:
-    monitor_interval: 5           # 监控间隔（秒）
-    report_gpu: true              # 报告 GPU 信息
-    report_temperature: true      # 报告温度信息
-    gpu_backend: auto
-  
-  # 命令执行器配置
-  executor:
-    max_concurrent: 4
-    task_timeout: 3600
-    allow_remote_stop: true
-    allowed_commands:
-      - load_model
-      - unload_model
-      - run_llamacpp
-      - stop_process
-      - scan_models
-      - collect_logs
+  capabilities:
+    python_enabled: false
+    conda_path: ""
+    conda_environments:
+      shepherd: ""
 
-# 服务器配置
 server:
   web_port: 9190
   anthropic_port: 9170
@@ -62,22 +35,18 @@ server:
   read_timeout: 60
   write_timeout: 60
 
-# 模型配置
 model:
   paths:
     - ./models
     - ~/.cache/huggingface/hub
   auto_scan: true
-  scan_interval: 0
 
-# llama.cpp 配置
 llamacpp:
   paths:
     - path: ./llama.cpp
       name: Default
-      description: 默认 llama.cpp 路径
+      description: ""
 
-# 下载配置
 download:
   directory: ./downloads
   max_concurrent: 4
@@ -85,13 +54,11 @@ download:
   retry_count: 3
   timeout: 300
 
-# 模型仓库配置
 model_repo:
   endpoint: hf-mirror.com
   token: ""
   timeout: 30
 
-# 安全配置
 security:
   api_key_enabled: false
   api_key: ""
@@ -99,7 +66,6 @@ security:
   allowed_origins:
     - "*"
 
-# 兼容性配置
 compatibility:
   ollama:
     enabled: true
@@ -108,7 +74,6 @@ compatibility:
     enabled: false
     port: 1234
 
-# 日志配置
 log:
   level: info
   format: json
@@ -119,7 +84,6 @@ log:
   max_age: 7
   compress: true
 
-# 存储配置
 storage:
   type: sqlite
   sqlite:

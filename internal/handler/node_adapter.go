@@ -36,7 +36,7 @@ func NewNodeAdapter(n *node.Node, log *logger.Logger, schedulerCfg *config.Sched
 	return &NodeAdapter{
 		node:      n,
 		log:       log,
-		scanner:   scanner.NewScanner(&config.NetworkScanConfig{}, log),
+		scanner:   scanner.NewScanner(log),
 		scheduler: sched,
 	}
 }
