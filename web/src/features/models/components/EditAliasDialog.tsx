@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -21,6 +21,13 @@ export function EditAliasDialog({
   isLoading = false,
 }: EditAliasDialogProps) {
   const [alias, setAlias] = useState(currentAlias || '');
+
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAlias(currentAlias || '');
+    }
+  }, [isOpen, currentAlias]);
 
   if (!isOpen) return null;
 

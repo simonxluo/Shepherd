@@ -448,13 +448,14 @@ export function LoadModelDialog({
   }, [isOpen, loadConfigData, isLoadingConfig]);
 
   const handleCapabilityChange = (key: string, value: boolean) => {
+    let newCaps: Record<string, boolean>;
+    let newReranking: boolean;
+
     setParams(prev => {
       const currentCaps = prev.capabilities || {};
+      newCaps = { ...currentCaps, [key]: value };
+      newReranking = prev.reranking || false;
 
-      const newCaps = { ...currentCaps, [key]: value };
-      let newReranking = prev.reranking || false;
-
-      // embedding and reranking are mutually exclusive with thinking/tools
       if (key === 'embedding' && value) {
         newReranking = false;
         newCaps.thinking = false;
@@ -470,24 +471,24 @@ export function LoadModelDialog({
         newReranking = false;
       }
 
-      const capabilitiesToSave = {
-        thinking: newCaps.thinking || false,
-        tools: newCaps.tools || false,
-        rerank: newReranking,
-        embedding: newCaps.embedding || false,
-      };
-
-      setModelCapabilities.mutate({
-        modelId,
-        capabilities: capabilitiesToSave,
-      });
-
       return {
         ...prev,
         capabilities: newCaps,
         reranking: newReranking,
       };
     });
+
+    setTimeout(() => {
+      setModelCapabilities.mutate({
+        modelId,
+        capabilities: {
+          thinking: newCaps!.thinking || false,
+          tools: newCaps!.tools || false,
+          rerank: newReranking!,
+          embedding: newCaps!.embedding || false,
+        },
+      });
+    }, 0);
   };
 
   const handleSaveConfig = async () => {

@@ -56,7 +56,7 @@ export const queryClient = new QueryClient({
       gcTime: 5 * 60 * 1000,
     },
     mutations: {
-      retry: 1,
+      retry: 0,
       onError: handleGlobalMutationError,
     },
   },

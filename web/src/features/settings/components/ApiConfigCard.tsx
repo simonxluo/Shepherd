@@ -49,6 +49,11 @@ export function ApiConfigCard({
     setLocalPort(config.port.toString());
   }
 
+  useEffect(() => {
+    if (config.enabled && prevEnabled && config.port === prevPort) return;
+    failedNotifiedRef.current = false;
+  }, [config.enabled, prevEnabled, config.port, prevPort]);
+
   const clearTimers = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);

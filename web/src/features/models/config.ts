@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
+import type { LoadModelParams } from '@/types/model';
 
 /**
  * Model load config response type
@@ -42,7 +43,7 @@ export function useSaveModelLoadConfig() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ modelId, config }: { modelId: string; config: Record<string, unknown> }) => {
+    mutationFn: async ({ modelId, config }: { modelId: string; config: LoadModelParams }) => {
       const response = await apiClient.put<{ success: boolean }>(
         `/models/${modelId}/load-config`,
         { config }

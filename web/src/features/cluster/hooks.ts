@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { apiClient } from '@/lib/api/client';
 import type {
   Client,
@@ -168,23 +169,24 @@ export function useFilteredClients(
     hasTag?: string;
   }
 ) {
-  if (!clients) return [];
+  return useMemo(() => {
+    if (!clients) return [];
 
-  return clients.filter((client) => {
-    // 搜索过滤
-    if (filters.search) {
-      const search = filters.search.toLowerCase();
-      const matchName = client.name ? client.name.toLowerCase().includes(search) : false;
-      const matchAddress = client.address ? client.address.toLowerCase().includes(search) : false;
-      if (!matchName && !matchAddress) return false;
-    }
+    return clients.filter((client) => {
+      if (filters.search) {
+        const search = filters.search.toLowerCase();
+        const matchName = client.name ? client.name.toLowerCase().includes(search) : false;
+        const matchAddress = client.address ? client.address.toLowerCase().includes(search) : false;
+        if (!matchName && !matchAddress) return false;
+      }
 
-    if (filters.status && client.status !== filters.status) return false;
+      if (filters.status && client.status !== filters.status) return false;
 
-    if (filters.hasTag && !client.tags.includes(filters.hasTag)) return false;
+      if (filters.hasTag && !client.tags.includes(filters.hasTag)) return false;
 
-    return true;
-  });
+      return true;
+    });
+  }, [clients, filters.search, filters.status, filters.hasTag]);
 }
 
 /**
@@ -199,24 +201,25 @@ export function useFilteredTasks(
     assignedTo?: string;
   }
 ) {
-  if (!tasks) return [];
+  return useMemo(() => {
+    if (!tasks) return [];
 
-  return tasks.filter((task) => {
-    // 搜索过滤
-    if (filters.search) {
-      const search = filters.search.toLowerCase();
-      const matchId = task.id.toLowerCase().includes(search);
-      if (!matchId) return false;
-    }
+    return tasks.filter((task) => {
+      if (filters.search) {
+        const search = filters.search.toLowerCase();
+        const matchId = task.id.toLowerCase().includes(search);
+        if (!matchId) return false;
+      }
 
-    if (filters.status && task.status !== filters.status) return false;
+      if (filters.status && task.status !== filters.status) return false;
 
-    if (filters.type && task.type !== filters.type) return false;
+      if (filters.type && task.type !== filters.type) return false;
 
-    if (filters.assignedTo && task.assignedTo !== filters.assignedTo) return false;
+      if (filters.assignedTo && task.assignedTo !== filters.assignedTo) return false;
 
-    return true;
-  });
+      return true;
+    });
+  }, [tasks, filters.search, filters.status, filters.type, filters.assignedTo]);
 }
 
 

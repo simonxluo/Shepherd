@@ -811,7 +811,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
                     <span className="text-xs text-muted-foreground">{item.version}</span>
                   )}
                   <Badge
-                    variant={item.exists ? 'success' : 'secondary'}
+                    variant={item.exists ? 'outline' : 'secondary'}
                     className="text-xs"
                   >
                     {item.exists ? '可用' : '不可用'}
@@ -853,7 +853,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
                     <Badge variant="secondary" className="text-xs">{item.modelCount} 个模型</Badge>
                   )}
                   <Badge
-                    variant={item.exists ? 'success' : 'secondary'}
+                    variant={item.exists ? 'outline' : 'secondary'}
                     className="text-xs"
                   >
                     {item.exists ? '可用' : '不可用'}
@@ -936,7 +936,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
           <Layers className="w-4 h-4 text-primary" />
           <span className="font-medium text-sm">Conda 环境</span>
           <Badge
-            variant={config.conda.enabled ? 'success' : 'secondary'}
+            variant={config.conda.enabled ? 'outline' : 'secondary'}
             className="ml-auto"
           >
             {config.conda.enabled ? '已启用' : '未启用'}

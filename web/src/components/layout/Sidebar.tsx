@@ -83,7 +83,7 @@ export function Sidebar() {
                   )}
 
                   <Icon size={20} />
-                  {sidebarOpen && <span>{t(item.labelKey)}</span>}
+                  {sidebarOpen && <span>{t(item.labelKey as any)}</span>}
                 </Link>
               </li>
             );

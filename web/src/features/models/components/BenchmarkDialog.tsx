@@ -72,47 +72,48 @@ export function BenchmarkDialog({
   }, [isOpen, llamaCppPath, llamaCppVersions]);
 
   // Load available devices when llama.cpp path is selected
-  // Use ref to prevent duplicate requests
-  const isLoadingDevicesRef = useRef(false);
-
   useEffect(() => {
-    if (isOpen && llamaCppPath && !isLoadingDevicesRef.current) {
-      const loadDevices = async () => {
-        if (isLoadingDevicesRef.current) return;
-        isLoadingDevicesRef.current = true;
-        
-        setDevicesLoading(true);
-        try {
-          const response = await fetch(`/api/model/device/list?llamaBinPath=${encodeURIComponent(llamaCppPath)}`);
+    if (!isOpen || !llamaCppPath) return;
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-          }
+    const abortController = new AbortController();
 
-          const data = await response.json();
-          if (data.success && data.data?.devices) {
-            const devices = data.data.devices;
-            setAvailableDevices(devices);
-            setSelectedDevices(devices);
-          } else {
-            throw new Error(data.error || '无法解析设备列表响应');
-          }
-        } catch (error) {
-          console.error('Failed to load devices:', error);
-          const errorMsg = error instanceof Error ? error.message : '未知错误';
-          toast.error('无法加载计算设备列表', errorMsg);
-          setAvailableDevices([]);
-          setSelectedDevices([]);
-        } finally {
-          setDevicesLoading(false);
-          isLoadingDevicesRef.current = false;
+    const loadDevices = async () => {
+      setDevicesLoading(true);
+      try {
+        const response = await fetch(
+          `/api/model/device/list?llamaBinPath=${encodeURIComponent(llamaCppPath)}`,
+          { signal: abortController.signal }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
         }
-      };
-      loadDevices();
-    }
-    // Note: toast is stable and doesn't need to be in deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+        const data = await response.json();
+        if (data.success && data.data?.devices) {
+          const devices = data.data.devices;
+          setAvailableDevices(devices);
+          setSelectedDevices(devices);
+        } else {
+          throw new Error(data.error || '无法解析设备列表响应');
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        console.error('Failed to load devices:', error);
+        const errorMsg = error instanceof Error ? error.message : '未知错误';
+        toast.error('无法加载计算设备列表', errorMsg);
+        setAvailableDevices([]);
+        setSelectedDevices([]);
+      } finally {
+        if (!abortController.signal.aborted) {
+          setDevicesLoading(false);
+        }
+      }
+    };
+    loadDevices();
+
+    return () => abortController.abort();
   }, [isOpen, llamaCppPath]);
 
   useEffect(() => {

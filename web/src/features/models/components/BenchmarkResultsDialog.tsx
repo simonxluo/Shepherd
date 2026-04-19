@@ -67,10 +67,6 @@ export function BenchmarkResultsDialog({
   const appendResult = (result: BenchmarkResult, fileName: string) => {
     let text = '';
 
-    if (resultContent.trim().length > 0) {
-      text += '\n\n';
-    }
-
     text += '==============================\n';
     text += `文件: ${fileName}\n`;
     text += `模型: ${result.modelName || modelName}\n`;
@@ -113,7 +109,10 @@ export function BenchmarkResultsDialog({
       text += `\n原始输出:\n${result.rawOutput}\n`;
     }
 
-    setResultContent(prev => prev + text);
+    setResultContent(prev => {
+      const separator = prev.trim().length > 0 ? '\n\n' : '';
+      return prev + separator + text;
+    });
   };
 
   const loadBenchmarkResult = async (fileName: string) => {

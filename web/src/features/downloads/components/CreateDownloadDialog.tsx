@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { X, Cloud, Database, Loader2, File, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,19 @@ export function CreateDownloadDialog({
   const [chunkSize, setChunkSize] = useState('');
 
   const [showFileBrowser, setShowFileBrowser] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSource(preFill?.source || 'huggingface');
+      setRepoId(preFill?.repoId || '');
+      setFileName(preFill?.fileName || '');
+      setPath('');
+      setMaxRetries('3');
+      setChunkSize('');
+      setShowFileBrowser(false);
+    }
+  }, [isOpen, preFill]);
 
   const { data: files, isLoading: loadingFiles, error: filesError } = useModelFiles(
     source,

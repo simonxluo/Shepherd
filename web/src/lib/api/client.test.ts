@@ -3,7 +3,6 @@ import { ApiClient } from './client'
 
 describe('ApiClient', () => {
   beforeEach(() => {
-    // @ts-expect-error mock global fetch
     global.fetch = vi.fn()
   })
 
@@ -23,7 +22,6 @@ describe('ApiClient', () => {
   it('POST fetch sends JSON body and returns parsed JSON', async () => {
     const fakeJson = { created: true }
     const mockFetch = vi.fn().mockResolvedValue({ json: async () => fakeJson })
-    // @ts-expect-error mock global fetch
     global.fetch = mockFetch
     const client = new ApiClient('https://api.example.com')
     const body = { name: 'test' }

@@ -10,7 +10,6 @@
 backend:
   # 后端 API 地址（可配置多个，按优先级使用）
   urls:
-    - "http://10.0.0.193:9190"
     - "http://localhost:9190"
   # 当前使用的后端索引（0 表示第一个）
   currentIndex: 0

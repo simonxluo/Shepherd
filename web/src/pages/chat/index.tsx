@@ -22,13 +22,18 @@ export function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
+  const messagesRef = useRef<ChatMessageType[]>([]);
   const [streamingStartTime, setStreamingStartTime] = useState(0);
 
   const streamingChat = useStreamingChat();
 
   // Load available models
   useEffect(() => {
-    getLoadedModels().then(setModels).catch(console.error);
+    let cancelled = false;
+    getLoadedModels().then((models) => {
+      if (!cancelled) setModels(models);
+    }).catch(console.error);
+    return () => { cancelled = true; };
   }, []);
 
   // Auto-scroll to bottom — only on message changes, skip initialization
@@ -56,7 +61,9 @@ export function ChatPage() {
       timestamp: now,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const newUserMessages = [...messagesRef.current, userMessage];
+    setMessages(newUserMessages);
+    messagesRef.current = newUserMessages;
     setIsStreaming(true);
     setStreamingStartTime(now);
     setCurrentResponse('');
@@ -64,7 +71,7 @@ export function ChatPage() {
     streamingChat.mutate(
       {
         model: selectedModel,
-        messages: [...messages, userMessage],
+        messages: newUserMessages,
         temperature: 0.7,
         topP: 0.95,
         onChunk: (chunk) => {
@@ -76,7 +83,11 @@ export function ChatPage() {
             content: message,
             timestamp: Date.now(),
           };
-          setMessages((prev) => [...prev, assistantMessage]);
+          setMessages((prev) => {
+            const updated = [...prev, assistantMessage];
+            messagesRef.current = updated;
+            return updated;
+          });
           setCurrentResponse('');
           setIsStreaming(false);
         },

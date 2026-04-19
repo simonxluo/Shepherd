@@ -38,6 +38,17 @@ export function WebSocketProvider({
   const subscriptionsRef = useRef<EventSubscriptions>(new Map());
   const mountedRef = useRef(true);
 
+  const optionsRef = useRef(options);
+  const onConnectRef = useRef(onConnect);
+  const onDisconnectRef = useRef(onDisconnect);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    optionsRef.current = options;
+    onConnectRef.current = onConnect;
+    onDisconnectRef.current = onDisconnect;
+    onErrorRef.current = onError;
+  });
+
   const getWebSocketUrl = useCallback(() => {
     if (propUrl) return propUrl;
 
@@ -48,16 +59,17 @@ export function WebSocketProvider({
 
   const createClient = useCallback(() => {
     const wsUrl = getWebSocketUrl();
+    const opts = optionsRef.current;
 
     const clientOptions: WebSocketClientOptions = {
       url: wsUrl,
-      maxReconnectAttempts: options.maxReconnectAttempts ?? 5,
-      initialReconnectDelay: options.initialReconnectDelay ?? 1000,
-      maxReconnectDelay: options.maxReconnectDelay ?? 30000,
-      heartbeatInterval: options.heartbeatInterval ?? 30000,
-      heartbeatTimeout: options.heartbeatTimeout ?? 10000,
-      autoReconnect: options.autoReconnect ?? true,
-      debug: options.debug ?? false,
+      maxReconnectAttempts: opts.maxReconnectAttempts ?? 5,
+      initialReconnectDelay: opts.initialReconnectDelay ?? 1000,
+      maxReconnectDelay: opts.maxReconnectDelay ?? 30000,
+      heartbeatInterval: opts.heartbeatInterval ?? 30000,
+      heartbeatTimeout: opts.heartbeatTimeout ?? 10000,
+      autoReconnect: opts.autoReconnect ?? true,
+      debug: opts.debug ?? false,
     };
 
     const client = new WebSocketClient(clientOptions);
@@ -94,23 +106,23 @@ export function WebSocketProvider({
       onReconnectFailed: () => {
         if (mountedRef.current) {
           setReconnectAttempts(clientOptions.maxReconnectAttempts ?? 5);
-          onError?.(new Error('WebSocket reconnection failed'));
+          onErrorRef.current?.(new Error('WebSocket reconnection failed'));
         }
       },
       onOpen: () => {
         if (mountedRef.current) {
-          onConnect?.();
+          onConnectRef.current?.();
         }
       },
       onClose: () => {
         if (mountedRef.current) {
-          onDisconnect?.();
+          onDisconnectRef.current?.();
         }
       },
     });
 
     return client;
-  }, [getWebSocketUrl, options, onConnect, onDisconnect, onError]);
+  }, [getWebSocketUrl]);
 
   const connect = useCallback(() => {
     if (!clientRef.current) {
@@ -210,5 +222,3 @@ export function WebSocketProvider({
     </WebSocketContext.Provider>
   );
 }
-
-

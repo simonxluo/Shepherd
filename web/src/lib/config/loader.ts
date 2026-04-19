@@ -91,7 +91,7 @@ export class ConfigLoader {
   /**
    * Merge configuration
    */
-  private mergeConfig(defaults: AppConfig, loaded: Record<string, unknown>): AppConfig {
+  private mergeConfig(defaults: AppConfig, loaded: Record<string, any>): AppConfig {
     // Convert backend.urls array format to api.baseUrl single value
     let apiBaseUrl = defaults.api.baseUrl;
     if (loaded?.backend?.urls && Array.isArray(loaded.backend.urls)) {

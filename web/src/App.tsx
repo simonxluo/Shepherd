@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useCallback } from 'react';
 import { queryClient } from './lib/query';
 import { MainLayout } from './components/layout/MainLayout';
 import { DashboardPage } from './pages/dashboard';
@@ -10,6 +11,7 @@ import { ClusterPage } from './pages/cluster';
 import { LogsPage } from './pages/logs';
 import { SettingsPage } from './pages/settings';
 import { useSSE } from './hooks/useSSE';
+import type { SSEEvent } from './types';
 import { AlertDialogProvider } from './providers/AlertDialog';
 import { AlertDialog } from './components/ui/alert-dialog';
 import { Toaster } from './components/ui/toaster';
@@ -18,10 +20,12 @@ import { WebSocketProvider } from './providers/WebSocketProvider';
 import 'highlight.js/styles/github-dark.css';
 
 function AppContent() {
+  const handleSSEMessage = useCallback((event: SSEEvent) => {
+    console.log('SSE Event:', event);
+  }, []);
+
   useSSE({
-    onMessage: (event) => {
-      console.log('SSE Event:', event);
-    },
+    onMessage: handleSSEMessage,
   });
 
   return (

@@ -179,6 +179,20 @@ export interface LoadModelParams {
   ropeFreqBase?: number;          // RoPE base frequency
   ropeFreqScale?: number;         // RoPE frequency scaling
 
+  // Embedding & retrieval
+  embedding?: boolean;
+
+  // UI options
+  noWebUI?: boolean;
+
+  // Reasoning
+  reasoning?: string;
+  reasoningFormat?: string;
+  reasoningBudget?: number;
+
+  // Multimedia
+  mmprojOffload?: boolean;
+
   // Runtime management
   unloadAfterMinutes?: number;   // Auto-unload idle time (minutes). 0=never, >0=custom
   concurrencyLimit?: number;     // Max concurrent requests. 0=unlimited, >0=custom limit
@@ -249,10 +263,23 @@ export interface LoadModelParams {
     // Other
     contextShift?: boolean;
     directIo?: boolean;
+    extraArgs?: boolean;
     logitsAll?: boolean;
     reranking?: boolean;
+    embedding?: boolean;
     timeout?: boolean;
     alias?: boolean;
+
+    // UI options
+    noWebUI?: boolean;
+
+    // Reasoning
+    reasoning?: boolean;
+    reasoningFormat?: boolean;
+    reasoningBudget?: boolean;
+
+    // Multimedia
+    mmprojOffload?: boolean;
 
     // Runtime management
     unloadAfterMinutes?: boolean;

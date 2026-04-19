@@ -205,14 +205,14 @@ function GeneralSettingsPanel() {
     markChanged();
   }, [markChanged]);
 
-  const handleTestConnection = async (port: number, type: 'ollama' | 'lmstudio'): Promise<boolean> => {
+  const handleTestConnection = useCallback(async (port: number, type: 'ollama' | 'lmstudio'): Promise<boolean> => {
     try {
       const response = await compatibilityApi.testConnection(port, type);
       return response.valid;
     } catch {
       return false;
     }
-  };
+  }, []);
 
   const handleConnectionFailed = useCallback(async (type: 'ollama' | 'lmstudio', port: number) => {
     const serviceName = type === 'ollama' ? 'Ollama API' : 'LM Studio API';
