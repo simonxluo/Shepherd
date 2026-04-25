@@ -42,10 +42,13 @@ type PostgreSQLConfig struct {
 
 // Capabilities represents model capabilities configuration
 type Capabilities struct {
-	Thinking  bool `json:"thinking" db:"thinking"`
-	Tools     bool `json:"tools" db:"tools"`
-	Rerank    bool `json:"rerank" db:"rerank"`
-	Embedding bool `json:"embedding" db:"embedding"`
+	Thinking       bool `json:"thinking" db:"thinking"`
+	Tools          bool `json:"tools" db:"tools"`
+	Rerank         bool `json:"rerank" db:"rerank"`
+	Embedding      bool `json:"embedding" db:"embedding"`
+	TTS            bool `json:"tts" db:"tts"`
+	ASR            bool `json:"asr" db:"asr"`
+	ImageGeneration bool `json:"imageGeneration" db:"image_generation"`
 }
 
 // Validate checks if the capabilities configuration is valid
@@ -58,10 +61,29 @@ func (c *Capabilities) Validate() error {
 
 // ApplyConstraints enforces mutual exclusion rules between capabilities.
 // If rerank or embedding is enabled, thinking and tools are automatically disabled.
+// TTS, ASR, ImageGeneration are mutually exclusive with each other and with other capabilities.
 func (c *Capabilities) ApplyConstraints() {
-	if c.Rerank || c.Embedding {
+	if c.Rerank || c.Embedding || c.TTS || c.ASR || c.ImageGeneration {
 		c.Thinking = false
 		c.Tools = false
+	}
+	if c.TTS {
+		c.Rerank = false
+		c.Embedding = false
+		c.ASR = false
+		c.ImageGeneration = false
+	}
+	if c.ASR {
+		c.Rerank = false
+		c.Embedding = false
+		c.TTS = false
+		c.ImageGeneration = false
+	}
+	if c.ImageGeneration {
+		c.Rerank = false
+		c.Embedding = false
+		c.TTS = false
+		c.ASR = false
 	}
 }
 

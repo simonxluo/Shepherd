@@ -300,10 +300,13 @@ export interface ModelListResponse {
  * Model capabilities
  */
 export interface ModelCapabilities {
-  thinking?: boolean;    // Thinking ability (e.g. DeepSeek-R1)
-  tools?: boolean;       // Tool use / function calling
-  rerank?: boolean;      // Reranking
-  embedding?: boolean;   // Embedding generation
+  thinking?: boolean;         // Thinking ability (e.g. DeepSeek-R1)
+  tools?: boolean;            // Tool use / function calling
+  rerank?: boolean;           // Reranking
+  embedding?: boolean;        // Embedding generation
+  tts?: boolean;              // Text-to-speech
+  asr?: boolean;              // Automatic speech recognition
+  imageGeneration?: boolean;  // Image generation (text-to-image)
 }
 
 /**

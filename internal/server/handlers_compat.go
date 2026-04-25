@@ -37,3 +37,15 @@ func (s *Server) HandleLMStudioModels(c *gin.Context) {
 func (s *Server) HandleLMStudioEmbeddings(c *gin.Context) {
 	s.handlers.LMStudio.HandleEmbeddings(c)
 }
+func (s *Server) HandleCreateSpeech(c *gin.Context) {
+	s.handlers.Audio.HandleCreateSpeech(c)
+}
+func (s *Server) HandleCreateTranscription(c *gin.Context) {
+	s.handlers.Audio.HandleCreateTranscription(c)
+}
+func (s *Server) HandleCreateTranslation(c *gin.Context) {
+	s.handlers.Audio.HandleCreateTranslation(c)
+}
+func (s *Server) HandleCreateImage(c *gin.Context) {
+	s.handlers.Image.HandleCreateImage(c)
+}

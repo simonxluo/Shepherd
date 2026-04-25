@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import (
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model/backend"
 )
 
 func (s *Server) HandleListModels(c *gin.Context) {
@@ -578,6 +580,20 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 		Status:      status,
 		IsLoaded:    isLoaded,
 		ScannedAt:   scannedAt,
+	}
+
+	// Auto-detect recommended backend type from model path
+	modelPath := m.Path
+	if len(m.ShardFiles) > 0 {
+		modelPath = m.ShardFiles[0]
+	}
+	if backend.IsGGUFModel(modelPath) {
+		dto.BackendType = "llamacpp"
+	} else if backend.IsSafeTensorsModel(modelPath) {
+		dto.BackendType = "vllm"
+	} else if filepath.Ext(modelPath) == "" {
+		// Directory-based model (HuggingFace format)
+		dto.BackendType = "vllm"
 	}
 
 	if m.Metadata != nil {

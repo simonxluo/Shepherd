@@ -247,33 +247,58 @@ func (s *Server) HandleGetGPUs(c *gin.Context) {
 	})
 }
 
-// handleGetLlamacppBackends 返回可用的 llama.cpp 后端列表
+// handleGetLlamacppBackends 返回可用的推理后端列表（llama.cpp 和其他推理后端分开返回）
 func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 	backends := []gin.H{}
+	inferenceBackends := []gin.H{}
 
-	// 从配置中获取 llama.cpp 路径
 	if s.config != nil && s.config.ServerCfg != nil {
+		// Llama.cpp backends (backward compatible)
 		paths := s.config.ServerCfg.Llamacpp.Paths
 		for _, p := range paths {
-			// 检查路径是否存在
 			available := false
 			if fileInfo, err := os.Stat(p.Path); err == nil {
-				// 检查是否是目录
 				available = fileInfo.IsDir()
 			}
 
 			backends = append(backends, gin.H{
+				"type":        "llamacpp",
 				"path":        p.Path,
 				"name":        p.Name,
 				"description": p.Description,
 				"available":   available,
 			})
 		}
+
+		// vLLM backend (separate array to avoid breaking frontend)
+		if s.config.ServerCfg.Backends.VLLM != nil {
+			vcfg := s.config.ServerCfg.Backends.VLLM
+			inferenceBackends = append(inferenceBackends, gin.H{
+				"type":      "vllm",
+				"name":      "vLLM",
+				"condaEnv":  vcfg.CondaEnv,
+				"enabled":   vcfg.Enabled,
+				"available": vcfg.Enabled && vcfg.CondaEnv != "",
+			})
+		}
+
+		// vLLM-omni backend
+		if s.config.ServerCfg.Backends.VLLMOmni != nil {
+			ocfg := s.config.ServerCfg.Backends.VLLMOmni
+			inferenceBackends = append(inferenceBackends, gin.H{
+				"type":      "vllm_omni",
+				"name":      "vLLM-Omni",
+				"condaEnv":  ocfg.CondaEnv,
+				"enabled":   ocfg.Enabled,
+				"available": ocfg.Enabled && ocfg.CondaEnv != "",
+			})
+		}
 	}
 
 	api.Success(c, gin.H{
-		"backends": backends,
-		"count":    len(backends),
+		"backends":         backends,
+		"inferenceBackends": inferenceBackends,
+		"count":            len(backends),
 	})
 }
 

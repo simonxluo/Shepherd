@@ -285,6 +285,9 @@ export function LoadModelDialog({
       tools: false,
       translation: false,
       embedding: false,
+      tts: false,
+      asr: false,
+      imageGeneration: false,
     },
     flashAttention: true,
     noMmap: false,
@@ -426,6 +429,9 @@ export function LoadModelDialog({
           translation: prev.capabilities?.translation || false,
           embedding: savedCapabilities.embedding || false,
           reranking: savedCapabilities.rerank || false,
+          tts: savedCapabilities.tts || false,
+          asr: savedCapabilities.asr || false,
+          imageGeneration: savedCapabilities.imageGeneration || false,
         },
       }));
     }
@@ -456,6 +462,17 @@ export function LoadModelDialog({
       newCaps = { ...currentCaps, [key]: value };
       newReranking = prev.reranking || false;
 
+      // Multimodal capabilities are mutually exclusive with chat capabilities
+      const multimodalKeys = ['tts', 'asr', 'imageGeneration'];
+      if (multimodalKeys.includes(key) && value) {
+        newCaps.thinking = false;
+        newCaps.tools = false;
+        // Also disable other multimodal keys
+        for (const mk of multimodalKeys) {
+          if (mk !== key) newCaps[mk] = false;
+        }
+      }
+
       if (key === 'embedding' && value) {
         newReranking = false;
         newCaps.thinking = false;
@@ -469,6 +486,9 @@ export function LoadModelDialog({
       if ((key === 'thinking' || key === 'tools') && value) {
         newCaps.embedding = false;
         newReranking = false;
+        for (const mk of multimodalKeys) {
+          newCaps[mk] = false;
+        }
       }
 
       return {
@@ -486,6 +506,9 @@ export function LoadModelDialog({
           tools: newCaps!.tools || false,
           rerank: newReranking!,
           embedding: newCaps!.embedding || false,
+          tts: newCaps!.tts || false,
+          asr: newCaps!.asr || false,
+          imageGeneration: newCaps!.imageGeneration || false,
         },
       });
     }, 0);
@@ -601,6 +624,9 @@ export function LoadModelDialog({
         tools: false,
         translation: false,
         embedding: false,
+        tts: false,
+        asr: false,
+        imageGeneration: false,
       },
       flashAttention: true,
       noMmap: false,
@@ -1098,6 +1124,9 @@ export function LoadModelDialog({
                               if (result.capabilities.tools) detectedList.push('工具调用');
                               if (result.capabilities.embedding) detectedList.push('嵌入');
                               if (result.capabilities.rerank) detectedList.push('重排序');
+                              if (result.capabilities.tts) detectedList.push('语音合成');
+                              if (result.capabilities.asr) detectedList.push('语音识别');
+                              if (result.capabilities.imageGeneration) detectedList.push('图像生成');
 
                               if (detectedList.length > 0) {
                                 toast.success('检测完成', detectedList.join(', '));
@@ -1165,10 +1194,29 @@ export function LoadModelDialog({
                           <span>{label}</span>
                         </label>
                       ))}
+
+                      {/* Multimodal capabilities */}
+                      <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1 mt-2">多模态能力</div>
+                      {[
+                        {key: 'tts', label: '语音合成 (TTS)' },
+                        {key: 'asr', label: '语音识别 (ASR)' },
+                        {key: 'imageGeneration', label: '图像生成' },
+                      ].map(({ key, label }) => (
+                        <label key={key} className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded hover:bg-accent">
+                          <input
+                            type="checkbox"
+                            checked={params.capabilities?.[key as keyof NonNullable<typeof params.capabilities>] || false}
+                            onChange={(e) => handleCapabilityChange(key, e.target.checked)}
+                            disabled={isLoading || params.capabilities?.thinking || params.capabilities?.tools}
+                            className="rounded border-border text-blue-600 focus:ring-blue-500 w-4 h-4"
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    选择模型支持的功能能力（互斥：思考/工具与嵌入）
+                    选择模型支持的功能能力（互斥：思考/工具与嵌入/TTS/ASR/图像生成）
                   </p>
                 </div>
 
