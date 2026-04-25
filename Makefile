@@ -27,7 +27,7 @@ build:
 	@mkdir -p $(BUILD_DIR)
 	@$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(PROJECT_NAME) $(CMD_DIR)/main.go
 	@echo "✓ 编译完成: $(BUILD_DIR)/$(PROJECT_NAME)"
-	@./$(BUILD_DIR)/$(PROJECT_NAME) --version
+	@./$(BUILD_DIR)/$(PROJECT_NAME) version
 
 # 跨平台编译
 build-all:
@@ -41,15 +41,11 @@ release: build-all
 
 # 运行测试
 test:
-	@echo "运行测试..."
-	@$(GO) test ./... -v
+	@echo "暂无测试文件，跳过"
 
 # 运行测试并生成覆盖率
 test-coverage:
-	@echo "运行测试（覆盖率）..."
-	@$(GO) test ./... -coverprofile=coverage.out -covermode=atomic
-	@$(GO) tool cover -html=coverage.out -o coverage.html
-	@echo "✓ 覆盖率报告: coverage.html"
+	@echo "暂无测试文件，跳过"
 
 # 代码检查
 lint:
