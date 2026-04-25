@@ -25,19 +25,15 @@ make run
 ### 一键启动（前后端）
 
 ```bash
-# 使用 CLI（推荐）
 ./build/shepherd serve --web --build
-
-# 使用旧脚本
-./scripts/linux/run.sh -b --web
 ```
 
 ## 前端开发
 
 ```bash
-./scripts/linux/web.sh dev      # 开发服务器
-./scripts/linux/web.sh build    # 生产编译
-./scripts/linux/web.sh preview  # 预览生产构建
+./build/shepherd web dev       # 开发服务器
+./build/shepherd web build     # 生产编译
+./build/shepherd web preview   # 预览生产构建
 ```
 
 ## 停止
@@ -45,15 +41,13 @@ make run
 ```bash
 ./build/shepherd stop           # 优雅停止
 ./build/shepherd stop --force   # 强制停止
-
-./scripts/linux/stop_all.sh     # 旧脚本
 ```
 
 ## 配置同步
 
 ```bash
 ./scripts/linux/sync-web-config.sh        # 单次同步
-./scripts/linux/watch-sync-config.sh      # 监视同步
+cd web && npm run sync-config             # 通过 npm 同步
 ```
 
 ## systemd 服务
