@@ -1,5 +1,11 @@
 # 模型管理
 
+## 设计目标
+
+Shepherd 的模型管理模块负责从模型发现到最终卸载的完整生命周期，涵盖文件系统扫描、GGUF 元数据解析、能力自动检测、加载/卸载编排、性能基准测试以及用户元数据持久化。核心设计原则是"自动化优先"。
+
+模块通过可插拔的后端注册表（`internal/service/model/backend/`）支持多种推理引擎：llama.cpp（默认，GGUF 模型）、vLLM（safetensors 模型）和 vLLM-Omni（多模态模型，支持 TTS/ASR/图像生成）。每种后端实现 `Backend` 接口，负责模型发现、命令构建、健康检查和能力匹配。
+
 ## 模型状态机
 
 ```
@@ -80,6 +86,20 @@ Error     → Unloaded, Loading
 | UnloadAfter | 空闲自动卸载时间 |
 | TotalPromptTokens / TotalCompletionTokens | Token 统计 |
 
+### Capabilities
+
+模型能力集合，附带互斥约束：
+
+| 字段 | 说明 |
+|---|---|
+| Thinking | 推理/思考能力（DeepSeek-R1、QwQ 等） |
+| Tools | 工具调用/函数调用能力 |
+| Embedding | 文本嵌入能力 |
+| Rerank | 重排序能力 |
+| TTS | 文本转语音能力（CosyVoice、ChatTTS 等） |
+| ASR | 语音识别能力（Whisper、SenseVoice 等） |
+| ImageGeneration | 图像生成能力（Stable Diffusion、Flux 等） |
+
 ### LoadRequest
 
 模型加载请求，包含约 55 个可配置字段：
@@ -120,19 +140,27 @@ Error     → Unloaded, Loading
 
 | 能力 | 关键词 |
 |---|---|
-| Thinking | "thinking", "think", "reason" 等 |
-| Tools | "tool", "function", "agent" 等 |
-| Embedding | "embed", "bge", "e5" 等 |
-| Rerank | "rerank", "cross-encoder" 等 |
+| Thinking | "thinking", "think", "reason", "deepseek-r1", "qwq" 等 |
+| Tools | "tool", "function", "agent", "mcp" 等 |
+| Embedding | "embed", "bge", "e5", "gte", "jina" 等 |
+| Rerank | "rerank", "cross-encoder", "reranker" 等 |
+| TTS | "tts", "text-to-speech", "cosyvoice", "chattts", "bark", "speecht5", "vits", "xtts", "melotts" |
+| ASR | "asr", "whisper", "speech-to-text", "wav2vec", "hubert", "sense-voice", "paraformer" |
+| ImageGeneration | "stable-diffusion", "sdxl", "flux", "dall-e", "text-to-image", "kandinsky", "pixart", "cogview", "janus" |
 
-**互斥规则**：Embedding/Rerank 与 Thinking/Tools 互斥。如果检测到 Embedding 或 Rerank，自动禁用 Thinking 和 Tools。
+### 互斥规则
+
+1. **Embedding / Rerank / TTS / ASR / ImageGeneration** 与 **Thinking / Tools** 互斥——启用任一能力时自动禁用 thinking 和 tools。
+2. **TTS、ASR、ImageGeneration** 三者之间互斥——每个模型实例仅服务于一种多模态任务。
+
+此约束在 `ApplyConstraints()` 方法中实现，防止能力冲突导致的运行时异常。
 
 ## 加载序列
 
 ```
 状态转换 (Unloaded → Loading)
     ↓
-BuildCommandFromRequest 构建命令
+Backend.BuildStartConfig() 构建命令
     ↓
 ProcessManager.Start() 启动进程
     ↓
@@ -206,3 +234,15 @@ SSE 广播通知
 - `InflightWg` / `InflightCount`：增减计数
 - `ConcurrencySem`：并发槽位控制（`ConcurrencyLimit` 限制）
 - `AddTokens()`：Token 计数统计
+
+## 设计决策
+
+| 决策 | 理由 |
+|---|---|
+| GGUF 元数据解析（gguf-parser-go） | 直接从模型二进制文件提取架构、模板信息，无需额外配置 |
+| 关键词能力检测 | 简单有效，覆盖主流模型命名规范，误报率低 |
+| 互斥约束（embedding/rerank/tts/asr/image 禁用 thinking/tools） | 语义层面不可共存，检测阶段强制约束优于运行时报错 |
+| 异步加载 + 动态超时 | 大模型加载耗时不固定，动态超时避免"一刀切"的等待或过早放弃 |
+| 路径 SHA256 作为模型 ID | 稳定且唯一，不依赖文件名或用户输入 |
+| LoadRequest 50+ 参数扁平化 | 直接映射 llama-server 标志位，无抽象损耗，便于未来扩展 |
+| 可插拔后端注册表（Backend 接口） | 新增推理引擎零改动现有代码，仅添加 Backend 实现 + 注册即可 |
