@@ -1,227 +1,235 @@
-# 模型加载 API 文档
+# 模型加载 API
 
-本文档详细说明 Shepherd 模型加载 API 的所有参数。
-
-## API 端点
+## 加载模型
 
 ```
 POST /api/models/{id}/load
 ```
 
-## 请求参数
+异步加载指定模型。返回 HTTP **202 Accepted**，表示加载请求已被接受。
 
-### 基础参数
+### 请求体
 
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `port` | integer | 自动分配 | 模型服务端口 (8081-9000) |
-| `ctxSize` | integer | 512 | 上下文大小 (tokens) |
-| `batchSize` | integer | 512 | 批次大小 |
-| `threads` | integer | 4 | 线程数 |
-
-### GPU 配置
-
-| 参数 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `gpuLayers` | integer | 0 | GPU 层数 (99=全部) |
-| `devices` | string[] | - | GPU 设备列表 (例: ["cuda:0", "cuda:1"]) |
-| `mainGPU` | integer | 0 | 主 GPU 索引 |
-
-### 采样参数
-
-| 参数 | 类型 | 默认值 | llama.cpp 参数 | 说明 |
-|------|------|--------|----------------|------|
-| `temperature` | float64 | 0.70 | `--temp` | 采样温度 |
-| `topP` | float64 | 0.95 | `--top-p` | Top-P 采样 |
-| `topK` | integer | 40 | `--top-k` | Top-K 采样 |
-| `repeatPenalty` | float64 | 1.10 | `--repeat-penalty` | 重复惩罚 |
-| `minP` | float64 | 0.00 | `--min-p` | Min-P 采样 (新) |
-| `presencePenalty` | float64 | 0.00 | `--presence-penalty` | Presence 惩罚 (新) |
-| `frequencyPenalty` | float64 | 0.00 | `--frequency-penalty` | Frequency 惩罚 (新) |
-| `seed` | integer | 0 | `--seed` | 随机种子 |
-| `nPredict` | integer | -1 | `-n` | 最大生成长度 |
-
-### 性能优化
-
-| 参数 | 类型 | 默认值 | llama.cpp 参数 | 说明 |
-|------|------|--------|----------------|------|
-| `flashAttention` | boolean | false | `-fa` | Flash Attention |
-| `noMmap` | boolean | false | `--no-mmap` | 禁用内存映射 |
-| `lockMemory` | boolean | false | `--mlock` | 锁定内存 |
-| `ubatchSize` | integer | 0 | `--ubatch-size` | 微批次大小 |
-| `parallelSlots` | integer | 0 | `--parallel` | 并行槽数 |
-
-### KV 缓存配置 (新)
-
-| 参数 | 类型 | 默认值 | llama.cpp 参数 | 说明 |
-|------|------|--------|----------------|------|
-| `kvCacheTypeK` | string | - | `--kv-cache-type-k` | K 缓存类型 (f16/q8_0) |
-| `kvCacheTypeV` | string | - | `--kv-cache-type-v` | V 缓存类型 (f16/q8_0) |
-| `kvCacheUnified` | boolean | false | `--kv-unified` | 统一 KV 缓存 |
-| `kvCacheSize` | integer | 0 | `--kv-cache-size` | KV 缓存大小 |
-
-### 模板系统 (新)
-
-| 参数 | 类型 | 默认值 | llama.cpp 参数 | 说明 |
-|------|------|--------|----------------|------|
-| `disableJinja` | boolean | false | `--no-jinja` | 禁用 Jinja 模板 |
-| `chatTemplate` | string | - | `--chat-template` | 内置模板名称 |
-| `chatTemplateFile` | string | - | `--chat-template-file` | 自定义模板文件 |
-| `contextShift` | boolean | false | `--context-shift` | 启用上下文切换 |
-
-### 视觉模型
-
-| 参数 | 类型 | 默认值 | llama.cpp 参数 | 说明 |
-|------|------|--------|----------------|------|
-| `mmprojPath` | string | - | `--mmproj` | 多模态项目路径 |
-| `enableVision` | boolean | false | - | 启用视觉能力 |
-
-### 服务器配置
-
-| 参数 | 类型 | 默认值 | llama.cpp 参数 | 说明 |
-|------|------|--------|----------------|------|
-| `noWebUI` | boolean | false | `--no-webui` | 禁用 Web UI |
-| `enableMetrics` | boolean | false | `--metrics` | 启用 /metrics 端点 |
-| `slotSavePath` | string | - | `--slot-save-path` | 槽位缓存目录 |
-| `cacheRAM` | integer | 0 | `--cache-ram` | RAM 缓存限制 (MB, -1=无限) |
-| `timeout` | integer | 0 | `--timeout` | 读写超时 (秒) |
-| `alias` | string | - | `--alias` | 模型别名 |
-
-### 其他参数
-
-| 参数 | 类型 | 默认值 | llama.cpp 参数 | 说明 |
-|------|------|--------|----------------|------|
-| `reranking` | boolean | false | `--reranking` | 重排序模式 (新) |
-| `customCmd` | string | - | - | 自定义命令字符串 |
-| `extraParams` | string | - | - | 额外参数字符串 |
-
-## 请求示例
-
-### 基础加载
-
-```bash
-curl -X POST http://localhost:9190/api/models/llama-2-7b/load \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ctxSize": 2048,
-    "gpuLayers": 99
-  }'
+```json
+{
+  "ctxSize": 4096,
+  "gpuLayers": 99,
+  "threads": 4,
+  "temperature": 0.7,
+  "flashAttention": true,
+  "parallelSlots": 4
+}
 ```
 
-### 完整参数加载
+### 响应
 
-```bash
-curl -X POST http://localhost:9190/api/models/llama-2-7b/load \
-  -H "Content-Type: application/json" \
-  -d '{
-    "port": 8081,
-    "ctxSize": 4096,
-    "batchSize": 512,
-    "threads": 8,
-    "gpuLayers": 99,
-    "temperature": 0.7,
-    "topP": 0.9,
-    "topK": 40,
-    "repeatPenalty": 1.1,
-    "minP": 0.05,
-    "presencePenalty": 0.1,
-    "frequencyPenalty": 0.2,
-    "flashAttention": true,
-    "ubatchSize": 128,
-    "kvCacheTypeK": "f16",
-    "kvCacheTypeV": "f16",
-    "kvCacheUnified": true,
-    "disableJinja": false,
-    "chatTemplate": "chatml",
-    "contextShift": true,
-    "reranking": false
-  }'
-```
-
-### 多 GPU 配置
-
-```bash
-curl -X POST http://localhost:9190/api/models/llama-2-70b/load \
-  -H "Content-Type: application/json" \
-  -d '{
-    "devices": ["cuda:0", "cuda:1"],
-    "gpuLayers": 99,
-    "ctxSize": 4096
-  }'
-```
-
-## 响应
-
-### 成功响应
+HTTP 状态码 **202 Accepted**。
 
 ```json
 {
   "success": true,
-  "message": "Model loaded successfully",
   "data": {
-    "id": "llama-2-7b",
-    "port": 8081,
-    "status": "running",
-    "process": {
-      "pid": 12345,
-      "command": "llama-server -m /path/to/model.gguf --port 8081 ..."
-    }
+    "id": "model-id",
+    "status": "loading"
+  },
+  "metadata": {
+    "timestamp": "2026-01-15T10:00:00Z",
+    "requestId": "req-xxx"
   }
 }
 ```
 
-### 错误响应
+如果模型已经处于加载状态：
 
 ```json
 {
-  "success": false,
-  "error": "Model already loaded",
-  "code": "MODEL_ALREADY_LOADED"
+  "success": true,
+  "data": {
+    "id": "model-id",
+    "status": "loading"
+  }
 }
 ```
 
-## 生成的命令示例
+如果模型已加载完成：
 
-执行加载后，Shepherd 会生成类似以下的 llama-server 命令：
-
-```bash
-llama-server \
-  -m /path/to/model.gguf \
-  --port 8081 \
-  --host 0.0.0.0 \
-  -c 4096 \
-  -b 512 \
-  -t 8 \
-  -ngl 99 \
-  --temp 0.70 \
-  --top-p 0.90 \
-  --top-k 40 \
-  --repeat-penalty 1.10 \
-  --min-p 0.05 \
-  --presence-penalty 0.10 \
-  --frequency-penalty 0.20 \
-  -fa \
-  --ubatch-size 128 \
-  --kv-cache-type-k f16 \
-  --kv-cache-type-v f16 \
-  --kv-unified \
-  --chat-template chatml \
-  --context-shift
+```json
+{
+  "success": true,
+  "data": {
+    "id": "model-id",
+    "status": "running",
+    "port": 8081
+  }
+}
 ```
 
-## 不支持的参数
+### 响应字段
 
-以下参数在当前环境中已禁用：
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | string | 模型 ID（来自 URL 路径） |
+| status | string | 当前状态：`loading` 或 `running` |
+| port | int | 服务端口（仅当模型已加载时返回） |
 
-| 参数 | 原因 |
-|------|------|
-| `logitsAll` (`--logits-all`) | 仅适用于 llama-cli，不适用于 llama-server |
-| `directIo` (`--dio`) | 需要特定文件系统支持 |
+### 示例
 
-## 注意事项
+```bash
+# 加载模型（GPU 99 层，4K 上下文）
+curl -X POST http://localhost:9190/api/models/abc123/load \
+  -H "Content-Type: application/json" \
+  -d '{"ctxSize": 4096, "gpuLayers": 99}'
 
-1. **端口分配**: 如果不指定 `port`，系统会自动分配 8081-9000 范围内的可用端口
-2. **GPU 层数**: 设置 `gpuLayers: 99` 表示将所有层加载到 GPU
-3. **内存锁定**: `lockMemory` 可提高性能但需要足够 RAM
-4. **Flash Attention**: 建议在支持的硬件上启用以提高性能
-5. **KV 缓存类型**: `f16` 精度更高，`q8_0` 更省内存
+# 使用别名加载
+curl -X POST http://localhost:9190/api/models/abc123/load \
+  -H "Content-Type: application/json" \
+  -d '{"alias": "my-model", "temperature": 0.5}'
+```
+
+## 完整参数参考
+
+### 基础参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| ctxSize | int | 512 | 上下文长度 |
+| batchSize | int | 512 | 批处理大小 |
+| threads | int | 4 | 线程数 |
+| nodeId | string | - | 指定运行节点 ID，为空表示自动调度 |
+
+### GPU 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| gpuLayers | int | 0 | GPU 层数（0=纯 CPU，-1=全部） |
+| devices | []string | - | GPU 设备列表（如 `["cuda:0", "cuda:1"]`） |
+| mainGpu | int | 0 | 主 GPU 序号（-mg 标志） |
+
+### 采样参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| temperature | float | 0.7 | 温度 |
+| topP | float | 0.95 | Top-P 采样 |
+| topK | int | 40 | Top-K 采样 |
+| repeatPenalty | float | 1.1 | 重复惩罚 |
+| minP | float | - | Min-P 采样 |
+| presencePenalty | float | - | 存在惩罚 |
+| frequencyPenalty | float | - | 频率惩罚 |
+| seed | int | - | 随机种子 |
+| nPredict | int | - | 最大预测 token 数 |
+
+### 性能参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| flashAttention | bool | false | Flash Attention（-fa 标志） |
+| noMmap | bool | false | 禁用 mmap（--no-mmap 标志） |
+| lockMemory | bool | false | 锁定内存（--mlock 标志） |
+| uBatchSize | int | - | 微批次大小（--ubatch-size） |
+| parallelSlots | int | - | 并行 slot 数（--parallel） |
+| logitsAll | bool | false | 输出所有 logits（--logits-all） |
+| contBatching | bool | false | 连续批处理（--cont-batching） |
+| cachePrompt | bool | false | 缓存提示（--cache-prompt） |
+
+### KV Cache 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| kvCacheTypeK | string | - | K cache 类型（--kv-cache-type-k） |
+| kvCacheTypeV | string | - | V cache 类型（--kv-cache-type-v） |
+| kvCacheUnified | bool | false | 统一 KV cache（--kv-unified） |
+| kvCacheSize | int | - | KV cache 大小（--kv-cache-size） |
+
+### 模板参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| disableJinja | bool | false | 禁用 Jinja 模板（--jinja 反向） |
+| chatTemplate | string | - | 自定义聊天模板（--chat-template） |
+| chatTemplateFile | string | - | 模板文件路径（--chat-template-file） |
+| chatTemplateKwargs | string | - | 模板参数（--chat-template-kwargs） |
+| contextShift | bool | false | 上下文移位（--context-shift） |
+
+### 视觉参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| mmprojPath | string | - | 多模态投影文件路径 |
+| enableVision | bool | false | 启用视觉/多模态 |
+
+### 服务器参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| noWebUI | bool | false | 禁用内置 Web UI（--no-webui） |
+| enableMetrics | bool | false | 启用指标（--metrics） |
+| slotSavePath | string | - | Slot 保存路径（--slot-save-path） |
+| cacheRam | int | - | RAM 缓存大小 MB（--cache-ram） |
+| timeout | int | - | 超时秒数（--timeout） |
+| alias | string | - | 模型别名（--alias） |
+
+### 自定义命令
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| llamaCppPath | string | - | 自定义 llama.cpp 二进制路径覆盖 |
+| extraArgs | string | - | 追加到命令的额外 CLI 参数 |
+
+### 多 GPU 配置
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| splitMode | string | - | 分割模式（none/layer/row，--split-mode） |
+| tensorSplit | string | - | 张量分割比例（逗号分隔，--tensor-split） |
+
+### RoPE 缩放参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| ropeScaling | string | - | RoPE 缩放类型（--rope-scaling） |
+| ropeScale | float | - | RoPE 缩放因子（--rope-scale） |
+| ropeFreqBase | float | - | RoPE 基础频率（--rope-freq-base） |
+| ropeFreqScale | float | - | RoPE 频率缩放（--rope-freq-scale） |
+
+### 扩展采样参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| repeatLastN | int | - | 重复惩罚窗口（--repeat-last-n） |
+| typicalP | float | - | Typical-P 采样（--typical-p） |
+| ignoreEos | bool | false | 忽略 EOS（--ignore-eos） |
+
+### 结构化生成
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| grammar | string | - | GBNF 语法（--grammar） |
+| grammarFile | string | - | 语法文件路径（--grammar-file） |
+
+### LoRA 适配器
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| lora | string | - | LoRA 适配器路径（--lora） |
+| loraScaled | string | - | 带缩放的 LoRA 适配器（--lora-scaled） |
+
+### 线程配置
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| threadsBatch | int | - | 批处理线程数（--threads-batch） |
+
+### 其他参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| reranking | bool | false | 重排序模式（--reranking） |
+| directIo | string | - | 直接 I/O（--dio） |
+
+### 运行时管理
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| unloadAfterMinutes | int | - | 空闲自动卸载时间（分钟，0=永不卸载） |
+| concurrencyLimit | int | - | 最大并发请求数（0=无限制） |

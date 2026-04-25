@@ -79,9 +79,11 @@ if "%RUN_TESTS%"=="true" (
 
 :: 使用提示
 echo 使用方法:
-echo   %BUILD_DIR%\%BINARY_NAME%                    # 单机模式
-echo   %BUILD_DIR%\%BINARY_NAME% --mode=master      # Master 模式
-echo   %BUILD_DIR%\%BINARY_NAME% --mode=client      # Client 模式
+echo   %BUILD_DIR%\%BINARY_NAME% serve                       # 启动服务 (默认 hybrid 模式)
+echo   %BUILD_DIR%\%BINARY_NAME% serve --web --build         # 编译 + 前后端一键启动
+echo   %BUILD_DIR%\%BINARY_NAME% serve --config config.yaml  # 使用指定配置文件
+echo   %BUILD_DIR%\%BINARY_NAME% stop                        # 停止服务
+echo   %BUILD_DIR%\%BINARY_NAME% version                     # 查看版本
 echo.
 
 endlocal

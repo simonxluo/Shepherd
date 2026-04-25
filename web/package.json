@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:start": "cd ../.. && ./scripts/start-dev.sh",
-    "dev:watch": "cd ../.. && ./scripts/watch-sync-config.sh",
+    "dev:start": "cd ../.. && make build && ./build/shepherd serve --web",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -14,7 +13,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:coverage": "vitest run --config vitest.config.ts --coverage",
-    "sync-config": "cd ../.. && ./scripts/sync-web-config.sh"
+    "sync-config": "cd ../.. && ./scripts/linux/sync-web-config.sh"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
