@@ -6,8 +6,11 @@ Shepherd 是一个 Go 语言编写的分布式 llama.cpp 模型管理系统，�
 
 - **统一管理**：单进程管理多个 llama.cpp 实例，提供模型加载/卸载/自动发现
 - **多协议兼容**：同时提供 OpenAI、Anthropic、Ollama、LM Studio 兼容 API
+- **多模态支持**：通过 vLLM-Omni 等多模态后端提供 TTS/ASR/图像生成能力（`/v1/audio/*`、`/v1/images/*`）
 - **分布式调度**：支持 master/client/hybrid 三种节点角色，跨机器调度模型
 - **纯 Go 实现**：SQLite 使用 modernc.org/sqlite（无 CGO 依赖），单二进制部署
+
+在后端进程引擎层面，系统采用"命令字符串 + 宏替换"的后端无关设计。进程管理器不绑定任何特定的推理引擎实现，而是通过可插拔的后端注册表（`Backend` 接口）支持 llama.cpp、vLLM、vLLM-Omni 等多种推理引擎。每种后端实现统一的 `Discover / BuildStartConfig / IsLoadComplete / CheckHealth / SupportsModel` 接口，新增后端仅需添加实现类并注册，无需改动现有代码。
 
 ## 分层架构
 
@@ -20,6 +23,7 @@ Shepherd 是一个 Go 语言编写的分布式 llama.cpp 模型管理系统，�
 │  ┌──────────┬──────────┬──────────┬────────────┐ │
 │  │ OpenAI   │ Ollama   │Anthropic │ LM Studio  │ │
 │  │ /v1/*    │ /api/*   │ /v1/*    │ /lmstudio/*│ │
+│  │ 多模态*  │          │          │            │ │
 │  └──────────┴──────────┴──────────┴────────────┘ │
 │  middleware: RequestID → Recovery → CORS → Logger │
 ├─────────────────────────────────────────────────┤
@@ -27,6 +31,7 @@ Shepherd 是一个 Go 语言编写的分布式 llama.cpp 模型管理系统，�
 │  ┌──────────┬──────────┬──────────┐              │
 │  │  model   │   node   │ langchain│              │
 │  │ 模型管理  │ 节点管理  │ LLM集成  │              │
+│  │ backend/ │          │          │              │
 │  └──────────┴──────────┴──────────┘              │
 │  ┌──────────┬──────────┐                         │
 │  │ cluster  │ cluster/ │                         │
@@ -50,6 +55,8 @@ Shepherd 是一个 Go 语言编写的分布式 llama.cpp 模型管理系统，�
 └─────────────────────────────────────────────────┘
 ```
 
+\* 多模态端点：`/v1/audio/speech`、`/v1/audio/transcriptions`、`/v1/audio/translations`、`/v1/images/generations`
+
 ## 层间依赖规则
 
 ```
@@ -70,6 +77,8 @@ server → handler → service → comm
 | **服务器** | `internal/server/` | HTTP 服务器生命周期、WebSocket Hub |
 | **处理器** | `internal/handler/` | HTTP 处理器 (Gin) + NodeAdapter |
 | ↳ OpenAI | `handler/openai/` | `/v1/chat/completions`, `/v1/completions`, `/v1/models` |
+| ↳ Audio | `handler/openai/` | `/v1/audio/speech`, `/v1/audio/transcriptions`, `/v1/audio/translations` |
+| ↳ Image | `handler/openai/` | `/v1/images/generations` |
 | ↳ Anthropic | `handler/anthropic/` | `/v1/messages` |
 | ↳ Ollama | `handler/ollama/` | `/api/chat`, `/api/tags` |
 | ↳ LM Studio | `handler/lmstudio/` | `/lmstudio/v1/*` |
@@ -79,6 +88,7 @@ server → handler → service → comm
 | ↳ 存储 | `handler/storage/` | 存储配置、会话管理 |
 | ↳ 基准测试 | `handler/benchmark/` | Benchmark 创建/查询/配置 |
 | **模型服务** | `service/model/` | GGUF 模型管理 + 能力自动检测 |
+| ↳ 后端注册表 | `service/model/backend/` | 可插拔后端（llama.cpp, vLLM, vLLM-Omni） |
 | **节点服务** | `service/node/` | 统一节点（hybrid/master/client） |
 | **集群服务** | `service/cluster/` | 集群类型、扫描器、调度器 |
 | **LangChain** | `service/langchain/` | LangChainGo 集成 |
@@ -147,6 +157,7 @@ Config → Logger → Process → Port → Storage → Model → LangChain → N
 4. **SSE 优先**：`GET /api/events` 为主实时通道，WebSocket 为辅助
 5. **Adapter 模式**：`NodeAdapter` 将 Node/Scheduler 桥接到 HTTP API
 6. **Provider 模式**：GPU 检测通过 Provider 接口支持 NVIDIA/AMD/Intel
+7. **可插拔后端注册表**：`Backend` 接口管理多种推理引擎（llama.cpp、vLLM、vLLM-Omni），新增后端只需实现接口并注册
 
 ## SDK 依赖
 

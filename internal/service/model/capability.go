@@ -47,6 +47,39 @@ const (
 	kwDeepseekSpaceR1 = "deepseek r1"
 	kwQWQ             = "qwq"
 	kwQWQ32B          = "qwq-32b"
+
+	// TTS 关键词
+	kwTTS          = "tts"
+	kwTextToSpeech = "text-to-speech"
+	kwCosyVoice    = "cosyvoice"
+	kwChatTTS      = "chattts"
+	kwMelotts      = "melotts"
+	kwBark         = "bark"
+	kwSpeechT5     = "speecht5"
+	kwVITS         = "vits"
+	kwXTTS         = "xtts"
+
+	// ASR 关键词
+	kwASR           = "asr"
+	kwWhisper       = "whisper"
+	kwSpeechToText  = "speech-to-text"
+	kwAutomaticSpeechRecognition = "automatic-speech-recognition"
+	kwWav2Vec       = "wav2vec"
+	kwHubert        = "hubert"
+	kwSenseVoice    = "sense-voice"
+	kwParaformer    = "paraformer"
+
+	// Image Generation 关键词
+	kwStableDiffusion = "stable-diffusion"
+	kwStableDiffusionSDXL = "sdxl"
+	kwFLUX            = "flux"
+	kwDALL            = "dall-e"
+	kwImageGeneration = "image-generation"
+	kwTextToImage     = "text-to-image"
+	kwKandinsky       = "kandinsky"
+	kwPixArt          = "pixart"
+	kwCogView         = "cogview"
+	kwJanus           = "janus"
 )
 
 // DetectCapabilities 自动检测模型能力
@@ -103,6 +136,26 @@ func DetectCapabilities(meta *gguf.Metadata) *storage.Capabilities {
 		kwDeepseekR1, kwDeepseekSpaceR1, kwQWQ, kwQWQ32B,
 	})
 	caps.Thinking = thinkingFromTemplate || thinkingFromName
+
+	// TTS 检测：通过模型名称关键词
+	caps.TTS = containsAny(combinedStr, []string{
+		kwTTS, kwTextToSpeech, kwCosyVoice, kwChatTTS,
+		kwMelotts, kwBark, kwSpeechT5, kwVITS, kwXTTS,
+	})
+
+	// ASR 检测：通过模型名称关键词
+	caps.ASR = containsAny(combinedStr, []string{
+		kwASR, kwWhisper, kwSpeechToText,
+		kwAutomaticSpeechRecognition, kwWav2Vec, kwHubert,
+		kwSenseVoice, kwParaformer,
+	})
+
+	// Image Generation 检测：通过模型名称关键词
+	caps.ImageGeneration = containsAny(combinedStr, []string{
+		kwStableDiffusion, kwStableDiffusionSDXL, kwFLUX,
+		kwDALL, kwImageGeneration, kwTextToImage,
+		kwKandinsky, kwPixArt, kwCogView, kwJanus,
+	})
 
 	// 应用互斥约束（使用统一的 ApplyConstraints 方法）
 	caps.ApplyConstraints()

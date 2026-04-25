@@ -28,6 +28,8 @@ type Handlers struct {
 	Ollama        *ollama.Handler
 	Anthropic     *anthropic.Handler
 	LMStudio      *lmstudio.Handler
+	Audio         *openai.AudioHandler
+	Image         *openai.ImageHandler
 	Paths         *paths.Handler
 	Storage       *storageapi.Handler
 	Compatibility *compatibilityapi.Handler
@@ -92,6 +94,10 @@ type ServerHandlers interface {
 	HandleLMStudioComplete(c *gin.Context)
 	HandleLMStudioModels(c *gin.Context)
 	HandleLMStudioEmbeddings(c *gin.Context)
+	HandleCreateSpeech(c *gin.Context)
+	HandleCreateTranscription(c *gin.Context)
+	HandleCreateTranslation(c *gin.Context)
+	HandleCreateImage(c *gin.Context)
 }
 
 // Config holds router-level configuration.
@@ -320,6 +326,10 @@ func registerCompatibilityRoutes(engine *gin.Engine, sh ServerHandlers) {
 		openai.POST("/chat/completions", sh.HandleOpenAIChat)
 		openai.POST("/completions", sh.HandleOpenAIComplete)
 		openai.GET("/models", sh.HandleOpenAIModels)
+		openai.POST("/audio/speech", sh.HandleCreateSpeech)
+		openai.POST("/audio/transcriptions", sh.HandleCreateTranscription)
+		openai.POST("/audio/translations", sh.HandleCreateTranslation)
+		openai.POST("/images/generations", sh.HandleCreateImage)
 	}
 
 	anthropic := engine.Group("/v1")

@@ -193,6 +193,10 @@ type LoadRequest struct {
 	Devices []string `json:"devices"` // -dev flags (e.g., ["cuda:0", "cuda:1"])
 	MainGPU int      `json:"mainGpu"` // -mg flag (main GPU index)
 
+	// Backend selection
+	BackendType string `json:"backendType,omitempty"` // Explicit backend: "llamacpp", "vllm", "vllm_omni"
+	BackendName string `json:"backendName,omitempty"` // Backend display name (informational)
+
 	// Custom command configuration
 	CustomCmd   string `json:"llamaCppPath"` // Custom llama.cpp binary path override (frontend uses llamaCppPath)
 	ExtraParams string `json:"extraArgs"`    // Extra CLI arguments appended to command (frontend uses extraArgs)
