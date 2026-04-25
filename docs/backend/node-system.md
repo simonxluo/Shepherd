@@ -10,38 +10,84 @@
 
 ## 核心接口
 
+### INode（15 个方法）
+
 ```go
 type INode interface {
+    // 身份信息
     ID() string
     Name() string
     Role() NodeRole
     Status() NodeStatus
+    Address() string
+    Port() int
+
+    // 生命周期管理
     Start() error
     Stop() error
     IsRunning() bool
+
+    // 健康检查
+    Health() *HealthStatus
+
+    // 配置
+    GetConfig() *NodeConfig
+    UpdateConfig(*NodeConfig) error
+
+    // 能力和资源
     GetCapabilities() *NodeCapabilities
     GetResources() *NodeResources
-}
 
+    // 上下文
+    Context() context.Context
+}
+```
+
+### ClientRegistry（10 个方法）
+
+```go
 type ClientRegistry interface {
-    Register(info) error
-    Unregister(id) error
-    Get(id) (*ClientInfo, error)
-    List() []*ClientInfo
-    GetOnlineClients() []*ClientInfo
+    Register(info *NodeInfo) error
+    Unregister(nodeID string) error
+    Get(nodeID string) (*NodeInfo, error)
+    List() []*NodeInfo
+    GetStats() *RegistryStats
+    Find(predicate func(*NodeInfo) bool) []*NodeInfo
+    UpdateStatus(nodeID string, status NodeStatus) error
+    UpdateResources(nodeID string, resources *NodeResources) error
+    GetOnlineClients() []*NodeInfo
+    Cleanup(timeout time.Duration) int
 }
+```
 
+### CommandQueue（8 个方法）
+
+```go
 type CommandQueue interface {
-    Enqueue(nodeID string, cmd Command) error
+    Enqueue(nodeID string, cmd *Command) error
     Dequeue(nodeID string) (*Command, error)
-    Cancel(id string) error
+    Peek(nodeID string) (*Command, error)
+    Cancel(commandID string) error
+    GetQueueSize(nodeID string) int
+    ListQueuedCommands(nodeID string) []*Command
+    ClearQueue(nodeID string) int
+    RetryCommand(commandID string) error
 }
+```
 
+### IResourceMonitor（9 个方法）
+
+```go
 type IResourceMonitor interface {
-    Start(ctx context.Context) error
-    Stop()
+    Start() error
+    Stop() error
     GetResources() *NodeResources
+    GetSnapshot() *NodeResources
+    Watch(callback func(*NodeResources))
+    SetUpdateInterval(interval time.Duration)
     GetMetrics() *NodeMetrics
+    GetGPUInfo() []GPUInfo
+    GetLlamacppInfo() *LlamacppInfo
 }
 ```
 
@@ -60,21 +106,22 @@ offline → online → busy / degraded / disabled → error → offline
 ## 注册流程（Client 角色）
 
 ```
-Client 构造 NodeInfo → POST /api/nodes/register → Master 记录
-                                                    ↓
-失败？指数退避重试 ←────────────────────────────── 失败
-                                                    ↓
-成功 → 启动 HeartbeatSubsystem → 定期 POST /api/nodes/:id/heartbeat
+Client 构造 NodeInfo → POST /api/master/nodes/register → Master 记录
+                                                             ↓
+失败？重试延迟 5s，最多 MaxRetries 次 ←───────────────────── 失败
+                                                             ↓
+成功 → 启动 HeartbeatSubsystem → 定期 POST /api/master/nodes/:id/heartbeat
 ```
 
 ## 心跳协议
 
 | 参数 | 值 |
 |---|---|
-| 发送间隔 | 30s（可配置） |
-| 超时阈值 | 15s |
-| 最大重试 | 5 次 |
-| 内容 | 状态 + 资源快照 + 能力信息 |
+| 发送间隔 | 5s（可配置，`NodeClientRoleConfig.HeartbeatInterval`） |
+| 超时阈值 | 15s（`HeartbeatTimeout`） |
+| HTTP 超时 | 10s |
+| 最大重试 | 3 次（默认，`RegisterRetry`） |
+| 内容 | 状态 + 资源快照 |
 
 ## 命令执行流程
 
@@ -86,20 +133,49 @@ API → Enqueue → Client 轮询 Dequeue → CommandExecutor (信号量 ≤4 �
                                       POST /api/command/result
 ```
 
-支持 12 种命令类型：LoadModel、UnloadModel、RunLlamacpp、StopProcess、UpdateConfig、CollectLogs、ScanModels、StartTask、StopTask、Restart、Shutdown、TestLlamacpp、GetConfig。
+支持 13 种命令类型：
+
+| CommandType | 值 |
+|---|---|
+| LoadModel | `load_model` |
+| UnloadModel | `unload_model` |
+| RunLlamacpp | `run_llamacpp` |
+| StopProcess | `stop_process` |
+| UpdateConfig | `update_config` |
+| CollectLogs | `collect_logs` |
+| ScanModels | `scan_models` |
+| StartTask | `start_task` |
+| StopTask | `stop_task` |
+| Restart | `restart` |
+| Shutdown | `shutdown` |
+| TestLlamacpp | `test_llamacpp` |
+| GetConfig | `get_config` |
 
 ## 资源监控
 
-通过 `gopsutil` 采集系统指标：
+`NodeResources` 结构体通过 `gopsutil` 和 `comm/gpu` Detector 采集：
 
-| 指标 | 来源 |
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| CPUUsed / CPUTotal | int64 | millicores |
+| MemoryUsed / MemoryTotal | int64 | bytes |
+| DiskUsed / DiskTotal | int64 | bytes |
+| GPUInfo | []gpu.Info | GPU 列表 |
+| NetworkRx / NetworkTx | int64 | bytes per second |
+| Uptime | int64 | seconds |
+| LoadAverage | []float64 | 1/5/15 分钟平均 |
+| ROCmVersion | string | ROCm 版本（AMD GPU） |
+| KernelVersion | string | Linux 内核版本 |
+
+## 环境能力检测
+
+除了 GPU 硬件信息（`comm/gpu`），`service/node/resource.go` 还检测：
+
+| 能力 | 检测方式 |
 |---|---|
-| CPU | millicores |
-| 内存 | 已用/总量 |
-| 磁盘 | 已用/总量 |
-| 负载 | 1/5/15 分钟平均 |
-| GPU | `comm/gpu` Detector |
-| 运行时间 | `time.Since(startTime)` |
+| llama.cpp 二进制 | 配置路径遍历 + `--version` / `--help` 解析 |
+| ROCm 版本 | `/opt/rocm/.info/version` → `hipcc --version` → `rocm-smi` 多级回退 |
+| 内核版本 | `gopsutil host.Info()` |
 
 ## 网络扫描
 
@@ -126,8 +202,17 @@ API → Enqueue → Client 轮询 Dequeue → CommandExecutor (信号量 ≤4 �
 `SubsystemManager` 管理子系统的启动和停止顺序：
 
 ```
-启动: Registration → Heartbeat → Commands → Resource
+启动: Registration → Heartbeat → Commands → Resource（然后启动其余子系统）
 停止: 反序
 ```
 
-每个子系统实现 `Subsystem` 接口（`Name()`、`Start()`、`Stop()`、`IsRunning()`）。
+每个子系统实现 `Subsystem` 接口：
+
+```go
+type Subsystem interface {
+    Name() string
+    Start(ctx context.Context) error
+    Stop() error
+    IsRunning() bool
+}
+```

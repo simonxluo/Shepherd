@@ -21,16 +21,17 @@ web/src/
 ├── App.tsx                # 根组件 + Provider 树
 ├── main.tsx               # 入口（i18n 初始化、配置加载、渲染）
 ├── index.css              # Tailwind v4 + 主题变量
+├── assets/                # 静态资源
 ├── components/
-│   ├── layout/            # 布局组件（Header, Sidebar, MainLayout）
-│   └── ui/                # UI 基础组件（Button, Card, Dialog, Toast...）
+│   ├── layout/            # 布局组件（Header, Sidebar, MainLayout, UserMenu, UserProfileDialog, UserSettingsDialog）
+│   └── ui/                # UI 基础组件（alert-dialog, badge, button, card, dialog, LanguageToggle, switch, tabs, ThemeToggle, toast, toaster）
 ├── features/              # 业务功能模块
 │   ├── chat/              # 聊天（流式响应）
 │   ├── cluster/           # 集群管理
 │   ├── downloads/         # 下载管理
 │   ├── logs/              # 日志查看
 │   ├── models/            # 模型管理（最大模块，拆分为子文件）
-│   └── settings/          # 系统设置
+│   └── settings/          # 系统设置（仅 components/，无 hooks.ts 或 index.ts）
 ├── hooks/                 # 共享 Hooks
 │   ├── useSSEConnection   # SSE 基础连接（指数退避重连）
 │   ├── useSSE             # SSE → React Query 失效
@@ -51,6 +52,7 @@ web/src/
 │   ├── uiStore            # UI 状态（主题、侧边栏、视图模式）
 │   ├── userStore          # 用户设置
 │   └── toast              # Toast 通知状态
+├── test/                  # 测试配置（setup.ts）
 └── types/                 # TypeScript 类型定义
 ```
 
@@ -60,12 +62,37 @@ web/src/
 
 所有从后端获取的数据通过 React Query 管理：
 
+**模型相关：**
 - `['models']` - 模型列表
+- `['models', modelId]` - 单个模型详情
+- `['models', 'capabilities', modelId]` - 模型能力配置
+- `['models', modelId, 'load-config']` - 模型加载配置
+- `['benchmark', 'params']` - 压测参数列表
+- `['llamacpp', 'versions']` - llama.cpp 版本列表
+- `['benchmarks']` - 压测任务列表
+- `['benchmark', 'results']` - 压测结果
+
+**下载相关：**
 - `['downloads']` - 下载任务
-- `['clients']` - 集群节点
-- `['tasks']` - 调度任务
-- `['cluster']` - 集群概览
-- `['system']` - 系统信息
+- `['model-files', source, repoId]` - 模型文件列表
+- `['huggingface-search', query, limit, format]` - HuggingFace 搜索
+- `['model-repo-config']` - 模型仓库配置
+- `['model-repo-endpoints']` - 可用端点列表
+
+**集群相关：**
+- `['cluster', 'overview']` - 集群概览
+- `['cluster', 'clients']` - 客户端列表
+- `['cluster', 'clients', clientId]` - 单个客户端详情
+- `['cluster', 'tasks']` - 调度任务
+- `['cluster', 'nodes', 'online']` - 在线节点
+- `['cluster', 'nodes', nodeId, 'config']` - 节点配置
+- `['cluster', 'scan']` - 网络扫描
+
+**系统相关：**
+- `['server', 'config']` - 服务器配置
+- `['system', 'gpus', llamaCppPath]` - GPU 信息
+- `['system', 'llamacpp-backends']` - llama.cpp 后端列表
+- `['system']` - 系统状态
 
 ### 客户端状态（Zustand）
 
@@ -81,6 +108,8 @@ web/src/
 
 ```typescript
 class ApiClient {
+  getBaseUrl(): string
+  setBaseUrl(baseUrl: string): void
   get<T>(path, params?, signal?): Promise<T>
   post<T>(path, body?): Promise<T>
   put<T>(path, body): Promise<T>
@@ -97,12 +126,14 @@ class ApiClient {
 ### SSE（主通道）
 
 ```
-useSSEConnection (基础) → useSSE (Query 失效) → useLogStream (日志)
+useSSEConnection (基础) → useSSE (Query 失效)
 ```
 
 - `useSSEConnection`：管理 EventSource 连接，指数退避重连（最大 10 次）
-- `useSSE`：监听 SSE 事件，自动失效对应 React Query 缓存
-- 重连时全量刷新所有 Query
+- `useSSE`：监听 SSE 事件（`/events`），自动失效对应 React Query 缓存
+- 重连时全量刷新所有 Query（`models`、`downloads`、`clients`、`cluster`、`tasks`、`system`、`nodes`）
+
+`useLogStream` 是 feature-specific hook（位于 `features/logs/hooks.ts`），直接使用 `useSSEConnection` 连接 `/logs/stream`，不经过 `useSSE`。
 
 ### WebSocket（辅助）
 
@@ -153,14 +184,14 @@ QueryClientProvider
 ## 配置管线
 
 ```
-web.config.yaml (源) → sync-web-config.sh → public/config.yaml → Vite + configLoader.ts
+config/example/web.config.yaml (源) → sync-web-config.sh → web/public/config.yaml → Vite + configLoader.ts
 ```
 
 配置文件包含后端 URL 列表，支持运行时切换。
 
 ## 功能模块模式
 
-每个功能模块遵循统一结构：
+大部分功能模块遵循统一结构：
 
 ```
 features/<name>/
@@ -169,7 +200,10 @@ features/<name>/
 └── index.ts       # 统一导出
 ```
 
-模型模块因规模较大，拆分为子文件：
+**例外：**
+
+- **settings/** — 仅包含 `components/`（ApiConfigCard, DirectoryBrowser, PathConfigPanel, PathEditDialog, PathItem），无 `hooks.ts` 或 `index.ts`
+- **models/** — 因规模较大，拆分为子文件：
 
 ```
 features/models/

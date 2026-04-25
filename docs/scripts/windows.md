@@ -4,10 +4,15 @@
 
 ```bash
 # PowerShell / CMD
-make build
+make build                             # 输出 build/shepherd (Go 会自动添加 .exe 后缀)
+
+# 或使用 Windows 构建脚本
+scripts\windows\build.bat [version]    # 输出 build/shepherd-windows-{amd64,arm64}.exe
 ```
 
-输出：`build/shepherd.exe`
+输出：
+- `make build` → `build/shepherd.exe` (Go 在 Windows 上自动添加 `.exe`)
+- `scripts\windows\build.bat` → `build/shepherd-windows-amd64.exe` 或 `build/shepherd-windows-arm64.exe`
 
 ## 依赖安装
 

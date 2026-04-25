@@ -65,21 +65,18 @@ for binary in ${PROJECT_NAME}-*; do
                 cat > "../${RELEASE_DIR}/${PACKAGE_DIR}/start.bat" << 'EOF'
 @echo off
 REM Shepherd 启动脚本 (Windows)
+REM 节点角色通过配置文件 config/server.config.yaml 的 node.role 字段设置
 
-set MODE=%1
-if "%MODE%"=="" set MODE=standalone
-
-shepherd.exe --mode=%MODE%
+shepherd.exe serve %*
 EOF
             else
                 cat > "../${RELEASE_DIR}/${PACKAGE_DIR}/start.sh" << 'EOF'
 #!/bin/bash
 # Shepherd 启动脚本 (Linux/macOS)
-
-MODE=${1:-standalone}
+# 节点角色通过配置文件 config/server.config.yaml 的 node.role 字段设置
 
 chmod +x shepherd
-./shepherd --mode="${MODE}"
+./shepherd serve "$@"
 EOF
                 chmod +x "../${RELEASE_DIR}/${PACKAGE_DIR}/start.sh"
             fi
@@ -89,9 +86,11 @@ EOF
 
             # server.config.yaml (单机模式)
             cat > "../${RELEASE_DIR}/${PACKAGE_DIR}/config/server.config.yaml" << 'EOF'
-# Shepherd 单机模式配置
+# Shepherd 配置文件
 
-mode: standalone
+node:
+  role: hybrid
+  id: auto
 
 server:
   web_port: 9190
@@ -137,7 +136,9 @@ EOF
             cat > "../${RELEASE_DIR}/${PACKAGE_DIR}/config/master.config.yaml" << 'EOF'
 # Shepherd Master 模式配置
 
-mode: master
+node:
+  role: master
+  id: auto
 
 server:
   web_port: 9190
@@ -192,9 +193,9 @@ EOF
             cat > "../${RELEASE_DIR}/${PACKAGE_DIR}/config/client.config.yaml" << 'EOF'
 # Shepherd Client 模式配置
 
-mode: client
-
-client:
+node:
+  role: client
+  id: auto
   name: "client-1"
   tags:
     - "gpu"
@@ -242,9 +243,9 @@ Shepherd 是一个轻量级的 llama.cpp 模型管理系统，支持多 API 兼�
 --------
 
 1. 编辑配置文件:
-   - 单机模式: config/server.config.yaml
-   - Master 模式: config/master.config.yaml
-   - Client 模式: config/client.config.yaml
+   - 默认: config/server.config.yaml (node.role 设为 hybrid/master/client)
+   - Master 示例: config/master.config.yaml
+   - Client 示例: config/client.config.yaml
 
 2. 运行 Shepherd:
 EOF
@@ -260,17 +261,14 @@ EOF
 3. 访问 Web UI:
    http://localhost:9190
 
-运行模式
+节点角色
 --------
 
-单机模式 (默认):
-  start.sh standalone
+通过配置文件 config/server.config.yaml 的 node.role 字段设置:
 
-Master 模式:
-  start.sh master
-
-Client 模式:
-  start.sh client
+  hybrid (默认)   混合模式
+  master          Master 模式 - 管理多个 Client 节点
+  client          Client 模式 - 作为工作节点
 
 更多信息
 --------

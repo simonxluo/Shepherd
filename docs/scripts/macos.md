@@ -11,14 +11,15 @@
 ## 编译
 
 ```bash
-make build                              # 自动检测当前架构
-BUILD_UNIVERSAL=true make build-all     # 编译通用二进制
+make build                              # 输出 build/shepherd (当前架构)
+./scripts/macos/build.sh [version]     # 输出 build/shepherd-darwin-{arm64,amd64}
+./build/shepherd build --universal     # 编译通用二进制
 ```
 
 输出：
-- `build/shepherd-darwin-arm64` (Apple Silicon)
-- `build/shepherd-darwin-amd64` (Intel)
-- `build/shepherd-darwin-universal` (通用)
+- `make build` → `build/shepherd`
+- `scripts/macos/build.sh` → `build/shepherd-darwin-arm64` 或 `build/shepherd-darwin-amd64`
+- `./build/shepherd build --universal` → `build/shepherd-darwin-universal`
 
 ## 依赖安装
 
@@ -82,7 +83,7 @@ launchctl load ~/Library/LaunchAgents/com.shepherd.plist
 | 变量 | 说明 |
 |---|---|
 | `GOPROXY` | Go 模块代理 |
-| `BUILD_UNIVERSAL` | 编译通用二进制 |
+| `BUILD_UNIVERSAL` | 编译通用二进制 (仅 `scripts/macos/build.sh`) |
 | `CODESIGN_IDENTITY` | 代码签名身份 |
 | `LLAMACPP_SERVER_PATH` | 自定义 llama.cpp 路径 |
 

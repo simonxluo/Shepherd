@@ -66,14 +66,7 @@ server {
 
 ### 3. 后端托管模式
 
-将编译后的前端文件复制到后端的 WebUI 目录：
-
-```bash
-cd web && npm run build
-cp -r dist/* ../internal/server/web/
-```
-
-单端口访问（9190），后端直接服务前端静态文件。
+使用 `shepherd serve --web --build` 一键编译并启动，后端直接服务前端静态文件，单端口访问（默认 9190）。
 
 ## 配置文件
 
@@ -82,16 +75,20 @@ cp -r dist/* ../internal/server/web/
 ```yaml
 backend:
   urls:
-    - name: "本地"
-      url: "http://localhost:9190"
-    - name: "生产"
-      url: "https://api.example.com"
+    - "http://localhost:9190"
+    - "https://api.example.com"
   currentIndex: 0
 features:
-  chat: true
-  cluster: true
+  models: true
   downloads: true
+  cluster: true
+  logs: true
+  chat: true
+  settings: true
+  dashboard: true
 ```
+
+注意：`backend.urls` 是字符串数组，不是对象数组。
 
 配置同步命令：
 
@@ -99,15 +96,14 @@ features:
 ./scripts/linux/sync-web-config.sh
 ```
 
-从 `config/node/web.config.yaml` 同步到 `web/public/config.yaml`。
+从 `config/example/web.config.yaml` 同步到 `web/public/config.yaml`。
 
 ## 后端地址切换
 
-三种方式设置后端地址：
+两种方式设置后端地址：
 
-1. **配置文件**：编辑 `public/config.yaml` 中的 `backend.urls`
-2. **环境变量**：`.env` 中设置 `VITE_BACKEND_URL`
-3. **运行时切换**：通过 `configLoader.switchBackend()` 动态切换
+1. **配置文件**：编辑 `public/config.yaml` 中的 `backend.urls`，修改 `currentIndex` 选择当前后端
+2. **运行时切换**：通过 `updateApiClientUrl(baseUrl)` （来自 `lib/api/client.ts`）动态切换 API 客户端地址
 
 ## CORS
 

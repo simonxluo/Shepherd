@@ -38,10 +38,15 @@ Shepherd 是一个 Go 语言编写的分布式 llama.cpp 模型管理系统，�
 │  │process │storage │ port  │download │  gguf   │  │
 │  │进程管理 │持久存储 │端口分配│下载管理  │GGUF解析 │  │
 │  └────────┴────────┴───────┴────────┴─────────┘  │
+│  ┌────────────┐                                   │
+│  │ modelrepo  │ HuggingFace/ModelScope 仓库集成   │
+│  └────────────┘                                   │
 ├─────────────────────────────────────────────────┤
 │             通信层 (comm/)                        │
 │  config │ logger │ event │ types │ gpu │shutdown │
 │  配置管理│ 日志   │ SSE   │ 类型  │GPU  │ 关闭   │
+│  netutil│ utils  │       │       │     │         │
+│  网络工具│通用工具 │       │       │     │         │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -82,14 +87,19 @@ server → handler → service → comm
 | **端口** | `infra/port/` | 端口分配（默认 8081-9000） |
 | **下载** | `infra/download/` | HuggingFace/URL 下载管理 |
 | **GGUF** | `infra/gguf/` | GGUF 文件解析器 |
+| **模型仓库** | `infra/modelrepo/` | HuggingFace/ModelScope 仓库集成 |
 | **配置** | `comm/config/` | 配置加载/迁移/原子写入 |
 | **事件** | `comm/event/` | SSE 事件管理器（主实时通道） |
 | **类型** | `comm/types/` | 共享类型：NodeInfo、ErrorCode、ApiResponse[T] |
 | **GPU** | `comm/gpu/` | GPU 检测（nvidia-smi / rocm-smi / lspci） |
 | **日志** | `comm/logger/` | 结构化日志 + 文件轮转 + 实时流 |
 | **关闭** | `comm/shutdown/` | 优先级优雅关闭 |
+| **网络工具** | `comm/netutil/` | 本地 IP 探测（`GetBestLocalIP`） |
+| **通用工具** | `comm/utils/` | 静默关闭/删除/重命名、进程信号、llama.cpp 二进制查找 |
 
 ## 初始化流程
+
+从 `cli/run_server.go` 的 `Initialize()` 方法实际顺序：
 
 ```
 Config → Logger → Process → Port → Storage → Model → LangChain → Node → Server → Shutdown
@@ -97,12 +107,12 @@ Config → Logger → Process → Port → Storage → Model → LangChain → N
 
 详细步骤：
 
-1. **配置管理器**：`config.NewManager()` → `Load()`，搜索 `config/node/server.config.yaml` → `config/example/server.config.yaml`
+1. **配置管理器**：`config.NewManager()` → `Load()`，默认路径 `config/server.config.yaml`（可通过 `SHEPHERD_CONFIG_DIR` 环境变量或 `--config` 参数覆盖）；文件不存在时使用 `DefaultConfig()`
 2. **确定角色**：读取 `cfg.Node.Role`，默认 `hybrid`
 3. **日志系统**：`logger.InitLogger()` + `InitLogStream(1000)`
 4. **进程管理器**：`process.NewManager()`
-5. **端口分配器**：`port.NewPortAllocator(base, max)`，范围从配置读取
-6. **存储管理器**：`storage.NewManager()`，默认 SQLite (`./data/shepherd.db`, WAL)
+5. **端口分配器**：`port.NewPortAllocator(base, max)`，范围从配置读取（默认 8081-9000）
+6. **存储管理器**：如果配置中 `storage.Type` 为空，run_server 会覆盖为 SQLite（`./data/shepherd.db`，WAL 模式）；`DefaultConfig()` 默认类型为 `memory`
 7. **模型管理器**：`model.NewManager()`，触发已保存模型加载 + TTL 检查器启动
 8. **LangChain**：`langchain.NewManager()` + `NewHandler()`
 9. **分布式组件**：根据角色初始化 Node（含子系统：注册、心跳、命令、资源监控）

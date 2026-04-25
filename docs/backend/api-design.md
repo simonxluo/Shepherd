@@ -11,26 +11,25 @@
   "metadata": {
     "timestamp": "2026-01-01T00:00:00Z",
     "requestId": "uuid",
-    "latency": "12ms"
+    "latency": 12
   }
 }
 ```
 
 ### 分页响应 `PaginatedResponse[T]`
 
+分页字段位于顶层，不包含 `totalPages`：
+
 ```json
 {
   "success": true,
   "data": [T],
+  "total": 100,
+  "page": 1,
+  "pageSize": 20,
   "metadata": {
     "timestamp": "...",
-    "requestId": "...",
-    "pagination": {
-      "page": 1,
-      "pageSize": 20,
-      "total": 100,
-      "totalPages": 5
-    }
+    "requestId": "..."
   }
 }
 ```
@@ -41,9 +40,9 @@
 {
   "success": false,
   "error": {
-    "code": "MODEL_NOT_FOUND",
-    "message": "模型不存在",
-    "details": "model id: xxx"
+    "code": "NODE_NOT_FOUND",
+    "message": "节点不存在",
+    "details": "node id: xxx"
   }
 }
 ```
@@ -201,32 +200,30 @@
 
 ## 兼容性 API
 
-| 协议 | 端口 | 路由 |
-|---|---|---|
-| OpenAI | 9190 | `POST /v1/chat/completions`, `POST /v1/completions`, `GET /v1/models` |
-| Anthropic | 9170 | `POST /v1/messages` |
-| Ollama | 11434 | `POST /api/chat`, `POST /api/tags` |
-| LM Studio | 1234 | `POST /lmstudio/v1/chat/completions`, `POST /lmstudio/v1/completions`, `GET /lmstudio/v1/models`, `POST /lmstudio/v1/embeddings` |
+所有兼容性 API 默认共用 WebPort（9190），但可通过配置为 Ollama 和 LM Studio 分配独立端口：
+
+| 协议 | 默认端口 | 配置 | 路由 |
+|---|---|---|---|
+| OpenAI | 9190（WebPort） | — | `POST /v1/chat/completions`, `POST /v1/completions`, `GET /v1/models` |
+| Anthropic | 9190（WebPort） | `server.anthropic_port` | `POST /v1/messages` |
+| Ollama | 11434 | `compatibility.ollama.port`（需 `enabled: true`） | `POST /api/chat`, `POST /api/tags` |
+| LM Studio | 1234 | `compatibility.lmstudio.port`（需 `enabled: true`） | `POST /lmstudio/v1/*` |
 
 ## SSE 事件类型
 
-| 事件 | 触发时机 |
-|---|---|
-| heartbeat | 定时心跳 |
-| systemStatus | 系统状态变更 |
-| modelLoadStart | 模型开始加载 |
-| modelLoad | 模型加载完成 |
-| modelStop | 模型停止 |
-| modelSlots | 模型 slot 状态更新 |
-| console | 控制台输出 |
-| download_progress | 下载进度 |
-| download_status | 下载状态变更 |
-| scan_progress | 模型扫描进度 |
-| scan_complete | 模型扫描完成 |
-| clientRegistered | 客户端注册 |
-| clientDisconnected | 客户端断开 |
-| clientResourcesUpdated | 客户端资源更新 |
-| taskUpdate | 任务状态更新 |
+| 事件 | EventType 常量 | 触发时机 |
+|---|---|---|
+| heartbeat | `heartbeat` | 定时心跳 |
+| systemStatus | `systemStatus` | 系统状态变更 |
+| modelLoadStart | `modelLoadStart` | 模型开始加载 |
+| modelLoad | `modelLoad` | 模型加载完成 |
+| modelStop | `modelStop` | 模型停止 |
+| model_slots | `model_slots` | 模型 slot 状态更新 |
+| console | `console` | 控制台输出（Base64 编码） |
+| download_update | `download_update` | 下载状态变更 |
+| download_progress | `download_progress` | 下载进度 |
+| scan_progress | `scan_progress` | 模型扫描进度 |
+| scan_complete | `scan_complete` | 模型扫描完成 |
 
 ## 中间件链
 
@@ -246,5 +243,5 @@ RequestID → Recovery → CORS → Logger → ErrorHandler → Handler
 
 - **泛型响应信封**：`ApiResponse[T]` 统一所有成功/错误响应格式
 - **错误码分离**：ErrorCode 与 HTTP Status 独立，支持更细粒度错误区分
-- **多协议端口**：不同协议使用不同端口，避免路由冲突
+- **多协议端口**：不同协议可使用不同端口，通过配置开启，避免路由冲突
 - **双实时通道**：SSE（主）+ WebSocket（辅助），SSE 用于服务端推送，WebSocket 用于双向通信
