@@ -12,6 +12,7 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/port"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model/backend"
 )
 
 // Manager manages model scanning and loading
@@ -21,6 +22,9 @@ type Manager struct {
 	processMgr    *process.Manager
 	portAllocator *port.PortAllocator
 	storageMgr    *storage.Manager // 数据库存储管理器
+
+	// Backend registry for multi-backend support
+	backendRegistry *backend.Registry
 
 	models     map[string]*Model
 	statuses   map[string]*ModelStatus
@@ -46,18 +50,23 @@ type ScanStatus struct {
 func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Manager, portAllocator *port.PortAllocator, storageMgr *storage.Manager) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Initialize backend registry
+	backendRegistry := backend.NewRegistry()
+	backendRegistry.SyncFromConfig(cfg)
+
 	m := &Manager{
-		config:        cfg,
-		configMgr:     cfgMgr,
-		processMgr:    procMgr,
-		portAllocator: portAllocator,
-		storageMgr:    storageMgr,
-		models:        make(map[string]*Model),
-		statuses:      make(map[string]*ModelStatus),
-		scanStatus:    &ScanStatus{},
-		groups:        make(map[string]*ModelGroup),
-		ctx:           ctx,
-		cancel:        cancel,
+		config:          cfg,
+		configMgr:       cfgMgr,
+		processMgr:      procMgr,
+		portAllocator:   portAllocator,
+		storageMgr:      storageMgr,
+		backendRegistry: backendRegistry,
+		models:          make(map[string]*Model),
+		statuses:        make(map[string]*ModelStatus),
+		scanStatus:      &ScanStatus{},
+		groups:          make(map[string]*ModelGroup),
+		ctx:             ctx,
+		cancel:          cancel,
 	}
 
 	// Log initialization info
@@ -124,13 +133,55 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 
 	startTime := time.Now()
 
-	// Phase 2: 准备工作（无锁）- 所有可能失败的操作
-	// Find llama.cpp binary
-	binPath := m.findLlamaCppBinary()
-	if binPath == "" {
+	// Phase 2: 准备工作（无锁）- 使用后端接口
+	// Determine model path
+	modelPath := model.Path
+	if len(model.ShardFiles) > 0 {
+		modelPath = model.ShardFiles[0]
+		fmt.Printf("[INFO] 使用分卷模型主文件: %s (共 %d 个分卷)\n", modelPath, len(model.ShardFiles))
+	}
+
+	// Resolve backend
+	bt, parseErr := backend.ParseBackendType(req.BackendType)
+	if parseErr != nil {
 		status.transitionTo(StateError)
-		status.Error = fmt.Errorf("llama.cpp binary not found")
-		logger.Error("模型加载失败: llama.cpp 二进制文件未找到", "modelId", req.ModelID)
+		status.Error = parseErr
+		logger.Error("模型加载失败: 无效的后端类型", "modelId", req.ModelID, "error", parseErr)
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   status.Error,
+		}, status.Error
+	}
+	b, bcfg, resolveErr := m.backendRegistry.Resolve(modelPath, bt)
+	if resolveErr != nil {
+		status.transitionTo(StateError)
+		status.Error = resolveErr
+		logger.Error("模型加载失败: 无法解析后端", "modelId", req.ModelID, "error", resolveErr)
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   status.Error,
+		}, status.Error
+	}
+
+	// Discover backend
+	info, discoverErr := b.Discover(bcfg)
+	if discoverErr != nil {
+		status.transitionTo(StateError)
+		status.Error = discoverErr
+		logger.Error("模型加载失败: 后端发现失败", "modelId", req.ModelID, "backend", b.Type(), "error", discoverErr)
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   status.Error,
+		}, status.Error
+	}
+	if !info.Available {
+		err := fmt.Errorf("backend %s is not available", b.Type())
+		status.transitionTo(StateError)
+		status.Error = err
+		logger.Error("模型加载失败: 后端不可用", "modelId", req.ModelID, "backend", b.Type())
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
@@ -151,29 +202,22 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}, status.Error
 	}
 
-	// Determine model path
-	modelPath := model.Path
-	if len(model.ShardFiles) > 0 {
-		modelPath = model.ShardFiles[0]
-		fmt.Printf("[INFO] 使用分卷模型主文件: %s (共 %d 个分卷)\n", modelPath, len(model.ShardFiles))
-	}
-
-	// Build command
-	procReq := toProcessLoadRequest(req, modelPath, port)
-	cmd, err := process.BuildCommandFromRequest(procReq, binPath)
-	if err != nil {
+	// Build command via backend interface
+	backendReq := m.toBackendLoadRequest(req, modelPath, port)
+	startCfg, cmdErr := b.BuildStartConfig(info, backendReq)
+	if cmdErr != nil {
 		m.portAllocator.Release(port)
 		status.transitionTo(StateError)
-		status.Error = err
+		status.Error = cmdErr
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
-			Error:   err,
-		}, err
+			Error:   cmdErr,
+		}, cmdErr
 	}
 
 	// Start process
-	proc, err := m.processMgr.Start(req.ModelID, model.Name, cmd, binPath)
+	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath)
 	if err != nil {
 		m.portAllocator.Release(port)
 		status.transitionTo(StateError)
@@ -203,7 +247,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 
 	duration := time.Since(startTime)
 
-	logger.Info("模型加载成功", "modelId", req.ModelID, "port", port, "duration", duration.String(), "pid", proc.GetPID())
+	logger.Info("模型加载成功", "modelId", req.ModelID, "port", port, "duration", duration.String(), "pid", proc.GetPID(), "backend", b.Type())
 
 	return &LoadResult{
 		Success:  true,
@@ -213,7 +257,6 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		Duration: duration,
 	}, nil
 }
-
 // isLoading 检查模型是否正在加载
 func (m *Manager) isLoading(modelID string) bool {
 	m.mu.RLock()

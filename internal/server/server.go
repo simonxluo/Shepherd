@@ -49,7 +49,8 @@ type ModelDTO struct {
 	Metadata    map[string]interface{} `json:"metadata"`
 	Status      string                 `json:"status"`
 	IsLoaded    bool                   `json:"isLoaded"`
-	ScannedAt   string                 `json:"scannedAt,omitempty"` // 扫描时间（ISO 8601 格式）
+	ScannedAt   string                 `json:"scannedAt,omitempty"`   // 扫描时间（ISO 8601 格式）
+	BackendType string                 `json:"backendType,omitempty"` // 推荐后端类型 (llamacpp/vllm/vllm_omni)
 }
 
 // Server represents the HTTP server
@@ -139,6 +140,8 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.Ollama = ollama.NewHandler(modelMgr)
 	s.handlers.Anthropic = anthropic.NewHandler(modelMgr)
 	s.handlers.LMStudio = lmstudio.NewHandler(modelMgr)
+	s.handlers.Audio = openai.NewAudioHandler(modelMgr)
+	s.handlers.Image = openai.NewImageHandler(modelMgr)
 	s.handlers.Paths = paths.NewHandler(config.ConfigMgr)
 	s.handlers.Storage = storageapi.NewHandler(config.ConfigMgr, storageMgr)
 	s.handlers.Compatibility = compatibilityapi.NewHandler(config.ConfigMgr, compatServerManager)

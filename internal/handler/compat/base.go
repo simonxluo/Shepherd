@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -261,4 +262,132 @@ func (b *BaseHandler) extractTokenUsage(modelID string, body []byte) {
 			status.AddTokens(resp.Usage.PromptTokens, resp.Usage.CompletionTokens)
 		}
 	}
+}
+
+// ForwardBinaryRequest forwards a JSON request and returns the raw binary response
+// without assuming JSON content type. Used for TTS audio responses.
+func (b *BaseHandler) ForwardBinaryRequest(c *gin.Context, port int, path string, modelID string, req interface{}) {
+	if status, exists := b.ModelMgr.GetStatusRef(modelID); exists {
+		if !status.AcquireSlot() {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "model is at concurrent request limit"})
+			return
+		}
+		defer status.ReleaseSlot()
+		status.InflightAdd()
+		defer status.InflightDone()
+	}
+
+	reqURL := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
+
+	var bodyReader io.Reader
+	if req != nil {
+		body, err := json.Marshal(req)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		bodyReader = bytes.NewReader(body)
+	}
+
+	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", reqURL, bodyReader)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
+
+	resp, err := b.Client.Do(httpReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+	defer utils.CloseQuietly(resp.Body)
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	for key, values := range resp.Header {
+		for _, value := range values {
+			c.Header(key, value)
+		}
+	}
+	c.Status(resp.StatusCode)
+	utils.WriteQuietly(c.Writer, respBody)
+}
+
+// ForwardMultipartRequest forwards a multipart/form-data request to the backend.
+// Used for ASR audio file uploads.
+func (b *BaseHandler) ForwardMultipartRequest(c *gin.Context, port int, path string, modelID string, formFields map[string]string) {
+	if status, exists := b.ModelMgr.GetStatusRef(modelID); exists {
+		if !status.AcquireSlot() {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "model is at concurrent request limit"})
+			return
+		}
+		defer status.ReleaseSlot()
+		status.InflightAdd()
+		defer status.InflightDone()
+	}
+
+	reqURL := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	// Copy form fields
+	for key, value := range formFields {
+		if err := writer.WriteField(key, value); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// Copy file from the incoming request
+	file, header, err := c.Request.FormFile("file")
+	if err == nil {
+		part, err := writer.CreateFormFile("file", header.Filename)
+		if err != nil {
+			utils.CloseQuietly(file)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		io.Copy(part, file)
+		utils.CloseQuietly(file)
+	}
+
+	writer.Close()
+
+	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", reqURL, &body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+	httpReq.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
+
+	resp, err := b.Client.Do(httpReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+	defer utils.CloseQuietly(resp.Body)
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	for key, values := range resp.Header {
+		for _, value := range values {
+			c.Header(key, value)
+		}
+	}
+	c.Status(resp.StatusCode)
+	utils.WriteQuietly(c.Writer, respBody)
 }

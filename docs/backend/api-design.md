@@ -205,9 +205,21 @@
 | 协议 | 默认端口 | 配置 | 路由 |
 |---|---|---|---|
 | OpenAI | 9190（WebPort） | — | `POST /v1/chat/completions`, `POST /v1/completions`, `GET /v1/models` |
+| OpenAI 多模态 | 9190（WebPort） | — | `POST /v1/audio/speech`, `POST /v1/audio/transcriptions`, `POST /v1/audio/translations`, `POST /v1/images/generations` |
 | Anthropic | 9190（WebPort） | `server.anthropic_port` | `POST /v1/messages` |
 | Ollama | 11434 | `compatibility.ollama.port`（需 `enabled: true`） | `POST /api/chat`, `POST /api/tags` |
 | LM Studio | 1234 | `compatibility.lmstudio.port`（需 `enabled: true`） | `POST /lmstudio/v1/*` |
+
+### 多模态兼容 API 代理模式
+
+TTS、ASR 和图像生成请求通过专用的 Handler（`AudioHandler`、`ImageHandler`）代理到后端模型进程。代理模式与 Chat/Completion 请求一致——从请求体的 `model` 字段解析模型标识，查找对应进程的监听端口，然后转发请求。
+
+| 端点 | 请求格式 | 响应格式 | Handler 方法 |
+|---|---|---|---|
+| `/v1/audio/speech` | JSON（model, input, voice） | 二进制音频流 | `ForwardBinaryRequest` |
+| `/v1/audio/transcriptions` | multipart/form-data（file + model） | JSON | `ForwardMultipartRequest` |
+| `/v1/audio/translations` | multipart/form-data（file + model） | JSON | `ForwardMultipartRequest` |
+| `/v1/images/generations` | JSON（model, prompt, size） | JSON（base64/URL） | `ForwardRequest` |
 
 ## SSE 事件类型
 
