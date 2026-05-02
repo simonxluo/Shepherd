@@ -56,6 +56,9 @@ func runServe(cmd *cobra.Command, args []string) error {
 		if err := buildBinary(projectDir); err != nil {
 			return fmt.Errorf("编译失败: %w", err)
 		}
+		if err := buildFrontend(projectDir); err != nil {
+			return fmt.Errorf("前端编译失败: %w", err)
+		}
 	}
 
 	binaryPath := filepath.Join(projectDir, "build", "shepherd")
@@ -211,6 +214,31 @@ func buildBinary(projectDir string) error {
 	}
 
 	fmt.Println("编译完成")
+	return nil
+}
+
+func buildFrontend(projectDir string) error {
+	webDir := filepath.Join(projectDir, "web")
+	if _, err := os.Stat(webDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	if err := ensureNodeModules(webDir); err != nil {
+		return err
+	}
+
+	npmCmd := getNpmCmd()
+	buildCmd := exec.Command(npmCmd, "run", "build")
+	buildCmd.Dir = webDir
+	buildCmd.Stdout = os.Stdout
+	buildCmd.Stderr = os.Stderr
+
+	fmt.Println("编译前端...")
+	if err := buildCmd.Run(); err != nil {
+		return err
+	}
+
+	fmt.Println("前端编译完成")
 	return nil
 }
 

@@ -2,6 +2,9 @@
 package router
 
 import (
+	"net/http"
+	"strings"
+
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/anthropic"
 	benchmarkapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/benchmark"
@@ -350,6 +353,18 @@ func registerStaticRoutes(engine *gin.Engine, cfg Config) {
 		return
 	}
 	engine.Static("/assets", cfg.WebUIPath+"/assets")
-	engine.Static("/favicon.svg", cfg.WebUIPath+"/favicon.svg")
+	engine.StaticFile("/favicon.svg", cfg.WebUIPath+"/favicon.svg")
 	engine.StaticFile("/", cfg.WebUIPath+"/index.html")
+
+	// SPA fallback: serve index.html for any unmatched non-API route
+	engine.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/api/") ||
+			strings.HasPrefix(path, "/v1/") ||
+			path == "/ws" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.File(cfg.WebUIPath + "/index.html")
+	})
 }

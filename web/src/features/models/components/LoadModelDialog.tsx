@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Loader2, ChevronDown, Info, RotateCcw, ToggleLeft, ToggleRight, Save, Wand2 } from 'lucide-react';
+import { X, Loader2, ChevronDown, Info, ToggleLeft, ToggleRight, Save, Trash2, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { LoadModelParams } from '@/types';
-import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
+import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
 import { useOnlineNodes } from '@/features/cluster/hooks';
 import type { UnifiedNode } from '@/types';
 import { useToast } from '@/hooks/useToast';
@@ -140,56 +140,6 @@ interface LoadModelDialogProps {
   isLoading?: boolean;
 }
 
-// Presets
-const PRESETS = {
-  fast: {
-    name: '快速加载',
-    description: '最小化内存占用，快速启动',
-    params: {
-      ctxSize: 4096,
-      batchSize: 512,
-      gpuLayers: 20,
-      flashAttention: true,
-      kvCacheUnified: false,
-    } as Partial<LoadModelParams>
-  },
-  balanced: {
-    name: '均衡模式',
-    description: '性能与内存的平衡',
-    params: {
-      ctxSize: 8192,
-      batchSize: 1024,
-      gpuLayers: 35,
-      flashAttention: true,
-      kvCacheUnified: true,
-    } as Partial<LoadModelParams>
-  },
-  performance: {
-    name: '性能优先',
-    description: '最大化性能，需要更多内存',
-    params: {
-      ctxSize: 16384,
-      batchSize: 2048,
-      gpuLayers: 99,
-      flashAttention: true,
-      kvCacheUnified: true,
-      uBatchSize: 512,
-    } as Partial<LoadModelParams>
-  },
-  max: {
-    name: '最大配置',
-    description: '最高性能，适合高端硬件',
-    params: {
-      ctxSize: 131072,
-      batchSize: 4096,
-      gpuLayers: 999,
-      flashAttention: true,
-      noMmap: true,
-      lockMemory: true,
-    } as Partial<LoadModelParams>
-  }
-};
-
 // Parameter help descriptions
 const PARAM_HELP = {
   ctxSize: '模型一次能处理的文本最大长度，单位token，值越大内存占用越高',
@@ -260,7 +210,6 @@ export function LoadModelDialog({
 
   const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
   const saveModelLoadConfig = useSaveModelLoadConfig();
-  const deleteModelLoadConfig = useDeleteModelLoadConfig();
 
   const autoDetectCapabilities = useAutoDetectCapabilities();
 
@@ -394,6 +343,46 @@ export function LoadModelDialog({
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
+  const [configName, setConfigName] = useState('');
+  const [selectedConfigName, setSelectedConfigName] = useState('');
+
+  const CONFIGS_STORAGE_KEY = `shepherd:model-configs:${modelId}`;
+
+  const getSavedConfigs = (): {name: string, config: LoadModelParams}[] => {
+    try {
+      const data = localStorage.getItem(CONFIGS_STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const [savedConfigs, setSavedConfigs] = useState(getSavedConfigs);
+
+  const handleLoadNamedConfig = (name: string) => {
+    const configs = getSavedConfigs();
+    const found = configs.find(c => c.name === name);
+    if (found) {
+      setParams(prev => ({
+        ...prev,
+        ...found.config,
+        modelId: prev.modelId,
+        enabled: found.config.enabled || prev.enabled,
+      }));
+      setSelectedConfigName(name);
+      setConfigName(name);
+    }
+  };
+
+  const handleDeleteNamedConfig = (name: string) => {
+    const configs = getSavedConfigs().filter(c => c.name !== name);
+    localStorage.setItem(CONFIGS_STORAGE_KEY, JSON.stringify(configs));
+    setSavedConfigs([...configs]);
+    if (selectedConfigName === name) {
+      setSelectedConfigName('');
+    }
+  };
+
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   useEffect(() => {
@@ -404,6 +393,9 @@ export function LoadModelDialog({
     if (isOpen) {
       setSaveStatus('idle');
       setEstimateResult(null);
+      setConfigName('');
+      setSelectedConfigName('');
+      setSavedConfigs(getSavedConfigs());
     }
   }, [isOpen]);
 
@@ -491,13 +483,23 @@ export function LoadModelDialog({
     }, 0);
   };
 
-  const handleSaveConfig = async () => {
-    setSaveStatus('saving');
+  const handleSaveConfig = () => {
+    const name = configName.trim();
+    if (!name) {
+      toast.error('请输入配置名称');
+      return;
+    }
     try {
-      await saveModelLoadConfig.mutateAsync({
-        modelId,
-        config: params,
-      });
+      const configs = getSavedConfigs();
+      const idx = configs.findIndex(c => c.name === name);
+      if (idx >= 0) {
+        configs[idx] = { name, config: params };
+      } else {
+        configs.push({ name, config: params });
+      }
+      localStorage.setItem(CONFIGS_STORAGE_KEY, JSON.stringify(configs));
+      setSavedConfigs([...configs]);
+      setSelectedConfigName(name);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
@@ -571,141 +573,6 @@ export function LoadModelDialog({
     onConfirm(filteredParams);
   };
 
-  const applyPreset = (presetParams: Partial<LoadModelParams>) => {
-    setParams(prev => ({ ...prev, ...presetParams }));
-  };
-
-  const handleResetConfig = async () => {
-    try {
-      await deleteModelLoadConfig.mutateAsync(modelId);
-    } catch (error) {
-      console.error('Failed to delete load config:', error);
-    }
-
-    setParams({
-      modelId,
-      ctxSize: 8192,
-      batchSize: 4096,
-      threads: 4,
-      gpuLayers: 99,
-      temperature: 0.7,
-      topP: 0.95,
-      topK: 40,
-      repeatPenalty: 1.1,
-      seed: -1,
-      nPredict: -1,
-      llamaCppPath: '/usr/local/bin',
-      mainGpu: 'default',
-      capabilities: {
-        thinking: false,
-        tools: false,
-        translation: false,
-        embedding: false,
-      },
-      flashAttention: true,
-      noMmap: false,
-      lockMemory: false,
-      logitsAll: false,
-      reranking: false,
-      minP: 0.05,
-      presencePenalty: 0.0,
-      frequencyPenalty: 0.0,
-      uBatchSize: 512,
-      parallelSlots: 4,
-      kvCacheSize: 8192,
-      kvCacheUnified: true,
-      kvCacheTypeK: 'f16',
-      kvCacheTypeV: 'f16',
-      directIo: 'default',
-      disableJinja: false,
-      chatTemplate: '',
-      contextShift: false,
-      extraArgs: '',
-      threadsBatch: 0,
-      repeatLastN: 0,
-      typicalP: 1.0,
-      ignoreEos: false,
-      splitMode: '',
-      tensorSplit: '',
-      contBatching: true,
-      cachePrompt: true,
-      grammar: '',
-      grammarFile: '',
-      lora: '',
-      loraScaled: '',
-      chatTemplateKwargs: '',
-      ropeScaling: '',
-      ropeScale: 0,
-      ropeFreqBase: 0,
-      ropeFreqScale: 0,
-      embedding: false,
-      noWebUI: true,
-      reasoning: 'auto',
-      reasoningFormat: 'auto',
-      reasoningBudget: -1,
-      mmprojOffload: true,
-      unloadAfterMinutes: 0,
-      concurrencyLimit: 0,
-      enabled: {
-        ctxSize: true,
-        batchSize: true,
-        threads: true,
-        threadsBatch: false,
-        gpuLayers: true,
-        temperature: true,
-        topP: true,
-        topK: true,
-        repeatPenalty: true,
-        repeatLastN: false,
-        seed: true,
-        nPredict: true,
-        minP: true,
-        typicalP: false,
-        presencePenalty: false,
-        frequencyPenalty: false,
-        ignoreEos: false,
-        uBatchSize: true,
-        parallelSlots: true,
-        contBatching: false,
-        cachePrompt: false,
-        kvCacheSize: true,
-        kvCacheUnified: true,
-        kvCacheTypeK: true,
-        kvCacheTypeV: true,
-        flashAttention: true,
-        noMmap: true,
-        lockMemory: false,
-        splitMode: false,
-        tensorSplit: false,
-        grammar: false,
-        grammarFile: false,
-        lora: false,
-        loraScaled: false,
-        chatTemplate: true,
-        chatTemplateKwargs: false,
-        disableJinja: true,
-        ropeScaling: false,
-        ropeScale: false,
-        ropeFreqBase: false,
-        ropeFreqScale: false,
-        contextShift: true,
-        directIo: true,
-        extraArgs: true,
-        logitsAll: false,
-        reranking: false,
-        timeout: false,
-        alias: false,
-        embedding: false,
-        noWebUI: true,
-        reasoning: true,
-        reasoningFormat: true,
-        reasoningBudget: true,
-        mmprojOffload: true,
-        unloadAfterMinutes: true,
-        concurrencyLimit: true,
-      },
-    });
-  };
 
   const ParamControl = ({ paramKey, showToggle = true }: { paramKey: string; showToggle?: boolean }) => {
     const helpText = PARAM_HELP[paramKey as keyof typeof PARAM_HELP];
@@ -778,7 +645,7 @@ export function LoadModelDialog({
     };
 
     return (
-      <div className="relative inline-flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <div className="relative inline-flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
         {/* Enable/disable toggle */}
         {showToggle && (
           <button
@@ -961,57 +828,6 @@ export function LoadModelDialog({
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
-
-        {/* Presets */}
-        <div className="px-4 py-3 border-b border-border bg-muted/50 flex-shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-foreground mr-2">预设配置:</span>
-              {Object.entries(PRESETS).map(([key, preset]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => applyPreset(preset.params)}
-                  disabled={isLoading}
-                  className={cn(
-                    "h-[34px] px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
-                    "border shadow-sm",
-                    "hover:shadow-md hover:-translate-y-px active:translate-y-0",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    // Different style per preset
-                    key === 'fast' && "bg-secondary text-secondary-foreground border-border hover:bg-secondary/80",
-                    key === 'balanced' && "bg-primary/10 text-primary border-primary/30 hover:bg-primary/15",
-                    key === 'performance' && "bg-accent text-accent-foreground border-border hover:bg-accent/80",
-                    key === 'max' && "bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive/15",
-                    "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm"
-                  )}
-                  title={preset.description}
-                >
-                  {preset.name}
-                </button>
-              ))}
-            </div>
-
-            {/* Reset config */}
-            <button
-              type="button"
-              onClick={handleResetConfig}
-              disabled={isLoading}
-              className={cn(
-                "flex items-center justify-center gap-1.5 h-[34px] px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
-                "border shadow-sm",
-                "hover:shadow-md hover:-translate-y-px active:translate-y-0",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                "bg-muted text-muted-foreground border-border hover:bg-muted/80",
-                "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm"
-              )}
-              title="重置为默认配置"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              重置
-            </button>
-          </div>
         </div>
 
         {/* Form content */}
@@ -1318,7 +1134,7 @@ export function LoadModelDialog({
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --ctx-size
                       {renderHelpButton('ctxSize')}
                     </div>
@@ -1334,7 +1150,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       Flash Attention
                       {renderHelpButton('flashAttention')}
                     </div>
@@ -1349,7 +1165,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --no-mmap
                       {renderHelpButton('noMmap')}
                     </div>
@@ -1364,7 +1180,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       锁定物理内存
                       {renderHelpButton('lockMemory')}
                     </div>
@@ -1379,7 +1195,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --embedding
                       {renderHelpButton('embedding')}
                     </div>
@@ -1394,7 +1210,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --reranking
                       {renderHelpButton('reranking')}
                     </div>
@@ -1409,7 +1225,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --gpu-layers
                       {renderHelpButton('gpuLayers')}
                     </div>
@@ -1434,7 +1250,7 @@ export function LoadModelDialog({
                 </h4>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --temp
                       {renderHelpButton('temperature')}
                     </div>
@@ -1450,7 +1266,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       Top-P
                       {renderHelpButton('topP')}
                     </div>
@@ -1466,7 +1282,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       Top-K
                       {renderHelpButton('topK')}
                     </div>
@@ -1482,7 +1298,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       Min-P
                       {renderHelpButton('minP')}
                     </div>
@@ -1498,7 +1314,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --repeat-penalty
                       {renderHelpButton('repeatPenalty')}
                     </div>
@@ -1514,7 +1330,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --presence-penalty
                       {renderHelpButton('presencePenalty')}
                     </div>
@@ -1530,7 +1346,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --frequency-penalty
                       {renderHelpButton('frequencyPenalty')}
                     </div>
@@ -1552,9 +1368,9 @@ export function LoadModelDialog({
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase">
                   批处理与并发
                 </h4>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --batch-size
                       {renderHelpButton('batchSize')}
                     </div>
@@ -1570,7 +1386,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --ubatch-size
                       {renderHelpButton('uBatchSize')}
                     </div>
@@ -1586,8 +1402,8 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
-                      --parallel(并发槽数)
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                      --parallel
                       {renderHelpButton('parallelSlots')}
                     </div>
                     <NumberInput
@@ -1602,7 +1418,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       线程数
                       {renderHelpButton('threads')}
                     </div>
@@ -1627,8 +1443,8 @@ export function LoadModelDialog({
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
-                      空闲卸载时间 (分钟)
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                      空闲卸载(分)
                       {renderHelpButton('unloadAfterMinutes')}
                     </div>
                     <NumberInput
@@ -1643,7 +1459,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       最大并发数
                       {renderHelpButton('concurrencyLimit')}
                     </div>
@@ -1667,7 +1483,7 @@ export function LoadModelDialog({
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --cache-ram
                       {renderHelpButton('kvCacheSize')}
                     </div>
@@ -1683,7 +1499,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --kv-unified
                       {renderHelpButton('kvCacheUnified')}
                     </div>
@@ -1748,7 +1564,7 @@ export function LoadModelDialog({
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --seed
                       {renderHelpButton('seed')}
                     </div>
@@ -1765,7 +1581,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --n-predict
                       {renderHelpButton('nPredict')}
                     </div>
@@ -1782,7 +1598,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --direct-io
                       {renderHelpButton('directIo')}
                     </div>
@@ -1798,7 +1614,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --no-webui
                       {renderHelpButton('noWebUI')}
                     </div>
@@ -1813,7 +1629,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --no-jinja
                       {renderHelpButton('disableJinja')}
                     </div>
@@ -1828,7 +1644,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --chat-template
                       {renderHelpButton('chatTemplate')}
                     </div>
@@ -1902,7 +1718,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --context-shift
                       {renderHelpButton('contextShift')}
                     </div>
@@ -1917,7 +1733,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --reasoning
                       {renderHelpButton('reasoning')}
                     </div>
@@ -1933,7 +1749,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --reasoning-format
                       {renderHelpButton('reasoningFormat')}
                     </div>
@@ -1948,7 +1764,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --reasoning-budget
                       {renderHelpButton('reasoningBudget')}
                     </div>
@@ -1965,7 +1781,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       --no-mmproj-offload
                       {renderHelpButton('mmprojOffload')}
                     </div>
@@ -1980,7 +1796,7 @@ export function LoadModelDialog({
                   </div>
 
                   <div className="col-span-2">
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
                       其他参数
                       {renderHelpButton('extraArgs')}
                     </div>
@@ -2003,95 +1819,141 @@ export function LoadModelDialog({
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
-            {/* Cancel */}
-            <Button variant="outline" onClick={onClose} disabled={isLoading}>
-              取消
-            </Button>
-
-            {/* VRAM estimate */}
+          <div className="flex justify-between items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
+            {/* Left: Config selection */}
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  setEstimateResult('计算中...');
-
-                  try {
-                    const result = await estimateVRAM.mutateAsync({
-                      modelId,
-                      llamaBinPath: params.llamaCppPath || '/home/user/workspace/llama.cpp/build-rocm/bin',
-                      ctxSize: params.ctxSize,
-                      batchSize: params.batchSize,
-                      uBatchSize: params.uBatchSize,
-                      parallel: params.parallelSlots,
-                      flashAttention: params.flashAttention,
-                      kvUnified: params.kvCacheUnified,
-                      cacheTypeK: params.kvCacheTypeK,
-                      cacheTypeV: params.kvCacheTypeV,
-                    });
-
-                    if (result.vramGB) {
-                      setEstimateResult(`约需 ${result.vramGB} GB 显存`);
-                    } else if (result.error) {
-                      setEstimateResult(`估算失败: ${result.error}`);
-                    } else {
-                      setEstimateResult('估算失败');
-                    }
-                  } catch (error) {
-                    setEstimateResult(`估算出错: ${error instanceof Error ? error.message : '未知错误'}`);
+              <select
+                value={selectedConfigName}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) {
+                    handleLoadNamedConfig(val);
                   }
                 }}
-                disabled={isLoading || estimateVRAM.isPending}
+                className={cn(
+                  "h-9 px-3 text-sm border-2 border-border rounded-md",
+                  "bg-input text-foreground",
+                  "focus:outline-none focus:ring-2 focus:ring-blue-500"
+                )}
               >
-                {estimateVRAM.isPending ? '计算中...' : '估算显存'}
-              </Button>
-              {estimateResult && (
-                <span className="text-sm text-muted-foreground px-2 py-1 bg-muted rounded">{estimateResult}</span>
+                <option value="">选择配置...</option>
+                {savedConfigs.map(c => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+              {selectedConfigName && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteNamedConfig(selectedConfigName)}
+                  className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                  title="删除此配置"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               )}
             </div>
 
-            {/* Save config */}
-            <Button
-              variant="secondary"
-              onClick={handleSaveConfig}
-              disabled={isLoading || saveStatus === 'saving'}
-              className={cn(
-                saveStatus === 'saved' && 'bg-green-600 text-white hover:bg-green-700',
-                saveStatus === 'error' && 'bg-red-600 text-white hover:bg-red-700'
-              )}
-            >
-              {saveStatus === 'saving' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  保存中...
-                </>
-              ) : saveStatus === 'saved' ? (
-                <>
-                  ✓ 已保存
-                </>
-              ) : saveStatus === 'error' ? (
-                <>
-                  ✗ 保存失败
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  保存配置
-                </>
-              )}
-            </Button>
+            {/* Right: Action buttons */}
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={onClose} disabled={isLoading}>
+                取消
+              </Button>
 
-            {/* Load - primary action */}
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  加载中...
-                </>
-              ) : (
-                '开始加载'
-              )}
-            </Button>
+              {/* VRAM estimate */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    setEstimateResult('计算中...');
+
+                    try {
+                      const result = await estimateVRAM.mutateAsync({
+                        modelId,
+                        llamaBinPath: params.llamaCppPath || '/home/user/workspace/llama.cpp/build-rocm/bin',
+                        ctxSize: params.ctxSize,
+                        batchSize: params.batchSize,
+                        uBatchSize: params.uBatchSize,
+                        parallel: params.parallelSlots,
+                        flashAttention: params.flashAttention,
+                        kvUnified: params.kvCacheUnified,
+                        cacheTypeK: params.kvCacheTypeK,
+                        cacheTypeV: params.kvCacheTypeV,
+                      });
+
+                      if (result.vramGB) {
+                        setEstimateResult(`约需 ${result.vramGB} GB 显存`);
+                      } else if (result.error) {
+                        setEstimateResult(`估算失败: ${result.error}`);
+                      } else {
+                        setEstimateResult('估算失败');
+                      }
+                    } catch (error) {
+                      setEstimateResult(`估算出错: ${error instanceof Error ? error.message : '未知错误'}`);
+                    }
+                  }}
+                  disabled={isLoading || estimateVRAM.isPending}
+                >
+                  {estimateVRAM.isPending ? '计算中...' : '估算显存'}
+                </Button>
+                {estimateResult && (
+                  <span className="text-sm text-muted-foreground px-2 py-1 bg-muted rounded">{estimateResult}</span>
+                )}
+              </div>
+
+              {/* Save named config */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={configName}
+                  onChange={(e) => setConfigName(e.target.value)}
+                  placeholder="配置名称"
+                  className={cn(
+                    "h-9 px-3 text-sm w-32 border-2 border-border rounded-md",
+                    "bg-input text-foreground",
+                    "focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  )}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveConfig();
+                    }
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  onClick={handleSaveConfig}
+                  disabled={isLoading}
+                  className={cn(
+                    saveStatus === 'saved' && 'bg-green-600 text-white hover:bg-green-700',
+                    saveStatus === 'error' && 'bg-red-600 text-white hover:bg-red-700'
+                  )}
+                >
+                  {saveStatus === 'saved' ? (
+                    <>✓ 已保存</>
+                  ) : saveStatus === 'error' ? (
+                    <>✗ 保存失败</>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      保存配置
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Load - primary action */}
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    加载中...
+                  </>
+                ) : (
+                  '开始加载'
+                )}
+              </Button>
+            </div>
           </div>
       </form>
     </div>
