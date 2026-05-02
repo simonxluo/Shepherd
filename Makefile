@@ -13,8 +13,7 @@ CMD_DIR := cmd/shepherd
 VERSION := dev
 
 # Go 相关
-GOROOT := /home/user/sdk/go
-GO := $(GOROOT)/bin/go
+GO := $(shell which go 2>/dev/null || echo go)
 GOFLAGS := -mod=mod
 GOPROXY := https://goproxy.cn,direct
 
@@ -116,7 +115,7 @@ version:
 # 生成 Swagger API 文档
 swag:
 	@echo "生成 Swagger 文档..."
-	@/home/user/go/bin/swag init -g cmd/shepherd/main.go -o api-docs --parseDependency --parseInternal --exclude internal/comm/gpu 2>&1
+	@$(shell which swag 2>/dev/null || echo swag) init -g cmd/shepherd/main.go -o api-docs --parseDependency --parseInternal --exclude internal/comm/gpu 2>&1
 	@echo "✓ Swagger 文档已生成到 api-docs/"
 
 # 帮助信息

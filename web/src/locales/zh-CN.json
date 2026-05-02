@@ -24,6 +24,7 @@
     "downloads": "下载管理",
     "cluster": "集群管理",
     "chat": "聊天",
+    "multimodal": "多模态",
     "logs": "日志",
     "settings": "设置",
     "collapse": "收起侧边栏",
@@ -76,6 +77,12 @@
     "placeholder": "输入消息...",
     "send": "发送",
     "clearHistory": "清空历史"
+  },
+  "multimodal": {
+    "title": "多模态工具",
+    "tts": "语音合成 (TTS)",
+    "asr": "语音识别 (ASR)",
+    "imageGen": "图像生成"
   },
   "footer": {
     "version": "版本",

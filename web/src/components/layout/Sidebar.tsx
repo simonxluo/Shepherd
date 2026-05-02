@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Network,
   ScrollText,
+  Wand2,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -21,7 +22,8 @@ const allNavItems = [
   { path: '/models', icon: Package, labelKey: 'sidebar.models', feature: 'models' },
   { path: '/downloads', icon: Download, labelKey: 'sidebar.downloads', feature: 'downloads' },
   { path: '/cluster', icon: Network, labelKey: 'sidebar.cluster', feature: 'cluster' },
-  {path: '/chat', icon: MessageSquare, labelKey: 'sidebar.chat', feature: 'chat' },
+  { path: '/chat', icon: MessageSquare, labelKey: 'sidebar.chat', feature: 'chat' },
+  { path: '/multimodal', icon: Wand2, labelKey: 'sidebar.multimodal', feature: 'multimodal' },
   { path: '/logs', icon: ScrollText, labelKey: 'sidebar.logs', feature: 'logs' },
   { path: '/settings', icon: Settings, labelKey: 'sidebar.settings', feature: 'settings' },
 ];
