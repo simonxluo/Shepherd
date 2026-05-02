@@ -24,6 +24,7 @@
     "downloads": "Downloads",
     "cluster": "Cluster",
     "chat": "Chat",
+    "multimodal": "Multimodal",
     "logs": "Logs",
     "settings": "Settings",
     "collapse": "Collapse sidebar",
@@ -76,6 +77,12 @@
     "placeholder": "Type a message...",
     "send": "Send",
     "clearHistory": "Clear History"
+  },
+  "multimodal": {
+    "title": "Multimodal Tools",
+    "tts": "Text-to-Speech (TTS)",
+    "asr": "Speech Recognition (ASR)",
+    "imageGen": "Image Generation"
   },
   "footer": {
     "version": "Version",

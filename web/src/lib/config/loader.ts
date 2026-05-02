@@ -29,6 +29,7 @@ const DEFAULT_CONFIG: AppConfig = {
     cluster: true,
     logs: true,
     chat: true,
+    multimodal: true,
     settings: true,
     dashboard: true,
   },

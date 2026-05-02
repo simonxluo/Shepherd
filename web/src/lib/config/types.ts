@@ -37,6 +37,7 @@ export interface FeaturesConfig {
   cluster: boolean;
   logs: boolean;
   chat: boolean;
+  multimodal: boolean;
   settings: boolean;
   dashboard: boolean;
 }

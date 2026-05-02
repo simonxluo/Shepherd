@@ -109,7 +109,13 @@ export interface LoadModelParams {
 
   // Capability toggles
   capabilities?: ModelCapabilities & {
-    translation?: boolean; // Translation
+    thinking?: boolean;
+    tools?: boolean;
+    translation?: boolean;
+    embedding?: boolean;
+    tts?: boolean;
+    asr?: boolean;
+    imageGeneration?: boolean;
   };
 
   // Context & acceleration

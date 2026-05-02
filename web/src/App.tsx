@@ -9,6 +9,7 @@ import { DownloadsPage } from './pages/downloads';
 import { ChatPage } from './pages/chat';
 import { ClusterPage } from './pages/cluster';
 import { LogsPage } from './pages/logs';
+import { MultimodalPage } from './pages/multimodal';
 import { SettingsPage } from './pages/settings';
 import { useSSE } from './hooks/useSSE';
 import type { SSEEvent } from './types';
@@ -38,6 +39,7 @@ function AppContent() {
           <Route path="chat" element={<ChatPage />} />
           <Route path="cluster" element={<ClusterPage />} />
           <Route path="logs" element={<LogsPage />} />
+          <Route path="multimodal" element={<MultimodalPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
