@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -553,6 +554,27 @@ func (m *Manager) findMmproj(modelPath string) string {
 	return ""
 }
 
+// expandPath expands ~ to the user's home directory and converts relative paths to absolute.
+func expandPath(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			path = filepath.Join(home, path[2:])
+		} else if u, err := user.Current(); err == nil {
+			path = filepath.Join(u.HomeDir, path[2:])
+		}
+	} else if path == "~" {
+		if home, err := os.UserHomeDir(); err == nil {
+			path = home
+		} else if u, err := user.Current(); err == nil {
+			path = u.HomeDir
+		}
+	}
+	if abs, err := filepath.Abs(path); err == nil {
+		return abs
+	}
+	return path
+}
+
 // getScanPaths returns the list of scan paths (from PathConfigs or Paths)
 // 从配置管理器获取最新配置，而不是使用初始化时的静态快照
 func (m *Manager) getScanPaths() []string {
@@ -564,22 +586,32 @@ func (m *Manager) getScanPaths() []string {
 		cfg = m.config
 	}
 
+	expandAll := func(raw []string) []string {
+		out := make([]string, 0, len(raw))
+		for _, p := range raw {
+			out = append(out, expandPath(p))
+		}
+		return out
+	}
+
 	if len(cfg.Model.PathConfigs) > 0 {
-		paths := make([]string, 0, len(cfg.Model.PathConfigs))
+		raw := make([]string, 0, len(cfg.Model.PathConfigs))
 		for _, pc := range cfg.Model.PathConfigs {
-			paths = append(paths, pc.Path)
+			raw = append(raw, pc.Path)
 		}
 		for _, mp := range cfg.Backends.MultimodalPaths {
-			paths = append(paths, mp.Path)
+			raw = append(raw, mp.Path)
 		}
+		paths := expandAll(raw)
 		logger.Debug("getScanPaths: returning paths from PathConfigs", "count", len(paths), "paths", paths)
 		return paths
 	}
-	paths := make([]string, len(cfg.Model.Paths), len(cfg.Model.Paths)+len(cfg.Backends.MultimodalPaths))
-	copy(paths, cfg.Model.Paths)
+	raw := make([]string, 0, len(cfg.Model.Paths)+len(cfg.Backends.MultimodalPaths))
+	raw = append(raw, cfg.Model.Paths...)
 	for _, mp := range cfg.Backends.MultimodalPaths {
-		paths = append(paths, mp.Path)
+		raw = append(raw, mp.Path)
 	}
+	paths := expandAll(raw)
 	logger.Debug("getScanPaths: returning paths from Paths", "count", len(paths), "paths", paths)
 	return paths
 }
