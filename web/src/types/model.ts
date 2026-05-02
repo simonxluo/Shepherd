@@ -108,11 +108,8 @@ export interface LoadModelParams {
   mainGpu?: number | string;  // Primary GPU selection
 
   // Capability toggles
-  capabilities?: {
-    thinking?: boolean;    // Thinking ability
-    tools?: boolean;       // Tool use / function calling
+  capabilities?: ModelCapabilities & {
     translation?: boolean; // Translation
-    embedding?: boolean;   // Embedding
   };
 
   // Context & acceleration

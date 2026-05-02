@@ -3,7 +3,7 @@ import { X, Loader2, ChevronDown, Info, ToggleLeft, ToggleRight, Save, Trash2, W
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { LoadModelParams } from '@/types';
-import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
+import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
 import { useOnlineNodes } from '@/features/cluster/hooks';
 import type { UnifiedNode } from '@/types';
 import { useToast } from '@/hooks/useToast';
@@ -210,6 +210,7 @@ export function LoadModelDialog({
 
   const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
   const saveModelLoadConfig = useSaveModelLoadConfig();
+  const deleteModelLoadConfig = useDeleteModelLoadConfig();
 
   const autoDetectCapabilities = useAutoDetectCapabilities();
 
