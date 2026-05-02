@@ -145,7 +145,7 @@ export function useAutoDetectCapabilities() {
  */
 interface EstimateVRAMParams {
   modelId: string;
-  llamaBinPath: string;
+  llamaBinPath?: string;
   ctxSize?: number;
   batchSize?: number;
   uBatchSize?: number;
@@ -158,15 +158,11 @@ interface EstimateVRAMParams {
 }
 
 /**
- * VRAM estimation response
+ * VRAM estimation response (unwrapped from API envelope)
  */
 interface EstimateVRAMData {
-  success: boolean;
-  vram?: string;
-  vramMB?: number;
   vramGB?: string;
   error?: string;
-  details?: string;
 }
 
 /**
@@ -175,11 +171,21 @@ interface EstimateVRAMData {
 export function useEstimateVRAM() {
   return useMutation({
     mutationFn: async (params: EstimateVRAMParams): Promise<EstimateVRAMData> => {
-      const response = await apiClient.post<EstimateVRAMData>(
-        '/models/vram/estimate',
-        params
-      );
-      return response;
+      const response = await apiClient.post<{
+        success: boolean;
+        data?: {
+          estimatedVRAMGB?: string;
+          modelSizeGB?: string;
+          kvCacheGB?: string;
+        };
+        error?: { message?: string };
+      }>('/models/vram/estimate', params);
+
+      if (!response.success) {
+        return { error: response.error?.message || '估算失败' };
+      }
+
+      return { vramGB: response.data?.estimatedVRAMGB };
     },
   });
 }

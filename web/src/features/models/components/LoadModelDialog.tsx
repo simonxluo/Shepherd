@@ -1820,7 +1820,7 @@ export function LoadModelDialog({
 
           {/* Footer */}
           <div className="flex justify-between items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
-            {/* Left: Config selection */}
+            {/* Left: Config selection + VRAM estimate */}
             <div className="flex items-center gap-2">
               <select
                 value={selectedConfigName}
@@ -1843,6 +1843,7 @@ export function LoadModelDialog({
               </select>
               {selectedConfigName && (
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDeleteNamedConfig(selectedConfigName)}
@@ -1852,54 +1853,42 @@ export function LoadModelDialog({
                   <Trash2 className="w-4 h-4" />
                 </Button>
               )}
+              <div className="w-px h-6 bg-border" />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  setEstimateResult('计算中...');
+                  try {
+                    const result = await estimateVRAM.mutateAsync({
+                      modelId,
+                      ctxSize: params.ctxSize,
+                    });
+                    if (result.vramGB) {
+                      setEstimateResult(`约需 ${result.vramGB} GB 显存`);
+                    } else if (result.error) {
+                      setEstimateResult(`估算失败: ${result.error}`);
+                    } else {
+                      setEstimateResult('估算失败');
+                    }
+                  } catch (error) {
+                    setEstimateResult(`估算出错: ${error instanceof Error ? error.message : '未知错误'}`);
+                  }
+                }}
+                disabled={isLoading || estimateVRAM.isPending}
+              >
+                {estimateVRAM.isPending ? '计算中...' : '估算显存'}
+              </Button>
+              {estimateResult && (
+                <span className="text-sm text-muted-foreground px-2 py-1 bg-muted rounded">{estimateResult}</span>
+              )}
             </div>
 
             {/* Right: Action buttons */}
             <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={onClose} disabled={isLoading}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
                 取消
               </Button>
-
-              {/* VRAM estimate */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    setEstimateResult('计算中...');
-
-                    try {
-                      const result = await estimateVRAM.mutateAsync({
-                        modelId,
-                        llamaBinPath: params.llamaCppPath || '/home/user/workspace/llama.cpp/build-rocm/bin',
-                        ctxSize: params.ctxSize,
-                        batchSize: params.batchSize,
-                        uBatchSize: params.uBatchSize,
-                        parallel: params.parallelSlots,
-                        flashAttention: params.flashAttention,
-                        kvUnified: params.kvCacheUnified,
-                        cacheTypeK: params.kvCacheTypeK,
-                        cacheTypeV: params.kvCacheTypeV,
-                      });
-
-                      if (result.vramGB) {
-                        setEstimateResult(`约需 ${result.vramGB} GB 显存`);
-                      } else if (result.error) {
-                        setEstimateResult(`估算失败: ${result.error}`);
-                      } else {
-                        setEstimateResult('估算失败');
-                      }
-                    } catch (error) {
-                      setEstimateResult(`估算出错: ${error instanceof Error ? error.message : '未知错误'}`);
-                    }
-                  }}
-                  disabled={isLoading || estimateVRAM.isPending}
-                >
-                  {estimateVRAM.isPending ? '计算中...' : '估算显存'}
-                </Button>
-                {estimateResult && (
-                  <span className="text-sm text-muted-foreground px-2 py-1 bg-muted rounded">{estimateResult}</span>
-                )}
-              </div>
 
               {/* Save named config */}
               <div className="flex items-center gap-2">
@@ -1921,6 +1910,7 @@ export function LoadModelDialog({
                   }}
                 />
                 <Button
+                  type="button"
                   variant="secondary"
                   onClick={handleSaveConfig}
                   disabled={isLoading}
