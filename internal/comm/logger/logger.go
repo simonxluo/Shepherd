@@ -57,6 +57,7 @@ type Logger struct {
 	formatJSON  bool
 	outputs     []io.Writer
 	fileWriter  io.WriteCloser
+	monitor     *LogMonitor
 	logDir      string
 	maxSize     int64 // MB
 	maxBackups  int
@@ -87,6 +88,7 @@ func NewLogger(cfg *config.LogConfig, role string) (*Logger, error) {
 		level:       parseLevel(cfg.Level),
 		formatJSON:  cfg.Format == "json",
 		outputs:     []io.Writer{},
+		monitor:     NewLogMonitor(),
 		logDir:      cfg.Directory,
 		maxSize:     int64(cfg.MaxSize),
 		maxBackups:  cfg.MaxBackups,
@@ -96,21 +98,21 @@ func NewLogger(cfg *config.LogConfig, role string) (*Logger, error) {
 		role:        role,
 	}
 
-	// Setup outputs
 	switch strings.ToLower(cfg.Output) {
 	case "stdout":
-		l.outputs = append(l.outputs, os.Stdout)
+		l.outputs = append(l.outputs, l.monitor)
 	case "file":
 		if err := l.setupFileWriter(); err != nil {
 			return nil, err
 		}
+		l.outputs = append(l.outputs, l.monitor)
 	case "both":
-		l.outputs = append(l.outputs, os.Stdout)
+		l.outputs = append(l.outputs, l.monitor)
 		if err := l.setupFileWriter(); err != nil {
 			return nil, err
 		}
 	default:
-		l.outputs = append(l.outputs, os.Stdout)
+		l.outputs = append(l.outputs, l.monitor)
 	}
 
 	return l, nil
@@ -289,7 +291,6 @@ func parseLevel(level string) LogLevel {
 	}
 }
 
-// GetLogger returns the global logger instance
 func GetLogger() *Logger {
 	if defaultLogger == nil {
 		once.Do(func() {
@@ -297,10 +298,14 @@ func GetLogger() *Logger {
 				Level:  "info",
 				Format: "text",
 				Output: "stdout",
-			}, "hybrid") // 默认使用 hybrid
+			}, "hybrid")
 		})
 	}
 	return defaultLogger
+}
+
+func GetMonitor() *LogMonitor {
+	return GetLogger().monitor
 }
 
 // log is the internal logging method
@@ -356,48 +361,24 @@ func (l *Logger) log(level LogLevel, msg string, fields []Field) {
 		logLine = fmt.Sprintf("[%s]%s %s %s%s\n", timestamp, callerStr, level, msg, fieldStr)
 	}
 
-	// Write to all outputs
 	for _, w := range l.outputs {
 		n, err := w.Write([]byte(logLine))
 		if err != nil {
-			// 记录错误到 stderr 作为降级方案
 			fmt.Fprintf(os.Stderr, "[ERROR] 写入日志失败: %v\n", err)
-			continue // 跳过这个输出，继续处理其他的
+			continue
 		}
 		if n != len(logLine) {
 			fmt.Fprintf(os.Stderr, "[WARN] 写入不完整: %d/%d\n", n, len(logLine))
 		}
-		// Flush if the writer supports it (e.g., *os.File)
-		// 注意：只对普通文件进行 Sync，stdout/stderr 不支持 Sync 操作
 		if f, ok := w.(*os.File); ok {
-			// 检查是否是普通文件（不是 stdout/stderr）
 			fileInfo, err := f.Stat()
 			if err == nil && (fileInfo.Mode()&os.ModeType) == 0 {
-				// 普通文件，执行 Sync
 				if err := f.Sync(); err != nil {
-					// Sync 失败不是致命错误，记录后继续
 					fmt.Fprintf(os.Stderr, "[WARN] 同步文件失败: %v\n", err)
 				}
-				// 更新文件大小
 				l.currentSize = fileInfo.Size()
 			}
-			// stdout/stderr 或其他特殊文件类型，跳过 Sync
 		}
-	}
-
-	// Send to log stream for real-time viewing
-	if globalLogStream != nil {
-		fieldsMap := make(map[string]interface{})
-		for _, f := range fields {
-			fieldsMap[f.Key] = f.Value
-		}
-		entry := StreamLogEntry{
-			Timestamp: time.Now(),
-			Level:     level.String(),
-			Message:   msg,
-			Fields:    fieldsMap,
-		}
-		globalLogStream.Add(entry)
 	}
 }
 

@@ -17,6 +17,27 @@ llamacpp:
         - path: /usr/local/bin/
           name: Default
           description: ""
+backends:
+    vllm:
+        enabled: false
+        conda_env: ""
+        conda_path: ""
+        paths:
+            - path: /usr/local/bin/
+              name: Default
+              description: ""
+    vllm_omni:
+        enabled: false
+        conda_env: ""
+        conda_path: ""
+        paths:
+            - path: /usr/local/bin/
+              name: Default
+              description: ""
+    multimodal_paths:
+        - path: ./models/multimodal
+          name: Multimodal Models
+          description: "Safetensors 模型目录 (TTS/ASR/Image Generation)"
 download:
     directory: ./downloads
     max_concurrent: 4

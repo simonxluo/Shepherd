@@ -81,12 +81,7 @@ type ServerHandlers interface {
 	HandleListProcesses(c *gin.Context)
 	HandleGetProcess(c *gin.Context)
 	HandleStopProcess(c *gin.Context)
-	HandleLogStream(c *gin.Context)
-	HandleLogEntries(c *gin.Context)
-	HandleLogFiles(c *gin.Context)
-	HandleLogFileContent(c *gin.Context)
-	HandleLogFileStats(c *gin.Context)
-	HandleDeleteLogFile(c *gin.Context)
+	HandleLogStreamText(c *gin.Context)
 	HandleOpenAIChat(c *gin.Context)
 	HandleOpenAIComplete(c *gin.Context)
 	HandleOpenAIModels(c *gin.Context)
@@ -205,6 +200,28 @@ func registerConfigRoutes(apiGroup *gin.RouterGroup, h *Handlers, sh ServerHandl
 			models.DELETE("", h.Paths.RemoveModelPath)
 		}
 
+		multimodal := config.Group("/multimodal/paths")
+		{
+			multimodal.GET("", h.Paths.GetMultimodalPaths)
+			multimodal.POST("", h.Paths.AddMultimodalPath)
+			multimodal.PUT("", h.Paths.UpdateMultimodalPath)
+			multimodal.DELETE("", h.Paths.RemoveMultimodalPath)
+		}
+
+		vllm := config.Group("/vllm/paths")
+		{
+			vllm.GET("", h.Paths.GetVLLMPaths)
+			vllm.POST("", h.Paths.AddVLLMPath)
+			vllm.DELETE("", h.Paths.RemoveVLLMPath)
+		}
+
+		vllmOmni := config.Group("/vllm_omni/paths")
+		{
+			vllmOmni.GET("", h.Paths.GetVLLMOmniPaths)
+			vllmOmni.POST("", h.Paths.AddVLLMOmniPath)
+			vllmOmni.DELETE("", h.Paths.RemoveVLLMOmniPath)
+		}
+
 		storage := config.Group("/storage")
 		{
 			storage.GET("", h.Storage.GetStorageConfig)
@@ -306,12 +323,7 @@ func registerProcessRoutes(apiGroup *gin.RouterGroup, sh ServerHandlers) {
 func registerLogRoutes(apiGroup *gin.RouterGroup, sh ServerHandlers) {
 	logs := apiGroup.Group("/logs")
 	{
-		logs.GET("/stream", sh.HandleLogStream)
-		logs.GET("/entries", sh.HandleLogEntries)
-		logs.GET("/files", sh.HandleLogFiles)
-		logs.GET("/files/:filename", sh.HandleLogFileContent)
-		logs.GET("/files/:filename/stats", sh.HandleLogFileStats)
-		logs.DELETE("/files/:filename", sh.HandleDeleteLogFile)
+		logs.GET("/stream/text", sh.HandleLogStreamText)
 	}
 }
 

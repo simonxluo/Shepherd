@@ -102,7 +102,7 @@ server → handler → service → comm
 | **事件** | `comm/event/` | SSE 事件管理器（主实时通道） |
 | **类型** | `comm/types/` | 共享类型：NodeInfo、ErrorCode、ApiResponse[T] |
 | **GPU** | `comm/gpu/` | GPU 检测（nvidia-smi / rocm-smi / lspci） |
-| **日志** | `comm/logger/` | 结构化日志 + 文件轮转 + 实时流 |
+| **日志** | `comm/logger/` | 结构化日志 + 文件轮转 + 环形缓冲区 + 实时流 |
 | **关闭** | `comm/shutdown/` | 优先级优雅关闭 |
 | **网络工具** | `comm/netutil/` | 本地 IP 探测（`GetBestLocalIP`） |
 | **通用工具** | `comm/utils/` | 静默关闭/删除/重命名、进程信号、llama.cpp 二进制查找 |
@@ -119,7 +119,7 @@ Config → Logger → Process → Port → Storage → Model → LangChain → N
 
 1. **配置管理器**：`config.NewManager()` → `Load()`，默认路径 `config/server.config.yaml`（可通过 `SHEPHERD_CONFIG_DIR` 环境变量或 `--config` 参数覆盖）；文件不存在时使用 `DefaultConfig()`
 2. **确定角色**：读取 `cfg.Node.Role`，默认 `hybrid`
-3. **日志系统**：`logger.InitLogger()` + `InitLogStream(1000)`
+3. **日志系统**：`logger.InitLogger()`（内含 LogMonitor 环形缓冲区）
 4. **进程管理器**：`process.NewManager()`
 5. **端口分配器**：`port.NewPortAllocator(base, max)`，范围从配置读取（默认 8081-9000）
 6. **存储管理器**：如果配置中 `storage.Type` 为空，run_server 会覆盖为 SQLite（`./data/shepherd.db`，WAL 模式）；`DefaultConfig()` 默认类型为 `memory`

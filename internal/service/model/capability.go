@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/huggingface"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 )
 
@@ -172,4 +173,57 @@ func containsAny(s string, keywords []string) bool {
 		}
 	}
 	return false
+}
+
+// DetectCapabilitiesFromHF detects model capabilities from HuggingFace model info
+func DetectCapabilitiesFromHF(hfInfo *huggingface.HFModelInfo) *storage.Capabilities {
+	caps := &storage.Capabilities{}
+
+	if hfInfo == nil {
+		return caps
+	}
+
+	combined := strings.ToLower(hfInfo.Name + " " + hfInfo.ModelType + " " + strings.Join(hfInfo.Architectures, " "))
+
+	if hfInfo.IsDiffusers {
+		diffuserLower := strings.ToLower(hfInfo.DiffuserClass)
+		switch {
+		case containsAny(diffuserLower, []string{"stable", "flux", "sdxl", "kandinsky", "pixart", "image"}):
+			caps.ImageGeneration = true
+		case containsAny(diffuserLower, []string{"speech", "tts", "voice", "audio"}):
+			caps.TTS = true
+		}
+	}
+
+	modelTypeLower := strings.ToLower(hfInfo.ModelType)
+	switch {
+	case containsAny(modelTypeLower, []string{"whisper", "wav2vec", "hubert", "speech_to_text", "sense_voice", "paraformer"}):
+		caps.ASR = true
+	case containsAny(modelTypeLower, []string{"speecht5", "vits", "bark", "xtts"}):
+		caps.TTS = true
+	}
+
+	archLower := strings.ToLower(strings.Join(hfInfo.Architectures, " "))
+	switch {
+	case containsAny(archLower, []string{"whisper", "wav2vec", "hubert", "sensevoice", "paraformer"}):
+		caps.ASR = true
+	case containsAny(archLower, []string{"speecht5", "vits", "bark"}):
+		caps.TTS = true
+	}
+
+	if !caps.ASR && !caps.TTS && !caps.ImageGeneration {
+		if containsAny(combined, []string{kwASR, kwWhisper, kwSpeechToText, kwAutomaticSpeechRecognition, kwWav2Vec, kwHubert, kwSenseVoice, kwParaformer}) {
+			caps.ASR = true
+		}
+		if containsAny(combined, []string{kwTTS, kwTextToSpeech, kwCosyVoice, kwChatTTS, kwMelotts, kwBark, kwSpeechT5, kwVITS, kwXTTS}) {
+			caps.TTS = true
+		}
+		if containsAny(combined, []string{kwStableDiffusion, kwStableDiffusionSDXL, kwFLUX, kwDALL, kwImageGeneration, kwTextToImage, kwKandinsky, kwPixArt, kwCogView, kwJanus}) {
+			caps.ImageGeneration = true
+		}
+	}
+
+	caps.ApplyConstraints()
+
+	return caps
 }

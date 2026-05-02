@@ -72,6 +72,21 @@
     "online": "Online",
     "offline": "Offline"
   },
+  "logs": {
+    "title": "Logs",
+    "local": "Local",
+    "nodes": "Nodes",
+    "localTitle": "Local Logs",
+    "nodeLogs": "Node Logs",
+    "nodeList": "Node List",
+    "noNodes": "No online nodes",
+    "selectNode": "Select a node to view logs",
+    "fontSize": "Font Size",
+    "wrapText": "Wrap Text",
+    "filter": "Filter",
+    "clear": "Clear",
+    "filterPlaceholder": "Regex filter..."
+  },
   "chat": {
     "title": "Chat",
     "placeholder": "Type a message...",

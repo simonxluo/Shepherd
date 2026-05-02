@@ -17,6 +17,7 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/huggingface"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 )
 
@@ -194,6 +195,37 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 			}
 
 			if info.IsDir() {
+				if path != scanPath && huggingface.IsHuggingFaceModelDir(path) {
+					fileCount++
+					matchedCount++
+					logger.Debug("找到 HuggingFace 模型目录", "path", path)
+
+					wg.Add(1)
+					semaphore <- struct{}{}
+
+					go func(dirPath string) {
+						defer wg.Done()
+						defer func() { <-semaphore }()
+
+						model, loadErr := m.loadHuggingFaceModel(dirPath)
+						if loadErr != nil {
+							logger.Warn("加载 HuggingFace 模型失败", "path", dirPath, "error", loadErr)
+							mu.Lock()
+							errors = append(errors, ScanError{
+								Path:  dirPath,
+								Error: loadErr.Error(),
+							})
+							mu.Unlock()
+						} else {
+							logger.Info("成功加载 HuggingFace 模型", "name", model.Name, "id", model.ID, "path", dirPath)
+							mu.Lock()
+							models = append(models, model)
+							mu.Unlock()
+						}
+					}(path)
+
+					return filepath.SkipDir
+				}
 				return nil
 			}
 
@@ -211,13 +243,13 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 					defer wg.Done()
 					defer func() { <-semaphore }()
 
-					model, err := m.loadModelWithValidation(filePath)
-					if err != nil {
-						logger.Warn("加载模型失败", "path", filePath, "error", err)
+					model, loadErr := m.loadModelWithValidation(filePath)
+					if loadErr != nil {
+						logger.Warn("加载模型失败", "path", filePath, "error", loadErr)
 						mu.Lock()
 						errors = append(errors, ScanError{
 							Path:  filePath,
-							Error: err.Error(),
+							Error: loadErr.Error(),
 						})
 						mu.Unlock()
 					} else {
@@ -241,6 +273,17 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 				Path:  scanPath,
 				Error: fmt.Sprintf("扫描中断: %v", err),
 			})
+		}
+	} else if huggingface.IsHuggingFaceModelDir(scanPath) {
+		logger.Info("HuggingFace 模型目录", "path", scanPath)
+		model, loadErr := m.loadHuggingFaceModel(scanPath)
+		if loadErr != nil {
+			errors = append(errors, ScanError{
+				Path:  scanPath,
+				Error: loadErr.Error(),
+			})
+		} else {
+			models = append(models, model)
 		}
 	} else if m.isModelFile(scanPath) {
 		logger.Info("单文件模型", "path", scanPath)
@@ -289,16 +332,6 @@ func (m *Manager) isModelFile(path string) bool {
 	// 模式1: models--org--model/snapshots/hash/*.gguf
 	if matched := reHuggingFacePath.MatchString(path); matched {
 		return true
-	}
-
-	// 模式2: HuggingFace 缓存中的 snapshots 目录
-	if strings.Contains(path, "snapshots") {
-		// 检查是否包含模型文件扩展名
-		if strings.HasSuffix(base, ".safetensors") ||
-			strings.HasSuffix(base, ".bin") {
-			logger.Debug("找到 HuggingFace 格式模型", "path", path)
-			return true
-		}
 	}
 
 	return false
@@ -436,6 +469,64 @@ func (m *Manager) generateModelID(path string, metadata *gguf.Metadata) string {
 	return fmt.Sprintf("%s-%s", base, hashStr)
 }
 
+// loadHuggingFaceModel loads a model from a HuggingFace model directory (safetensors format)
+func (m *Manager) loadHuggingFaceModel(dirPath string) (*Model, error) {
+	hfInfo, err := huggingface.ReadModelInfo(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("无法读取 HuggingFace 模型信息: %w", err)
+	}
+
+	modelID := m.generateHFModelID(dirPath)
+	pathPrefix := m.calculatePathPrefix(dirPath)
+	displayName := hfInfo.Name
+	if pathPrefix != "" && pathPrefix != "models" {
+		displayName = fmt.Sprintf("[%s]%s", pathPrefix, hfInfo.Name)
+	}
+
+	model := &Model{
+		ID:          modelID,
+		Name:        hfInfo.Name,
+		DisplayName: displayName,
+		Path:        dirPath,
+		PathPrefix:  pathPrefix,
+		Size:        hfInfo.TotalSize,
+		Metadata:    &gguf.Metadata{
+			Name:         hfInfo.Name,
+			Architecture: strings.Join(hfInfo.Architectures, ","),
+		},
+		ScannedAt:   time.Now(),
+		SourcePath:  dirPath,
+		SourceType:  "huggingface",
+	}
+
+	detectedCaps := DetectCapabilitiesFromHF(hfInfo)
+	ctx := context.Background()
+	existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, model.ID)
+	if err == nil && existingMeta != nil {
+		existingMeta.Capabilities = detectedCaps
+		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); saveErr != nil {
+			logger.Warn("保存模型能力失败", "modelId", model.ID, "error", saveErr)
+		}
+	} else {
+		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
+			ModelID:      model.ID,
+			Capabilities: detectedCaps,
+		}); saveErr != nil {
+			logger.Warn("保存模型能力失败", "modelId", model.ID, "error", saveErr)
+		}
+	}
+
+	return model, nil
+}
+
+// generateHFModelID generates a unique model ID for a HuggingFace model directory
+func (m *Manager) generateHFModelID(dirPath string) string {
+	hash := sha256.Sum256([]byte(dirPath))
+	hashStr := hex.EncodeToString(hash[:8])
+	base := filepath.Base(dirPath)
+	return fmt.Sprintf("%s-%s", base, hashStr)
+}
+
 // findMmproj looks for a multimodal projector file
 func (m *Manager) findMmproj(modelPath string) string {
 	dir := filepath.Dir(modelPath)
@@ -478,11 +569,19 @@ func (m *Manager) getScanPaths() []string {
 		for _, pc := range cfg.Model.PathConfigs {
 			paths = append(paths, pc.Path)
 		}
+		for _, mp := range cfg.Backends.MultimodalPaths {
+			paths = append(paths, mp.Path)
+		}
 		logger.Debug("getScanPaths: returning paths from PathConfigs", "count", len(paths), "paths", paths)
 		return paths
 	}
-	logger.Debug("getScanPaths: returning paths from Paths", "count", len(cfg.Model.Paths), "paths", cfg.Model.Paths)
-	return cfg.Model.Paths
+	paths := make([]string, len(cfg.Model.Paths), len(cfg.Model.Paths)+len(cfg.Backends.MultimodalPaths))
+	copy(paths, cfg.Model.Paths)
+	for _, mp := range cfg.Backends.MultimodalPaths {
+		paths = append(paths, mp.Path)
+	}
+	logger.Debug("getScanPaths: returning paths from Paths", "count", len(paths), "paths", paths)
+	return paths
 }
 
 // calculatePathPrefix calculates a short path prefix for display

@@ -91,6 +91,12 @@ export function ModelCard({ model, onLoad, onUnload, onToggleFavourite, onShowDe
             <span className="truncate">{quantizationLabel}</span>
             <span className="shrink-0">|</span>
             <span className="shrink-0">{formatSize(model.totalSize ?? model.size)}</span>
+            {model.sourceType === 'huggingface' && (
+              <>
+                <span className="shrink-0">|</span>
+                <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-500">Safetensors</span>
+              </>
+            )}
           </div>
         </div>
       </div>

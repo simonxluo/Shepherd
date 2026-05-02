@@ -72,6 +72,21 @@
     "online": "在线",
     "offline": "离线"
   },
+  "logs": {
+    "title": "日志",
+    "local": "本机",
+    "nodes": "节点",
+    "localTitle": "本机日志",
+    "nodeLogs": "节点日志",
+    "nodeList": "节点列表",
+    "noNodes": "无在线节点",
+    "selectNode": "请选择一个节点查看日志",
+    "fontSize": "字体大小",
+    "wrapText": "自动换行",
+    "filter": "过滤",
+    "clear": "清空",
+    "filterPlaceholder": "正则过滤..."
+  },
   "chat": {
     "title": "聊天",
     "placeholder": "输入消息...",

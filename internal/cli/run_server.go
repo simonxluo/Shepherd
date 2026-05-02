@@ -120,7 +120,6 @@ func (app *App) Initialize(configPath string) error {
 	if err := logger.InitLogger(&cfg.Log, app.role); err != nil {
 		fmt.Printf("警告: 无法初始化日志系统: %v\n", err)
 	}
-	logger.InitLogStream(1000)
 
 	logger.Info("Shepherd 正在启动...")
 	logger.Infof("版本: %s", Version)

@@ -39,7 +39,7 @@ type BackendConfig struct {
 	Name     string // Human-readable name
 	// LlamaCpp-specific
 	BinPath  string   // Directory containing llama-server binary
-	BinPaths []string // All configured llama.cpp binary paths (tried in order)
+	BinPaths []string // All configured binary paths (tried in order)
 	// vLLM / vLLM-omni specific
 	CondaEnv    string // Conda environment name
 	CondaPath   string // Path to conda executable

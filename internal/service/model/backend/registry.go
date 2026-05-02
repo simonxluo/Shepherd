@@ -127,7 +127,7 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 
 	// Sync vLLM config
 	if cfg.Backends.VLLM != nil && cfg.Backends.VLLM.Enabled {
-		r.configs[BackendVLLM] = &BackendConfig{
+		vllmCfg := &BackendConfig{
 			Type:         BackendVLLM,
 			Name:         "vLLM",
 			CondaEnv:     cfg.Backends.VLLM.CondaEnv,
@@ -136,11 +136,19 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 			ExtraArgs:    cfg.Backends.VLLM.ExtraArgs,
 			DefaultPort:  cfg.Backends.VLLM.DefaultPort,
 		}
+		if len(cfg.Backends.VLLM.Paths) > 0 {
+			vllmCfg.BinPath = cfg.Backends.VLLM.Paths[0].Path
+			vllmCfg.BinPaths = make([]string, 0, len(cfg.Backends.VLLM.Paths))
+			for _, p := range cfg.Backends.VLLM.Paths {
+				vllmCfg.BinPaths = append(vllmCfg.BinPaths, p.Path)
+			}
+		}
+		r.configs[BackendVLLM] = vllmCfg
 	}
 
 	// Sync vLLM-omni config
 	if cfg.Backends.VLLMOmni != nil && cfg.Backends.VLLMOmni.Enabled {
-		r.configs[BackendVLLMOmni] = &BackendConfig{
+		omniCfg := &BackendConfig{
 			Type:         BackendVLLMOmni,
 			Name:         "vLLM-Omni",
 			CondaEnv:     cfg.Backends.VLLMOmni.CondaEnv,
@@ -149,6 +157,14 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 			ExtraArgs:    cfg.Backends.VLLMOmni.ExtraArgs,
 			DefaultPort:  cfg.Backends.VLLMOmni.DefaultPort,
 		}
+		if len(cfg.Backends.VLLMOmni.Paths) > 0 {
+			omniCfg.BinPath = cfg.Backends.VLLMOmni.Paths[0].Path
+			omniCfg.BinPaths = make([]string, 0, len(cfg.Backends.VLLMOmni.Paths))
+			for _, p := range cfg.Backends.VLLMOmni.Paths {
+				omniCfg.BinPaths = append(omniCfg.BinPaths, p.Path)
+			}
+		}
+		r.configs[BackendVLLMOmni] = omniCfg
 	}
 }
 

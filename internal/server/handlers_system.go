@@ -3,9 +3,9 @@ package server
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -492,271 +492,46 @@ func (s *Server) HandleStopProcess(c *gin.Context) {
 	})
 }
 
-// handleLogStream streams log entries using Server-Sent Events
-func (s *Server) HandleLogStream(c *gin.Context) {
-	// Set SSE headers
-	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
-	c.Writer.Header().Set("Connection", "keep-alive")
-	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+func (s *Server) HandleLogStreamText(c *gin.Context) {
+	c.Header("Content-Type", "text/plain")
+	c.Header("Transfer-Encoding", "chunked")
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("X-Accel-Buffering", "no")
 
-	// Get parameters
-	fromBeginning := c.DefaultQuery("fromBeginning", "false") == "true"
-	limit := 100
-	if l := c.Query("limit"); l != "" {
-		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil {
-			limit = 100
+	monitor := logger.GetMonitor()
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		c.String(http.StatusInternalServerError, "streaming unsupported")
+		return
+	}
+
+	_, skipHistory := c.GetQuery("no-history")
+	if !skipHistory {
+		history := monitor.GetHistory()
+		if len(history) > 0 {
+			c.Writer.Write(history)
+			flusher.Flush()
 		}
 	}
 
-	// Get log stream
-	logStream := logger.GetLogStream()
+	ch := monitor.Subscribe()
+	defer monitor.Unsubscribe(ch)
 
-	// Flush headers
-	c.Writer.Flush()
-
-	// Create channel for log entries
-	logCh := logStream.Subscribe()
-	defer logStream.Unsubscribe(logCh)
-
-	// Send existing entries if requested
-	if fromBeginning {
-		// Try to read from log file first
-		logEntries := []logger.StreamLogEntry{}
-
-		// Get log file path from configuration
-		if s.config != nil && s.config.ServerCfg != nil {
-			logDir := s.config.ServerCfg.Log.Directory
-			role := s.config.ServerCfg.Node.Role
-
-			// Get latest log file path
-			logPath, err := logger.GetLatestLogFile(logDir, role)
-			if err == nil {
-				// Read log file with empty filter to get all entries
-				parsedEntries, err := logger.ReadLogFile(logPath, logger.LogFileFilter{})
-				if err == nil && len(parsedEntries) > 0 {
-					// Convert ParsedLogEntry to StreamLogEntry
-					for _, entry := range parsedEntries {
-						logEntries = append(logEntries, logger.StreamLogEntry{
-							Timestamp: entry.Timestamp,
-							Level:     entry.Level,
-							Message:   entry.Message,
-							Fields:    entry.Fields,
-						})
-					}
-				}
-			}
-		}
-
-		// If no file entries, use memory cache as fallback
-		if len(logEntries) == 0 {
-			logEntries = logStream.GetEntries(limit)
-		}
-
-		// Send historical logs
-		if len(logEntries) > 0 {
-			// Batch send historical logs to reduce network I/O
-			var buf strings.Builder
-			for _, entry := range logEntries {
-				data := fmt.Sprintf("data: {\"timestamp\":\"%s\",\"level\":\"%s\",\"message\":\"%s\"}\n\n",
-					entry.Timestamp.Format(time.RFC3339),
-					entry.Level,
-					entry.Message)
-				buf.WriteString(data)
-			}
-			utils.WriteStringQuietly(c.Writer, buf.String())
-			c.Writer.Flush()
-		}
-	}
-
-	// Keep connection alive and send new entries
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	ctx := c.Request.Context()
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case entry, ok := <-logCh:
-			if !ok {
-				return
-			}
-			s.sendSSE(c, &entry)
-			c.Writer.Flush()
+		case data := <-ch:
+			c.Writer.Write(data)
+			flusher.Flush()
 		case <-ticker.C:
-			// Send keepalive comment
-			c.SSEvent("keepalive", "")
-			c.Writer.Flush()
+			c.Writer.Write([]byte("\n"))
+			flusher.Flush()
 		}
 	}
-}
-
-// sendSSE sends a log entry as Server-Sent Event
-func (s *Server) sendSSE(c *gin.Context, entry *logger.StreamLogEntry) {
-	data := fmt.Sprintf("data: {\"timestamp\":\"%s\",\"level\":\"%s\",\"message\":\"%s\"}\n\n",
-		entry.Timestamp.Format(time.RFC3339),
-		entry.Level,
-		entry.Message)
-	utils.WriteStringQuietly(c.Writer, data)
-}
-
-// handleLogEntries returns recent log entries
-func (s *Server) HandleLogEntries(c *gin.Context) {
-	limit := 100
-	if l := c.Query("limit"); l != "" {
-		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil {
-			limit = 100
-		}
-	}
-
-	logStream := logger.GetLogStream()
-	entries := logStream.GetEntries(limit)
-
-	api.Success(c, gin.H{
-		"entries": entries,
-		"count":   len(entries),
-	})
-}
-
-// handleLogFiles lists all available log files
-func (s *Server) HandleLogFiles(c *gin.Context) {
-	cfg := s.config.ConfigMgr.Get()
-	logDir := cfg.Log.Directory
-	role := s.config.ServerCfg.Node.Role
-
-	files, err := logger.ListLogFiles(logDir, role)
-	if err != nil {
-		api.ErrorWithDetails(c, types.ErrInternalError, "获取日志文件列表失败", err.Error())
-		return
-	}
-
-	api.Success(c, gin.H{
-		"files": files,
-		"count": len(files),
-	})
-}
-
-// handleLogFileContent returns the content of a specific log file
-func (s *Server) HandleLogFileContent(c *gin.Context) {
-	filename := c.Param("filename")
-
-	// Security: ensure filename is safe
-	if !isSafeFilename(filename) {
-		api.BadRequest(c, "无效的文件名")
-		return
-	}
-
-	cfg := s.config.ConfigMgr.Get()
-	logDir := cfg.Log.Directory
-	logPath := filepath.Join(logDir, filename)
-
-	// Parse filters
-	filter := logger.LogFileFilter{
-		Level:  c.Query("level"),
-		Search: c.Query("search"),
-	}
-
-	if offset := c.Query("offset"); offset != "" {
-		if _, err := fmt.Sscanf(offset, "%d", &filter.Offset); err != nil {
-			filter.Offset = 0
-		}
-	}
-	if limit := c.Query("limit"); limit != "" {
-		if _, err := fmt.Sscanf(limit, "%d", &filter.Limit); err != nil {
-			filter.Limit = 100
-		}
-	}
-
-	// Read log file
-	entries, err := logger.ReadLogFile(logPath, filter)
-	if err != nil {
-		api.ErrorWithDetails(c, types.ErrInternalError, "读取日志文件失败", err.Error())
-		return
-	}
-
-	api.Success(c, gin.H{
-		"entries": entries,
-		"count":   len(entries),
-	})
-}
-
-// handleLogFileStats returns statistics about a log file
-func (s *Server) HandleLogFileStats(c *gin.Context) {
-	filename := c.Param("filename")
-
-	// Security: ensure filename is safe
-	if !isSafeFilename(filename) {
-		api.BadRequest(c, "无效的文件名")
-		return
-	}
-
-	cfg := s.config.ConfigMgr.Get()
-	logDir := cfg.Log.Directory
-	logPath := filepath.Join(logDir, filename)
-
-	stats, err := logger.GetLogFileStats(logPath)
-	if err != nil {
-		api.ErrorWithDetails(c, types.ErrInternalError, "获取日志统计失败", err.Error())
-		return
-	}
-
-	api.Success(c, stats)
-}
-
-// handleDeleteLogFile deletes a specific log file
-func (s *Server) HandleDeleteLogFile(c *gin.Context) {
-	filename := c.Param("filename")
-
-	// Security: ensure filename is safe
-	if !isSafeFilename(filename) {
-		api.BadRequest(c, "无效的文件名")
-		return
-	}
-
-	// Prevent deleting the current day's log file
-	cfg := s.config.ConfigMgr.Get()
-	role := s.config.ServerCfg.Node.Role
-	currentDate := time.Now().Format("2006-01-02")
-	currentLogName := fmt.Sprintf("shepherd-%s-%s.log", role, currentDate)
-
-	if filename == currentLogName {
-		api.Forbidden(c, "不能删除当前日志文件")
-		return
-	}
-
-	logDir := cfg.Log.Directory
-	logPath := filepath.Join(logDir, filename)
-
-	// Delete file
-	if err := os.Remove(logPath); err != nil {
-		api.ErrorWithDetails(c, types.ErrInternalError, "删除日志文件失败", err.Error())
-		return
-	}
-
-	logger.Info("日志文件已删除", "filename", filename)
-
-	api.Success(c, gin.H{
-		"message": "日志文件已删除",
-	})
-}
-
-// isSafeFilename checks if a filename is safe (prevents directory traversal)
-func isSafeFilename(filename string) bool {
-	// Check for path traversal attempts
-	if strings.Contains(filename, "..") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
-		return false
-	}
-
-	// Check file extension
-	if !strings.HasSuffix(filename, ".log") {
-		return false
-	}
-
-	// Check filename format (basic pattern match)
-	// Format: shepherd-{mode}-{date} {time}.log or shepherd-{mode}-{date} {time}-{timestamp}-{reason}.log
-	// Supports filenames with spaces and timestamps: shepherd-hybrid-2026-02-26 21-46-59.log
-	pattern := regexp.MustCompile(`^shepherd-[a-z]+-\d{4}-\d{2}-\d{2}(?:\s\d{2}-\d{2}-\d{2})?(?:-\d{8}-\d{6}-[a-z]+)?\.log$`)
-	return pattern.MatchString(filename)
 }
