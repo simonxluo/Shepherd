@@ -352,12 +352,14 @@ func (m *Manager) Unload(modelID string) error {
 // toBackendLoadRequest converts model.LoadRequest to backend.LoadRequest
 func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port int) *backend.LoadRequest {
 	br := &backend.LoadRequest{
-		ModelPath: modelPath,
-		Port:      port,
-		CtxSize:   req.CtxSize,
-		GPULayers: req.GPULayers,
-		Threads:   req.Threads,
-		Devices:   req.Devices,
+		ModelPath:      modelPath,
+		Port:           port,
+		CtxSize:        req.CtxSize,
+		GPULayers:      req.GPULayers,
+		Threads:        req.Threads,
+		Devices:        req.Devices,
+		DraftModelPath: req.DraftModelPath,
+		DraftMaxTokens: req.DraftMaxTokens,
 	}
 
 	// Map all fields to the appropriate backend params based on the backend type
@@ -424,6 +426,8 @@ func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port 
 			RopeScale:        req.RopeScale,
 			RopeFreqBase:     req.RopeFreqBase,
 			RopeFreqScale:    req.RopeFreqScale,
+			DraftModelPath:   req.DraftModelPath,
+			DraftMaxTokens:   req.DraftMaxTokens,
 		}
 	}
 

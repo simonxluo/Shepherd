@@ -297,6 +297,13 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		args = append(args, "--rope-freq-scale", fmt.Sprintf("%.2f", p.RopeFreqScale))
 	}
 
+	if p.DraftModelPath != "" {
+		args = append(args, "--draft", p.DraftModelPath)
+	}
+	if p.DraftMaxTokens > 0 {
+		args = append(args, "--draft-max-n", strconv.Itoa(p.DraftMaxTokens))
+	}
+
 	// Build command string
 	cmd := quoteAndJoin(args)
 
