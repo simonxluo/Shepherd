@@ -1690,12 +1690,14 @@ export function LoadModelDialog({
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5">
                         <label className="text-xs font-medium">Draft 最大 token 数</label>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent>每轮推测解码中 draft 模型生成的最大 token 数（默认 16）</TooltipContent>
-                        </Tooltip>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>每轮推测解码中 draft 模型生成的最大 token 数（默认 16）</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                     <NumberInput
