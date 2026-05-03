@@ -12,6 +12,8 @@ model:
         - ~/.cache/huggingface/hub
     path_configs: []
     auto_scan: true
+    scan_interval: 300
+    port_range: "8081-9000"
 llamacpp:
     paths:
         - path: /usr/local/bin/
@@ -22,6 +24,9 @@ backends:
         enabled: false
         conda_env: ""
         conda_path: ""
+        serve_bin: ""
+        extra_args: ""
+        default_port: 8000
         paths:
             - path: /usr/local/bin/
               name: Default
@@ -30,6 +35,11 @@ backends:
         enabled: false
         conda_env: ""
         conda_path: ""
+        serve_bin: ""
+        extra_args: ""
+        default_port: 8000
+        video_pruning_rate: 0
+        mm_tensor_ipc: false
         paths:
             - path: /usr/local/bin/
               name: Default
@@ -88,13 +98,13 @@ node:
         os: linux
         arch: amd64
     master_role:
+        enabled: true
         port: 9190
-        scheduler:
-            strategy: round_robin
-            max_queue_size: 100
-            task_timeout: 300
-            retry_on_failure: true
-            max_retries: 3
+        api_key: ""
+        ssl:
+            enabled: false
+            cert_path: ""
+            key_path: ""
     client_role:
         enabled: true
         master_address: ""
@@ -106,3 +116,34 @@ node:
         conda_path: ""
         conda_environments:
             shepherd: ""
+    resources:
+        monitor_interval: 10
+        report_gpu: true
+        report_temperature: true
+        gpu_backend: ""
+    executor:
+        max_concurrent: 5
+        task_timeout: 300
+        allow_remote_stop: false
+        allowed_commands: []
+master:
+    enabled: false
+    client_config_dir: ""
+    network_scan:
+        enabled: false
+        subnets: []
+        port_range: ""
+        timeout: 5
+        auto_discover: false
+        interval: 300
+    scheduler:
+        strategy: round_robin
+        max_queue_size: 100
+        task_timeout: 300
+        retry_on_failure: true
+        max_retries: 3
+    log_aggregation:
+        enabled: false
+        max_buffer_size: 1000
+        flush_interval: 30
+client: null
