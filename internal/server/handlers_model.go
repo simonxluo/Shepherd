@@ -452,7 +452,7 @@ func (s *Server) HandleSaveModelLoadConfig(c *gin.Context) {
 		return
 	}
 
-	logger.Info("模型加载配置已保存", "modelId", id, "nodeId", nodeID)
+	logger.Infof("模型加载配置已保存: modelId=%s, nodeId=%s", id, nodeID)
 
 	api.Success(c, gin.H{
 		"modelId": id,
@@ -476,7 +476,7 @@ func (s *Server) HandleDeleteModelLoadConfig(c *gin.Context) {
 		return
 	}
 
-	logger.Info("模型加载配置已删除", "modelId", id, "nodeId", nodeID)
+	logger.Infof("模型加载配置已删除: modelId=%s, nodeId=%s", id, nodeID)
 
 	api.SuccessWithMessage(c, "模型加载配置已删除")
 }

@@ -54,9 +54,9 @@ func (m *Manager) checkAndUnloadIdle() {
 	m.mu.RUnlock()
 
 	for _, id := range toUnload {
-		logger.Info("TTL 过期，自动卸载模型", "modelId", id)
+		logger.Infof("TTL 过期，自动卸载模型: modelId=%s", id)
 		if err := m.Unload(id); err != nil {
-			logger.Warn("TTL 自动卸载失败", "modelId", id, "error", err)
+			logger.Warnf("TTL 自动卸载失败: modelId=%s, error=%v", id, err)
 		}
 	}
 }

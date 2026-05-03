@@ -369,7 +369,7 @@ func (s *Server) HandleUpdateConfig(c *gin.Context) {
 		if req.AutoScan {
 			go func() {
 				if _, err := s.modelMgr.Scan(c.Request.Context()); err != nil {
-					logger.Warn("模型扫描失败", "error", err)
+					logger.Warnf("模型扫描失败: error=%v", err)
 				}
 			}()
 		}

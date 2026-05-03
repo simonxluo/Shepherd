@@ -155,7 +155,7 @@ func (app *App) Initialize(configPath string) error {
 		return fmt.Errorf("无法创建存储管理器: %w", err)
 	}
 	app.storageMgr = storageMgr
-	logger.Info("存储管理器初始化成功", "type", storageCfg.Type)
+	logger.Infof("存储管理器初始化成功: type=%s", storageCfg.Type)
 
 	app.modelMgr = model.NewManager(cfg, app.configMgr, app.procMgr, app.portAllocator, app.storageMgr)
 

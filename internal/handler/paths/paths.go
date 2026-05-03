@@ -695,6 +695,71 @@ func (h *Handler) AddVLLMPath(c *gin.Context) {
 	})
 }
 
+// UpdateVLLMPath updates an existing vLLM path
+func (h *Handler) UpdateVLLMPath(c *gin.Context) {
+	var req struct {
+		OriginalPath string `json:"originalPath"`
+		config.BackendPath
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Path == "" {
+		handler.BadRequest(c, "Path is required")
+		return
+	}
+
+	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	if err != nil {
+		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
+		return
+	}
+
+	cfg := h.configManager.Get()
+	if cfg.Backends.VLLM == nil {
+		handler.NotFound(c, "vLLM not configured")
+		return
+	}
+
+	found := false
+	updatedIndex := -1
+	for i, p := range cfg.Backends.VLLM.Paths {
+		if req.OriginalPath != "" && p.Path == req.OriginalPath {
+			updatedIndex = i
+			found = true
+			break
+		}
+		if !found && p.Path == req.Path {
+			updatedIndex = i
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		handler.NotFound(c, "Path not found")
+		return
+	}
+
+	cfg.Backends.VLLM.Paths[updatedIndex] = config.BackendPath{
+		Path:        normalizedPath,
+		Name:        req.Name,
+		Description: req.Description,
+	}
+
+	if err := h.configManager.Save(cfg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{
+		"message": "vLLM path updated successfully",
+		"updated": cfg.Backends.VLLM.Paths[updatedIndex],
+	})
+}
+
 // RemoveVLLMPath removes a vLLM path
 func (h *Handler) RemoveVLLMPath(c *gin.Context) {
 	path := c.Query("path")
@@ -774,7 +839,7 @@ func (h *Handler) AddVLLMOmniPath(c *gin.Context) {
 
 	cfg := h.configManager.Get()
 	if cfg.Backends.VLLMOmni == nil {
-		cfg.Backends.VLLMOmni = &config.VLLMOmniBackendConfig{Enabled: true}
+		cfg.Backends.VLLMOmni = &config.VLLMBackendConfig{Enabled: true}
 	}
 
 	for _, p := range cfg.Backends.VLLMOmni.Paths {
@@ -795,6 +860,71 @@ func (h *Handler) AddVLLMOmniPath(c *gin.Context) {
 		"message": "vLLM-Omni path added successfully",
 		"added":   req,
 		"count":   len(cfg.Backends.VLLMOmni.Paths),
+	})
+}
+
+// UpdateVLLMOmniPath updates an existing vLLM-Omni path
+func (h *Handler) UpdateVLLMOmniPath(c *gin.Context) {
+	var req struct {
+		OriginalPath string `json:"originalPath"`
+		config.BackendPath
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Path == "" {
+		handler.BadRequest(c, "Path is required")
+		return
+	}
+
+	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	if err != nil {
+		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
+		return
+	}
+
+	cfg := h.configManager.Get()
+	if cfg.Backends.VLLMOmni == nil {
+		handler.NotFound(c, "vLLM-Omni not configured")
+		return
+	}
+
+	found := false
+	updatedIndex := -1
+	for i, p := range cfg.Backends.VLLMOmni.Paths {
+		if req.OriginalPath != "" && p.Path == req.OriginalPath {
+			updatedIndex = i
+			found = true
+			break
+		}
+		if !found && p.Path == req.Path {
+			updatedIndex = i
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		handler.NotFound(c, "Path not found")
+		return
+	}
+
+	cfg.Backends.VLLMOmni.Paths[updatedIndex] = config.BackendPath{
+		Path:        normalizedPath,
+		Name:        req.Name,
+		Description: req.Description,
+	}
+
+	if err := h.configManager.Save(cfg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{
+		"message": "vLLM-Omni path updated successfully",
+		"updated": cfg.Backends.VLLMOmni.Paths[updatedIndex],
 	})
 }
 

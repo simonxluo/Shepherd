@@ -56,9 +56,9 @@ func (m *Manager) swapBeforeLoad(modelID string) error {
 		status, exists := m.statuses[id]
 		m.mu.RUnlock()
 		if exists && status.State == StateLoaded {
-			logger.Info("组交换: 停止同组模型", "stopping", id, "loading", modelID, "group", group.ID)
+			logger.Infof("组交换: 停止同组模型: stopping=%s, loading=%s, group=%s", id, modelID, group.ID)
 			if err := m.Unload(id); err != nil {
-				logger.Warn("组交换: 停止模型失败", "modelId", id, "error", err)
+				logger.Warnf("组交换: 停止模型失败: modelId=%s, error=%v", id, err)
 			}
 		}
 	}
@@ -83,9 +83,9 @@ func (m *Manager) swapBeforeLoad(modelID string) error {
 		m.mu.RUnlock()
 
 		for _, id := range toStop {
-			logger.Info("互斥组: 停止非持久化模型", "stopping", id, "group", group.ID)
+			logger.Infof("互斥组: 停止非持久化模型: stopping=%s, group=%s", id, group.ID)
 			if err := m.Unload(id); err != nil {
-				logger.Warn("互斥组: 停止模型失败", "modelId", id, "error", err)
+				logger.Warnf("互斥组: 停止模型失败: modelId=%s, error=%v", id, err)
 			}
 		}
 	}

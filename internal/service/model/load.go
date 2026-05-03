@@ -19,7 +19,7 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 	modelPath := model.Path
 	if len(model.ShardFiles) > 0 {
 		modelPath = model.ShardFiles[0]
-		logger.Info("using shard model primary file", "modelId", req.ModelID, "path", modelPath, "shardCount", len(model.ShardFiles))
+		logger.Infof("using shard model primary file: modelId=%s, path=%s, shardCount=%d", req.ModelID, modelPath, len(model.ShardFiles))
 	}
 
 	bt, parseErr := backend.ParseBackendType(req.BackendType)
@@ -146,24 +146,24 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *Model) {
 	startTime := time.Now()
 
-	logger.Info("开始异步加载模型", "modelId", req.ModelID, "modelName", model.Name)
+	logger.Infof("开始异步加载模型: modelId=%s, modelName=%s", req.ModelID, model.Name)
 
 	// 根据模型大小计算超时时间
 	timeout := m.calculateLoadTimeout(model.Size)
-	logger.Info("模型加载超时设置", "modelId", req.ModelID, "sizeGB", float64(model.Size)/(1024*1024*1024), "timeout", timeout)
+	logger.Infof("模型加载超时设置: modelId=%s, sizeGB=%.2f, timeout=%s", req.ModelID, float64(model.Size)/(1024*1024*1024), timeout)
 
 	// 准备并启动进程
 	proc, port, b, err := m.prepareAndStartProcess(req, model, status)
 	if err != nil {
-		logger.Error("异步模型加载失败", "modelId", req.ModelID, "error", err)
+		logger.Errorf("异步模型加载失败: modelId=%s, error=%v", req.ModelID, err)
 		return
 	}
 
-	logger.Info("进程启动成功，准备获取 PID", "modelId", req.ModelID)
+	logger.Infof("进程启动成功，准备获取 PID: modelId=%s", req.ModelID)
 
 	// 获取 PID
 	pid := proc.GetPID()
-	logger.Info("异步模型加载: 进程已启动", "modelId", req.ModelID, "pid", pid, "port", port, "backend", b.Type())
+	logger.Infof("异步模型加载: 进程已启动: modelId=%s, pid=%d, port=%d, backend=%s", req.ModelID, pid, port, b.Type())
 
 	// 等待加载完成（监控进程输出）
 	loadCompleted := make(chan bool, 1)
@@ -184,14 +184,14 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		for {
 			select {
 			case <-stopHealthCheck:
-				logger.Info("健康检查收到停止信号", "modelId", req.ModelID, "checkCount", checkCount)
+				logger.Infof("健康检查收到停止信号: modelId=%s, checkCount=%d", req.ModelID, checkCount)
 				return
 			case <-ticker.C:
 				checkCount++
 
 				// 检查总超时
 				if time.Since(checkStart) > healthCheckTimeout {
-					logger.Error("健康检查总超时", "modelId", req.ModelID, "timeout", healthCheckTimeout, "checkCount", checkCount)
+					logger.Errorf("健康检查总超时: modelId=%s, timeout=%s, checkCount=%d", req.ModelID, healthCheckTimeout, checkCount)
 					select {
 					case loadError <- fmt.Errorf("健康检查超时 (%v)，模型可能加载失败", healthCheckTimeout):
 					default:
@@ -201,7 +201,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 
 				// 检查进程是否仍在运行
 				if !proc.IsRunning() {
-					logger.Error("健康检查发现进程已退出", "modelId", req.ModelID, "pid", proc.GetPID())
+					logger.Errorf("健康检查发现进程已退出: modelId=%s, pid=%d", req.ModelID, proc.GetPID())
 					select {
 					case loadError <- fmt.Errorf("进程意外退出 (PID: %d)", proc.GetPID()):
 					default:
@@ -213,13 +213,13 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 				result, err := b.CheckHealth(port)
 				if err != nil {
 					// 连接失败，可能是进程尚未监听端口
-					logger.Warn("健康检查连接失败（正常：后端可能仍在启动）", "modelId", req.ModelID, "error", err, "checkCount", checkCount)
+					logger.Warnf("健康检查连接失败（正常：后端可能仍在启动）: modelId=%s, error=%v, checkCount=%d", req.ModelID, err, checkCount)
 				} else if !result.Healthy {
 					// HTTP 503 等 - 模型仍在加载中，继续等待
-					logger.Info("后端尚未就绪（正常加载中）", "modelId", req.ModelID, "statusCode", "non-200", "checkCount", checkCount)
+					logger.Infof("后端尚未就绪（正常加载中）: modelId=%s, statusCode=%s, checkCount=%d", req.ModelID, "non-200", checkCount)
 				} else {
 					// 健康检查成功！
-					logger.Info("健康检查成功，模型已就绪", "modelId", req.ModelID, "port", port, "checkCount", checkCount)
+					logger.Infof("健康检查成功，模型已就绪: modelId=%s, port=%d, checkCount=%d", req.ModelID, port, checkCount)
 					select {
 					case loadCompleted <- true:
 					default:
@@ -257,7 +257,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		m.mu.Unlock()
 		status.LoadWait.Done()
 		duration := time.Since(startTime)
-		logger.Info("异步模型加载成功", "modelId", req.ModelID, "port", port, "duration", duration.String(), "backend", b.Type())
+		logger.Infof("异步模型加载成功: modelId=%s, port=%d, duration=%s, backend=%s", req.ModelID, port, duration.String(), b.Type())
 
 	case err := <-loadError:
 		close(stopHealthCheck)
@@ -266,7 +266,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		status.Error = err
 		m.mu.Unlock()
 		status.LoadWait.Done()
-		logger.Error("异步模型加载失败", "modelId", req.ModelID, "error", err)
+		logger.Errorf("异步模型加载失败: modelId=%s, error=%v", req.ModelID, err)
 		m.processMgr.Stop(req.ModelID) //errcheck:ignore
 		m.portAllocator.Release(port)
 
@@ -277,7 +277,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		status.Error = fmt.Errorf("模型加载超时 (%v)", timeout)
 		m.mu.Unlock()
 		status.LoadWait.Done()
-		logger.Error("异步模型加载超时", "modelId", req.ModelID, "timeout", timeout)
+		logger.Errorf("异步模型加载超时: modelId=%s, timeout=%s", req.ModelID, timeout)
 		m.processMgr.Stop(req.ModelID) //errcheck:ignore
 		m.portAllocator.Release(port)
 	}
@@ -312,35 +312,35 @@ func (m *Manager) Unload(modelID string) error {
 
 	status, exists := m.statuses[modelID]
 	if !exists {
-		logger.Warn("模型卸载失败: 模型未加载", "modelId", modelID)
+		logger.Warnf("模型卸载失败: 模型未加载: modelId=%s", modelID)
 		return fmt.Errorf("model not loaded: %s", modelID)
 	}
 
 	if status.State != StateLoaded {
-		logger.Warn("模型卸载失败: 模型未处于已加载状态", "modelId", modelID, "state", status.State)
+		logger.Warnf("模型卸载失败: 模型未处于已加载状态: modelId=%s, state=%v", modelID, status.State)
 		return fmt.Errorf("model not in loaded state: %s", modelID)
 	}
 
-	logger.Info("开始卸载模型", "modelId", modelID, "modelName", status.Name, "port", status.Port)
+	logger.Infof("开始卸载模型: modelId=%s, modelName=%s, port=%d", modelID, status.Name, status.Port)
 
 	status.transitionTo(StateUnloading)
 	status.InflightWait()
 
 	if err := m.processMgr.Stop(modelID); err != nil {
-		logger.Error("模型卸载失败: 停止进程失败", "modelId", modelID, "error", err)
+		logger.Errorf("模型卸载失败: 停止进程失败: modelId=%s, error=%v", modelID, err)
 		return err
 	}
 
 	if status.Port > 0 {
 		m.portAllocator.Release(status.Port)
-		logger.Info("已释放端口", "modelId", modelID, "port", status.Port)
+		logger.Infof("已释放端口: modelId=%s, port=%d", modelID, status.Port)
 	}
 
 	status.State = StateUnloaded
 	status.ProcessID = ""
 	status.Port = 0
 
-	logger.Info("模型卸载成功", "modelId", modelID, "modelName", status.Name)
+	logger.Infof("模型卸载成功: modelId=%s, modelName=%s", modelID, status.Name)
 
 	return nil
 }

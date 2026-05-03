@@ -7,7 +7,7 @@ import type { AppConfig } from './types';
  */
 const DEFAULT_CONFIG: AppConfig = {
   api: {
-    baseUrl: 'http://localhost:9190',
+    baseUrl: '',
     basePath: '/api',
     timeout: 30000,
     connectTimeout: 5000,
@@ -97,7 +97,7 @@ export class ConfigLoader {
     let apiBaseUrl = defaults.api.baseUrl;
     if (loaded?.backend?.urls && Array.isArray(loaded.backend.urls)) {
       const index = loaded.backend.currentIndex ?? 0;
-      apiBaseUrl = loaded.backend.urls[index] || loaded.backend.urls[0] || defaults.api.baseUrl;
+      apiBaseUrl = loaded.backend.urls[index] ?? loaded.backend.urls[0] ?? defaults.api.baseUrl;
     } else if (loaded?.api?.baseUrl) {
       apiBaseUrl = loaded.api.baseUrl;
     }

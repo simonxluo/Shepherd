@@ -53,13 +53,13 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 	}
 
 	scanPaths := m.getScanPaths()
-	logger.Info("开始扫描模型", "pathCount", len(scanPaths))
+	logger.Infof("开始扫描模型: pathCount=%d", len(scanPaths))
 
 	// Scan each configured path
 	for _, scanPath := range scanPaths {
-		logger.Info("正在扫描路径", "path", scanPath)
+		logger.Infof("正在扫描路径: %s", scanPath)
 		pathModels, pathErrors := m.scanPath(ctx, scanPath)
-		logger.Info("路径扫描完成", "path", scanPath, "modelCount", len(pathModels), "errorCount", len(pathErrors))
+		logger.Infof("路径扫描完成: path=%s, modelCount=%d, errorCount=%d", scanPath, len(pathModels), len(pathErrors))
 		result.Models = append(result.Models, pathModels...)
 		result.Errors = append(result.Errors, pathErrors...)
 		result.TotalFiles += len(pathModels) + len(pathErrors)
@@ -67,7 +67,7 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 	}
 
 	result.Duration = time.Since(result.ScannedAt)
-	logger.Info("模型扫描完成", "totalModels", len(result.Models), "duration", result.Duration.String(), "totalErrors", len(result.Errors))
+	logger.Infof("模型扫描完成: totalModels=%d, duration=%s, totalErrors=%d", len(result.Models), result.Duration.String(), len(result.Errors))
 
 	// ========== 修复：从数据库加载用户设置的属性 ==========
 	// 从数据库加载所有模型的元数据（别名、收藏、标签、描述、使用统计等）
@@ -76,10 +76,10 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 		store := m.storageMgr.GetStore()
 		metadata, err := store.GetAllModelMetadata(ctx)
 		if err != nil {
-			logger.Warn("从数据库加载模型元数据失败", "error", err)
+			logger.Warnf("从数据库加载模型元数据失败: %v", err)
 		} else {
 			modelMetadataMap = metadata
-			logger.Info("从数据库加载模型元数据", "count", len(metadata))
+			logger.Infof("从数据库加载模型元数据: count=%d", len(metadata))
 		}
 	}
 	// ==============================================
@@ -105,7 +105,7 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 				model.LastLoaded = *metadata.LastLoaded
 			}
 			model.TotalTokens = metadata.TotalTokens
-			logger.Debug("恢复模型用户属性", "id", id, "alias", metadata.Alias, "favourite", metadata.Favourite)
+			logger.Debugf("恢复模型用户属性: id=%s, alias=%s, favourite=%v", id, metadata.Alias, metadata.Favourite)
 		}
 	}
 	// ==============================================
@@ -113,16 +113,16 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 	// ========== 新增：合并分卷文件 ==========
 	mergedCount := m.mergeSplitModels()
 	if mergedCount > 0 {
-		logger.Info("已合并分卷文件", "mergedCount", mergedCount)
+		logger.Infof("已合并分卷文件: mergedCount=%d", mergedCount)
 	}
 
 	modelCount := len(m.models)
 	m.mu.Unlock()
-	logger.Info("模型缓存已更新", "modelCount", modelCount)
+	logger.Infof("模型缓存已更新: modelCount=%d", modelCount)
 
 	// Save to config
 	m.saveModels()
-	logger.Info("已保存模型到配置", "savedCount", len(m.models))
+	logger.Infof("已保存模型到配置: savedCount=%d", len(m.models))
 
 	// 更新 result.Models 为合并后的模型列表
 	// 这样 Scan API 返回的是合并后的结果
@@ -153,7 +153,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 	// Check if path exists
 	info, err := os.Stat(scanPath)
 	if err != nil {
-		logger.Error("路径访问失败", "path", scanPath, "error", err)
+		logger.Errorf("路径访问失败: %s, error: %v", scanPath, err)
 		return nil, []ScanError{{Path: scanPath, Error: fmt.Sprintf("路径访问失败: %v", err)}}
 	}
 
@@ -161,7 +161,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 	if info.IsDir() {
 		pathType = "目录"
 	}
-	logger.Debug("开始扫描路径", "path", scanPath, "type", pathType)
+	logger.Debugf("开始扫描路径: %s, type=%s", scanPath, pathType)
 
 	// Check if path is readable
 	if info.IsDir() {
@@ -199,7 +199,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 				if path != scanPath && huggingface.IsHuggingFaceModelDir(path) {
 					fileCount++
 					matchedCount++
-					logger.Debug("找到 HuggingFace 模型目录", "path", path)
+					logger.Debugf("找到 HuggingFace 模型目录: %s", path)
 
 					wg.Add(1)
 					semaphore <- struct{}{}
@@ -210,7 +210,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 
 						model, loadErr := m.loadHuggingFaceModel(dirPath)
 						if loadErr != nil {
-							logger.Warn("加载 HuggingFace 模型失败", "path", dirPath, "error", loadErr)
+							logger.Warnf("加载 HuggingFace 模型失败: %s, error: %v", dirPath, loadErr)
 							mu.Lock()
 							errors = append(errors, ScanError{
 								Path:  dirPath,
@@ -218,7 +218,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 							})
 							mu.Unlock()
 						} else {
-							logger.Info("成功加载 HuggingFace 模型", "name", model.Name, "id", model.ID, "path", dirPath)
+							logger.Infof("成功加载 HuggingFace 模型: %s, id=%s, path=%s", model.Name, model.ID, dirPath)
 							mu.Lock()
 							models = append(models, model)
 							mu.Unlock()
@@ -235,7 +235,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 			// 检查是否为模型文件
 			if m.isModelFile(path) {
 				matchedCount++
-				logger.Debug("找到模型文件", "path", path)
+				logger.Debugf("找到模型文件: %s", path)
 
 				wg.Add(1)
 				semaphore <- struct{}{}
@@ -246,7 +246,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 
 					model, loadErr := m.loadModelWithValidation(filePath)
 					if loadErr != nil {
-						logger.Warn("加载模型失败", "path", filePath, "error", loadErr)
+						logger.Warnf("加载模型失败: %s, error: %v", filePath, loadErr)
 						mu.Lock()
 						errors = append(errors, ScanError{
 							Path:  filePath,
@@ -254,7 +254,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 						})
 						mu.Unlock()
 					} else {
-						logger.Info("成功加载模型", "name", model.Name, "id", model.ID, "path", filePath)
+						logger.Infof("成功加载模型: %s, id=%s, path=%s", model.Name, model.ID, filePath)
 						mu.Lock()
 						models = append(models, model)
 						mu.Unlock()
@@ -267,7 +267,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 
 		wg.Wait()
 
-		logger.Debug("路径扫描完成", "path", scanPath, "fileCount", fileCount, "matchedCount", matchedCount)
+		logger.Debugf("路径扫描完成: path=%s, fileCount=%d, matchedCount=%d", scanPath, fileCount, matchedCount)
 
 		if err != nil && err != ctx.Err() {
 			errors = append(errors, ScanError{
@@ -276,7 +276,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 			})
 		}
 	} else if huggingface.IsHuggingFaceModelDir(scanPath) {
-		logger.Info("HuggingFace 模型目录", "path", scanPath)
+		logger.Infof("HuggingFace 模型目录: %s", scanPath)
 		model, loadErr := m.loadHuggingFaceModel(scanPath)
 		if loadErr != nil {
 			errors = append(errors, ScanError{
@@ -287,7 +287,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 			models = append(models, model)
 		}
 	} else if m.isModelFile(scanPath) {
-		logger.Info("单文件模型", "path", scanPath)
+		logger.Infof("单文件模型: %s", scanPath)
 		model, err := m.loadModelWithValidation(scanPath)
 		if err != nil {
 			errors = append(errors, ScanError{
@@ -298,7 +298,7 @@ func (m *Manager) scanPath(ctx context.Context, scanPath string) ([]*Model, []Sc
 			models = append(models, model)
 		}
 	} else {
-		logger.Warn("路径不是模型文件", "path", scanPath)
+		logger.Warnf("路径不是模型文件: %s", scanPath)
 	}
 
 	return models, errors
@@ -406,7 +406,7 @@ func (m *Manager) loadModel(path string) (*Model, error) {
 			// Update existing metadata, preserve user settings
 			existingMeta.Capabilities = detectedCaps
 			if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); err != nil {
-				logger.Warn("保存模型能力失败", "modelId", model.ID, "error", err)
+				logger.Warnf("保存模型能力失败: modelId=%s, error=%v", model.ID, err)
 			}
 		} else {
 			// Create new metadata entry with capabilities
@@ -414,7 +414,7 @@ func (m *Manager) loadModel(path string) (*Model, error) {
 				ModelID:      model.ID,
 				Capabilities: detectedCaps,
 			}); err != nil {
-				logger.Warn("保存模型能力失败", "modelId", model.ID, "error", err)
+				logger.Warnf("保存模型能力失败: modelId=%s, error=%v", model.ID, err)
 			}
 		}
 	}
@@ -506,14 +506,14 @@ func (m *Manager) loadHuggingFaceModel(dirPath string) (*Model, error) {
 	if err == nil && existingMeta != nil {
 		existingMeta.Capabilities = detectedCaps
 		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); saveErr != nil {
-			logger.Warn("保存模型能力失败", "modelId", model.ID, "error", saveErr)
+			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", model.ID, saveErr)
 		}
 	} else {
 		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
 			ModelID:      model.ID,
 			Capabilities: detectedCaps,
 		}); saveErr != nil {
-			logger.Warn("保存模型能力失败", "modelId", model.ID, "error", saveErr)
+			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", model.ID, saveErr)
 		}
 	}
 
@@ -603,7 +603,7 @@ func (m *Manager) getScanPaths() []string {
 			raw = append(raw, mp.Path)
 		}
 		paths := expandAll(raw)
-		logger.Debug("getScanPaths: returning paths from PathConfigs", "count", len(paths), "paths", paths)
+		logger.Debugf("getScanPaths: returning paths from PathConfigs: count=%d, paths=%v", len(paths), paths)
 		return paths
 	}
 	raw := make([]string, 0, len(cfg.Model.Paths)+len(cfg.Backends.MultimodalPaths))
@@ -612,7 +612,7 @@ func (m *Manager) getScanPaths() []string {
 		raw = append(raw, mp.Path)
 	}
 	paths := expandAll(raw)
-	logger.Debug("getScanPaths: returning paths from Paths", "count", len(paths), "paths", paths)
+	logger.Debugf("getScanPaths: returning paths from Paths: count=%d, paths=%v", len(paths), paths)
 	return paths
 }
 
@@ -709,7 +709,7 @@ func (m *Manager) mergeSplitModels() int {
 
 	// 对每组进行处理
 	for groupKey, models := range groups {
-		logger.Debug("mergeSplitModels: processing group", "groupKey", groupKey, "found", len(models))
+		logger.Debugf("mergeSplitModels: processing group: groupKey=%s, found=%d", groupKey, len(models))
 
 		if len(models) < 2 {
 			// 只有一个分卷，不合并
@@ -738,12 +738,12 @@ func (m *Manager) mergeSplitModels() int {
 			expectedPart := i + 1
 			if partNum != expectedPart {
 				isComplete = false
-				logger.Warn("shard file not contiguous", "path", model.Path, "expected", expectedPart, "actual", partNum)
+				logger.Warnf("shard file not contiguous: path=%s, expected=%d, actual=%d", model.Path, expectedPart, partNum)
 			}
 		}
 
 		if !isComplete {
-			logger.Warn("shard group incomplete", "groupKey", groupKey, "found", len(models), "expected", totalParts)
+			logger.Warnf("shard group incomplete: groupKey=%s, found=%d, expected=%d", groupKey, len(models), totalParts)
 		}
 
 		// 使用第一卷作为主模型
@@ -786,7 +786,7 @@ func (m *Manager) mergeSplitModels() int {
 				if info, err := os.Stat(candidate); err == nil {
 					mmprojSize = info.Size()
 					mmprojPath = candidate
-					logger.Info("found mmproj file", "name", filepath.Base(candidate), "sizeGB", float64(mmprojSize)/(1024*1024*1024))
+					logger.Infof("found mmproj file: name=%s, sizeGB=%.2f", filepath.Base(candidate), float64(mmprojSize)/(1024*1024*1024))
 					break
 				}
 			}
@@ -801,7 +801,7 @@ func (m *Manager) mergeSplitModels() int {
 							if info, err := os.Stat(fullPath); err == nil {
 								mmprojSize = info.Size()
 								mmprojPath = fullPath
-								logger.Info("found mmproj via directory search", "name", entry.Name(), "sizeGB", float64(mmprojSize)/(1024*1024*1024))
+								logger.Infof("found mmproj via directory search: name=%s, sizeGB=%.2f", entry.Name(), float64(mmprojSize)/(1024*1024*1024))
 								break
 							}
 						}
@@ -813,7 +813,7 @@ func (m *Manager) mergeSplitModels() int {
 		// 更新 TotalSize 包含 mmproj 文件
 		totalSizeWithMmproj := totalSize + mmprojSize
 
-		logger.Debug("合并分卷模型前", "name", primary.Name, "modelCount", len(models), "shardFiles", len(shardFiles))
+		logger.Debugf("合并分卷模型前: name=%s, modelCount=%d, shardFiles=%d", primary.Name, len(models), len(shardFiles))
 
 		// 更新主模型的属性
 		primary.Name = extractModelName(filepath.Base(primary.Path))
@@ -824,12 +824,11 @@ func (m *Manager) mergeSplitModels() int {
 			primary.MmprojPath = mmprojPath
 		}
 
-		logger.Debug("合并分卷模型后",
-			"name", primary.Name,
-			"shardCount", primary.ShardCount,
-			"totalSizeGB", fmt.Sprintf("%.2f", float64(totalSize)/(1024*1024*1024)),
-			"mmprojSizeGB", fmt.Sprintf("%.2f", float64(mmprojSize)/(1024*1024*1024)),
-			"combinedSizeGB", fmt.Sprintf("%.2f", float64(primary.TotalSize)/(1024*1024*1024)),
+		logger.Debugf("合并分卷模型后: name=%s, shardCount=%d, totalSizeGB=%s, mmprojSizeGB=%s, combinedSizeGB=%s",
+			primary.Name, primary.ShardCount,
+			fmt.Sprintf("%.2f", float64(totalSize)/(1024*1024*1024)),
+			fmt.Sprintf("%.2f", float64(mmprojSize)/(1024*1024*1024)),
+			fmt.Sprintf("%.2f", float64(primary.TotalSize)/(1024*1024*1024)),
 		)
 
 		// 删除其他分卷的模型记录
@@ -844,10 +843,9 @@ func (m *Manager) mergeSplitModels() int {
 		primary.ID = newID
 
 		mergedCount++
-		logger.Info("已合并分卷模型",
-			"name", primary.Name,
-			"shardCount", len(models),
-			"totalSizeGB", fmt.Sprintf("%.2f", float64(totalSize)/(1024*1024*1024)),
+		logger.Infof("已合并分卷模型: name=%s, shardCount=%d, totalSizeGB=%s",
+			primary.Name, len(models),
+			fmt.Sprintf("%.2f", float64(totalSize)/(1024*1024*1024)),
 		)
 	}
 

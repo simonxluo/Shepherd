@@ -46,7 +46,7 @@ func (m *Manager) ListModels() []*Model {
 			done := make(chan bool, 1)
 			go func() {
 				if _, err := m.Scan(ctx); err != nil {
-					logger.Warn("ListModels: auto-scan failed", "error", err)
+					logger.Warnf("ListModels: auto-scan failed: error=%v", err)
 				}
 				done <- true
 			}()
@@ -156,10 +156,10 @@ func (m *Manager) SetAlias(modelID, alias string) error {
 		metadata.Alias = alias
 
 		if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
-			logger.Error("保存模型别名到数据库失败", "modelId", modelID, "error", err)
+			logger.Errorf("保存模型别名到数据库失败: modelId=%s, error=%v", modelID, err)
 			return fmt.Errorf("failed to save alias to database: %w", err)
 		}
-		logger.Info("模型别名已保存到数据库", "modelId", modelID, "alias", alias)
+		logger.Infof("模型别名已保存到数据库: modelId=%s, alias=%s", modelID, alias)
 	}
 
 	return nil
@@ -201,10 +201,10 @@ func (m *Manager) SetFavourite(modelID string, favourite bool) error {
 		metadata.Favourite = favourite
 
 		if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
-			logger.Error("保存模型收藏状态到数据库失败", "modelId", modelID, "error", err)
+			logger.Errorf("保存模型收藏状态到数据库失败: modelId=%s, error=%v", modelID, err)
 			return fmt.Errorf("failed to save favourite to database: %w", err)
 		}
-		logger.Info("模型收藏状态已保存到数据库", "modelId", modelID, "favourite", favourite)
+		logger.Infof("模型收藏状态已保存到数据库: modelId=%s, favourite=%v", modelID, favourite)
 	}
 
 	return nil
@@ -228,14 +228,14 @@ func (m *Manager) AutoDetectCapabilities(modelId string) (*storage.Capabilities,
 	if err == nil && existingMeta != nil {
 		existingMeta.Capabilities = detectedCaps
 		if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); err != nil {
-			logger.Warn("保存模型能力失败", "modelId", modelId, "error", err)
+			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelId, err)
 		}
 	} else {
 		if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
 			ModelID:      modelId,
 			Capabilities: detectedCaps,
 		}); err != nil {
-			logger.Warn("保存模型能力失败", "modelId", modelId, "error", err)
+			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelId, err)
 		}
 	}
 
@@ -251,11 +251,11 @@ func (m *Manager) loadModels() {
 
 	configModels, err := m.configMgr.LoadModelsConfig()
 	if err != nil {
-		logger.Error("loadModels: failed to load models config", "error", err)
+		logger.Errorf("loadModels: failed to load models config: error=%v", err)
 		return
 	}
 
-	logger.Info("loadModels: loaded models from config", "count", len(configModels))
+	logger.Infof("loadModels: loaded models from config: count=%d", len(configModels))
 
 	// Load aliases and favourites
 	aliases, _ := m.configMgr.LoadAliasMap()
@@ -266,7 +266,7 @@ func (m *Manager) loadModels() {
 		// 跳过 mmproj 文件（这些是多模态投影器，应该作为主模型的附件）
 		base := filepath.Base(cfgModel.Path)
 		if strings.Contains(base, "mmproj") || strings.HasPrefix(base, "mmproj") {
-			logger.Info("loadModels: skipping mmproj file", "path", cfgModel.Path)
+			logger.Infof("loadModels: skipping mmproj file: path=%s", cfgModel.Path)
 			continue
 		}
 
@@ -287,7 +287,7 @@ func (m *Manager) loadModels() {
 					model.TotalSize = cfgModel.TotalSize
 					model.ShardCount = cfgModel.ShardCount
 					model.ShardFiles = cfgModel.ShardFiles
-					logger.Info("loadModels: loaded shard model", "name", model.Name, "shardCount", model.ShardCount, "totalSizeGB", float64(model.TotalSize)/(1024*1024*1024))
+					logger.Infof("loadModels: loaded shard model: name=%s, shardCount=%d, totalSizeGB=%.2f", model.Name, model.ShardCount, float64(model.TotalSize)/(1024*1024*1024))
 				}
 
 				// 加载 mmproj 路径（如果配置中有保存）
@@ -295,28 +295,28 @@ func (m *Manager) loadModels() {
 					mmprojPath := filepath.Join(filepath.Dir(cfgModel.Path), cfgModel.Mmproj.FileName)
 					if info, err := os.Stat(mmprojPath); err == nil {
 						model.MmprojPath = mmprojPath
-						logger.Info("loadModels: loaded mmproj file", "fileName", cfgModel.Mmproj.FileName, "sizeGB", float64(info.Size())/(1024*1024*1024))
+						logger.Infof("loadModels: loaded mmproj file: fileName=%s, sizeGB=%.2f", cfgModel.Mmproj.FileName, float64(info.Size())/(1024*1024*1024))
 					} else {
-						logger.Warn("loadModels: mmproj file not found", "path", mmprojPath)
+						logger.Warnf("loadModels: mmproj file not found: path=%s", mmprojPath)
 					}
 				}
 
 				m.models[model.ID] = model
 				loadedCount++
 			} else {
-				logger.Warn("loadModels: failed to load model", "path", cfgModel.Path, "error", err)
+				logger.Warnf("loadModels: failed to load model: path=%s, error=%v", cfgModel.Path, err)
 			}
 		} else {
-			logger.Warn("loadModels: model file not found", "path", cfgModel.Path)
+			logger.Warnf("loadModels: model file not found: path=%s", cfgModel.Path)
 		}
 	}
-	logger.Info("loadModels: successfully loaded models into cache", "count", loadedCount)
+	logger.Infof("loadModels: successfully loaded models into cache: count=%d", loadedCount)
 	// ========== 合并分卷文件 ==========
 	// 注意：如果配置中已经保存了分卷信息，这里不需要再次合并
 	// 但如果配置中没有分卷信息，则尝试合并
 	mergedCount := m.mergeSplitModels()
 	if mergedCount > 0 {
-		logger.Info("loadModels: merged shard files", "mergedCount", mergedCount)
+		logger.Infof("loadModels: merged shard files: mergedCount=%d", mergedCount)
 	}
 }
 
@@ -378,7 +378,7 @@ func (m *Manager) saveModels() {
 	}
 
 	if err := m.configMgr.SaveModelsConfig(configModels); err != nil {
-		logger.Warn("保存模型配置失败", "error", err)
+		logger.Warnf("保存模型配置失败: error=%v", err)
 	}
 }
 
