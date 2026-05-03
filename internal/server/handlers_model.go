@@ -657,6 +657,6 @@ func getArchitecture(modelPath string) string {
 	if err != nil {
 		return ""
 	}
-	defer parser.Close()
+	defer func() { _ = parser.Close() }()
 	return parser.GetArchitecture()
 }
