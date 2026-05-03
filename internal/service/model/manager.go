@@ -31,10 +31,11 @@ type Manager struct {
 	scanStatus *ScanStatus
 	groups     map[string]*ModelGroup
 
-	mu     sync.RWMutex
-	ctx    context.Context
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	mu          sync.RWMutex
+	scannedOnce bool
+	ctx         context.Context
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
 }
 
 // ScanStatus represents the current scan status

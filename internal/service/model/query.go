@@ -34,28 +34,31 @@ func (m *Manager) ListModels() []*Model {
 	modelCount := len(m.models)
 	m.mu.RUnlock()
 
-	// 如果内存中没有模型，自动触发一次扫描
 	if modelCount == 0 {
-		logger.Info("ListModels: no models in memory, triggering auto-scan")
-		// 使用 background context 进行自动扫描
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		defer cancel()
+		m.mu.Lock()
+		if !m.scannedOnce {
+			m.scannedOnce = true
+			m.mu.Unlock()
+			logger.Info("ListModels: no models in memory, triggering auto-scan")
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
 
-		// 在 goroutine 中执行扫描，避免阻塞当前调用
-		done := make(chan bool, 1)
-		go func() {
-			if _, err := m.Scan(ctx); err != nil {
-				logger.Warn("ListModels: auto-scan failed", "error", err)
+			done := make(chan bool, 1)
+			go func() {
+				if _, err := m.Scan(ctx); err != nil {
+					logger.Warn("ListModels: auto-scan failed", "error", err)
+				}
+				done <- true
+			}()
+
+			select {
+			case <-done:
+				logger.Info("ListModels: auto-scan complete")
+			case <-time.After(10 * time.Second):
+				logger.Warn("ListModels: auto-scan timed out, returning current model list")
 			}
-			done <- true
-		}()
-
-		// 等待扫描完成，最多等待 10 秒
-		select {
-		case <-done:
-			logger.Info("ListModels: auto-scan complete")
-		case <-time.After(10 * time.Second):
-			logger.Warn("ListModels: auto-scan timed out, returning current model list")
+		} else {
+			m.mu.Unlock()
 		}
 	}
 
