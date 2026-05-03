@@ -279,6 +279,10 @@ type LoadRequest struct {
 	RopeFreqBase  float64 `json:"ropeFreqBase"`  // --rope-freq-base
 	RopeFreqScale float64 `json:"ropeFreqScale"` // --rope-freq-scale
 
+	DraftModelID   string `json:"draftModelId"`
+	DraftMaxTokens int    `json:"draftMaxTokens"`
+	DraftModelPath string `json:"-"`
+
 	// Runtime management
 	UnloadAfterMinutes int `json:"unloadAfterMinutes"` // TTL: idle minutes before auto-unload. 0 = never unload, >0 = custom minutes
 	ConcurrencyLimit   int `json:"concurrencyLimit"`   // Max concurrent requests. 0 = unlimited, >0 = custom limit

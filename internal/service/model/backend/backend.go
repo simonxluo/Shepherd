@@ -83,6 +83,9 @@ type LoadRequest struct {
 	Threads   int
 	Devices   []string // GPU devices (e.g., ["cuda:0", "cuda:1"])
 
+	DraftModelPath string
+	DraftMaxTokens int
+
 	// LlamaCpp-specific
 	LlamacppParams *LlamacppLoadParams
 
@@ -170,6 +173,8 @@ type LlamacppLoadParams struct {
 	RopeScale        float64
 	RopeFreqBase     float64
 	RopeFreqScale    float64
+	DraftModelPath   string
+	DraftMaxTokens   int
 }
 
 // VLLMLoadParams contains vLLM-specific load parameters
