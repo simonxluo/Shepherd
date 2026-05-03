@@ -1,4 +1,4 @@
-import { FolderOpen, TestTube, Edit, Trash2 } from 'lucide-react';
+import { Bug, FolderOpen, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { LlamaCppPathConfig, ModelPathConfig, BackendPathConfig, MultimodalPathConfig } from '@/lib/config';
 
@@ -55,7 +55,7 @@ export function PathItem({
             title="测试路径"
             className="h-8 w-8"
           >
-            <TestTube size={16} />
+            <Bug size={16} />
           </Button>
         )}
         <Button
