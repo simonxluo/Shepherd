@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model/backend"
@@ -103,6 +106,47 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	}
 
 	req.ModelID = id
+
+	if req.DraftModelID != "" {
+		if req.DraftModelID == id {
+			api.BadRequest(c, "Draft模型不能与主模型相同")
+			return
+		}
+		draftModel, exists := s.modelMgr.GetModel(req.DraftModelID)
+		if !exists {
+			api.BadRequest(c, fmt.Sprintf("Draft模型未找到: %s", req.DraftModelID))
+			return
+		}
+		draftPath := draftModel.Path
+		if len(draftModel.ShardFiles) > 0 {
+			draftPath = draftModel.ShardFiles[0]
+		}
+		if _, err := os.Stat(draftPath); err != nil {
+			api.BadRequest(c, fmt.Sprintf("Draft模型文件不可访问: %s", draftPath))
+			return
+		}
+		mainModel, mainExists := s.modelMgr.GetModel(id)
+		if !mainExists {
+			api.BadRequest(c, "主模型未找到")
+			return
+		}
+		mainPath := mainModel.Path
+		if len(mainModel.ShardFiles) > 0 {
+			mainPath = mainModel.ShardFiles[0]
+		}
+		mainArch := getArchitecture(mainPath)
+		draftArch := getArchitecture(draftPath)
+		if mainArch == "" || draftArch == "" {
+			api.BadRequest(c, "无法读取模型架构信息，请确保模型文件有效")
+			return
+		}
+		if !strings.EqualFold(mainArch, draftArch) {
+			api.BadRequest(c, fmt.Sprintf("Draft模型架构(%s)与主模型架构(%s)不匹配", draftArch, mainArch))
+			return
+		}
+		req.DraftModelPath = draftPath
+		logger.Infof("draft model resolved: modelId=%s, draftModelId=%s, draftPath=%s, arch=%s", id, req.DraftModelID, draftPath, draftArch)
+	}
 
 	if req.CtxSize == 0 {
 		req.CtxSize = 512
@@ -606,4 +650,13 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 	}
 
 	return dto
+}
+
+func getArchitecture(modelPath string) string {
+	parser, err := gguf.NewParser(modelPath)
+	if err != nil {
+		return ""
+	}
+	defer parser.Close()
+	return parser.GetArchitecture()
 }
