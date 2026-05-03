@@ -1,6 +1,40 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import type { ModelCapabilities } from '@/types';
+
+// ========== Model category ==========
+
+export type ModelCategory = 'all' | 'chat' | 'audio' | 'image' | 'embedding';
+
+export const MODEL_CATEGORIES: { key: ModelCategory; label: string }[] = [
+  { key: 'all', label: '全部' },
+  { key: 'chat', label: 'Chat' },
+  { key: 'audio', label: '音频' },
+  { key: 'image', label: '图像' },
+  { key: 'embedding', label: '嵌入' },
+];
+
+export function getModelCategory(capabilities?: ModelCapabilities | null): ModelCategory {
+  if (!capabilities) return 'chat';
+  if (capabilities.tts || capabilities.asr) return 'audio';
+  if (capabilities.imageGeneration) return 'image';
+  if (capabilities.embedding || capabilities.rerank) return 'embedding';
+  return 'chat';
+}
+
+export function useAllModelCapabilities(modelIds: string[]) {
+  return useQueries({
+    queries: modelIds.map(id => ({
+      queryKey: ['models', 'capabilities', id],
+      queryFn: async () => {
+        const response = await apiClient.get<{ success: boolean; data: { capabilities: ModelCapabilities } }>('/models/capabilities/get', { modelId: id });
+        return response.data.capabilities;
+      },
+      staleTime: 10 * 60 * 1000,
+      enabled: !!id,
+    })),
+  });
+}
 
 // ========== GPU & llama.cpp backend ==========
 

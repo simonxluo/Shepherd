@@ -59,7 +59,12 @@
     "load": "Load",
     "unload": "Unload",
     "loadModel": "Load Model",
-    "unloadConfirm": "Are you sure you want to unload this model?"
+    "unloadConfirm": "Are you sure you want to unload this model?",
+    "categoryAll": "All",
+    "categoryChat": "Chat",
+    "categoryAudio": "Audio",
+    "categoryImage": "Image",
+    "categoryEmbedding": "Embedding"
   },
   "downloads": {
     "title": "Download Management",

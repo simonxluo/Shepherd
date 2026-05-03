@@ -59,7 +59,12 @@
     "load": "加载",
     "unload": "卸载",
     "loadModel": "加载模型",
-    "unloadConfirm": "确定要卸载此模型吗？"
+    "unloadConfirm": "确定要卸载此模型吗？",
+    "categoryAll": "全部",
+    "categoryChat": "Chat",
+    "categoryAudio": "音频",
+    "categoryImage": "图像",
+    "categoryEmbedding": "嵌入"
   },
   "downloads": {
     "title": "下载管理",

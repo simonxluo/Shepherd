@@ -35,8 +35,12 @@ export {
   useSetModelCapabilities,
   useAutoDetectCapabilities,
   useEstimateVRAM,
+  useAllModelCapabilities,
+  getModelCategory,
+  MODEL_CATEGORIES,
   type SystemGPUInfo,
   type LlamacppBackend,
+  type ModelCategory,
 } from './capabilities';
 
 // Model load config

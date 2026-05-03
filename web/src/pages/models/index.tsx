@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Search, RefreshCw, Filter, Grid3X3, List, Gauge, FileText } from 'lucide-react';
-import { useModels, useLoadModel, useUnloadModel, useSetModelFavourite, useUpdateModelAlias, useScanModels, useFilteredModels, useCreateBenchmark } from '@/features/models';
+import { useState, useMemo } from 'react';
+import { Search, RefreshCw, Grid3X3, List, Gauge, FileText, Star, Layers, MessageSquare, Mic, Image, Database } from 'lucide-react';
+import { useModels, useLoadModel, useUnloadModel, useSetModelFavourite, useUpdateModelAlias, useScanModels, useFilteredModels, useCreateBenchmark, useAllModelCapabilities, MODEL_CATEGORIES, getModelCategory } from '@/features/models';
+import type { ModelCategory } from '@/features/models';
 import { ModelCard } from '@/features/models/components/ModelCard';
 import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
 import { EditAliasDialog } from '@/features/models/components/EditAliasDialog';
@@ -9,17 +10,29 @@ import { BenchmarkResultsDialog } from '@/features/models/components/BenchmarkRe
 import { ModelDetailDialog } from '@/features/models/components/ModelDetailDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { Model, ModelStatus, BenchmarkConfig, LoadModelParams } from '@/types';
+import type { Model, ModelStatus, BenchmarkConfig, LoadModelParams, ModelCapabilities } from '@/types';
 import { useAlertDialog } from '@/providers/AlertDialog';
 import { useToast } from '@/hooks/useToast';
 import { APIError } from '@/lib/api/client';
 import { useUIStore } from '@/stores/uiStore';
 
-/**
- * Model management page
- */
+const CATEGORY_ICONS: Record<ModelCategory, React.ElementType> = {
+  all: Layers,
+  chat: MessageSquare,
+  audio: Mic,
+  image: Image,
+  embedding: Database,
+};
+
+const STATUS_CHIPS: { value: ModelStatus | ''; label: string; dot?: string }[] = [
+  { value: '', label: '全部' },
+  { value: 'running', label: '运行中', dot: 'bg-green-500' },
+  { value: 'stopped', label: '已停止', dot: 'bg-gray-400' },
+  { value: 'loading', label: '加载中', dot: 'bg-amber-500' },
+  { value: 'error', label: '错误', dot: 'bg-red-500' },
+];
+
 export function ModelsPage() {
   const alertDialog = useAlertDialog();
   const toast = useToast();
@@ -31,31 +44,50 @@ export function ModelsPage() {
   const scanModels = useScanModels();
   const createBenchmark = useCreateBenchmark();
 
-  // UI state
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState<ModelCategory>('all');
   const [statusFilter, setStatusFilter] = useState<ModelStatus | ''>('');
   const [favouriteFilter, setFavouriteFilter] = useState(false);
   const { modelViewMode: viewMode, setModelViewMode: setViewMode } = useUIStore();
 
   const [dialogModel, setDialogModel] = useState<Model | null>(null);
-
   const [editAliasModel, setEditAliasModel] = useState<Model | null>(null);
-
   const [benchmarkModel, setBenchmarkModel] = useState<Model | null>(null);
-
   const [benchmarkResultsModel, setBenchmarkResultsModel] = useState<Model | null>(null);
-
   const [detailModel, setDetailModel] = useState<Model | null>(null);
+
+  const modelIds = useMemo(() => models.map(m => m.id), [models]);
+  const capsResults = useAllModelCapabilities(modelIds);
+
+  const capabilitiesMap = useMemo(() => {
+    const map: Record<string, ModelCapabilities> = {};
+    modelIds.forEach((id, i) => {
+      if (capsResults[i]?.data) {
+        map[id] = capsResults[i].data!;
+      }
+    });
+    return map;
+  }, [modelIds, capsResults]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<ModelCategory, number> = { all: 0, chat: 0, audio: 0, image: 0, embedding: 0 };
+    models.forEach(m => {
+      counts.all++;
+      const cat = getModelCategory(capabilitiesMap[m.id]);
+      counts[cat]++;
+    });
+    return counts;
+  }, [models, capabilitiesMap]);
 
   const filteredModels = useFilteredModels(models, {
     search,
     status: statusFilter || undefined,
     favourite: favouriteFilter || undefined,
+    category,
+    capabilitiesMap,
   });
 
-  const handleLoadClick = (model: Model) => {
-    setDialogModel(model);
-  };
+  const handleLoadClick = (model: Model) => setDialogModel(model);
 
   const handleLoadConfirm = (params: Partial<LoadModelParams>) => {
     loadModel.mutate(params, {
@@ -93,11 +125,7 @@ export function ModelsPage() {
       { modelId, favourite: !favourite },
       {
         onSuccess: () => {
-          const newFavourite = !favourite;
-          toast.success(
-            newFavourite ? '已添加到收藏' : '已取消收藏',
-            modelId
-          );
+          toast.success(!favourite ? '已添加到收藏' : '已取消收藏', modelId);
         },
         onError: (error) => {
           (error as APIError).handled = true;
@@ -120,9 +148,7 @@ export function ModelsPage() {
     });
   };
 
-  const handleEditAlias = (model: Model) => {
-    setEditAliasModel(model);
-  };
+  const handleEditAlias = (model: Model) => setEditAliasModel(model);
 
   const handleAliasConfirm = (alias: string) => {
     if (editAliasModel) {
@@ -142,24 +168,18 @@ export function ModelsPage() {
     }
   };
 
-  const handleBenchmarkModel = (model: Model) => {
-    setBenchmarkModel(model);
-  };
+  const handleBenchmarkModel = (model: Model) => setBenchmarkModel(model);
 
   const handleBenchmarkConfirm = async (config: BenchmarkConfig) => {
-    // 1. Get model path
     const model = models.find(m => m.id === config.modelId);
     if (!model) {
       toast.error('模型未找到', '无法获取模型信息');
       return;
     }
 
-    // 2. Build command string and arguments array
     const cmdParts: string[] = [];
-    // Add model path argument first
     cmdParts.push('-m', model.path);
 
-    // Add remaining arguments
     Object.entries(config.params).forEach(([key, value]) => {
       if (value === 'true') {
         cmdParts.push(key);
@@ -167,7 +187,6 @@ export function ModelsPage() {
         cmdParts.push(key, String(value));
       }
     });
-    // Add device argument
     if (config.devices && config.devices.length > 0 && config.devices.length < 999) {
       cmdParts.push('-dev', config.devices.join('/'));
     }
@@ -176,17 +195,15 @@ export function ModelsPage() {
     createBenchmark.mutate(
       {
         modelId: config.modelId,
-        llamaBinPath: config.llamaCppPath, // Backend auto-finds llama-bench
+        llamaBinPath: config.llamaCppPath,
         cmd,
         args: cmdParts,
       },
-
       {
         onSuccess: (data) => {
           if (data) {
             toast.success('压测任务已创建', '正在运行...');
             setBenchmarkModel(null);
-            // Open results dialog
             const currentModel = models.find(m => m.id === config.modelId);
             if (currentModel) {
               setBenchmarkResultsModel(currentModel);
@@ -201,17 +218,11 @@ export function ModelsPage() {
     );
   };
 
-  const handleViewBenchmarkResults = (model: Model) => {
-    setBenchmarkResultsModel(model);
-  };
-
-  const handleShowDetail = (model: Model) => {
-    setDetailModel(model);
-  };
+  const handleViewBenchmarkResults = (model: Model) => setBenchmarkResultsModel(model);
+  const handleShowDetail = (model: Model) => setDetailModel(model);
 
   return (
-    <div className="space-y-6">
-      {/* Title and actions */}
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">模型管理</h1>
@@ -233,33 +244,33 @@ export function ModelsPage() {
         </div>
       </div>
 
-      {/* Search and filter */}
-      <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-lg border border-border">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索模型名称、架构..."
-            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-input text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        {MODEL_CATEGORIES.map(cat => {
+          const Icon = CATEGORY_ICONS[cat.key];
+          return (
+            <button
+              key={cat.key}
+              onClick={() => setCategory(cat.key)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border",
+                category === cat.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-card text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {cat.label}
+              <span className={cn(
+                "text-xs tabular-nums",
+                category === cat.key ? "text-primary-foreground/70" : "text-muted-foreground/70"
+              )}>
+                {categoryCounts[cat.key]}
+              </span>
+            </button>
+          );
+        })}
 
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as ModelStatus | '')}
-        >
-          <SelectTrigger className="px-3 py-2 border border-border rounded-lg bg-input text-foreground w-[130px]">
-            <SelectValue placeholder="所有状态" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="running">运行中</SelectItem>
-            <SelectItem value="stopped">已停止</SelectItem>
-            <SelectItem value="loading">加载中</SelectItem>
-            <SelectItem value="error">错误</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex-1" />
 
         <Button
           onClick={() => setFavouriteFilter(!favouriteFilter)}
@@ -269,7 +280,7 @@ export function ModelsPage() {
             favouriteFilter && 'border-yellow-500 bg-yellow-500 text-white hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700 dark:border-yellow-700'
           )}
         >
-          <Filter className="w-4 h-4" />
+          <Star className={cn('w-4 h-4', favouriteFilter && 'fill-current')} />
           只看收藏
         </Button>
 
@@ -290,6 +301,42 @@ export function ModelsPage() {
           >
             <List className="w-4 h-4" />
           </Button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="搜索模型名称、架构..."
+            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-input text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {STATUS_CHIPS.map(s => (
+            <button
+              key={s.value}
+              onClick={() => setStatusFilter(s.value)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors border",
+                statusFilter === s.value
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-transparent text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              {s.dot && (
+                <span className={cn(
+                  "w-1.5 h-1.5 rounded-full shrink-0",
+                  statusFilter === s.value ? 'bg-primary-foreground' : s.dot
+                )} />
+              )}
+              {s.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -318,6 +365,7 @@ export function ModelsPage() {
             <ModelCard
               key={model.id}
               model={model}
+              capabilities={capabilitiesMap[model.id]}
               onLoad={() => handleLoadClick(model)}
               onUnload={() => handleUnloadClick(model.id)}
               onToggleFavourite={() => handleToggleFavourite(model.id, model.favourite)}
@@ -361,7 +409,6 @@ export function ModelsPage() {
         />
       )}
 
-      {/* Edit Alias Dialog */}
       {editAliasModel && (
         <EditAliasDialog
           isOpen={!!editAliasModel}
@@ -374,7 +421,6 @@ export function ModelsPage() {
         />
       )}
 
-      {/* Benchmark Dialog */}
       {benchmarkModel && (
         <BenchmarkDialog
           isOpen={!!benchmarkModel}
@@ -386,7 +432,6 @@ export function ModelsPage() {
         />
       )}
 
-      {/* Benchmark Results Dialog */}
       {benchmarkResultsModel && (
         <BenchmarkResultsDialog
           isOpen={!!benchmarkResultsModel}
@@ -396,7 +441,6 @@ export function ModelsPage() {
         />
       )}
 
-      {/* Model Detail Dialog */}
       {detailModel && (
         <ModelDetailDialog
           isOpen={!!detailModel}

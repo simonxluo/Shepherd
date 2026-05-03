@@ -1,12 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import type {
   Model,
   ModelListResponse,
   LoadModelParams,
   ModelStatus,
+  ModelCapabilities,
 } from '@/types';
+import type { ModelCategory } from './capabilities';
+import { getModelCategory } from './capabilities';
 
 /**
  * Model list hook
@@ -131,6 +134,8 @@ export function useFilteredModels(
     search?: string;
     status?: ModelStatus;
     favourite?: boolean;
+    category?: ModelCategory;
+    capabilitiesMap?: Record<string, ModelCapabilities>;
   }
 ): Model[] {
   return useMemo(() => {
@@ -149,10 +154,15 @@ export function useFilteredModels(
 
       if (filters.favourite && !model.favourite) return false;
 
+      if (filters.category && filters.category !== 'all') {
+        const caps = filters.capabilitiesMap?.[model.id];
+        const cat = getModelCategory(caps);
+        if (cat !== filters.category) return false;
+      }
+
       return true;
     });
 
-    // Sort: architecture > display name > scan time > path
     return [...filtered].sort((a: Model, b: Model) => {
       const aArch = (a.metadata?.architecture || '').toLowerCase();
       const bArch = (b.metadata?.architecture || '').toLowerCase();
@@ -171,5 +181,5 @@ export function useFilteredModels(
 
       return a.path.localeCompare(b.path);
     });
-  }, [models, filters.search, filters.status, filters.favourite]);
+  }, [models, filters.search, filters.status, filters.favourite, filters.category, filters.capabilitiesMap]);
 }

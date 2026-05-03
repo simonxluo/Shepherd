@@ -849,7 +849,7 @@ export function LoadModelDialog({
       <SelectTrigger className={cn("h-8 w-full text-sm", className)}>
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent position="popper" sideOffset={4}>
         {groups ? (
           groups.map((group) => (
             <SelectGroup key={group.label}>
