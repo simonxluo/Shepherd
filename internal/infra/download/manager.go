@@ -3,7 +3,6 @@ package download
 import (
 	"context"
 	"fmt"
-	"io"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -272,14 +271,4 @@ func (m *Manager) Close() error {
 	case <-time.After(30 * time.Second):
 		return fmt.Errorf("timeout waiting for downloads to finish")
 	}
-}
-
-// closeQuietly closes a file and ignores the error (used in defer)
-func closeQuietly(c io.Closer) {
-	_ = c.Close()
-}
-
-// removeQuietly removes a file and ignores errors (file may not exist)
-func removeQuietly(path string) {
-	utils.RemoveQuietly(path)
 }

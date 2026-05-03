@@ -3,7 +3,6 @@ package openai
 
 import (
 	"encoding/json"
-	"time"
 )
 
 // ChatCompletionRequest represents a chat completion request
@@ -201,30 +200,6 @@ type ErrorDetail struct {
 	Type    string `json:"type"`
 	Param   string `json:"param,omitempty"`
 	Code    string `json:"code,omitempty"`
-}
-
-// NewChatCompletionResponse creates a new chat completion response
-func NewChatCompletionResponse(id, model string, choices []ChatCompletionChoice, usage *Usage) *ChatCompletionResponse {
-	return &ChatCompletionResponse{
-		ID:      id,
-		Object:  "chat.completion",
-		Created: time.Now().Unix(),
-		Model:   model,
-		Choices: choices,
-		Usage:   usage,
-	}
-}
-
-// NewCompletionResponse creates a new legacy completion response
-func NewCompletionResponse(id, model string, choices []CompletionChoice, usage *Usage) *CompletionResponse {
-	return &CompletionResponse{
-		ID:      id,
-		Object:  "text_completion",
-		Created: time.Now().Unix(),
-		Model:   model,
-		Choices: choices,
-		Usage:   usage,
-	}
 }
 
 // NewModelsResponse creates a new models response

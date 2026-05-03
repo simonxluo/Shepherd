@@ -25,16 +25,6 @@ func (s NodeState) String() string {
 	return string(s)
 }
 
-// IsValid checks if the state is valid
-func (s NodeState) IsValid() bool {
-	switch s {
-	case StateOffline, StateOnline, StateBusy, StateError, StateDegraded, StateDisabled:
-		return true
-	default:
-		return false
-	}
-}
-
 // ErrorCode represents unified error codes
 // 统一的错误码定义
 type ErrorCode string

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
@@ -224,5 +225,5 @@ func (h *Handler) sendError(c *gin.Context, statusCode int, errorType, message s
 }
 
 func generateID(prefix string) string {
-	return fmt.Sprintf("%s_%s", prefix, "id")
+	return fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
 }

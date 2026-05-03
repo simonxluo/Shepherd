@@ -38,68 +38,6 @@ type INode interface {
 	Context() context.Context
 }
 
-// ClientRegistry manages client registration and discovery
-// ClientRegistry 接口 - 管理客户端注册和发现
-type ClientRegistry interface {
-	// Register a new client - 注册新客户端
-	Register(info *NodeInfo) error
-
-	// Unregister a client - 注销客户端
-	Unregister(nodeID string) error
-
-	// Get client by ID - 根据 ID 获取客户端
-	Get(nodeID string) (*NodeInfo, error)
-
-	// List all clients - 列出所有客户端
-	List() []*NodeInfo
-
-	// Get statistics - 获取统计信息
-	GetStats() *RegistryStats
-
-	// Find clients by criteria - 根据条件查找客户端
-	Find(predicate func(*NodeInfo) bool) []*NodeInfo
-
-	// Update client status - 更新客户端状态
-	UpdateStatus(nodeID string, status NodeStatus) error
-
-	// Update client resources - 更新客户端资源
-	UpdateResources(nodeID string, resources *NodeResources) error
-
-	// Get online clients - 获取在线客户端
-	GetOnlineClients() []*NodeInfo
-
-	// Cleanup offline clients - 清理离线客户端
-	Cleanup(timeout time.Duration) int
-}
-
-// CommandQueue manages command queuing and distribution
-// CommandQueue 接口 - 管理命令队列和分发
-type CommandQueue interface {
-	// Enqueue a command for a node - 将命令加入队列
-	Enqueue(nodeID string, cmd *Command) error
-
-	// Dequeue gets the next command for a node - 获取节点的下一个命令
-	Dequeue(nodeID string) (*Command, error)
-
-	// Peek returns the next command without removing it - 查看下一个命令
-	Peek(nodeID string) (*Command, error)
-
-	// Cancel a command - 取消命令
-	Cancel(commandID string) error
-
-	// GetQueueSize returns the queue size for a node - 获取队列大小
-	GetQueueSize(nodeID string) int
-
-	// ListQueuedCommands returns all queued commands for a node - 列出队列中的命令
-	ListQueuedCommands(nodeID string) []*Command
-
-	// ClearQueue removes all commands for a node - 清空队列
-	ClearQueue(nodeID string) int
-
-	// RetryCommand requeues a failed command - 重试失败的命令
-	RetryCommand(commandID string) error
-}
-
 // IResourceMonitor monitors node resource usage
 // IResourceMonitor 接口 - 监控节点资源使用（使用 I 前缀避免与结构体冲突）
 type IResourceMonitor interface {
@@ -141,12 +79,3 @@ type RegistryStats struct {
 	ErrorClients   int `json:"errorClients"`
 }
 
-// CommandQueueStats contains statistics about the command queue
-// 命令队列统计信息
-type CommandQueueStats struct {
-	TotalCommands     int   `json:"totalCommands"`
-	QueuedCommands    int   `json:"queuedCommands"`
-	RunningCommands   int   `json:"runningCommands"`
-	CompletedCommands int64 `json:"completedCommands"`
-	FailedCommands    int64 `json:"failedCommands"`
-}

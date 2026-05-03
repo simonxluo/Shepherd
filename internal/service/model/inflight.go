@@ -23,12 +23,6 @@ func (s *ModelStatus) GetInflightCount() int32 {
 	return s.InflightCount.Load()
 }
 
-func (s *ModelStatus) GetLastRequestTime() time.Time {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.LastRequestTime
-}
-
 func (s *ModelStatus) InitConcurrency(limit int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

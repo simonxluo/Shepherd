@@ -67,9 +67,7 @@ type Server struct {
 	repoClient       *modelrepoclient.Client
 	langchainHandler *langchain.Handler
 
-	// 新增字段：WebSocket Hub
-	wsHub             *WebSocketHub
-	downloadTasksFile string // 下载任务持久化文件路径
+	wsHub *WebSocketHub
 
 	mu     sync.RWMutex
 	ctx    context.Context
@@ -327,7 +325,4 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 }
 
-// GetEngine returns the Gin engine (for testing)
-func (s *Server) GetEngine() *gin.Engine {
-	return s.engine
-}
+

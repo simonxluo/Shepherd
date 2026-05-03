@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 )
 
 // downloader handles the actual download logic
@@ -104,7 +106,7 @@ func (d *downloader) prepare(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer closeQuietly(resp.Body)
+	defer utils.CloseQuietly(resp.Body)
 
 	// Get content length
 	contentLength := resp.ContentLength
@@ -161,7 +163,7 @@ func (d *downloader) downloadSimple(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer closeQuietly(resp.Body)
+	defer utils.CloseQuietly(resp.Body)
 
 	// Check status code
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
@@ -188,11 +190,11 @@ func (d *downloader) downloadSimple(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer closeQuietly(file)
+	defer utils.CloseQuietly(file)
 
 	// Start progress updater
 	stopProgress := make(chan struct{})
-	go d.updateProgress()
+	go d.updateProgress(stopProgress)
 
 	defer close(stopProgress)
 
@@ -336,7 +338,7 @@ func (d *downloader) downloadPart(ctx context.Context, part *partDownload) error
 	if err != nil {
 		return err
 	}
-	defer closeQuietly(resp.Body)
+	defer utils.CloseQuietly(resp.Body)
 
 	if resp.StatusCode != http.StatusPartialContent && resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -348,7 +350,7 @@ func (d *downloader) downloadPart(ctx context.Context, part *partDownload) error
 	if err != nil {
 		return err
 	}
-	defer closeQuietly(file)
+	defer utils.CloseQuietly(file)
 
 	// Download part
 	_, err = io.Copy(file, resp.Body)
@@ -373,7 +375,7 @@ func (d *downloader) mergeParts() error {
 	if err != nil {
 		return err
 	}
-	defer closeQuietly(file)
+	defer utils.CloseQuietly(file)
 
 	for _, part := range d.task.Parts {
 		if part.FileName == "" {
@@ -384,10 +386,10 @@ func (d *downloader) mergeParts() error {
 		if err != nil {
 			return err
 		}
-		defer closeQuietly(partFile)
+		defer utils.CloseQuietly(partFile)
 
 		_, err = io.Copy(file, partFile)
-		removeQuietly(part.FileName)
+		utils.RemoveQuietly(part.FileName)
 
 		if err != nil {
 			return err
@@ -415,7 +417,7 @@ func (d *downloader) verify() error {
 }
 
 // updateProgress updates progress information
-func (d *downloader) updateProgress() {
+func (d *downloader) updateProgress(stop <-chan struct{}) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -429,6 +431,8 @@ func (d *downloader) updateProgress() {
 				d.calculateSpeed()
 				lastBytes = currentBytes
 			}
+		case <-stop:
+			return
 		}
 	}
 }

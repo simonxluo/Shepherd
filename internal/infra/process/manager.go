@@ -2,7 +2,6 @@ package process
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 )
 
@@ -134,20 +133,6 @@ func (m *Manager) ListAll() (running, loading map[string]*Process) {
 	return running, loading
 }
 
-// GetRunningCount returns the number of running processes
-func (m *Manager) GetRunningCount() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return len(m.processes)
-}
-
-// GetLoadingCount returns the number of loading processes
-func (m *Manager) GetLoadingCount() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return len(m.loading)
-}
-
 // IsRunning returns true if a model is currently running
 func (m *Manager) IsRunning(modelID string) bool {
 	m.mu.RLock()
@@ -185,44 +170,5 @@ func (m *Manager) StopAll() []error {
 	return errs
 }
 
-// quoteAndJoin joins arguments into a command string with proper quoting
-func quoteAndJoin(args []string) string {
-	var result string
-	for i, arg := range args {
-		if i > 0 {
-			result += " "
-		}
-
-		// Quote arguments that contain spaces or special characters
-		if needsQuoting(arg) {
-			result += `"` + escapeQuotes(arg) + `"`
-		} else {
-			result += arg
-		}
-	}
-	return result
-}
-
-// needsQuoting returns true if an argument needs to be quoted
-func needsQuoting(arg string) bool {
-	for _, c := range arg {
-		if c == ' ' || c == '\t' || c == '"' || c == '\'' || c == '\\' {
-			return true
-		}
-	}
-	return false
-}
-
-// escapeQuotes escapes quotes in a string
-func escapeQuotes(s string) string {
-	result := strings.Builder{}
-	for _, c := range s {
-		if c == '"' || c == '\\' {
-			result.WriteRune('\\')
-		}
-		result.WriteRune(c)
-	}
-	return result.String()
-}
 
 

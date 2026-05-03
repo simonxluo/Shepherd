@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -30,8 +29,7 @@ const (
 
 // Endpoint URLs
 const (
-	EndpointHuggingFace   = "huggingface.co"
-	EndpointHuggingMirror = "hf-mirror.com"
+	EndpointHuggingFace = "huggingface.co"
 )
 
 // DownloadMode determines which download method to use
@@ -44,16 +42,10 @@ const (
 
 // Client is a model repository client
 type Client struct {
-	httpClient   *http.Client
-	hfToken      string
-	endpoint     string
-	cacheDir     string
-	downloadMode DownloadMode
-}
-
-// NewClient creates a new model repository client
-func NewClient() *Client {
-	return NewClientWithConfig(EndpointHuggingFace, "", 30*time.Second)
+	httpClient *http.Client
+	hfToken    string
+	endpoint   string
+	cacheDir   string
 }
 
 // NewClientWithConfig creates a new model repository client with full configuration
@@ -202,7 +194,6 @@ func isGGUFFile(path string) bool {
 	return strings.HasSuffix(strings.ToLower(path), ".gguf")
 }
 
-// HuggingFaceModel represents a model from HuggingFace search results
 type HuggingFaceModel struct {
 	ID           string   `json:"id"`
 	ModelID      string   `json:"modelId"`
@@ -270,62 +261,4 @@ func (c *Client) SearchHuggingFaceModels(query string, limit int, formatFilter s
 	}
 
 	return result, nil
-}
-
-// ============================================
-// Advanced features using SDK integrations
-// ============================================
-
-// ListModelFiles lists all files in a HuggingFace model repository
-func (c *Client) ListModelFiles(repoID string, revision string) ([]FileInfo, error) {
-	if revision == "" {
-		revision = "main"
-	}
-
-	repo := hfhub.New(repoID).
-		WithRevision(revision).
-		WithEndpoint("https://" + c.endpoint).
-		WithAuth(c.hfToken).
-		WithCacheDir(c.cacheDir)
-	repo.Verbosity = 0
-
-	if err := repo.DownloadInfo(false); err != nil {
-		return nil, fmt.Errorf("failed to fetch repo info: %w", err)
-	}
-
-	info := repo.Info()
-	files := make([]FileInfo, 0, len(info.Siblings))
-	for _, sibling := range info.Siblings {
-		downloadURL := fmt.Sprintf("https://%s/%s/resolve/%s/%s",
-			c.endpoint, repoID, revision, sibling.Name)
-		files = append(files, FileInfo{
-			Name:        sibling.Name,
-			Size:        0, // go-huggingface/hub doesn't provide file size
-			DownloadURL: downloadURL,
-		})
-	}
-
-	return files, nil
-}
-
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	source, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer utils.CloseQuietly(source)
-
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-		return err
-	}
-
-	destination, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer utils.CloseQuietly(destination)
-
-	_, err = io.Copy(destination, source)
-	return err
 }

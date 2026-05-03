@@ -147,9 +147,6 @@ func (b *BaseHandler) ForwardStreamRequest(c *gin.Context, port int, path string
 		c.Request.ContentLength = int64(len(body))
 		c.Request.Header.Set("Content-Type", "application/json")
 	}
-	if auth := c.Request.Header.Get("Authorization"); auth != "" {
-		c.Request.Header.Set("Authorization", auth)
-	}
 
 	proxy.ServeHTTP(c.Writer, c.Request)
 }

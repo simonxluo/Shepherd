@@ -322,21 +322,4 @@ func (p *amdProvider) parseUpdateOutput(output string, gpu *Info) error {
 	return nil
 }
 
-// Sensor constants for AMD GPU detection
-const (
-	sensorTypeGPU      = 0 // GPU temperature sensor
-	sensorTypeJunction = 1 // Junction temperature sensor
-	metricTypeCurrent  = 0 // Current value metric
-)
 
-// Error constants for AMD SMI operations
-const (
-	uint16MaxError = 0xFFFF
-	uint32MaxError = 0xFFFFFFFF
-	uint64MaxError = 0xFFFFFFFFFFFFFFFF
-)
-
-// convertMicrowattsToWatts converts power from microwatts to watts
-func convertMicrowattsToWatts(microwatts uint64) float64 {
-	return float64(microwatts) / 1000000.0
-}

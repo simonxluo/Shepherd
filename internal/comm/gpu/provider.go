@@ -136,17 +136,6 @@ func (d *Detector) Update(ctx context.Context, gpu *Info) error {
 	return nil
 }
 
-// GetAvailableProviders returns a list of available provider names.
-func (d *Detector) GetAvailableProviders() []string {
-	var names []string
-	for _, provider := range d.providers {
-		if provider.IsAvailable() {
-			names = append(names, provider.Name())
-		}
-	}
-	return names
-}
-
 // registerProviders returns all registered GPU providers.
 // This is the central registry for GPU providers.
 func registerProviders(logger Logger) []Provider {

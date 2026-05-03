@@ -85,14 +85,6 @@ func NewLogMonitor() *LogMonitor {
 	}
 }
 
-func NewLogMonitorWriter(stdout io.Writer) *LogMonitor {
-	return &LogMonitor{
-		stdout:     stdout,
-		buffer:     nil,
-		subscribers: make(map[chan []byte]struct{}),
-	}
-}
-
 func (m *LogMonitor) Write(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil

@@ -363,13 +363,3 @@ func (h *Handler) TestConnection(c *gin.Context) {
 		})
 	}
 }
-
-// GetConfig returns the compatibility configuration (alias for GetCompatibility)
-func (h *Handler) GetConfig(c *gin.Context) {
-	h.GetCompatibility(c)
-}
-
-// UpdateConfig updates the compatibility configuration (alias for UpdateCompatibility)
-func (h *Handler) UpdateConfig(c *gin.Context) {
-	h.UpdateCompatibility(c)
-}

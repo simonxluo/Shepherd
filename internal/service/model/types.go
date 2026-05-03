@@ -76,20 +76,6 @@ type ModelStatus struct {
 	tokenMu               sync.Mutex
 }
 
-func (s *ModelStatus) swapState(expected, newState LoadState) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.State != expected {
-		return fmt.Errorf("invalid state transition: expected %s but current is %s (target %s)", expected, s.State, newState)
-	}
-	if !isValidTransition(expected, newState) {
-		return fmt.Errorf("forbidden state transition: %s -> %s", expected, newState)
-	}
-	s.State = newState
-	return nil
-}
-
 func (s *ModelStatus) transitionTo(newState LoadState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -147,16 +133,6 @@ func isValidTransition(from, to LoadState) bool {
 		}
 	}
 	return false
-}
-
-// ScanConfig contains configuration for model scanning
-type ScanConfig struct {
-	Paths          []string
-	Recursive      bool
-	FollowSymlinks bool
-	MaxDepth       int
-	IncludePattern string // Regex pattern for files to include
-	ExcludePattern string // Regex pattern for files to exclude
 }
 
 // ScanResult represents the result of a scan operation

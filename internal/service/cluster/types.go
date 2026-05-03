@@ -114,15 +114,6 @@ type ResourceUsage struct {
 	Uptime         int64   `json:"uptime"` // seconds
 }
 
-// LogEntry represents a log entry from a client
-type LogEntry struct {
-	ClientID  string            `json:"clientId"`
-	Timestamp time.Time         `json:"timestamp"`
-	Level     string            `json:"level"`
-	Message   string            `json:"message"`
-	Fields    map[string]string `json:"fields,omitempty"`
-}
-
 // DiscoveredClient represents a client found during network scan
 type DiscoveredClient struct {
 	Address      string        `json:"address"`

@@ -221,20 +221,4 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 	return meta, nil
 }
 
-// GetArchitecture 获取架构名称
-func (p *Parser) GetArchitecture() string {
-	if p.file != nil {
-		meta := p.file.Metadata()
-		return meta.Architecture
-	}
-	return ""
-}
 
-// GetFileType 获取文件类型
-func (p *Parser) GetFileType() ggufparser.GGUFFileType {
-	if p.file != nil {
-		meta := p.file.Metadata()
-		return meta.FileType
-	}
-	return ggufparser.GGUFFileTypeMostlyF32
-}

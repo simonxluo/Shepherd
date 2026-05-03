@@ -185,7 +185,7 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		args = append(args, "-kvu")
 	}
 	if p.KVCacheSize > 0 {
-		args = append(args, "--cache-ram", strconv.Itoa(p.KVCacheSize))
+		args = append(args, "--kv-cache-size", strconv.Itoa(p.KVCacheSize))
 	}
 
 	// Runtime configuration

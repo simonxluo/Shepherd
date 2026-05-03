@@ -87,13 +87,6 @@ func (p *Process) GetCtxSize() int {
 	return p.CtxSize
 }
 
-// SetPort sets the port number
-func (p *Process) SetPort(port int) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.Port = port
-}
-
 // GetPort returns the port number
 func (p *Process) GetPort() int {
 	p.mu.Lock()
@@ -299,19 +292,6 @@ func (p *Process) handleOutputLine(line string) {
 	// 日志行（以 [ 开头）已通过 outputHandler 处理，这里不再重复打印
 }
 
-// Send sends input to the process stdin
-func (p *Process) Send(input string) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if !p.Running || p.stdinPipe == nil {
-		return fmt.Errorf("process not running")
-	}
-
-	_, err := p.stdinPipe.Write([]byte(input))
-	return err
-}
-
 // Stop stops the process
 func (p *Process) Stop() error {
 	p.mu.Lock()
@@ -399,39 +379,6 @@ func (p *Process) GetPID() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.PID
-}
-
-// GetExitCode returns the process exit code if it has exited
-func (p *Process) GetExitCode() (int, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if p.cmd == nil || p.cmd.Process == nil {
-		return 0, fmt.Errorf("process not started")
-	}
-
-	// Try to get exit code (non-blocking)
-	err := p.cmd.Process.Signal(syscall.Signal(0))
-	if err == nil {
-		// Process still running
-		return 0, fmt.Errorf("process still running")
-	}
-
-	// Process has exited, get exit code
-	status, err := p.cmd.Process.Wait()
-	if err != nil {
-		return 0, err
-	}
-
-	if status.Success() {
-		return 0, nil
-	}
-
-	if status, ok := status.Sys().(syscall.WaitStatus); ok {
-		return status.ExitStatus(), nil
-	}
-
-	return 0, fmt.Errorf("unable to get exit status")
 }
 
 // splitCommandLineArgs splits a command line string into arguments

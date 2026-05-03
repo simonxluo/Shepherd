@@ -51,13 +51,6 @@ func (a *PortAllocator) Release(port int) {
 	delete(a.allocated, port)
 }
 
-// IsAllocated checks if a port is marked as allocated
-func (a *PortAllocator) IsAllocated(port int) bool {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.allocated[port]
-}
-
 // isPortInUse checks if a port is actually in use by attempting to connect
 func (a *PortAllocator) isPortInUse(port int) bool {
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf(":%d", port), 1*time.Second)

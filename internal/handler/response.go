@@ -50,38 +50,7 @@ func NotFound(c *gin.Context, resource string) {
 	Error(c, types.ErrNodeNotFound, resource+" not found")
 }
 
-// InternalError sends an internal server error response
-func InternalError(c *gin.Context, err error) {
-	ErrorWithDetails(c, types.ErrInternalError, "Internal server error", err.Error())
-}
-
 // BadRequest sends a bad request error response
 func BadRequest(c *gin.Context, message string) {
 	Error(c, types.ErrInvalidRequest, message)
-}
-
-// Unauthorized sends an unauthorized error response
-func Unauthorized(c *gin.Context, message string) {
-	Error(c, types.ErrNotAuthenticated, message)
-}
-
-// Forbidden sends a forbidden error response
-func Forbidden(c *gin.Context, message string) {
-	Error(c, types.ErrPermissionDenied, message)
-}
-
-// Paginated sends a paginated API response
-func Paginated[T any](c *gin.Context, data []T, total int64, page, pageSize int) {
-	c.JSON(http.StatusOK, types.NewPaginatedResponse(data, total, page, pageSize, getRequestID(c)))
-}
-
-// Accepted sends an accepted response (for async operations)
-func Accepted(c *gin.Context, message string) {
-	response := gin.H{"message": message, "status": "accepted"}
-	c.JSON(http.StatusAccepted, types.NewSuccessResponse(response, getRequestID(c)))
-}
-
-// NoContent sends a no content response
-func NoContent(c *gin.Context) {
-	c.Status(http.StatusNoContent)
 }

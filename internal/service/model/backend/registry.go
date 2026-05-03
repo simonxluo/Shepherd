@@ -54,13 +54,6 @@ func (r *Registry) Configure(bt BackendType, cfg *BackendConfig) {
 	r.configs[bt] = cfg
 }
 
-// GetConfig returns the configuration for a backend type
-func (r *Registry) GetConfig(bt BackendType) *BackendConfig {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.configs[bt]
-}
-
 // Resolve determines which backend to use for a given model path.
 // It uses explicit type first, then auto-detects from model format, then defaults to llama.cpp.
 func (r *Registry) Resolve(modelPath string, explicitType BackendType) (Backend, *BackendConfig, error) {

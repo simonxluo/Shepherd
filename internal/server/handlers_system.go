@@ -18,10 +18,6 @@ import (
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 )
 
-// Middleware
-
-// corsMiddleware handles CORS
-// loggerMiddleware logs requests
 func (s *Server) HandleServerInfo(c *gin.Context) {
 	api.Success(c, gin.H{
 		"version":   s.config.Version,

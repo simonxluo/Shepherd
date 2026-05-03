@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -292,13 +291,3 @@ func (h *Handler) RegisterRoutes(router *gin.RouterGroup) {
 	h.log.Infof("LangChainGo API 路由已注册: /api/langchain/*")
 }
 
-// ===== 错误处理 =====
-
-// ErrorWithDetails 发送带详细信息的错误响应
-func ErrorWithDetails(c *gin.Context, code types.ErrorCode, message, details string) {
-	c.JSON(http.StatusBadRequest, gin.H{
-		"error":   message,
-		"code":    string(code),
-		"details": details,
-	})
-}
