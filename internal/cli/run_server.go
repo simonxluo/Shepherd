@@ -384,7 +384,7 @@ func (app *App) buildNodeConfig() *node.NodeConfig {
 
 func (app *App) initNodeAdapter() error {
 	if app.node != nil {
-		schedulerCfg := &app.cfg.Node.MasterRole.Scheduler
+		schedulerCfg := &app.cfg.Master.Scheduler
 		app.nodeAdapter = handler.NewNodeAdapter(app.node, logger.GetLogger(), schedulerCfg)
 		logger.Info("Node API 适配器已创建")
 		return nil
