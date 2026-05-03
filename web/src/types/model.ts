@@ -117,6 +117,7 @@ export interface LoadModelParams {
     tts?: boolean;
     asr?: boolean;
     imageGeneration?: boolean;
+    music?: boolean;
   };
 
   // Context & acceleration
@@ -311,6 +312,7 @@ export interface ModelCapabilities {
   tts?: boolean;              // Text-to-speech
   asr?: boolean;              // Automatic speech recognition
   imageGeneration?: boolean;  // Image generation (text-to-image)
+  music?: boolean;            // Music generation (text-to-music)
 }
 
 /**

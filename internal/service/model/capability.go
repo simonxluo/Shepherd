@@ -71,6 +71,16 @@ const (
 	kwPixArt                      = "pixart"
 	kwCogView                     = "cogview"
 	kwJanus                       = "janus"
+
+	kwMusicGen     = "musicgen"
+	kwMusicGenAlt  = "music-gen"
+	kwMusicGenUS   = "music_gen"
+	kwAudioGen     = "audiogen"
+	kwAudioGenAlt  = "audio-gen"
+	kwAudioCraft   = "audiocraft"
+	kwTextToMusic  = "text-to-music"
+	kwAceStep      = "acestep"
+	kwAceStepAlt   = "ace-step"
 )
 
 // 架构→能力映射关键词表
@@ -100,6 +110,11 @@ var (
 		"dall", "text-to-image", "image-generation",
 	}
 
+	musicArchKeywords = []string{
+		"musicgen", "audiogen", "audiocraft",
+		"music", "music-gen",
+	}
+
 	rerankNameKeywords = []string{
 		kwRerank, kwReRank, kwReranker, kwRanker,
 		kwCrossEncoder, kwCrossencoder, kwCrossUnderscoreEncoder,
@@ -125,6 +140,12 @@ var (
 		kwStableDiffusion, kwStableDiffusionSDXL, kwFLUX,
 		kwDALL, kwImageGeneration, kwTextToImage,
 		kwKandinsky, kwPixArt, kwCogView, kwJanus,
+	}
+
+	musicNameKeywords = []string{
+		kwMusicGen, kwMusicGenAlt, kwMusicGenUS,
+		kwAudioGen, kwAudioGenAlt, kwAudioCraft,
+		kwTextToMusic, kwAceStep, kwAceStepAlt,
 	}
 
 	toolTemplateKeywords = []string{
@@ -181,13 +202,16 @@ func DetectCapabilities(meta *gguf.Metadata) *storage.Capabilities {
 		if containsAny(archLower, imageGenArchKeywords) {
 			caps.ImageGeneration = true
 		}
+		if containsAny(archLower, musicArchKeywords) {
+			caps.Music = true
+		}
 		if containsAny(archLower, embeddingArchKeywords) {
 			caps.Embedding = true
 		}
 	}
 
 	// P4: 名称关键词 fallback（仅当 P2+P3 都未命中时）
-	if !caps.TTS && !caps.ASR && !caps.ImageGeneration && !caps.Embedding && !caps.Rerank {
+	if !caps.TTS && !caps.ASR && !caps.ImageGeneration && !caps.Music && !caps.Embedding && !caps.Rerank {
 		if containsAny(combinedLower, ttsNameKeywords) {
 			caps.TTS = true
 		}
@@ -196,6 +220,9 @@ func DetectCapabilities(meta *gguf.Metadata) *storage.Capabilities {
 		}
 		if containsAny(combinedLower, imageNameKeywords) {
 			caps.ImageGeneration = true
+		}
+		if containsAny(combinedLower, musicNameKeywords) {
+			caps.Music = true
 		}
 		if containsAny(combinedLower, rerankNameKeywords) {
 			caps.Rerank = true
@@ -263,6 +290,9 @@ func DetectCapabilitiesFromHF(hfInfo *huggingface.HFModelInfo) *storage.Capabili
 	if !caps.ImageGeneration && containsAny(archLower, imageGenArchKeywords) {
 		caps.ImageGeneration = true
 	}
+	if !caps.Music && containsAny(archLower, musicArchKeywords) {
+		caps.Music = true
+	}
 	if !caps.Embedding && containsAny(archLower, embeddingArchKeywords) {
 		caps.Embedding = true
 	}
@@ -277,7 +307,7 @@ func DetectCapabilitiesFromHF(hfInfo *huggingface.HFModelInfo) *storage.Capabili
 	}
 
 	// P4: 名称关键词 fallback
-	if !caps.ASR && !caps.TTS && !caps.ImageGeneration && !caps.Embedding && !caps.Rerank {
+	if !caps.ASR && !caps.TTS && !caps.ImageGeneration && !caps.Music && !caps.Embedding && !caps.Rerank {
 		combined := strings.ToLower(hfInfo.DirName + " " + hfInfo.Name + " " + hfInfo.ModelType + " " + strings.Join(hfInfo.Architectures, " "))
 		if containsAny(combined, asrNameKeywords) {
 			caps.ASR = true
@@ -287,6 +317,9 @@ func DetectCapabilitiesFromHF(hfInfo *huggingface.HFModelInfo) *storage.Capabili
 		}
 		if containsAny(combined, imageNameKeywords) {
 			caps.ImageGeneration = true
+		}
+		if containsAny(combined, musicNameKeywords) {
+			caps.Music = true
 		}
 		if containsAny(combined, rerankNameKeywords) {
 			caps.Rerank = true

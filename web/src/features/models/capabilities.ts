@@ -4,7 +4,7 @@ import type { ModelCapabilities } from '@/types';
 
 // ========== Model category ==========
 
-export type ModelCategory = 'all' | 'chat' | 'tts' | 'asr' | 'image' | 'embedding' | 'rerank';
+export type ModelCategory = 'all' | 'chat' | 'tts' | 'asr' | 'image' | 'music' | 'embedding' | 'rerank';
 
 export const MODEL_CATEGORIES: { key: ModelCategory; label: string }[] = [
   { key: 'all', label: '全部' },
@@ -12,6 +12,7 @@ export const MODEL_CATEGORIES: { key: ModelCategory; label: string }[] = [
   { key: 'tts', label: 'TTS' },
   { key: 'asr', label: 'ASR' },
   { key: 'image', label: '图像' },
+  { key: 'music', label: '音乐' },
   { key: 'embedding', label: '嵌入' },
   { key: 'rerank', label: '重排序' },
 ];
@@ -21,6 +22,7 @@ export function getModelCategory(capabilities?: ModelCapabilities | null): Model
   if (capabilities.tts) return 'tts';
   if (capabilities.asr) return 'asr';
   if (capabilities.imageGeneration) return 'image';
+  if (capabilities.music) return 'music';
   if (capabilities.embedding) return 'embedding';
   if (capabilities.rerank) return 'rerank';
   return 'chat';

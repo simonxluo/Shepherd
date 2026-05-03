@@ -10,6 +10,7 @@ import (
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/huggingface"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 )
 
@@ -271,40 +272,62 @@ func (m *Manager) loadModels() {
 		}
 
 		// Try to load the model from disk
-		if info, err := os.Stat(cfgModel.Path); err == nil && !info.IsDir() {
-			model, err := m.loadModel(cfgModel.Path)
-			if err == nil {
-				model.ID = cfgModel.ModelID
-				if alias, ok := aliases[model.ID]; ok {
-					model.Alias = alias
-				}
-				if fav, ok := favourites[model.ID]; ok {
-					model.Favourite = fav
-				}
-
-				// 加载分卷模型信息（如果配置中有保存）
-				if cfgModel.ShardCount > 0 && len(cfgModel.ShardFiles) > 0 {
-					model.TotalSize = cfgModel.TotalSize
-					model.ShardCount = cfgModel.ShardCount
-					model.ShardFiles = cfgModel.ShardFiles
-					logger.Infof("loadModels: loaded shard model: name=%s, shardCount=%d, totalSizeGB=%.2f", model.Name, model.ShardCount, float64(model.TotalSize)/(1024*1024*1024))
-				}
-
-				// 加载 mmproj 路径（如果配置中有保存）
-				if cfgModel.Mmproj != nil && cfgModel.Mmproj.FileName != "" {
-					mmprojPath := filepath.Join(filepath.Dir(cfgModel.Path), cfgModel.Mmproj.FileName)
-					if info, err := os.Stat(mmprojPath); err == nil {
-						model.MmprojPath = mmprojPath
-						logger.Infof("loadModels: loaded mmproj file: fileName=%s, sizeGB=%.2f", cfgModel.Mmproj.FileName, float64(info.Size())/(1024*1024*1024))
+		if info, err := os.Stat(cfgModel.Path); err == nil {
+			if info.IsDir() {
+				// 目录型模型（HuggingFace/safetensors）
+				if huggingface.IsHuggingFaceModelDir(cfgModel.Path) {
+					model, loadErr := m.loadHuggingFaceModel(cfgModel.Path)
+					if loadErr == nil {
+						model.ID = cfgModel.ModelID
+						if alias, ok := aliases[model.ID]; ok {
+							model.Alias = alias
+						}
+						if fav, ok := favourites[model.ID]; ok {
+							model.Favourite = fav
+						}
+						m.models[model.ID] = model
+						loadedCount++
 					} else {
-						logger.Warnf("loadModels: mmproj file not found: path=%s", mmprojPath)
+						logger.Warnf("loadModels: failed to load HF model: path=%s, error=%v", cfgModel.Path, loadErr)
 					}
+				} else {
+					logger.Warnf("loadModels: directory is not a valid HuggingFace model: path=%s", cfgModel.Path)
 				}
-
-				m.models[model.ID] = model
-				loadedCount++
 			} else {
-				logger.Warnf("loadModels: failed to load model: path=%s, error=%v", cfgModel.Path, err)
+				model, err := m.loadModel(cfgModel.Path)
+				if err == nil {
+					model.ID = cfgModel.ModelID
+					if alias, ok := aliases[model.ID]; ok {
+						model.Alias = alias
+					}
+					if fav, ok := favourites[model.ID]; ok {
+						model.Favourite = fav
+					}
+
+					// 加载分卷模型信息（如果配置中有保存）
+					if cfgModel.ShardCount > 0 && len(cfgModel.ShardFiles) > 0 {
+						model.TotalSize = cfgModel.TotalSize
+						model.ShardCount = cfgModel.ShardCount
+						model.ShardFiles = cfgModel.ShardFiles
+						logger.Infof("loadModels: loaded shard model: name=%s, shardCount=%d, totalSizeGB=%.2f", model.Name, model.ShardCount, float64(model.TotalSize)/(1024*1024*1024))
+					}
+
+					// 加载 mmproj 路径（如果配置中有保存）
+					if cfgModel.Mmproj != nil && cfgModel.Mmproj.FileName != "" {
+						mmprojPath := filepath.Join(filepath.Dir(cfgModel.Path), cfgModel.Mmproj.FileName)
+						if info, err := os.Stat(mmprojPath); err == nil {
+							model.MmprojPath = mmprojPath
+							logger.Infof("loadModels: loaded mmproj file: fileName=%s, sizeGB=%.2f", cfgModel.Mmproj.FileName, float64(info.Size())/(1024*1024*1024))
+						} else {
+							logger.Warnf("loadModels: mmproj file not found: path=%s", mmprojPath)
+						}
+					}
+
+					m.models[model.ID] = model
+					loadedCount++
+				} else {
+					logger.Warnf("loadModels: failed to load model: path=%s, error=%v", cfgModel.Path, err)
+				}
 			}
 		} else {
 			logger.Warnf("loadModels: model file not found: path=%s", cfgModel.Path)

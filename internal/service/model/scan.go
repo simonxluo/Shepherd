@@ -84,11 +84,32 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 	}
 	// ==============================================
 
-	// Update models map（先清空，再添加）
+	// Update models map（合并扫描结果，保留扫描路径之外的模型）
 	m.mu.Lock()
-	m.models = make(map[string]*Model) // 清空旧数据
+
+	// 构建已扫描模型 ID 集合
+	scannedIDs := make(map[string]bool, len(result.Models))
 	for _, model := range result.Models {
 		m.models[model.ID] = model
+		scannedIDs[model.ID] = true
+	}
+
+	// 移除在扫描路径下但未被重新发现的模型（已从磁盘删除）
+	cleanScanPaths := make([]string, len(scanPaths))
+	for i, sp := range scanPaths {
+		cleanScanPaths[i] = filepath.Clean(sp)
+	}
+	for id, existingModel := range m.models {
+		if scannedIDs[id] {
+			continue
+		}
+		modelPath := filepath.Clean(existingModel.Path)
+		for _, csp := range cleanScanPaths {
+			if strings.HasPrefix(modelPath, csp) {
+				delete(m.models, id)
+				break
+			}
+		}
 	}
 
 	// ========== 修复：恢复用户设置的属性 ==========

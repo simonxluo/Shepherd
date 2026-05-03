@@ -236,6 +236,7 @@ export function LoadModelDialog({
       tts: false,
       asr: false,
       imageGeneration: false,
+      music: false,
     },
     flashAttention: true,
     noMmap: false,
@@ -411,7 +412,7 @@ export function LoadModelDialog({
   const estimateVRAM = useEstimateVRAM();
 
   useEffect(() => {
-    if (isOpen && savedCapabilities) {
+      if (isOpen && savedCapabilities) {
       setParams(prev => ({
         ...prev,
         capabilities: {
@@ -423,6 +424,7 @@ export function LoadModelDialog({
           tts: savedCapabilities.tts || false,
           asr: savedCapabilities.asr || false,
           imageGeneration: savedCapabilities.imageGeneration || false,
+          music: savedCapabilities.music || false,
         },
       }));
     }
@@ -454,7 +456,7 @@ export function LoadModelDialog({
       newReranking = prev.reranking || false;
 
       // Multimodal capabilities are mutually exclusive with chat capabilities
-      const multimodalKeys = ['tts', 'asr', 'imageGeneration'];
+      const multimodalKeys = ['tts', 'asr', 'imageGeneration', 'music'];
       if (multimodalKeys.includes(key) && value) {
         newCaps.thinking = false;
         newCaps.tools = false;
@@ -500,6 +502,7 @@ export function LoadModelDialog({
           tts: newCaps!.tts || false,
           asr: newCaps!.asr || false,
           imageGeneration: newCaps!.imageGeneration || false,
+          music: newCaps!.music || false,
         },
       });
     }, 0);
@@ -628,6 +631,7 @@ export function LoadModelDialog({
         tts: false,
         asr: false,
         imageGeneration: false,
+        music: false,
       },
       flashAttention: true,
       noMmap: false,
@@ -960,6 +964,7 @@ export function LoadModelDialog({
                               if (result.capabilities.tts) detectedList.push('语音合成');
                               if (result.capabilities.asr) detectedList.push('语音识别');
                               if (result.capabilities.imageGeneration) detectedList.push('图像生成');
+                              if (result.capabilities.music) detectedList.push('音乐生成');
 
                               if (detectedList.length > 0) {
                                 toast.success('检测完成', detectedList.join(', '));
@@ -1034,6 +1039,7 @@ export function LoadModelDialog({
                         {key: 'tts', label: '语音合成 (TTS)' },
                         {key: 'asr', label: '语音识别 (ASR)' },
                         {key: 'imageGeneration', label: '图像生成' },
+                        {key: 'music', label: '音乐生成' },
                       ].map(({ key, label }) => (
                         <label key={key} className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded hover:bg-accent">
                           <input
