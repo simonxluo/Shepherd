@@ -178,6 +178,7 @@ func (app *App) Initialize(configPath string) error {
 		WebUIPath:     "./web/dist",
 		ServerCfg:     cfg,
 		ConfigMgr:     app.configMgr,
+		StorageMgr:    app.storageMgr,
 		Version:       Version,
 		BuildTime:     BuildTime,
 		GitCommit:     GitCommit,

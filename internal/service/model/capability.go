@@ -1,4 +1,3 @@
-// Package model provides model capability detection functionality
 package model
 
 import (
@@ -11,7 +10,6 @@ import (
 
 // 能力检测关键词常量
 const (
-	// Rerank 关键词
 	kwRerank                 = "rerank"
 	kwReRank                 = "re-rank"
 	kwReranker               = "reranker"
@@ -20,7 +18,6 @@ const (
 	kwCrossencoder           = "crossencoder"
 	kwCrossUnderscoreEncoder = "cross_encoder"
 
-	// Embedding 关键词
 	kwEmbedding     = "embedding"
 	kwEmbeddings    = "embeddings"
 	kwTextEmbedding = "text-embedding"
@@ -33,14 +30,12 @@ const (
 	kwArcticEmbed   = "arctic-embed"
 	kwBGE           = "bge"
 
-	// Tools 关键词
 	kwToolCall  = "tool_call"
 	kwToolCalls = "tool_calls"
 	kwTools     = "tools"
 	kwMCP       = "mcp"
 	kwFunction  = "function"
 
-	// Thinking 关键词
 	kwEnableThinking  = "enable_thinking"
 	kwThinking        = "thinking"
 	kwReasoning       = "reasoning"
@@ -49,43 +44,110 @@ const (
 	kwQWQ             = "qwq"
 	kwQWQ32B          = "qwq-32b"
 
-	// TTS 关键词
-	kwTTS          = "tts"
-	kwTextToSpeech = "text-to-speech"
-	kwCosyVoice    = "cosyvoice"
-	kwChatTTS      = "chattts"
-	kwMelotts      = "melotts"
-	kwBark         = "bark"
-	kwSpeechT5     = "speecht5"
-	kwVITS         = "vits"
-	kwXTTS         = "xtts"
-
-	// ASR 关键词
-	kwASR           = "asr"
-	kwWhisper       = "whisper"
-	kwSpeechToText  = "speech-to-text"
-	kwAutomaticSpeechRecognition = "automatic-speech-recognition"
-	kwWav2Vec       = "wav2vec"
-	kwHubert        = "hubert"
-	kwSenseVoice    = "sense-voice"
-	kwParaformer    = "paraformer"
-
-	// Image Generation 关键词
-	kwStableDiffusion = "stable-diffusion"
-	kwStableDiffusionSDXL = "sdxl"
-	kwFLUX            = "flux"
-	kwDALL            = "dall-e"
-	kwImageGeneration = "image-generation"
-	kwTextToImage     = "text-to-image"
-	kwKandinsky       = "kandinsky"
-	kwPixArt          = "pixart"
-	kwCogView         = "cogview"
-	kwJanus           = "janus"
+	kwTTS                        = "tts"
+	kwTextToSpeech               = "text-to-speech"
+	kwCosyVoice                   = "cosyvoice"
+	kwChatTTS                     = "chattts"
+	kwMelotts                     = "melotts"
+	kwBark                        = "bark"
+	kwSpeechT5                    = "speecht5"
+	kwVITS                        = "vits"
+	kwXTTS                        = "xtts"
+	kwASR                         = "asr"
+	kwWhisper                     = "whisper"
+	kwSpeechToText                = "speech-to-text"
+	kwAutomaticSpeechRecognition  = "automatic-speech-recognition"
+	kwWav2Vec                     = "wav2vec"
+	kwHubert                      = "hubert"
+	kwSenseVoice                  = "sense-voice"
+	kwParaformer                  = "paraformer"
+	kwStableDiffusion             = "stable-diffusion"
+	kwStableDiffusionSDXL         = "sdxl"
+	kwFLUX                        = "flux"
+	kwDALL                        = "dall-e"
+	kwImageGeneration             = "image-generation"
+	kwTextToImage                 = "text-to-image"
+	kwKandinsky                   = "kandinsky"
+	kwPixArt                      = "pixart"
+	kwCogView                     = "cogview"
+	kwJanus                       = "janus"
 )
 
-// DetectCapabilities 自动检测模型能力
-// 参考 LlamacppServer 的 resolveModelType() 实现
-// 基于 GGUF 元数据中的模型名称、架构和 chat_template 进行检测
+// 架构→能力映射关键词表
+// 参考 llama.cpp (llama-arch.h) 和 LM Studio (architectureStylizations.ts) 的架构分类
+var (
+	embeddingArchKeywords = []string{
+		"bert", "nomic-bert", "modern-bert", "neo-bert",
+		"jina-bert", "gemma-embedding", "pangu-embed",
+		"llama-embed", "arctic", "eurobert",
+	}
+
+	ttsArchKeywords = []string{
+		"tts", "talker", "cosyvoice", "speecht5",
+		"vits", "bark", "xtts", "melotts", "chattts",
+		"voice",
+	}
+
+	asrArchKeywords = []string{
+		"asr", "whisper", "wav2vec", "hubert",
+		"sensevoice", "paraformer", "speech_to_text",
+		"automatic-speech-recognition",
+	}
+
+	imageGenArchKeywords = []string{
+		"flux", "stable-diffusion", "sdxl",
+		"kandinsky", "pixart", "cogview", "wan",
+		"dall", "text-to-image", "image-generation",
+	}
+
+	rerankNameKeywords = []string{
+		kwRerank, kwReRank, kwReranker, kwRanker,
+		kwCrossEncoder, kwCrossencoder, kwCrossUnderscoreEncoder,
+	}
+
+	embeddingNameKeywords = []string{
+		kwEmbedding, kwEmbeddings, kwTextEmbedding, kwEmbed,
+		kwE5, kwGTE, kwJina, kwNomic, kwMxbai, kwArcticEmbed, kwBGE,
+	}
+
+	ttsNameKeywords = []string{
+		kwTTS, kwTextToSpeech, kwCosyVoice, kwChatTTS,
+		kwMelotts, kwBark, kwSpeechT5, kwVITS, kwXTTS,
+	}
+
+	asrNameKeywords = []string{
+		kwASR, kwWhisper, kwSpeechToText,
+		kwAutomaticSpeechRecognition, kwWav2Vec, kwHubert,
+		kwSenseVoice, kwParaformer,
+	}
+
+	imageNameKeywords = []string{
+		kwStableDiffusion, kwStableDiffusionSDXL, kwFLUX,
+		kwDALL, kwImageGeneration, kwTextToImage,
+		kwKandinsky, kwPixArt, kwCogView, kwJanus,
+	}
+
+	toolTemplateKeywords = []string{
+		kwToolCall, kwToolCalls, kwTools, kwMCP, kwFunction,
+	}
+
+	thinkingTemplateKeywords = []string{
+		kwEnableThinking, kwThinking, kwReasoning,
+	}
+
+	thinkingNameKeywords = []string{
+		kwDeepseekR1, kwDeepseekSpaceR1, kwQWQ, kwQWQ32B,
+	}
+)
+
+// DetectCapabilities 自动检测 GGUF 模型能力
+//
+// 检测优先级:
+// P1: general.type 过滤（非 model 类型直接返回空能力）
+// P2: pooling_type（GGUF 结构化元数据，最可靠的 embedding/rerank 检测信号）
+// P3: architecture 名称映射（已知架构关键词匹配）
+// P4: 模型名称关键词 fallback
+// P5: chat_template 检测（tools/thinking）
 func DetectCapabilities(meta *gguf.Metadata) *storage.Capabilities {
 	if meta == nil {
 		return &storage.Capabilities{}
@@ -93,89 +155,85 @@ func DetectCapabilities(meta *gguf.Metadata) *storage.Capabilities {
 
 	caps := &storage.Capabilities{}
 
-	// 组合模型名称和架构用于关键词检测（转换为小写一次性）
-	var combined strings.Builder
-	combined.Grow(len(meta.Name) + len(meta.Architecture) + 1)
-	combined.WriteString(strings.ToLower(meta.Name))
-	combined.WriteString(" ")
-	combined.WriteString(strings.ToLower(meta.Architecture))
-	combinedStr := combined.String()
+	if meta.Type != "" && meta.Type != "model" {
+		return caps
+	}
 
-	// Chat template 转换为小写（如果存在）
+	// P2: pooling_type 检测 embedding / rerank
+	switch meta.PoolingType {
+	case 1, 2, 3:
+		caps.Embedding = true
+	case 4:
+		caps.Rerank = true
+	}
+
+	archLower := strings.ToLower(meta.Architecture)
+	combinedLower := strings.ToLower(meta.Name + " " + meta.Architecture)
+
+	// P3: architecture 名称映射
+	if !caps.Embedding && !caps.Rerank {
+		if containsAny(archLower, ttsArchKeywords) {
+			caps.TTS = true
+		}
+		if containsAny(archLower, asrArchKeywords) {
+			caps.ASR = true
+		}
+		if containsAny(archLower, imageGenArchKeywords) {
+			caps.ImageGeneration = true
+		}
+		if containsAny(archLower, embeddingArchKeywords) {
+			caps.Embedding = true
+		}
+	}
+
+	// P4: 名称关键词 fallback（仅当 P2+P3 都未命中时）
+	if !caps.TTS && !caps.ASR && !caps.ImageGeneration && !caps.Embedding && !caps.Rerank {
+		if containsAny(combinedLower, ttsNameKeywords) {
+			caps.TTS = true
+		}
+		if containsAny(combinedLower, asrNameKeywords) {
+			caps.ASR = true
+		}
+		if containsAny(combinedLower, imageNameKeywords) {
+			caps.ImageGeneration = true
+		}
+		if containsAny(combinedLower, rerankNameKeywords) {
+			caps.Rerank = true
+		}
+		if containsAny(combinedLower, embeddingNameKeywords) {
+			caps.Embedding = true
+		}
+	}
+
+	// P5: chat_template 检测 tools / thinking
 	var chatTemplate string
 	if meta.ChatTemplate != "" {
 		chatTemplate = strings.ToLower(meta.ChatTemplate)
 	}
 
-	// Rerank 检测：通过模型名称和架构关键词
-	caps.Rerank = containsAny(combinedStr, []string{
-		kwRerank, kwReRank, kwReranker, kwRanker,
-		kwCrossEncoder, kwCrossencoder, kwCrossUnderscoreEncoder,
-	})
-
-	// Embedding 检测：通过模型名称和架构关键词
-	caps.Embedding = containsAny(combinedStr, []string{
-		kwEmbedding, kwEmbeddings, kwTextEmbedding, kwEmbed,
-		kwE5, kwGTE, kwJina, kwNomic, kwMxbai, kwArcticEmbed, kwBGE,
-	})
-
-	// Tools 检测：通过 chat_template 关键词（仅当 chat_template 存在时）
 	if chatTemplate != "" {
-		caps.Tools = containsAny(chatTemplate, []string{
-			kwToolCall, kwToolCalls, kwTools, kwMCP, kwFunction,
-		})
+		caps.Tools = containsAny(chatTemplate, toolTemplateKeywords)
 	}
 
-	// Thinking 检测：通过 chat_template 和模型名称
 	thinkingFromTemplate := false
 	if chatTemplate != "" {
-		thinkingFromTemplate = containsAny(chatTemplate, []string{
-			kwEnableThinking, kwThinking, kwReasoning,
-		})
+		thinkingFromTemplate = containsAny(chatTemplate, thinkingTemplateKeywords)
 	}
-	thinkingFromName := containsAny(combinedStr, []string{
-		kwDeepseekR1, kwDeepseekSpaceR1, kwQWQ, kwQWQ32B,
-	})
+	thinkingFromName := containsAny(combinedLower, thinkingNameKeywords)
 	caps.Thinking = thinkingFromTemplate || thinkingFromName
 
-	// TTS 检测：通过模型名称关键词
-	caps.TTS = containsAny(combinedStr, []string{
-		kwTTS, kwTextToSpeech, kwCosyVoice, kwChatTTS,
-		kwMelotts, kwBark, kwSpeechT5, kwVITS, kwXTTS,
-	})
-
-	// ASR 检测：通过模型名称关键词
-	caps.ASR = containsAny(combinedStr, []string{
-		kwASR, kwWhisper, kwSpeechToText,
-		kwAutomaticSpeechRecognition, kwWav2Vec, kwHubert,
-		kwSenseVoice, kwParaformer,
-	})
-
-	// Image Generation 检测：通过模型名称关键词
-	caps.ImageGeneration = containsAny(combinedStr, []string{
-		kwStableDiffusion, kwStableDiffusionSDXL, kwFLUX,
-		kwDALL, kwImageGeneration, kwTextToImage,
-		kwKandinsky, kwPixArt, kwCogView, kwJanus,
-	})
-
-	// 应用互斥约束（使用统一的 ApplyConstraints 方法）
 	caps.ApplyConstraints()
 
 	return caps
 }
 
-// containsAny 检查字符串是否包含任一关键词
-// 这是一个优化版本，避免创建临时字符串
-func containsAny(s string, keywords []string) bool {
-	for _, kw := range keywords {
-		if strings.Contains(s, kw) {
-			return true
-		}
-	}
-	return false
-}
-
-// DetectCapabilitiesFromHF detects model capabilities from HuggingFace model info
+// DetectCapabilitiesFromHF 检测 HuggingFace 模型能力
+//
+// 检测优先级:
+// P1: diffusers 类名检测
+// P2: HF architectures 字段映射
+// P3: HF model_type 字段映射
+// P4: 名称关键词 fallback（使用 DirName + Name + ModelType + Architectures）
 func DetectCapabilitiesFromHF(hfInfo *huggingface.HFModelInfo) *storage.Capabilities {
 	caps := &storage.Capabilities{}
 
@@ -183,8 +241,7 @@ func DetectCapabilitiesFromHF(hfInfo *huggingface.HFModelInfo) *storage.Capabili
 		return caps
 	}
 
-	combined := strings.ToLower(hfInfo.Name + " " + hfInfo.ModelType + " " + strings.Join(hfInfo.Architectures, " "))
-
+	// P1: diffusers 模型检测
 	if hfInfo.IsDiffusers {
 		diffuserLower := strings.ToLower(hfInfo.DiffuserClass)
 		switch {
@@ -195,35 +252,60 @@ func DetectCapabilitiesFromHF(hfInfo *huggingface.HFModelInfo) *storage.Capabili
 		}
 	}
 
+	// P2: architectures 字段映射
+	archLower := strings.ToLower(strings.Join(hfInfo.Architectures, " "))
+	if !caps.TTS && containsAny(archLower, ttsArchKeywords) {
+		caps.TTS = true
+	}
+	if !caps.ASR && containsAny(archLower, asrArchKeywords) {
+		caps.ASR = true
+	}
+	if !caps.ImageGeneration && containsAny(archLower, imageGenArchKeywords) {
+		caps.ImageGeneration = true
+	}
+	if !caps.Embedding && containsAny(archLower, embeddingArchKeywords) {
+		caps.Embedding = true
+	}
+
+	// P3: model_type 字段映射
 	modelTypeLower := strings.ToLower(hfInfo.ModelType)
 	switch {
-	case containsAny(modelTypeLower, []string{"whisper", "wav2vec", "hubert", "speech_to_text", "sense_voice", "paraformer"}):
+	case !caps.ASR && containsAny(modelTypeLower, []string{"whisper", "wav2vec", "hubert", "speech_to_text", "sense_voice", "paraformer"}):
 		caps.ASR = true
-	case containsAny(modelTypeLower, []string{"speecht5", "vits", "bark", "xtts"}):
+	case !caps.TTS && containsAny(modelTypeLower, []string{"speecht5", "vits", "bark", "xtts", "tts"}):
 		caps.TTS = true
 	}
 
-	archLower := strings.ToLower(strings.Join(hfInfo.Architectures, " "))
-	switch {
-	case containsAny(archLower, []string{"whisper", "wav2vec", "hubert", "sensevoice", "paraformer"}):
-		caps.ASR = true
-	case containsAny(archLower, []string{"speecht5", "vits", "bark"}):
-		caps.TTS = true
-	}
-
-	if !caps.ASR && !caps.TTS && !caps.ImageGeneration {
-		if containsAny(combined, []string{kwASR, kwWhisper, kwSpeechToText, kwAutomaticSpeechRecognition, kwWav2Vec, kwHubert, kwSenseVoice, kwParaformer}) {
+	// P4: 名称关键词 fallback
+	if !caps.ASR && !caps.TTS && !caps.ImageGeneration && !caps.Embedding && !caps.Rerank {
+		combined := strings.ToLower(hfInfo.DirName + " " + hfInfo.Name + " " + hfInfo.ModelType + " " + strings.Join(hfInfo.Architectures, " "))
+		if containsAny(combined, asrNameKeywords) {
 			caps.ASR = true
 		}
-		if containsAny(combined, []string{kwTTS, kwTextToSpeech, kwCosyVoice, kwChatTTS, kwMelotts, kwBark, kwSpeechT5, kwVITS, kwXTTS}) {
+		if containsAny(combined, ttsNameKeywords) {
 			caps.TTS = true
 		}
-		if containsAny(combined, []string{kwStableDiffusion, kwStableDiffusionSDXL, kwFLUX, kwDALL, kwImageGeneration, kwTextToImage, kwKandinsky, kwPixArt, kwCogView, kwJanus}) {
+		if containsAny(combined, imageNameKeywords) {
 			caps.ImageGeneration = true
+		}
+		if containsAny(combined, rerankNameKeywords) {
+			caps.Rerank = true
+		}
+		if containsAny(combined, embeddingNameKeywords) {
+			caps.Embedding = true
 		}
 	}
 
 	caps.ApplyConstraints()
 
 	return caps
+}
+
+func containsAny(s string, keywords []string) bool {
+	for _, kw := range keywords {
+		if strings.Contains(s, kw) {
+			return true
+		}
+	}
+	return false
 }

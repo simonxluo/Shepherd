@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
@@ -234,6 +235,7 @@ func (s *Server) HandleGetModelCapabilities(c *gin.Context) {
 	ctx := context.Background()
 	meta, err := s.storageMgr.GetStore().GetModelMetadata(ctx, modelID)
 	if err != nil {
+		logger.Infof("HandleGetModelCapabilities: GetModelMetadata failed: modelId=%s, err=%v, storeType=%T", modelID, err, s.storageMgr.GetStore())
 		api.Success(c, gin.H{
 			"modelId":      modelID,
 			"capabilities": &storage.Capabilities{},
@@ -245,6 +247,8 @@ func (s *Server) HandleGetModelCapabilities(c *gin.Context) {
 	if caps == nil {
 		caps = &storage.Capabilities{}
 	}
+
+	logger.Infof("HandleGetModelCapabilities: modelId=%s, caps=%+v", modelID, caps)
 
 	api.Success(c, gin.H{
 		"modelId":      modelID,

@@ -1073,6 +1073,8 @@ func (s *SQLiteStore) GetModelMetadata(ctx context.Context, modelID string) (*Mo
 	var tagsJSON string
 	var capsJSON string
 	var lastLoaded *int64
+	var createdAt int64
+	var updatedAt int64
 
 	err := s.db.QueryRowContext(ctx, query, modelID).Scan(
 		&metadata.ModelID,
@@ -1086,8 +1088,8 @@ func (s *SQLiteStore) GetModelMetadata(ctx context.Context, modelID string) (*Mo
 		&lastLoaded,
 		&metadata.TotalTokens,
 		&capsJSON,
-		&metadata.CreatedAt,
-		&metadata.UpdatedAt,
+		&createdAt,
+		&updatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -1096,6 +1098,9 @@ func (s *SQLiteStore) GetModelMetadata(ctx context.Context, modelID string) (*Mo
 	if err != nil {
 		return nil, fmt.Errorf("failed to get model metadata: %w", err)
 	}
+
+	metadata.CreatedAt = time.Unix(createdAt, 0)
+	metadata.UpdatedAt = time.Unix(updatedAt, 0)
 
 	// Parse tags JSON
 	if tagsJSON != "" {
@@ -1145,6 +1150,8 @@ func (s *SQLiteStore) ListModelMetadata(ctx context.Context, limit, offset int) 
 		var tagsJSON string
 		var capsJSON string
 		var lastLoaded *int64
+		var createdAt int64
+		var updatedAt int64
 
 		err := rows.Scan(
 			&metadata.ModelID,
@@ -1158,12 +1165,15 @@ func (s *SQLiteStore) ListModelMetadata(ctx context.Context, limit, offset int) 
 			&lastLoaded,
 			&metadata.TotalTokens,
 			&capsJSON,
-			&metadata.CreatedAt,
-			&metadata.UpdatedAt,
+			&createdAt,
+			&updatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan model metadata: %w", err)
 		}
+
+		metadata.CreatedAt = time.Unix(createdAt, 0)
+		metadata.UpdatedAt = time.Unix(updatedAt, 0)
 
 		// Parse tags JSON
 		if tagsJSON != "" {
