@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
@@ -278,6 +279,7 @@ func (s *Server) HandleGetModelCapabilities(c *gin.Context) {
 	ctx := context.Background()
 	meta, err := s.storageMgr.GetStore().GetModelMetadata(ctx, modelID)
 	if err != nil {
+		logger.Infof("HandleGetModelCapabilities: GetModelMetadata failed: modelId=%s, err=%v, storeType=%T", modelID, err, s.storageMgr.GetStore())
 		api.Success(c, gin.H{
 			"modelId":      modelID,
 			"capabilities": &storage.Capabilities{},
@@ -290,6 +292,8 @@ func (s *Server) HandleGetModelCapabilities(c *gin.Context) {
 		caps = &storage.Capabilities{}
 	}
 
+	logger.Infof("HandleGetModelCapabilities: modelId=%s, caps=%+v", modelID, caps)
+
 	api.Success(c, gin.H{
 		"modelId":      modelID,
 		"capabilities": caps,
@@ -298,11 +302,15 @@ func (s *Server) HandleGetModelCapabilities(c *gin.Context) {
 
 func (s *Server) HandleSetModelCapabilities(c *gin.Context) {
 	var req struct {
-		ModelID   string `json:"modelId"`
-		Thinking  bool   `json:"thinking"`
-		Tools     bool   `json:"tools"`
-		Rerank    bool   `json:"rerank"`
-		Embedding bool   `json:"embedding"`
+		ModelID         string `json:"modelId"`
+		Thinking        bool   `json:"thinking"`
+		Tools           bool   `json:"tools"`
+		Rerank          bool   `json:"rerank"`
+		Embedding       bool   `json:"embedding"`
+		TTS             bool   `json:"tts"`
+		ASR             bool   `json:"asr"`
+		ImageGeneration bool   `json:"imageGeneration"`
+		Music           bool   `json:"music"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		api.ErrorWithDetails(c, types.ErrInvalidRequest, "无效的请求格式", err.Error())
@@ -315,10 +323,14 @@ func (s *Server) HandleSetModelCapabilities(c *gin.Context) {
 	}
 
 	caps := &storage.Capabilities{
-		Thinking:  req.Thinking,
-		Tools:     req.Tools,
-		Rerank:    req.Rerank,
-		Embedding: req.Embedding,
+		Thinking:        req.Thinking,
+		Tools:           req.Tools,
+		Rerank:          req.Rerank,
+		Embedding:       req.Embedding,
+		TTS:             req.TTS,
+		ASR:             req.ASR,
+		ImageGeneration: req.ImageGeneration,
+		Music:           req.Music,
 	}
 	caps.ApplyConstraints()
 

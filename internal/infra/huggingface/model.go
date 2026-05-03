@@ -22,6 +22,7 @@ type HFModelIndex struct {
 
 type HFModelInfo struct {
 	Name           string
+	DirName        string
 	ModelType      string
 	Architectures  []string
 	PipelineTag    string
@@ -43,6 +44,7 @@ func ReadModelInfo(dirPath string) (*HFModelInfo, error) {
 	hfInfo := &HFModelInfo{
 		DirPath: dirPath,
 		Name:    filepath.Base(dirPath),
+		DirName: filepath.Base(dirPath),
 	}
 
 	hfInfo.TotalSize, _ = calcDirSize(dirPath)

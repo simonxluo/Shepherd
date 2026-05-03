@@ -32,6 +32,7 @@ const CAPABILITY_BADGES: Record<string, { label: string; className: string }> = 
   tts: { label: 'TTS', className: 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20' },
   asr: { label: 'ASR', className: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20' },
   imageGeneration: { label: '图像生成', className: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20' },
+  music: { label: '音乐', className: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' },
 };
 
 function formatSize(bytes: number): string {
@@ -56,7 +57,8 @@ function hasAnyCapability(capabilities?: ModelCapabilities): boolean {
     capabilities.rerank ||
     capabilities.tts ||
     capabilities.asr ||
-    capabilities.imageGeneration
+    capabilities.imageGeneration ||
+    capabilities.music
   );
 }
 

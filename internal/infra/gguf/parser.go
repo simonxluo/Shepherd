@@ -210,6 +210,11 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		meta.ChatTemplate = kv.ValueString()
 	}
 
+	// ========== 架构特定信息 ==========
+	// 读取 pooling_type 等架构级别的元数据
+	archInfo := p.file.Architecture()
+	meta.PoolingType = archInfo.PoolingType
+
 	// ========== 计算量化字符串 ==========
 	meta.Quantization = meta.GetQuantizationString()
 

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, RefreshCw, Grid3X3, List, Gauge, FileText, Star, Layers, MessageSquare, Mic, Image, Database } from 'lucide-react';
+import { Search, RefreshCw, Grid3X3, List, Gauge, FileText, Star, Layers, MessageSquare, Volume2, Ear, Image, Music, Database, ArrowUpDown } from 'lucide-react';
 import { useModels, useLoadModel, useUnloadModel, useSetModelFavourite, useUpdateModelAlias, useScanModels, useFilteredModels, useCreateBenchmark, useAllModelCapabilities, MODEL_CATEGORIES, getModelCategory } from '@/features/models';
 import type { ModelCategory } from '@/features/models';
 import { ModelCard } from '@/features/models/components/ModelCard';
@@ -20,9 +20,12 @@ import { useUIStore } from '@/stores/uiStore';
 const CATEGORY_ICONS: Record<ModelCategory, React.ElementType> = {
   all: Layers,
   chat: MessageSquare,
-  audio: Mic,
+  tts: Volume2,
+  asr: Ear,
   image: Image,
+  music: Music,
   embedding: Database,
+  rerank: ArrowUpDown,
 };
 
 const STATUS_CHIPS: { value: ModelStatus | ''; label: string; dot?: string }[] = [
@@ -70,7 +73,7 @@ export function ModelsPage() {
   }, [modelIds, capsResults]);
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<ModelCategory, number> = { all: 0, chat: 0, audio: 0, image: 0, embedding: 0 };
+    const counts: Record<ModelCategory, number> = { all: 0, chat: 0, tts: 0, asr: 0, image: 0, music: 0, embedding: 0, rerank: 0 };
     models.forEach(m => {
       counts.all++;
       const cat = getModelCategory(capabilitiesMap[m.id]);

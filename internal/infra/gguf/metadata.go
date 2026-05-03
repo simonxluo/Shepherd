@@ -178,6 +178,16 @@ type Metadata struct {
 	// PostToken is the string to append to tokens during tokenization
 	PostToken string
 
+	/* ========== Pooling Type ========== */
+
+	// PoolingType indicates the model's pooling strategy from GGUF metadata
+	// 0 = NONE (text generation, default)
+	// 1 = MEAN (embedding)
+	// 2 = CLS (embedding)
+	// 3 = LAST (embedding)
+	// 4 = RANK (reranking)
+	PoolingType uint32
+
 	/* ========== Tokenizer Chat Template ========== */
 
 	// ChatTemplate is the Jinja chat template for conversation formatting

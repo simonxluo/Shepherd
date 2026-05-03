@@ -89,6 +89,7 @@ type Config struct {
 	WebUIPath     string
 	ServerCfg     *config.Config
 	ConfigMgr     *config.Manager // 配置管理器
+	StorageMgr    *storage.Manager
 	// Version information
 	Version   string // 版本号
 	BuildTime string // 构建时间
@@ -108,10 +109,16 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	}
 
 	// Initialize storage manager
-	storageMgr, err := storage.NewManager(&config.ServerCfg.Storage)
-	if err != nil {
-		cancel()
-		return nil, fmt.Errorf("failed to initialize storage manager: %w", err)
+	var storageMgr *storage.Manager
+	if config.StorageMgr != nil {
+		storageMgr = config.StorageMgr
+	} else {
+		var err error
+		storageMgr, err = storage.NewManager(&config.ServerCfg.Storage)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("failed to initialize storage manager: %w", err)
+		}
 	}
 	s.storageMgr = storageMgr
 
