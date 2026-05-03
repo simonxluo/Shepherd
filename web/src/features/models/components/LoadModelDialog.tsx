@@ -337,6 +337,7 @@ export function LoadModelDialog({
       mmprojOffload: true,
       unloadAfterMinutes: true,
       concurrencyLimit: true,
+      extraArgs: true,
     },
   });
 
@@ -396,6 +397,7 @@ export function LoadModelDialog({
       setConfigName('');
       setSelectedConfigName('');
       setSavedConfigs(getSavedConfigs());
+      autoDetectCapabilities.mutate(modelId);
     }
   }, [isOpen]);
 
@@ -872,7 +874,7 @@ export function LoadModelDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose(); }}>
-      <DialogContent className="max-w-5xl max-h-[85vh] p-0 overflow-hidden flex flex-col" onInteractOutside={(e) => { if (isLoading) e.preventDefault(); }}>
+      <DialogContent className="sm:max-w-[95vw] max-h-[90vh] p-0 overflow-hidden flex flex-col" onInteractOutside={(e) => { if (isLoading) e.preventDefault(); }}>
         {/* Header */}
         <DialogHeader className="p-4 border-b border-border flex-shrink-0">
           <DialogTitle className="text-lg font-semibold text-foreground">
@@ -882,8 +884,8 @@ export function LoadModelDialog({
 
         {/* Form content */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex flex-col flex-1 min-h-0 p-4 overflow-hidden">
-            <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+          <div className="flex flex-col flex-1 min-h-0 p-3 overflow-hidden">
+            <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
             {/* Left column: basic config */}
 
             <div className="flex-1 space-y-4 overflow-y-scroll pr-2 min-h-0 dialog-scrollable" aria-label="基础配置区域">
@@ -924,7 +926,7 @@ export function LoadModelDialog({
                             label: `${backend.name}${backend.description ? ` (${backend.description})` : ''}${!backend.available ? ' - 不可用' : ''}`,
                             disabled: !backend.available,
                           }))
-                        : [{ value: '', label: '未配置 llama.cpp 后端', disabled: true }]
+                        : [{ value: '__placeholder__', label: '未配置 llama.cpp 后端', disabled: true }]
                     }
                   />
                   {llamacppBackends.length === 0 && (

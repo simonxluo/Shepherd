@@ -17,6 +17,7 @@ import { AlertDialogProvider } from './providers/AlertDialog';
 import { AlertDialog } from './components/ui/alert-dialog';
 import { Toaster } from './components/ui/sonner';
 import { WebSocketProvider } from './providers/WebSocketProvider';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 import 'highlight.js/styles/github-dark.css';
 
@@ -59,11 +60,13 @@ function App() {
         }}
         onError={(error) => console.error('WebSocket error:', error)}
       >
-        <AlertDialogProvider>
-          <AppContent />
-          <AlertDialog />
-          <Toaster />
-        </AlertDialogProvider>
+        <ErrorBoundary>
+          <AlertDialogProvider>
+            <AppContent />
+            <AlertDialog />
+            <Toaster />
+          </AlertDialogProvider>
+        </ErrorBoundary>
       </WebSocketProvider>
     </QueryClientProvider>
   );

@@ -34,9 +34,8 @@ export function ThemeToggle() {
           className={cn(
             'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5',
             'transition-all duration-200',
-            'border border-border/40 hover:border-border/60',
-            'bg-background/50 hover:bg-background/80',
-            'hover:bg-accent',
+            'border border-border/60 hover:border-border/80',
+            'bg-muted/30 hover:bg-muted/50',
             'focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary/50'
           )}
           aria-label={`选择主题（当前：${currentTheme?.label}）`}
