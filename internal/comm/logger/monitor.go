@@ -70,20 +70,29 @@ type LogDataEvent struct {
 }
 
 type LogMonitor struct {
-	bufferMu   sync.RWMutex
-	buffer     *circularBuffer
-	stdout     io.Writer
-	subMu      sync.RWMutex
+	bufferMu    sync.RWMutex
+	buffer      *circularBuffer
+	stdout      io.Writer
+	subMu       sync.RWMutex
 	subscribers map[chan []byte]struct{}
 }
 
 func NewLogMonitor() *LogMonitor {
 	return &LogMonitor{
-		stdout:     os.Stdout,
-		buffer:     nil,
+		stdout:      os.Stdout,
+		buffer:      nil,
 		subscribers: make(map[chan []byte]struct{}),
 	}
 }
+
+func NewLogMonitorWriter(stdout io.Writer) *LogMonitor {
+	return &LogMonitor{
+		stdout:      stdout,
+		buffer:      nil,
+		subscribers: make(map[chan []byte]struct{}),
+	}
+}
+
 
 func (m *LogMonitor) Write(p []byte) (n int, err error) {
 	if len(p) == 0 {

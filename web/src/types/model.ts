@@ -184,6 +184,9 @@ export interface LoadModelParams {
   ropeFreqBase?: number;          // RoPE base frequency
   ropeFreqScale?: number;         // RoPE frequency scaling
 
+  draftModelId?: string;
+  draftMaxTokens?: number;
+
   // Embedding & retrieval
   embedding?: boolean;
 
@@ -285,6 +288,9 @@ export interface LoadModelParams {
 
     // Multimedia
     mmprojOffload?: boolean;
+
+    draftModel?: boolean;
+    draftMaxTokens?: boolean;
 
     // Runtime management
     unloadAfterMinutes?: boolean;

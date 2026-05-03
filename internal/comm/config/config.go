@@ -132,8 +132,8 @@ type LMStudioConfig struct {
 
 // BackendsConfig contains backend configuration for different inference engines
 type BackendsConfig struct {
-	VLLM           *VLLMBackendConfig `mapstructure:"vllm" yaml:"vllm" json:"vllm,omitempty"`
-	VLLMOmni       *VLLMBackendConfig `mapstructure:"vllm_omni" yaml:"vllm_omni" json:"vllmOmni,omitempty"`
+	VLLM            *VLLMBackendConfig `mapstructure:"vllm" yaml:"vllm" json:"vllm,omitempty"`
+	VLLMOmni        *VLLMBackendConfig `mapstructure:"vllm_omni" yaml:"vllm_omni" json:"vllmOmni,omitempty"`
 	MultimodalPaths []MultimodalPath   `mapstructure:"multimodal_paths" yaml:"multimodal_paths" json:"multimodalPaths"`
 }
 

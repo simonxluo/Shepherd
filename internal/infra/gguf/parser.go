@@ -221,4 +221,11 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 	return meta, nil
 }
 
+func (p *Parser) GetArchitecture() string {
+	if p.file != nil {
+		meta := p.file.Metadata()
+		return meta.Architecture
+	}
+	return ""
+}
 

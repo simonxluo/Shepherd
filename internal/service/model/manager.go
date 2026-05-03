@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -84,6 +85,193 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 	m.StartTTLChecker()
 
 	return m
+}
+
+func (m *Manager) isGGUFFile(path string) bool {
+	return m.isModelFile(path)
+}
+
+func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
+	model, exists := m.GetModel(req.ModelID)
+	if !exists {
+		logger.Warnf("模型加载失败: 模型不存在: modelId=%s", req.ModelID)
+		return nil, fmt.Errorf("model not found: %s", req.ModelID)
+	}
+
+	logger.Infof("开始加载模型: modelId=%s, modelName=%s, ctxSize=%d, gpuLayers=%s", req.ModelID, model.Name, req.CtxSize, req.GPULayers)
+
+	var status *ModelStatus
+	m.mu.Lock()
+	if existingStatus, exists := m.statuses[req.ModelID]; exists && existingStatus.State == StateLoading {
+		m.mu.Unlock()
+		logger.Warnf("模型加载失败: 模型正在加载中: modelId=%s", req.ModelID)
+		return nil, fmt.Errorf("model already loading: %s", req.ModelID)
+	}
+
+	status = &ModelStatus{
+		ID:   req.ModelID,
+		Name: model.Name,
+	}
+	applyRuntimeConfig(status, req.UnloadAfterMinutes, req.ConcurrencyLimit)
+	m.statuses[req.ModelID] = status
+	m.mu.Unlock()
+
+	m.swapBeforeLoad(req.ModelID)
+
+	if err := status.transitionTo(StateLoading); err != nil {
+		m.mu.Lock()
+		delete(m.statuses, req.ModelID)
+		m.mu.Unlock()
+		logger.Warnf("模型加载失败: 状态转换错误: modelId=%s, error=%v", req.ModelID, err)
+		return nil, fmt.Errorf("failed to transition to loading: %w", err)
+	}
+
+	startTime := time.Now()
+
+	modelPath := model.Path
+	if len(model.ShardFiles) > 0 {
+		modelPath = model.ShardFiles[0]
+		fmt.Printf("[INFO] 使用分卷模型主文件: %s (共 %d 个分卷)\n", modelPath, len(model.ShardFiles))
+	}
+
+	bt, parseErr := backend.ParseBackendType(req.BackendType)
+	if parseErr != nil {
+		status.transitionTo(StateError)
+		status.Error = parseErr
+		logger.Errorf("模型加载失败: 无效的后端类型: modelId=%s, error=%v", req.ModelID, parseErr)
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   status.Error,
+		}, status.Error
+	}
+	b, bcfg, resolveErr := m.backendRegistry.Resolve(modelPath, bt)
+	if resolveErr != nil {
+		status.transitionTo(StateError)
+		status.Error = resolveErr
+		logger.Errorf("模型加载失败: 无法解析后端: modelId=%s, error=%v", req.ModelID, resolveErr)
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   status.Error,
+		}, status.Error
+	}
+
+	info, discoverErr := b.Discover(bcfg)
+	if discoverErr != nil {
+		status.transitionTo(StateError)
+		status.Error = discoverErr
+		logger.Errorf("模型加载失败: 后端发现失败: modelId=%s, backend=%v, error=%v", req.ModelID, b.Type(), discoverErr)
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   status.Error,
+		}, status.Error
+	}
+	if !info.Available {
+		err := fmt.Errorf("backend %s is not available", b.Type())
+		status.transitionTo(StateError)
+		status.Error = err
+		logger.Errorf("模型加载失败: 后端不可用: modelId=%s, backend=%v", req.ModelID, b.Type())
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   status.Error,
+		}, status.Error
+	}
+
+	port, err := m.portAllocator.NextPort()
+	if err != nil {
+		status.transitionTo(StateError)
+		status.Error = fmt.Errorf("no available ports: %w", err)
+		logger.Errorf("模型加载失败: 无可用端口: modelId=%s, error=%v", req.ModelID, err)
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   status.Error,
+		}, status.Error
+	}
+
+	backendReq := m.toBackendLoadRequest(req, modelPath, port)
+	startCfg, cmdErr := b.BuildStartConfig(info, backendReq)
+	if cmdErr != nil {
+		m.portAllocator.Release(port)
+		status.transitionTo(StateError)
+		status.Error = cmdErr
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   cmdErr,
+		}, cmdErr
+	}
+
+	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath)
+	if err != nil {
+		m.portAllocator.Release(port)
+		status.transitionTo(StateError)
+		status.Error = err
+		logger.Errorf("模型加载失败: 启动进程失败: modelId=%s, error=%v", req.ModelID, err)
+		return &LoadResult{
+			Success: false,
+			ModelID: req.ModelID,
+			Error:   err,
+		}, err
+	}
+
+	proc.SetOutputHandler(func(line string) {
+		if !strings.Contains(line, "update_slots") && !strings.Contains(line, "log_server_r") {
+			logger.Debug(fmt.Sprintf("[%s] %s", req.ModelID, line))
+		}
+	})
+
+	status.transitionTo(StateLoaded)
+	m.mu.Lock()
+	status.ProcessID = proc.ID
+	status.Port = port
+	status.LoadedAt = time.Now()
+	m.mu.Unlock()
+
+	duration := time.Since(startTime)
+
+	logger.Infof("模型加载成功: modelId=%s, port=%d, duration=%s, pid=%d, backend=%v", req.ModelID, port, duration.String(), proc.GetPID(), b.Type())
+
+	return &LoadResult{
+		Success:  true,
+		ModelID:  req.ModelID,
+		Port:     port,
+		CtxSize:  req.CtxSize,
+		Duration: duration,
+	}, nil
+}
+
+func (m *Manager) isLoading(modelID string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if status, exists := m.statuses[modelID]; exists {
+		return status.State == StateLoading
+	}
+	return false
+}
+
+func (m *Manager) findAvailablePort() int {
+	basePort := 8081
+
+	statuses := m.ListStatus()
+	usedPorts := make(map[int]bool)
+	for _, status := range statuses {
+		if status.Port > 0 {
+			usedPorts[status.Port] = true
+		}
+	}
+
+	for port := basePort; port < basePort+100; port++ {
+		if !usedPorts[port] {
+			return port
+		}
+	}
+
+	return basePort
 }
 
 
