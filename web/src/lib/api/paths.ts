@@ -111,6 +111,8 @@ export const vllmPathsApi = {
     apiClient.get<PathListResponse<BackendPathConfig>>('/config/vllm/paths'),
   add: (data: BackendPathConfig) =>
     apiClient.post<PathMutationResponse>('/config/vllm/paths', data),
+  update: (data: BackendPathConfig) =>
+    apiClient.put<PathMutationResponse>('/config/vllm/paths', data),
   remove: (path: string) =>
     apiClient.delete<PathMutationResponse>(
       `/config/vllm/paths?path=${encodeURIComponent(path)}`
@@ -122,6 +124,8 @@ export const vllmOmniPathsApi = {
     apiClient.get<PathListResponse<BackendPathConfig>>('/config/vllm_omni/paths'),
   add: (data: BackendPathConfig) =>
     apiClient.post<PathMutationResponse>('/config/vllm_omni/paths', data),
+  update: (data: BackendPathConfig) =>
+    apiClient.put<PathMutationResponse>('/config/vllm_omni/paths', data),
   remove: (path: string) =>
     apiClient.delete<PathMutationResponse>(
       `/config/vllm_omni/paths?path=${encodeURIComponent(path)}`

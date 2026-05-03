@@ -193,7 +193,7 @@ func (r *Registry) DiscoverAll() map[BackendType]*BackendInfo {
 	for _, item := range items {
 		info, err := item.backend.Discover(item.config)
 		if err != nil {
-			logger.Warn("backend discovery failed", "backend", item.backend.Type(), "error", err)
+			logger.Warnf("backend discovery failed: backend=%s, error=%v", item.backend.Type(), err)
 			results[item.backend.Type()] = &BackendInfo{
 				Type:      item.backend.Type(),
 				Available: false,

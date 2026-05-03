@@ -75,12 +75,12 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 	if len(paths) == 0 {
 		logger.Warn("ModelManager: 未配置模型扫描路径")
 	} else {
-		logger.Info("ModelManager: 初始化完成", "paths", paths)
+		logger.Infof("ModelManager: 初始化完成: paths=%v", paths)
 	}
 
 	// Load saved models
 	m.loadModels()
-	logger.Info("ModelManager: 从配置加载模型完成", "modelCount", len(m.models))
+	logger.Infof("ModelManager: 从配置加载模型完成: modelCount=%d", len(m.models))
 
 	m.StartTTLChecker()
 
@@ -98,18 +98,18 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	// Get model
 	model, exists := m.GetModel(req.ModelID)
 	if !exists {
-		logger.Warn("模型加载失败: 模型不存在", "modelId", req.ModelID)
+		logger.Warnf("模型加载失败: 模型不存在: modelId=%s", req.ModelID)
 		return nil, fmt.Errorf("model not found: %s", req.ModelID)
 	}
 
-	logger.Info("开始加载模型", "modelId", req.ModelID, "modelName", model.Name, "ctxSize", req.CtxSize, "gpuLayers", req.GPULayers)
+	logger.Infof("开始加载模型: modelId=%s, modelName=%s, ctxSize=%d, gpuLayers=%s", req.ModelID, model.Name, req.CtxSize, req.GPULayers)
 
 	// Phase 1: 检查状态并创建初始 status（加锁）
 	var status *ModelStatus
 	m.mu.Lock()
 	if existingStatus, exists := m.statuses[req.ModelID]; exists && existingStatus.State == StateLoading {
 		m.mu.Unlock()
-		logger.Warn("模型加载失败: 模型正在加载中", "modelId", req.ModelID)
+		logger.Warnf("模型加载失败: 模型正在加载中: modelId=%s", req.ModelID)
 		return nil, fmt.Errorf("model already loading: %s", req.ModelID)
 	}
 
@@ -128,7 +128,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		m.mu.Lock()
 		delete(m.statuses, req.ModelID)
 		m.mu.Unlock()
-		logger.Warn("模型加载失败: 状态转换错误", "modelId", req.ModelID, "error", err)
+		logger.Warnf("模型加载失败: 状态转换错误: modelId=%s, error=%v", req.ModelID, err)
 		return nil, fmt.Errorf("failed to transition to loading: %w", err)
 	}
 
@@ -147,7 +147,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	if parseErr != nil {
 		status.transitionTo(StateError)
 		status.Error = parseErr
-		logger.Error("模型加载失败: 无效的后端类型", "modelId", req.ModelID, "error", parseErr)
+		logger.Errorf("模型加载失败: 无效的后端类型: modelId=%s, error=%v", req.ModelID, parseErr)
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
@@ -158,7 +158,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	if resolveErr != nil {
 		status.transitionTo(StateError)
 		status.Error = resolveErr
-		logger.Error("模型加载失败: 无法解析后端", "modelId", req.ModelID, "error", resolveErr)
+		logger.Errorf("模型加载失败: 无法解析后端: modelId=%s, error=%v", req.ModelID, resolveErr)
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
@@ -171,7 +171,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	if discoverErr != nil {
 		status.transitionTo(StateError)
 		status.Error = discoverErr
-		logger.Error("模型加载失败: 后端发现失败", "modelId", req.ModelID, "backend", b.Type(), "error", discoverErr)
+		logger.Errorf("模型加载失败: 后端发现失败: modelId=%s, backend=%v, error=%v", req.ModelID, b.Type(), discoverErr)
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
@@ -182,7 +182,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		err := fmt.Errorf("backend %s is not available", b.Type())
 		status.transitionTo(StateError)
 		status.Error = err
-		logger.Error("模型加载失败: 后端不可用", "modelId", req.ModelID, "backend", b.Type())
+		logger.Errorf("模型加载失败: 后端不可用: modelId=%s, backend=%v", req.ModelID, b.Type())
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
@@ -195,7 +195,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	if err != nil {
 		status.transitionTo(StateError)
 		status.Error = fmt.Errorf("no available ports: %w", err)
-		logger.Error("模型加载失败: 无可用端口", "modelId", req.ModelID, "error", err)
+		logger.Errorf("模型加载失败: 无可用端口: modelId=%s, error=%v", req.ModelID, err)
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
@@ -223,7 +223,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		m.portAllocator.Release(port)
 		status.transitionTo(StateError)
 		status.Error = err
-		logger.Error("模型加载失败: 启动进程失败", "modelId", req.ModelID, "error", err)
+		logger.Errorf("模型加载失败: 启动进程失败: modelId=%s, error=%v", req.ModelID, err)
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
@@ -248,7 +248,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 
 	duration := time.Since(startTime)
 
-	logger.Info("模型加载成功", "modelId", req.ModelID, "port", port, "duration", duration.String(), "pid", proc.GetPID(), "backend", b.Type())
+	logger.Infof("模型加载成功: modelId=%s, port=%d, duration=%s, pid=%d, backend=%v", req.ModelID, port, duration.String(), proc.GetPID(), b.Type())
 
 	return &LoadResult{
 		Success:  true,

@@ -141,8 +141,12 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         case 'multimodal':
           response = await multimodalPathsApi.update(data as MultimodalPathConfig);
           break;
-        default:
-          throw new Error('此路径类型不支持更新');
+        case 'vllm':
+          response = await vllmPathsApi.update(data as BackendPathConfig);
+          break;
+        case 'vllm_omni':
+          response = await vllmOmniPathsApi.update(data as BackendPathConfig);
+          break;
       }
 
       if (response?.success) {

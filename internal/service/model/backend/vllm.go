@@ -68,7 +68,7 @@ func (b *VLLMBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 	cmd := exec.Command(condaPath, "run", "--no-banner", "-n", cfg.CondaEnv, "vllm", "--version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		logger.Warn("vLLM discovery failed", "condaEnv", cfg.CondaEnv, "error", err, "output", string(output))
+		logger.Warnf("vLLM discovery failed: condaEnv=%s, error=%v, output=%s", cfg.CondaEnv, err, string(output))
 		info.Available = false
 		return info, nil
 	}
