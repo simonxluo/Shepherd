@@ -50,10 +50,6 @@ export default defineConfig({
             'react-dom',
             'react-router-dom'
           ],
-          'query-vendor': [
-            '@tanstack/react-query',
-            '@tanstack/react-virtual'
-          ],
           'ui-vendor': [
             'zustand'
           ]
