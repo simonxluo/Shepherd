@@ -1,7 +1,7 @@
 # Shepherd Makefile
 # 快速编译和开发命令
 
-.PHONY: all build build-all test clean release run swag
+.PHONY: all build build-all test clean release run stop swag
 
 # 默认目标
 all: build
@@ -73,10 +73,14 @@ clean:
 	@rm -f coverage.out coverage.html
 	@echo "✓ 清理完成"
 
-# 运行程序
+# 编译并启动服务（含前端构建和Web界面）
 run: build
 	@echo "启动 $(PROJECT_NAME)..."
-	@./$(BUILD_DIR)/$(PROJECT_NAME)
+	@./$(BUILD_DIR)/$(PROJECT_NAME) serve --build --web
+
+# 停止所有进程
+stop:
+	@./$(BUILD_DIR)/$(PROJECT_NAME) stop
 
 # 安装到本地
 install: build
@@ -135,7 +139,8 @@ help:
 	@echo "  fmt           - 格式化代码"
 	@echo "  tidy          - 整理依赖"
 	@echo "  clean         - 清理构建文件"
-	@echo "  run           - 编译并运行"
+	@echo "  run           - 编译并启动服务（含前端构建和Web界面）"
+	@echo "  stop          - 停止所有进程"
 	@echo "  swag          - 生成 Swagger API 文档"
 	@echo "  install       - 安装到 /usr/local/bin"
 	@echo "  uninstall     - 从 /usr/local/bin 卸载"
