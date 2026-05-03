@@ -13,10 +13,11 @@
     "settings": "设置",
     "back": "返回",
     "saved": "已保存",
-    "active": "已启用",
-    "unsavedChanges": "有未保存的更改",
+    "active": "活跃",
+    "unsavedChanges": "未保存的更改",
     "allChangesSaved": "所有更改已保存",
-    "editProfile": "编辑资料"
+    "editProfile": "编辑资料",
+    "more": "更多"
   },
   "sidebar": {
     "dashboard": "仪表盘",
@@ -28,7 +29,9 @@
     "logs": "日志",
     "settings": "设置",
     "collapse": "收起侧边栏",
-    "expand": "展开侧边栏"
+    "expand": "展开侧边栏",
+    "toggle": "切换菜单",
+    "close": "关闭菜单"
   },
   "header": {
     "notifications": "通知",

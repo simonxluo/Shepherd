@@ -38,6 +38,16 @@ interface UIState {
   // Model view mode
   modelViewMode: 'grid' | 'list';
   setModelViewMode: (mode: 'grid' | 'list') => void;
+
+  // Mobile menu overlay
+  mobileMenuOpen: boolean;
+  toggleMobileMenu: () => void;
+  setMobileMenuOpen: (open: boolean) => void;
+
+  // Mobile More panel
+  morePanelOpen: boolean;
+  toggleMorePanel: () => void;
+  setMorePanelOpen: (open: boolean) => void;
 }
 
 /**
@@ -101,6 +111,16 @@ export const useUIStore = create<UIState>()(
       // Model view mode
       modelViewMode: 'grid',
       setModelViewMode: (modelViewMode) => set({ modelViewMode }),
+
+      // Mobile menu overlay
+      mobileMenuOpen: false,
+      toggleMobileMenu: () => set((s) => ({ mobileMenuOpen: !s.mobileMenuOpen })),
+      setMobileMenuOpen: (mobileMenuOpen) => set({ mobileMenuOpen }),
+
+      // Mobile More panel
+      morePanelOpen: false,
+      toggleMorePanel: () => set((s) => ({ morePanelOpen: !s.morePanelOpen })),
+      setMorePanelOpen: (morePanelOpen) => set({ morePanelOpen }),
     }),
     {
       name: 'shepherd-ui-storage',

@@ -15,6 +15,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  X,
 } from 'lucide-react';
 
 const allNavItems = [
@@ -28,39 +29,59 @@ const allNavItems = [
   { path: '/settings', icon: Settings, labelKey: 'sidebar.settings', feature: 'settings' },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  overlay?: boolean;
+}
+
+export function Sidebar({ overlay = false }: SidebarProps) {
   const location = useLocation();
-  const { sidebarOpen, toggleSidebar } = useUIStore();
+  const { sidebarOpen, toggleSidebar, setMobileMenuOpen } = useUIStore();
   const config = useConfig();
   const { t } = useTranslation();
+
+  const isExpanded = overlay || sidebarOpen;
 
   const navItems = allNavItems.filter(
     (item) => config.features[item.feature as keyof typeof config.features] !== false
   );
 
+  const closeMobile = () => setMobileMenuOpen(false);
+
   return (
     <aside
       className={cn(
         'flex flex-col border-r bg-background transition-all duration-300',
-        sidebarOpen ? 'w-64' : 'w-16'
+        overlay
+          ? 'h-full w-64 fixed left-0 top-0 z-50 shadow-xl animate-in slide-in-from-left'
+          : cn('hidden md:flex', isExpanded ? 'w-64' : 'w-16')
       )}
     >
       <div className="flex h-16 items-center justify-between border-b px-4">
-        {sidebarOpen && (
-          <Link to="/" className="flex items-center gap-2 font-semibold">
+        {isExpanded && (
+          <Link to="/" className="flex items-center gap-2 font-semibold" onClick={overlay ? closeMobile : undefined}>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               🐏
             </div>
             <span>Shepherd</span>
           </Link>
         )}
-        <button
-          onClick={toggleSidebar}
-          className="ml-auto rounded-lg p-2 hover:bg-accent"
-          aria-label={sidebarOpen ? t('sidebar.collapse') : t('sidebar.expand')}
-        >
-          {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-        </button>
+        {overlay ? (
+          <button
+            onClick={closeMobile}
+            className="ml-auto rounded-lg p-2 hover:bg-accent"
+            aria-label={t('sidebar.close' as any)}
+          >
+            <X size={18} />
+          </button>
+        ) : (
+          <button
+            onClick={toggleSidebar}
+            className="ml-auto rounded-lg p-2 hover:bg-accent"
+            aria-label={isExpanded ? t('sidebar.collapse') : t('sidebar.expand')}
+          >
+            {isExpanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4">
@@ -73,6 +94,7 @@ export function Sidebar() {
               <li key={item.path}>
                 <Link
                   to={item.path}
+                  onClick={overlay ? closeMobile : undefined}
                   className={cn(
                     'relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                     isActive
@@ -85,7 +107,7 @@ export function Sidebar() {
                   )}
 
                   <Icon size={20} />
-                  {sidebarOpen && <span>{t(item.labelKey as any)}</span>}
+                  {isExpanded && <span>{t(item.labelKey as any)}</span>}
                 </Link>
               </li>
             );
@@ -94,9 +116,9 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t p-4 space-y-4">
-        <UserMenu sidebarOpen={sidebarOpen} />
-        
-        {sidebarOpen && (
+        <UserMenu sidebarOpen={isExpanded} />
+
+        {isExpanded && (
           <div className="text-xs text-muted-foreground pt-2 border-t">
             <div>Shepherd v0.4.0</div>
             <div className="mt-1">{t('footer.copyright')}</div>

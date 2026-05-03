@@ -109,6 +109,18 @@
     font-size: 22px; /* 整体放大约 37.5% */
   }
 
+  @media (max-width: 1023px) {
+    html {
+      font-size: 18px;
+    }
+  }
+
+  @media (max-width: 639px) {
+    html {
+      font-size: 16px;
+    }
+  }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));

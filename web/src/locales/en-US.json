@@ -16,7 +16,8 @@
     "active": "Active",
     "unsavedChanges": "Unsaved changes",
     "allChangesSaved": "All changes saved",
-    "editProfile": "Edit Profile"
+    "editProfile": "Edit Profile",
+    "more": "More"
   },
   "sidebar": {
     "dashboard": "Dashboard",
@@ -28,7 +29,9 @@
     "logs": "Logs",
     "settings": "Settings",
     "collapse": "Collapse sidebar",
-    "expand": "Expand sidebar"
+    "expand": "Expand sidebar",
+    "toggle": "Toggle menu",
+    "close": "Close menu"
   },
   "header": {
     "notifications": "Notifications",
