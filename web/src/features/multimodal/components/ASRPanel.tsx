@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { Mic, Loader2, Upload, FileAudio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useASR } from '../hooks';
 import { useToast } from '@/hooks/useToast';
 
@@ -73,18 +75,21 @@ export function ASRPanel({ models }: ASRPanelProps) {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1.5">ASR 模型</label>
-          <select
+          <Select
             value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+            onValueChange={setModel}
           >
-            <option value="">选择 ASR 模型</option>
-            {models.map((m) => (
-              <option key={m.id} value={m.alias || m.name}>
-                {m.alias || m.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+              <SelectValue placeholder="选择 ASR 模型" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((m) => (
+                <SelectItem key={m.id} value={m.alias || m.name}>
+                  {m.alias || m.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
@@ -125,7 +130,7 @@ export function ASRPanel({ models }: ASRPanelProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">语言 (可选)</label>
-            <input
+            <Input
               type="text"
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
@@ -135,7 +140,7 @@ export function ASRPanel({ models }: ASRPanelProps) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">提示词 (可选)</label>
-            <input
+            <Input
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}

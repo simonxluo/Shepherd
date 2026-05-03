@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  User, 
-  Settings, 
-  LogOut, 
+import {
+  User,
+  Settings,
+  LogOut,
   ChevronUp,
   Moon,
   Sun,
@@ -15,6 +14,14 @@ import { useUserStore } from '@/stores/userStore';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 
 interface UserMenuProps {
   sidebarOpen: boolean;
@@ -22,34 +29,20 @@ interface UserMenuProps {
 
 export function UserMenu({ sidebarOpen }: UserMenuProps) {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  
-  const { 
-    user, 
+
+  const {
+    user,
     settings,
     logout,
     setShowProfileDialog,
     setShowSettingsDialog,
     updateSettings
   } = useUserStore();
-  
-  const { theme, setTheme } = useUIStore();
 
-  // Close menu on outside click
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const { theme, setTheme } = useUIStore();
 
   const handleLogout = () => {
     logout();
-    setIsOpen(false);
   };
 
   const handleToggleTheme = () => {
@@ -74,131 +67,6 @@ export function UserMenu({ sidebarOpen }: UserMenuProps) {
     return null;
   };
 
-  // Collapsed state - avatar only
-  if (!sidebarOpen) {
-    return (
-      <div className="relative" ref={menuRef}>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="w-10 h-10 rounded-full"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {getAvatarUrl() ? (
-            <img 
-              src={getAvatarUrl()!} 
-              alt={getDisplayName()}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="w-4 h-4 text-primary" />
-            </div>
-          )}
-        </Button>
-
-        {isOpen && (
-          <div className="absolute bottom-full left-0 mb-2 w-48 bg-popover border rounded-lg shadow-lg py-1 z-50">
-            <div className="px-3 py-2 border-b">
-              <p className="font-medium text-sm truncate">{getDisplayName()}</p>
-              {user?.email && (
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-              )}
-            </div>
-            
-            <MenuItems
-              onProfile={() => { setShowProfileDialog(true); setIsOpen(false); }}
-              onSettings={() => { setShowSettingsDialog(true); setIsOpen(false); }}
-              onTheme={handleToggleTheme}
-              onNotifications={handleToggleNotifications}
-              onLogout={handleLogout}
-              theme={theme}
-              notifications={settings.notifications}
-              // @ts-expect-error menu items props typing
-              t={t}
-            />
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Expanded state
-  return (
-    <div className="relative" ref={menuRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          'w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
-          'hover:bg-accent text-left',
-          isOpen && 'bg-accent'
-        )}
-      >
-        {getAvatarUrl() ? (
-          <img 
-            src={getAvatarUrl()!} 
-            alt={getDisplayName()}
-            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-          />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <User className="w-4 h-4 text-primary" />
-          </div>
-        )}
-        
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{getDisplayName()}</p>
-          <p className="text-xs text-muted-foreground truncate">
-            {user?.role === 'admin' ? t('user.admin') : t('user.user')}
-          </p>
-        </div>
-        
-        <ChevronUp className={cn(
-          'w-4 h-4 text-muted-foreground transition-transform flex-shrink-0',
-          isOpen && 'rotate-180'
-        )} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 bg-popover border rounded-lg shadow-lg py-1 z-50">
-          <MenuItems
-            onProfile={() => { setShowProfileDialog(true); setIsOpen(false); }}
-            onSettings={() => { setShowSettingsDialog(true); setIsOpen(false); }}
-            onTheme={handleToggleTheme}
-            onNotifications={handleToggleNotifications}
-            onLogout={handleLogout}
-            theme={theme}
-            notifications={settings.notifications}
-            // @ts-expect-error menu items props typing
-            t={t}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface MenuItemsProps {
-  onProfile: () => void;
-  onSettings: () => void;
-  onTheme: () => void;
-  onNotifications: () => void;
-  onLogout: () => void;
-  theme: string;
-  notifications: boolean;
-  t: (...args: unknown[]) => string;
-}
-
-function MenuItems({ 
-  onProfile, 
-  onSettings, 
-  onTheme, 
-  onNotifications,
-  onLogout, 
-  theme,
-  notifications,
-  t 
-}: MenuItemsProps) {
   const getThemeLabel = () => {
     switch (theme) {
       case 'light': return t('theme.light');
@@ -207,53 +75,141 @@ function MenuItems({
     }
   };
 
+  const avatarContent = getAvatarUrl() ? (
+    <img
+      src={getAvatarUrl()!}
+      alt={getDisplayName()}
+      className="w-8 h-8 rounded-full object-cover"
+    />
+  ) : (
+    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+      <User className="w-4 h-4 text-primary" />
+    </div>
+  );
+
+  // Collapsed state - avatar only
+  if (!sidebarOpen) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-10 h-10 rounded-full"
+          >
+            {avatarContent}
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent side="top" align="start" className="w-48">
+          <DropdownMenuLabel>
+            <p className="font-medium text-sm truncate">{getDisplayName()}</p>
+            {user?.email && (
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+            )}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem onClick={() => setShowProfileDialog(true)}>
+            <User className="w-4 h-4" />
+            {t('user.profile')}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+            <Settings className="w-4 h-4" />
+            {t('user.settings')}
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem onClick={handleToggleTheme}>
+            {theme === 'light' && <Sun className="w-4 h-4" />}
+            {theme === 'dark' && <Moon className="w-4 h-4" />}
+            {theme === 'system' && <Monitor className="w-4 h-4" />}
+            {t('user.theme')}: {getThemeLabel()}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={handleToggleNotifications}>
+            {settings.notifications ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+            {settings.notifications ? t('user.notificationsOn') : t('user.notificationsOff')}
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+            <LogOut className="w-4 h-4" />
+            {t('user.logout')}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  // Expanded state
   return (
-    <>
-      <button
-        onClick={onProfile}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
-      >
-        <User className="w-4 h-4" />
-        {t('user.profile')}
-      </button>
-      
-      <button
-        onClick={onSettings}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
-      >
-        <Settings className="w-4 h-4" />
-        {t('user.settings')}
-      </button>
-      
-      <div className="border-t my-1" />
-      
-      <button
-        onClick={onTheme}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
-      >
-        {theme === 'light' && <Sun className="w-4 h-4" />}
-        {theme === 'dark' && <Moon className="w-4 h-4" />}
-        {theme === 'system' && <Monitor className="w-4 h-4" />}
-        {t('user.theme')}: {getThemeLabel()}
-      </button>
-      
-      <button
-        onClick={onNotifications}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
-      >
-        {notifications ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-        {notifications ? t('user.notificationsOn') : t('user.notificationsOff')}
-      </button>
-      
-      <div className="border-t my-1" />
-      
-      <button
-        onClick={onLogout}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors text-destructive"
-      >
-        <LogOut className="w-4 h-4" />
-        {t('user.logout')}
-      </button>
-    </>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            'w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
+            'hover:bg-accent text-left'
+          )}
+        >
+          {getAvatarUrl() ? (
+            <img
+              src={getAvatarUrl()!}
+              alt={getDisplayName()}
+              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-primary" />
+            </div>
+          )}
+
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{getDisplayName()}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {user?.role === 'admin' ? t('user.admin') : t('user.user')}
+            </p>
+          </div>
+
+          <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent side="top" align="start" className="w-full min-w-[200px]">
+        <DropdownMenuItem onClick={() => setShowProfileDialog(true)}>
+          <User className="w-4 h-4" />
+          {t('user.profile')}
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+          <Settings className="w-4 h-4" />
+          {t('user.settings')}
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem onClick={handleToggleTheme}>
+          {theme === 'light' && <Sun className="w-4 h-4" />}
+          {theme === 'dark' && <Moon className="w-4 h-4" />}
+          {theme === 'system' && <Monitor className="w-4 h-4" />}
+          {t('user.theme')}: {getThemeLabel()}
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={handleToggleNotifications}>
+          {settings.notifications ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+          {settings.notifications ? t('user.notificationsOn') : t('user.notificationsOff')}
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+          <LogOut className="w-4 h-4" />
+          {t('user.logout')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

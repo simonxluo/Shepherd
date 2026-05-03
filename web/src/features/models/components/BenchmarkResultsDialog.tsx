@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, FileText, Loader2, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
+import { FileText, Loader2, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 import type { BenchmarkResultFile, BenchmarkResult } from '@/types';
@@ -171,23 +172,15 @@ export function BenchmarkResultsDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-card rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] flex flex-col">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-6xl max-h-[85vh] flex flex-col p-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-2">
+        <DialogHeader className="px-4 py-3 border-b border-border flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold text-foreground">
-              模型测试结果对比
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+            模型测试结果对比
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Content - two-column layout */}
         <div className="flex-1 flex gap-4 p-4 min-h-0 overflow-hidden">
@@ -292,12 +285,12 @@ export function BenchmarkResultsDialog({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-4 py-3 border-t border-border bg-card flex-shrink-0">
+        <DialogFooter className="px-4 py-3 border-t border-border bg-card flex-shrink-0">
           <Button variant="secondary" onClick={onClose}>
             关闭
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

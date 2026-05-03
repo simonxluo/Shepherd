@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { Image, Loader2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useImageGeneration } from '../hooks';
 import { useToast } from '@/hooks/useToast';
 
@@ -60,23 +62,26 @@ export function ImageGenPanel({ models }: ImageGenPanelProps) {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1.5">图像生成模型</label>
-          <select
+          <Select
             value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+            onValueChange={setModel}
           >
-            <option value="">选择模型</option>
-            {models.map((m) => (
-              <option key={m.id} value={m.alias || m.name}>
-                {m.alias || m.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+              <SelectValue placeholder="选择模型" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((m) => (
+                <SelectItem key={m.id} value={m.alias || m.name}>
+                  {m.alias || m.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1.5">图像描述</label>
-          <textarea
+          <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="描述要生成的图像..."
@@ -88,50 +93,66 @@ export function ImageGenPanel({ models }: ImageGenPanelProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">尺寸</label>
-            <select
+            <Select
               value={size}
-              onChange={(e) => setSize(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+              onValueChange={setSize}
             >
-              <option value="1024x1024">1024 × 1024</option>
-              <option value="1792x1024">1792 × 1024</option>
-              <option value="1024x1792">1024 × 1792</option>
-              <option value="512x512">512 × 512</option>
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1024x1024">1024 × 1024</SelectItem>
+                <SelectItem value="1792x1024">1792 × 1024</SelectItem>
+                <SelectItem value="1024x1792">1024 × 1792</SelectItem>
+                <SelectItem value="512x512">512 × 512</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">数量</label>
-            <select
-              value={n}
-              onChange={(e) => setN(Number(e.target.value))}
-              className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+            <Select
+              value={String(n)}
+              onValueChange={(v) => setN(Number(v))}
             >
-              <option value={1}>1</option>
-              <option value={2}>2</option>
-              <option value={4}>4</option>
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="2">2</SelectItem>
+                <SelectItem value="4">4</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">质量</label>
-            <select
+            <Select
               value={quality}
-              onChange={(e) => setQuality(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+              onValueChange={setQuality}
             >
-              <option value="standard">标准</option>
-              <option value="hd">高清</option>
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">标准</SelectItem>
+                <SelectItem value="hd">高清</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">风格</label>
-            <select
+            <Select
               value={style}
-              onChange={(e) => setStyle(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+              onValueChange={setStyle}
             >
-              <option value="vivid">生动</option>
-              <option value="natural">自然</option>
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vivid">生动</SelectItem>
+                <SelectItem value="natural">自然</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

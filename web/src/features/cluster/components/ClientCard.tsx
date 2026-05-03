@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Server, Cpu, HardDrive, Clock, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { ClientInfoDialog } from './ClientInfoDialog';
 import type { Client, ClientStatus } from '@/types';
@@ -280,19 +281,21 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
       </div>
 
       {Object.keys(client.metadata).length > 0 && (
-        <details className="mt-3">
-          <summary className="cursor-pointer text-xs text-muted-foreground">
+        <Collapsible className="mt-3">
+          <CollapsibleTrigger className="cursor-pointer text-xs text-muted-foreground">
             元数据
-          </summary>
-          <div className="mt-2 p-2 bg-muted rounded text-xs">
-            {Object.entries(client.metadata).map(([key, value]) => (
-              <div key={key} className="flex justify-between gap-4">
-                <span className="text-muted-foreground">{key}:</span>
-                <span className="text-foreground font-mono">{String(value)}</span>
-              </div>
-            ))}
-          </div>
-        </details>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-2 p-2 bg-muted rounded text-xs">
+              {Object.entries(client.metadata).map(([key, value]) => (
+                <div key={key} className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">{key}:</span>
+                  <span className="text-foreground font-mono">{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
     </>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Plug, CheckCircle2, XCircle, AlertTriangle, Loader2, Power } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 export interface ApiConfig {
   enabled: boolean;
@@ -234,7 +235,7 @@ export function ApiConfigCard({
             <label className="block text-xs font-medium mb-1.5 text-muted-foreground">
               服务端口
             </label>
-            <input
+            <Input
               type="number"
               min="1"
               max="65535"

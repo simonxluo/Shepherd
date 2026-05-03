@@ -1,7 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
-import { X, Loader2, ChevronDown, Info, ToggleLeft, ToggleRight, Save, Trash2, Wand2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Loader2, Info, Save, Trash2, Wand2, ToggleRight, ToggleLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { LoadModelParams } from '@/types';
 import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
 import { useOnlineNodes } from '@/features/cluster/hooks';
@@ -100,7 +105,7 @@ const NumberInput = ({
 
   return (
     <div>
-      <input
+      <Input
         type="number"
         value={inputValue}
         onChange={handleChange}
@@ -111,15 +116,8 @@ const NumberInput = ({
         step={step}
         placeholder={placeholder}
         className={cn(
-          "w-full px-2 py-1.5 text-sm",
-          "border-2 rounded-md",
-          error ? "border-red-500 dark:border-red-500" : "border-border",
-          "bg-input",
-          "text-foreground",
-          "focus:outline-none focus:ring-2",
-          error ? "focus:ring-red-500 focus:border-red-500" : "focus:ring-blue-500 focus:border-blue-500",
-          "disabled:opacity-50 disabled:cursor-not-allowed",
-          "transition-colors",
+          "h-8 px-2 py-1.5 text-sm",
+          error && "border-red-500 dark:border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500/50",
           className
         )}
       />
@@ -386,8 +384,6 @@ export function LoadModelDialog({
       setSelectedConfigName('');
     }
   };
-
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('[LoadModelDialog] params.enabled changed:', params.enabled);
@@ -739,63 +735,10 @@ export function LoadModelDialog({
   const ParamControl = ({ paramKey, showToggle = true }: { paramKey: string; showToggle?: boolean }) => {
     const helpText = PARAM_HELP[paramKey as keyof typeof PARAM_HELP];
     const isEnabled = params.enabled?.[paramKey as keyof NonNullable<typeof params.enabled>] ?? false;
-    const buttonRef = useRef<HTMLButtonElement>(null);
-    const tooltipRef = useRef<HTMLDivElement>(null);
-    const [position, setPosition] = useState({ top: 0, left: 0 });
-
-    const updatePosition = () => {
-      if (buttonRef.current && activeTooltip === paramKey) {
-        const rect = buttonRef.current.getBoundingClientRect();
-        setPosition({
-          top: rect.top - 8,
-          left: rect.left + rect.width / 2,
-        });
-      }
-    };
-
-    useEffect(() => {
-      if (activeTooltip === paramKey) {
-        updatePosition();
-        const handleScroll = () => updatePosition();
-        window.addEventListener('scroll', handleScroll, true);
-        window.addEventListener('resize', updatePosition);
-        return () => {
-          window.removeEventListener('scroll', handleScroll, true);
-          window.removeEventListener('resize', updatePosition);
-        };
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeTooltip, paramKey]);
-
-    useEffect(() => {
-      const handleClickOutside = (e: MouseEvent) => {
-        if (
-          buttonRef.current &&
-          !buttonRef.current.contains(e.target as Node) &&
-          tooltipRef.current &&
-          !tooltipRef.current.contains(e.target as Node)
-        ) {
-          setActiveTooltip(null);
-        }
-      };
-
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleToggleTooltip = () => {
-      setActiveTooltip(prev => prev === paramKey ? null : paramKey);
-    };
 
     const handleToggleEnabled = () => {
-      console.log('[ToggleEnabled] 点击按钮:', paramKey);
-      console.log('[ToggleEnabled] 当前 enabled:', params.enabled);
-      const currentValue = params.enabled?.[paramKey as keyof typeof params.enabled] ?? false;
-      console.log('[ToggleEnabled] 当前值:', currentValue, '将变为:', !currentValue);
-
       setParams(prevParams => {
         const newValue = !(prevParams.enabled?.[paramKey as keyof typeof prevParams.enabled] ?? false);
-        console.log('[ToggleEnabled] setParams 调用, 新值:', newValue);
         return {
           ...prevParams,
           enabled: {
@@ -808,121 +751,53 @@ export function LoadModelDialog({
 
     return (
       <div className="relative inline-flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-        {/* Enable/disable toggle */}
+        {/* Enable/disable toggle using shadcn Switch */}
         {showToggle && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('[Toggle Button] onClick triggered, paramKey:', paramKey);
-              console.log('[Toggle Button] isLoading:', isLoading, 'isEnabled:', isEnabled);
-              console.log('[Toggle Button] event:', e);
-              handleToggleEnabled();
-              (e.currentTarget as HTMLButtonElement).blur();
-            }}
-            onMouseDown={(e) => {
-              e.preventDefault();
-            }}
+          <Switch
+            checked={isEnabled}
+            onCheckedChange={handleToggleEnabled}
             disabled={isLoading}
-            className={cn(
-              "inline-flex items-center justify-center w-6 h-6 rounded transition-all duration-200",
-              "focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400",
-              isEnabled
-                ? "text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
-                : "text-gray-400 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800/20",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
-              "active:scale-95",
-              "select-none"
-            )}
+            size="sm"
             aria-label={isEnabled ? `禁用 ${paramKey}` : `启用 ${paramKey}`}
-            title={isEnabled ? '已启用 - 点击禁用' : '已禁用 - 点击启用'}
-            data-param-key={paramKey}
-            data-is-enabled={String(isEnabled)}
-            data-is-loading={String(isLoading)}
-          >
-            {isEnabled ? (
-              <ToggleRight className="w-4 h-4" />
-            ) : (
-              <ToggleLeft className="w-4 h-4" />
+            className={cn(
+              isEnabled
+                ? "data-[state=checked]:bg-green-600 dark:data-[state=checked]:bg-green-500"
+                : ""
             )}
-          </button>
+          />
         )}
 
-        {/* Help button */}
-        <div className="relative inline-block">
-          <button
-            ref={buttonRef}
-            type="button"
-            onClick={handleToggleTooltip}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleToggleTooltip();
-              }
-            }}
-            className={cn(
-              "w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium",
-              "flex items-center justify-center",
-              "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600",
-              "hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40",
-              "hover:text-blue-600 dark:hover:text-blue-400",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1",
-              "transition-all duration-200 cursor-help shadow-sm hover:shadow",
-              activeTooltip === paramKey && "from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 text-blue-600 dark:text-blue-400",
-              !isEnabled && "opacity-50"
-            )}
-            aria-label={`查看 ${paramKey} 的帮助说明`}
-            aria-expanded={activeTooltip === paramKey}
-            aria-controls={`tooltip-${paramKey}`}
-          >
-            ?
-          </button>
-
-          {/* Tooltip */}
-          {activeTooltip === paramKey && (
-            <div
-              ref={tooltipRef}
-              id={`tooltip-${paramKey}`}
-              role="tooltip"
-              className="fixed z-[100]"
-              style={{
-                top: `${position.top}px`,
-                left: `${position.left}px`,
-                transform: 'translateX(-50%) translateY(-100%)',
-                animation: 'tooltipFadeIn 0.2s ease-out forwards',
-              }}
-            >
-              <style>{`
-                @keyframes tooltipFadeIn {
-                  from {
-                    opacity: 0;
-                    transform: 'translateX(-50%) translateY(-10%)';
-                  }
-                  to {
-                    opacity: 1;
-                    transform: 'translateX(-50%) translateY(-100%)';
-                  }
-                }
-              `}</style>
-              <div className="relative mb-1.5">
-                <div className="max-w-xs px-4 py-3 bg-background/95 backdrop-blur-xl rounded-xl shadow-2xl border border-white/10">
-                  <div className="flex items-start gap-3">
-                    <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-foreground leading-relaxed">
-                      {helpText || '暂无说明'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Arrow */}
-                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2">
-                  <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-900/95 backdrop-blur-xl" />
-                </div>
+        {/* Help button using shadcn Tooltip */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium",
+                  "flex items-center justify-center",
+                  "bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600",
+                  "hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40",
+                  "hover:text-blue-600 dark:hover:text-blue-400",
+                  "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1",
+                  "transition-all duration-200 cursor-help shadow-sm hover:shadow",
+                  !isEnabled && "opacity-50"
+                )}
+                aria-label={`查看 ${paramKey} 的帮助说明`}
+              >
+                ?
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <div className="flex items-start gap-3 px-1 py-0.5">
+                <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm leading-relaxed">
+                  {helpText || '暂无说明'}
+                </p>
               </div>
-            </div>
-          )}
-        </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     );
   };
@@ -937,60 +812,73 @@ export function LoadModelDialog({
     return isLoading || !isParamEnabled(paramKey);
   };
 
-  // Dropdown select for booleans and fixed options
+  // Dropdown select using shadcn Select
+  interface SelectOption {
+    value: string;
+    label: string;
+    disabled?: boolean;
+  }
+
+  interface SelectOptionGroup {
+    label: string;
+    options: SelectOption[];
+  }
+
   const SelectInput = ({
     value,
-    onChange,
+    onValueChange,
     disabled,
-    children,
+    options,
+    groups,
     className = '',
   }: {
     value: string | number | undefined;
-    onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+    onValueChange: (value: string) => void;
     disabled?: boolean;
-    children: React.ReactNode;
+    options?: SelectOption[];
+    groups?: SelectOptionGroup[];
     className?: string;
   }) => (
-    <div className="relative">
-      <select
-        value={value ?? ''}
-        onChange={onChange}
-        disabled={disabled}
-        className={cn(
-          "w-full px-2 py-1.5 pr-8 text-sm",
-          "border-2 border-border",
-          "rounded-md bg-input",
-          "text-foreground",
-          "appearance-none cursor-pointer",
-          "hover:border-blue-400 dark:hover:border-blue-500",
-          "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-          "disabled:opacity-50 disabled:cursor-not-allowed",
-          "transition-colors",
-          className
+    <Select
+      value={String(value ?? '')}
+      onValueChange={onValueChange}
+      disabled={disabled}
+    >
+      <SelectTrigger className={cn("h-8 w-full text-sm", className)}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {groups ? (
+          groups.map((group) => (
+            <SelectGroup key={group.label}>
+              <SelectLabel>{group.label}</SelectLabel>
+              {group.options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ))
+        ) : (
+          options?.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+              {opt.label}
+            </SelectItem>
+          ))
         )}
-      >
-        {children}
-      </select>
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-    </div>
+      </SelectContent>
+    </Select>
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-card rounded-lg shadow-xl border border-border max-w-5xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose(); }}>
+      <DialogContent className="max-w-5xl max-h-[85vh] p-0 overflow-hidden flex flex-col" onInteractOutside={(e) => { if (isLoading) e.preventDefault(); }}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
-          <h2 className="text-lg font-semibold text-foreground">
+        <DialogHeader className="p-4 border-b border-border flex-shrink-0">
+          <DialogTitle className="text-lg font-semibold text-foreground">
             加载模型配置
-          </h2>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Form content */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
@@ -1026,28 +914,19 @@ export function LoadModelDialog({
                   </label>
                   <SelectInput
                     value={params.llamaCppPath || ''}
-                    onChange={(e) => setParams({ ...params, llamaCppPath: e.target.value })}
+                    onValueChange={(v) => setParams({ ...params, llamaCppPath: v })}
                     disabled={isLoading}
                     className="w-full"
-                  >
-                    {llamacppBackends.length > 0 ? (
-                      llamacppBackends.map((backend: LlamacppBackend) => (
-                        <option
-                          key={backend.path}
-                          value={backend.path}
-                          disabled={!backend.available}
-                        >
-                          {backend.name}
-                          {backend.description && ` (${backend.description})`}
-                          {!backend.available && ' - 不可用'}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        未配置 llama.cpp 后端
-                      </option>
-                    )}
-                  </SelectInput>
+                    options={
+                      llamacppBackends.length > 0
+                        ? llamacppBackends.map((backend: LlamacppBackend) => ({
+                            value: backend.path,
+                            label: `${backend.name}${backend.description ? ` (${backend.description})` : ''}${!backend.available ? ' - 不可用' : ''}`,
+                            disabled: !backend.available,
+                          }))
+                        : [{ value: '', label: '未配置 llama.cpp 后端', disabled: true }]
+                    }
+                  />
                   {llamacppBackends.length === 0 && (
                     <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
                       请在服务器配置中添加 llama.cpp 路径
@@ -1179,17 +1058,17 @@ export function LoadModelDialog({
                   </label>
                   <SelectInput
                     value={params.mainGpu || 'default'}
-                    onChange={(e) => setParams({ ...params, mainGpu: e.target.value })}
+                    onValueChange={(v) => setParams({ ...params, mainGpu: v })}
                     disabled={isLoading || gpus.length === 0}
                     className="w-full"
-                  >
-                    <option value="default">默认</option>
-                    {gpus.map((gpu: SystemGPUInfo) => (
-                      <option key={gpu.id} value={gpu.id}>
-                        {gpu.name}
-                      </option>
-                    ))}
-                  </SelectInput>
+                    options={[
+                      { value: 'default', label: '默认' },
+                      ...gpus.map((gpu: SystemGPUInfo) => ({
+                        value: gpu.id,
+                        label: gpu.name,
+                      })),
+                    ]}
+                  />
                   {gpus.length === 0 && (
                     <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
                       未检测到GPU，请确保ROCm正确安装
@@ -1258,28 +1137,23 @@ export function LoadModelDialog({
                     </label>
                     <SelectInput
                       value={params.nodeId || 'auto'}
-                      onChange={(e) => setParams({ 
-                        ...params, 
-                        nodeId: e.target.value === 'auto' ? undefined : e.target.value 
+                      onValueChange={(v) => setParams({
+                        ...params,
+                        nodeId: v === 'auto' ? undefined : v
                       })}
                       disabled={isLoading}
                       className="w-full"
-                    >
-                      <option value="auto">
-                        🎯 自动调度（推荐）- 系统选择最佳节点
-                      </option>
-                      <optgroup label="指定节点">
-                        {onlineNodes.map((node: UnifiedNode) => (
-                          <option key={node.id} value={node.id}>
-                            {node.name} ({node.address}:{node.port})
-                            {node.capabilities?.gpuCount && ` · ${node.capabilities.gpuCount} GPU`}
-                            {node.resources?.gpuInfo?.[0] && 
-                              ` · 显存 ${Math.round((node.resources.gpuInfo[0].totalMemory - node.resources.gpuInfo[0].usedMemory) / 1024 / 1024 / 1024)}GB 可用`
-                            }
-                          </option>
-                        ))}
-                      </optgroup>
-                    </SelectInput>
+                      options={[
+                        { value: 'auto', label: '🎯 自动调度（推荐）- 系统选择最佳节点' },
+                      ]}
+                      groups={onlineNodes.length > 0 ? [{
+                        label: '指定节点',
+                        options: onlineNodes.map((node: UnifiedNode) => ({
+                          value: node.id,
+                          label: `${node.name} (${node.address}:${node.port})${node.capabilities?.gpuCount ? ` · ${node.capabilities.gpuCount} GPU` : ''}${node.resources?.gpuInfo?.[0] ? ` · 显存 ${Math.round((node.resources.gpuInfo[0].totalMemory - node.resources.gpuInfo[0].usedMemory) / 1024 / 1024 / 1024)}GB 可用` : ''}`,
+                        })),
+                      }] : undefined}
+                    />
                     <p className="mt-1 text-xs text-muted-foreground">
                       自动调度会根据 GPU 显存和负载选择最佳节点
                     </p>
@@ -1340,12 +1214,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.flashAttention ? 'on' : 'off'}
-                      onChange={(e) => setParams({ ...params, flashAttention: e.target.value === 'on' })}
+                      onValueChange={(v) => setParams({ ...params, flashAttention: v === 'on' })}
                       disabled={getInputDisabled('flashAttention')}
-                    >
-                      <option value="on">on</option>
-                      <option value="off">off</option>
-                    </SelectInput>
+                      options={[{ value: 'on', label: 'on' }, { value: 'off', label: 'off' }]}
+                    />
                   </div>
 
                   <div>
@@ -1355,12 +1227,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.noMmap ? 'true' : 'false'}
-                      onChange={(e) => setParams({ ...params, noMmap: e.target.value === 'true' })}
+                      onValueChange={(v) => setParams({ ...params, noMmap: v === 'true' })}
                       disabled={getInputDisabled('noMmap')}
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div>
@@ -1370,12 +1240,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.lockMemory ? 'true' : 'false'}
-                      onChange={(e) => setParams({ ...params, lockMemory: e.target.value === 'true' })}
+                      onValueChange={(v) => setParams({ ...params, lockMemory: v === 'true' })}
                       disabled={getInputDisabled('lockMemory')}
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div>
@@ -1385,12 +1253,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.embedding ? 'true' : 'false'}
-                      onChange={(e) => setParams({ ...params, embedding: e.target.value === 'true' })}
+                      onValueChange={(v) => setParams({ ...params, embedding: v === 'true' })}
                       disabled={getInputDisabled('embedding')}
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div>
@@ -1400,12 +1266,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.reranking ? 'true' : 'false'}
-                      onChange={(e) => setParams({ ...params, reranking: e.target.value === 'true' })}
+                      onValueChange={(v) => setParams({ ...params, reranking: v === 'true' })}
                       disabled={getInputDisabled('reranking')}
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div>
@@ -1689,12 +1553,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.kvCacheUnified ? 'true' : 'false'}
-                      onChange={(e) => setParams({ ...params, kvCacheUnified: e.target.value === 'true' })}
+                      onValueChange={(v) => setParams({ ...params, kvCacheUnified: v === 'true' })}
                       disabled={getInputDisabled('kvCacheUnified')}
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div>
@@ -1703,19 +1565,20 @@ export function LoadModelDialog({
                     </label>
                     <SelectInput
                       value={params.kvCacheTypeK || 'f16'}
-                      onChange={(e) => setParams({ ...params, kvCacheTypeK: e.target.value })}
+                      onValueChange={(v) => setParams({ ...params, kvCacheTypeK: v })}
                       disabled={getInputDisabled('kvCacheTypeK')}
-                    >
-                      <option value="f32">f32</option>
-                      <option value="f16">f16 (默认)</option>
-                      <option value="bf16">bf16</option>
-                      <option value="q8_0">q8_0</option>
-                      <option value="q5_0">q5_0</option>
-                      <option value="q5_1">q5_1</option>
-                      <option value="q4_0">q4_0</option>
-                      <option value="q4_1">q4_1</option>
-                      <option value="iq4_nl">iq4_nl</option>
-                    </SelectInput>
+                      options={[
+                        { value: 'f32', label: 'f32' },
+                        { value: 'f16', label: 'f16 (默认)' },
+                        { value: 'bf16', label: 'bf16' },
+                        { value: 'q8_0', label: 'q8_0' },
+                        { value: 'q5_0', label: 'q5_0' },
+                        { value: 'q5_1', label: 'q5_1' },
+                        { value: 'q4_0', label: 'q4_0' },
+                        { value: 'q4_1', label: 'q4_1' },
+                        { value: 'iq4_nl', label: 'iq4_nl' },
+                      ]}
+                    />
                   </div>
 
                   <div>
@@ -1724,19 +1587,20 @@ export function LoadModelDialog({
                     </label>
                     <SelectInput
                       value={params.kvCacheTypeV || 'f16'}
-                      onChange={(e) => setParams({ ...params, kvCacheTypeV: e.target.value })}
+                      onValueChange={(v) => setParams({ ...params, kvCacheTypeV: v })}
                       disabled={getInputDisabled('kvCacheTypeV')}
-                    >
-                      <option value="f32">f32</option>
-                      <option value="f16">f16 (默认)</option>
-                      <option value="bf16">bf16</option>
-                      <option value="q8_0">q8_0</option>
-                      <option value="q5_0">q5_0</option>
-                      <option value="q5_1">q5_1</option>
-                      <option value="q4_0">q4_0</option>
-                      <option value="q4_1">q4_1</option>
-                      <option value="iq4_nl">iq4_nl</option>
-                    </SelectInput>
+                      options={[
+                        { value: 'f32', label: 'f32' },
+                        { value: 'f16', label: 'f16 (默认)' },
+                        { value: 'bf16', label: 'bf16' },
+                        { value: 'q8_0', label: 'q8_0' },
+                        { value: 'q5_0', label: 'q5_0' },
+                        { value: 'q5_1', label: 'q5_1' },
+                        { value: 'q4_0', label: 'q4_0' },
+                        { value: 'q4_1', label: 'q4_1' },
+                        { value: 'iq4_nl', label: 'iq4_nl' },
+                      ]}
+                    />
                   </div>
                 </div>
               </div>
@@ -1788,13 +1652,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.directIo || 'default'}
-                      onChange={(e) => setParams({ ...params, directIo: e.target.value })}
+                      onValueChange={(v) => setParams({ ...params, directIo: v })}
                       disabled={getInputDisabled('directIo')}
-                    >
-                      <option value="default">default</option>
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'default', label: 'default' }, { value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div>
@@ -1804,12 +1665,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.noWebUI ? 'true' : 'false'}
-                      onChange={(e) => setParams({ ...params, noWebUI: e.target.value === 'true' })}
+                      onValueChange={(v) => setParams({ ...params, noWebUI: v === 'true' })}
                       disabled={getInputDisabled('noWebUI')}
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div>
@@ -1819,12 +1678,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.disableJinja ? 'true' : 'false'}
-                      onChange={(e) => setParams({ ...params, disableJinja: e.target.value === 'true' })}
+                      onValueChange={(v) => setParams({ ...params, disableJinja: v === 'true' })}
                       disabled={getInputDisabled('disableJinja')}
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div>
@@ -1833,72 +1690,63 @@ export function LoadModelDialog({
                       {renderHelpButton('chatTemplate')}
                     </div>
                     <SelectInput
-                      value={params.chatTemplate || ''}
-                      onChange={(e) => setParams({ ...params, chatTemplate: e.target.value })}
+                      value={params.chatTemplate || '__auto__'}
+                      onValueChange={(v) => setParams({ ...params, chatTemplate: v === '__auto__' ? '' : v })}
                       disabled={getInputDisabled('chatTemplate')}
-                    >
-                      <option value="">(自动 - 使用模型元数据)</option>
-                      {/* Bailing */}
-                      <option value="bailing">bailing</option>
-                      <option value="bailing-think">bailing-think</option>
-                      <option value="bailing2">bailing2</option>
-                      {/* ChatGLM */}
-                      <option value="chatglm3">chatglm3</option>
-                      <option value="chatglm4">chatglm4</option>
-                      {/* DeepSeek */}
-                      <option value="deepseek">deepseek</option>
-                      <option value="deepseek2">deepseek2</option>
-                      <option value="deepseek3">deepseek3</option>
-                      {/* Exaone */}
-                      <option value="exaone-moe">exaone-moe</option>
-                      <option value="exaone3">exaone3</option>
-                      <option value="exaone4">exaone4</option>
-                      {/* Hunyuan */}
-                      <option value="hunyuan-dense">hunyuan-dense</option>
-                      <option value="hunyuan-moe">hunyuan-moe</option>
-                      {/* Llama */}
-                      <option value="llama2">llama2</option>
-                      <option value="llama2-sys">llama2-sys</option>
-                      <option value="llama2-sys-bos">llama2-sys-bos</option>
-                      <option value="llama2-sys-strip">llama2-sys-strip</option>
-                      <option value="llama3">llama3</option>
-                      <option value="llama4">llama4</option>
-                      {/* Mistral */}
-                      <option value="mistral-v1">mistral-v1</option>
-                      <option value="mistral-v3">mistral-v3</option>
-                      <option value="mistral-v3-tekken">mistral-v3-tekken</option>
-                      <option value="mistral-v7">mistral-v7</option>
-                      <option value="mistral-v7-tekken">mistral-v7-tekken</option>
-                      {/* Phi */}
-                      <option value="phi3">phi3</option>
-                      <option value="phi4">phi4</option>
-                      {/* Vicuna */}
-                      <option value="vicuna">vicuna</option>
-                      <option value="vicuna-orca">vicuna-orca</option>
-                      {/* Other templates */}
-                      <option value="chatml">chatml</option>
-                      <option value="command-r">command-r</option>
-                      <option value="falcon3">falcon3</option>
-                      <option value="gemma">gemma</option>
-                      <option value="gigachat">gigachat</option>
-                      <option value="glmedge">glmedge</option>
-                      <option value="gpt-oss">gpt-oss</option>
-                      <option value="granite">granite</option>
-                      <option value="grok-2">grok-2</option>
-                      <option value="kimi-k2">kimi-k2</option>
-                      <option value="megrez">megrez</option>
-                      <option value="minicpm">minicpm</option>
-                      <option value="monarch">monarch</option>
-                      <option value="openchat">openchat</option>
-                      <option value="orion">orion</option>
-                      <option value="pangu-embedded">pangu-embedded</option>
-                      <option value="rwkv-world">rwkv-world</option>
-                      <option value="seed_oss">seed_oss</option>
-                      <option value="smolvlm">smolvlm</option>
-                      <option value="solar-open">solar-open</option>
-                      <option value="yandex">yandex</option>
-                      <option value="zephyr">zephyr</option>
-                    </SelectInput>
+                      options={[
+                        { value: '__auto__', label: '(自动 - 使用模型元数据)' },
+                        { value: 'bailing', label: 'bailing' },
+                        { value: 'bailing-think', label: 'bailing-think' },
+                        { value: 'bailing2', label: 'bailing2' },
+                        { value: 'chatglm3', label: 'chatglm3' },
+                        { value: 'chatglm4', label: 'chatglm4' },
+                        { value: 'deepseek', label: 'deepseek' },
+                        { value: 'deepseek2', label: 'deepseek2' },
+                        { value: 'deepseek3', label: 'deepseek3' },
+                        { value: 'exaone-moe', label: 'exaone-moe' },
+                        { value: 'exaone3', label: 'exaone3' },
+                        { value: 'exaone4', label: 'exaone4' },
+                        { value: 'hunyuan-dense', label: 'hunyuan-dense' },
+                        { value: 'hunyuan-moe', label: 'hunyuan-moe' },
+                        { value: 'llama2', label: 'llama2' },
+                        { value: 'llama2-sys', label: 'llama2-sys' },
+                        { value: 'llama2-sys-bos', label: 'llama2-sys-bos' },
+                        { value: 'llama2-sys-strip', label: 'llama2-sys-strip' },
+                        { value: 'llama3', label: 'llama3' },
+                        { value: 'llama4', label: 'llama4' },
+                        { value: 'mistral-v1', label: 'mistral-v1' },
+                        { value: 'mistral-v3', label: 'mistral-v3' },
+                        { value: 'mistral-v3-tekken', label: 'mistral-v3-tekken' },
+                        { value: 'mistral-v7', label: 'mistral-v7' },
+                        { value: 'mistral-v7-tekken', label: 'mistral-v7-tekken' },
+                        { value: 'phi3', label: 'phi3' },
+                        { value: 'phi4', label: 'phi4' },
+                        { value: 'vicuna', label: 'vicuna' },
+                        { value: 'vicuna-orca', label: 'vicuna-orca' },
+                        { value: 'chatml', label: 'chatml' },
+                        { value: 'command-r', label: 'command-r' },
+                        { value: 'falcon3', label: 'falcon3' },
+                        { value: 'gemma', label: 'gemma' },
+                        { value: 'gigachat', label: 'gigachat' },
+                        { value: 'glmedge', label: 'glmedge' },
+                        { value: 'gpt-oss', label: 'gpt-oss' },
+                        { value: 'granite', label: 'granite' },
+                        { value: 'grok-2', label: 'grok-2' },
+                        { value: 'kimi-k2', label: 'kimi-k2' },
+                        { value: 'megrez', label: 'megrez' },
+                        { value: 'minicpm', label: 'minicpm' },
+                        { value: 'monarch', label: 'monarch' },
+                        { value: 'openchat', label: 'openchat' },
+                        { value: 'orion', label: 'orion' },
+                        { value: 'pangu-embedded', label: 'pangu-embedded' },
+                        { value: 'rwkv-world', label: 'rwkv-world' },
+                        { value: 'seed_oss', label: 'seed_oss' },
+                        { value: 'smolvlm', label: 'smolvlm' },
+                        { value: 'solar-open', label: 'solar-open' },
+                        { value: 'yandex', label: 'yandex' },
+                        { value: 'zephyr', label: 'zephyr' },
+                      ]}
+                    />
                   </div>
 
                   <div>
@@ -1908,12 +1756,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.contextShift ? 'true' : 'false'}
-                      onChange={(e) => setParams({ ...params, contextShift: e.target.value === 'true' })}
+                      onValueChange={(v) => setParams({ ...params, contextShift: v === 'true' })}
                       disabled={getInputDisabled('contextShift')}
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div>
@@ -1923,13 +1769,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.reasoning || 'auto'}
-                      onChange={(e) => setParams({ ...params, reasoning: e.target.value })}
+                      onValueChange={(v) => setParams({ ...params, reasoning: v })}
                       disabled={getInputDisabled('reasoning')}
-                    >
-                      <option value="auto">auto</option>
-                      <option value="on">on</option>
-                      <option value="off">off</option>
-                    </SelectInput>
+                      options={[{ value: 'auto', label: 'auto' }, { value: 'on', label: 'on' }, { value: 'off', label: 'off' }]}
+                    />
                   </div>
 
                   <div>
@@ -1939,12 +1782,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.reasoningFormat || 'auto'}
-                      onChange={(e) => setParams({ ...params, reasoningFormat: e.target.value })}
+                      onValueChange={(v) => setParams({ ...params, reasoningFormat: v })}
                       disabled={getInputDisabled('reasoningFormat')}
-                    >
-                      <option value="auto">auto</option>
-                      <option value="deepseek">deepseek</option>
-                    </SelectInput>
+                      options={[{ value: 'auto', label: 'auto' }, { value: 'deepseek', label: 'deepseek' }]}
+                    />
                   </div>
 
                   <div>
@@ -1971,12 +1812,10 @@ export function LoadModelDialog({
                     </div>
                     <SelectInput
                       value={params.mmprojOffload ? 'true' : 'false'}
-                      onChange={(e) => setParams({ ...params, mmprojOffload: e.target.value === 'true' })}
+                      onValueChange={(v) => setParams({ ...params, mmprojOffload: v === 'true' })}
                       disabled={getInputDisabled('mmprojOffload')}
-                    >
-                      <option value="true">true</option>
-                      <option value="false">false</option>
-                    </SelectInput>
+                      options={[{ value: 'true', label: 'true' }, { value: 'false', label: 'false' }]}
+                    />
                   </div>
 
                   <div className="col-span-2">
@@ -2130,7 +1969,7 @@ export function LoadModelDialog({
             </div>
           </div>
       </form>
-    </div>
-  </div>
+      </DialogContent>
+    </Dialog>
   );
 }

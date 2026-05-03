@@ -1,38 +1,24 @@
-import { useMemo } from 'react';
-import { useToastStore } from '@/stores/toast';
-import type { ToastType } from '@/stores/toast';
+import { toast as sonnerToast } from 'sonner';
+
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+const variantMap = {
+  success: sonnerToast.success,
+  error: sonnerToast.error,
+  warning: sonnerToast.warning,
+  info: sonnerToast.info,
+} as const;
 
 export function useToast() {
-  const addToast = useToastStore((state) => state.addToast);
+  const showToast = (type: ToastType, title: string, description?: string, duration?: number) => {
+    variantMap[type](title, { description, duration });
+  };
 
-  return useMemo(() => {
-    const toast = (
-      type: ToastType,
-      title: string,
-      description?: string,
-      duration?: number
-    ) => {
-      addToast({ type, title, description, duration });
-    };
-
-    return {
-      toast,
-
-      success: (title: string, description?: string, duration?: number) => {
-        toast('success', title, description, duration);
-      },
-
-      error: (title: string, description?: string, duration?: number) => {
-        toast('error', title, description, duration);
-      },
-
-      warning: (title: string, description?: string, duration?: number) => {
-        toast('warning', title, description, duration);
-      },
-
-      info: (title: string, description?: string, duration?: number) => {
-        toast('info', title, description, duration);
-      },
-    };
-  }, [addToast]);
+  return {
+    toast: showToast,
+    success: (title: string, description?: string, duration?: number) => showToast('success', title, description, duration),
+    error: (title: string, description?: string, duration?: number) => showToast('error', title, description, duration),
+    warning: (title: string, description?: string, duration?: number) => showToast('warning', title, description, duration),
+    info: (title: string, description?: string, duration?: number) => showToast('info', title, description, duration),
+  };
 }

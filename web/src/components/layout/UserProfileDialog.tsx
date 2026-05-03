@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  User, 
-  Mail, 
-  Shield, 
-  Calendar, 
+import {
+  User,
+  Mail,
+  Shield,
+  Calendar,
   Camera,
   Edit3,
   Check,
@@ -15,11 +15,14 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@/stores/userStore';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +67,9 @@ export function UserProfileDialog() {
   return (
     <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
       <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{t('user.profile')}</DialogTitle>
+        </DialogHeader>
         {/* Header Background */}
         <div className="h-32 bg-gradient-to-r from-primary/80 via-primary to-primary/80 relative overflow-hidden">
           <div className="absolute inset-0 opacity-20">
@@ -283,7 +289,7 @@ function ProfileField({
         </p>
         
         {isEditing && !disabled ? (
-          <input
+          <Input
             type={type}
             value={value}
             onChange={(e) => onChange?.(e.target.value)}

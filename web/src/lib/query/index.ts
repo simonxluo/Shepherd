@@ -1,13 +1,11 @@
 import { QueryClient } from '@tanstack/react-query';
-import { useToastStore } from '@/stores/toast';
+import { toast } from 'sonner';
 import { APIError } from '@/lib/api/client';
 
 function handleGlobalMutationError(error: Error) {
   if (error instanceof APIError && error.handled) {
     return;
   }
-
-  const { addToast } = useToastStore.getState();
 
   let title = '操作失败';
   let description = error.message || '未知错误';
@@ -44,7 +42,7 @@ function handleGlobalMutationError(error: Error) {
     }
   }
 
-  addToast({ type: 'error', title, description, duration: 5000 });
+  toast.error(title, { description, duration: 5000 });
 }
 
 export const queryClient = new QueryClient({

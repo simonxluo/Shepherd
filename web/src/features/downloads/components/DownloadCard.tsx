@@ -1,5 +1,7 @@
-import { Pause, Play, X, RotateCcw, CloudDownload, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Pause, Play, X, RotateCcw, CloudDownload, CheckCircle2, XCircle, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { DownloadTask, DownloadState } from '@/types';
 
@@ -144,15 +146,13 @@ export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: Dow
           <span className="font-medium text-foreground">{progressPercent}%</span>
         </div>
 
-        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-          <div
-            className={cn(
-              'h-full transition-all duration-300',
-              isActive ? 'bg-blue-500' : 'bg-gray-400'
-            )}
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
+        <Progress
+          value={progressPercent}
+          className={cn(
+            'h-2',
+            !isActive && '[&>[data-slot=progress-indicator]]:bg-gray-400'
+          )}
+        />
 
         {task.partsTotal > 1 && (
           <div className="text-xs text-muted-foreground mt-1">
@@ -169,9 +169,10 @@ export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: Dow
       )}
 
       {task.state === 'failed' && task.error && (
-        <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300 mb-3">
-          {task.error}
-        </div>
+        <Alert variant="destructive" className="mb-3 py-2">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="text-sm">{task.error}</AlertDescription>
+        </Alert>
       )}
 
       <div className="flex items-center gap-2">
