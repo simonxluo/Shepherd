@@ -224,5 +224,3 @@ func escapeQuotes(s string) string {
 	}
 	return result.String()
 }
-
-

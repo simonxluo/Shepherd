@@ -106,14 +106,12 @@ const NumberInput = ({
   return (
     <div>
       <Input
-        type="number"
+        type="text"
+        inputMode="numeric"
         value={inputValue}
         onChange={handleChange}
         onBlur={handleBlur}
         disabled={disabled}
-        min={allowMinusOne ? -1 : min}
-        max={max}
-        step={step}
         placeholder={placeholder}
         className={cn(
           "h-8 px-2 py-1.5 text-sm",
@@ -208,6 +206,8 @@ export function LoadModelDialog({
 
   const { data: modelsData } = useModels();
   const allModels = modelsData ?? [];
+  const currentModel = allModels.find(m => m.id === modelId);
+  const modelMaxCtxSize = currentModel?.metadata?.contextLength;
 
   const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
   const saveModelLoadConfig = useSaveModelLoadConfig();
@@ -1275,7 +1275,7 @@ export function LoadModelDialog({
                       onChange={(v) => setParams({ ...params, ctxSize: v })}
                       disabled={getInputDisabled('ctxSize')}
                       min={0}
-                      max={131072}
+                      max={modelMaxCtxSize}
                       step={1}
                       placeholder="8192"
                     />
@@ -1614,7 +1614,7 @@ export function LoadModelDialog({
                       onChange={(v) => setParams({ ...params, kvCacheSize: v })}
                       disabled={getInputDisabled('kvCacheSize')}
                       min={0}
-                      max={131072}
+                      max={modelMaxCtxSize}
                       step={1}
                       placeholder="8192"
                     />

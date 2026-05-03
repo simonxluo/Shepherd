@@ -296,9 +296,9 @@ func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 	}
 
 	api.Success(c, gin.H{
-		"backends":         backends,
+		"backends":          backends,
 		"inferenceBackends": inferenceBackends,
-		"count":            len(backends),
+		"count":             len(backends),
 	})
 }
 

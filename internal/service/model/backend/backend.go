@@ -35,8 +35,8 @@ func ParseBackendType(s string) (BackendType, error) {
 
 // BackendConfig is the configuration for discovering a backend
 type BackendConfig struct {
-	Type     BackendType
-	Name     string // Human-readable name
+	Type BackendType
+	Name string // Human-readable name
 	// LlamaCpp-specific
 	BinPath  string   // Directory containing llama-server binary
 	BinPaths []string // All configured binary paths (tried in order)
@@ -50,20 +50,20 @@ type BackendConfig struct {
 
 // BackendInfo contains discovered information about a backend
 type BackendInfo struct {
-	Type        BackendType
-	Name        string
-	BinPath     string // Resolved binary path or conda lib dir
-	Version     string // Detected version
-	Available   bool   // Whether the backend is usable
-	CondaEnv    string // Conda env name (if applicable)
+	Type      BackendType
+	Name      string
+	BinPath   string // Resolved binary path or conda lib dir
+	Version   string // Detected version
+	Available bool   // Whether the backend is usable
+	CondaEnv  string // Conda env name (if applicable)
 }
 
 // StartConfig contains the command and metadata needed to start a backend process
 type StartConfig struct {
-	Command          string // Full command string to execute
-	BinPath          string // Binary/library path for the process manager
-	BackendType      BackendType
-	SkipLDLibraryPath bool  // If true, skip setting LD_LIBRARY_PATH (for conda-based backends)
+	Command           string // Full command string to execute
+	BinPath           string // Binary/library path for the process manager
+	BackendType       BackendType
+	SkipLDLibraryPath bool // If true, skip setting LD_LIBRARY_PATH (for conda-based backends)
 }
 
 // HealthResult contains the result of a health check
@@ -119,85 +119,85 @@ type Backend interface {
 
 // LlamacppLoadParams contains llama.cpp-specific load parameters
 type LlamacppLoadParams struct {
-	BatchSize        int
-	Temperature      float64
-	TopP             float64
-	TopK             int
-	RepeatPenalty    float64
-	Seed             int
-	NPredict         int
-	MainGPU          int
-	CustomCmd        string
-	ExtraParams      string
-	MmprojPath       string
-	EnableVision     bool
-	FlashAttention   bool
-	NoMmap           bool
-	LockMemory       bool
-	NoWebUI          bool
-	EnableMetrics    bool
-	SlotSavePath     string
-	CacheRAM         int
-	ChatTemplateFile string
-	Timeout          int
-	Alias            string
-	UBatchSize       int
-	ParallelSlots    int
-	KVCacheTypeK     string
-	KVCacheTypeV     string
-	KVCacheUnified   bool
-	KVCacheSize      int
-	LogitsAll        bool
-	Reranking        bool
-	MinP             float64
-	PresencePenalty  float64
-	FrequencyPenalty float64
-	DirectIo         string
-	DisableJinja     bool
-	ChatTemplate     string
-	ContextShift     bool
-	ThreadsBatch     int
-	RepeatLastN      int
-	TypicalP         float64
-	IgnoreEOS        bool
-	SplitMode        string
-	TensorSplit      string
-	ContBatching     bool
-	CachePrompt      bool
-	Grammar          string
-	GrammarFile      string
-	Lora             string
-	LoraScaled       string
+	BatchSize          int
+	Temperature        float64
+	TopP               float64
+	TopK               int
+	RepeatPenalty      float64
+	Seed               int
+	NPredict           int
+	MainGPU            int
+	CustomCmd          string
+	ExtraParams        string
+	MmprojPath         string
+	EnableVision       bool
+	FlashAttention     bool
+	NoMmap             bool
+	LockMemory         bool
+	NoWebUI            bool
+	EnableMetrics      bool
+	SlotSavePath       string
+	CacheRAM           int
+	ChatTemplateFile   string
+	Timeout            int
+	Alias              string
+	UBatchSize         int
+	ParallelSlots      int
+	KVCacheTypeK       string
+	KVCacheTypeV       string
+	KVCacheUnified     bool
+	KVCacheSize        int
+	LogitsAll          bool
+	Reranking          bool
+	MinP               float64
+	PresencePenalty    float64
+	FrequencyPenalty   float64
+	DirectIo           string
+	DisableJinja       bool
+	ChatTemplate       string
+	ContextShift       bool
+	ThreadsBatch       int
+	RepeatLastN        int
+	TypicalP           float64
+	IgnoreEOS          bool
+	SplitMode          string
+	TensorSplit        string
+	ContBatching       bool
+	CachePrompt        bool
+	Grammar            string
+	GrammarFile        string
+	Lora               string
+	LoraScaled         string
 	ChatTemplateKwargs string
-	RopeScaling      string
-	RopeScale        float64
-	RopeFreqBase     float64
-	RopeFreqScale    float64
-	DraftModelPath   string
-	DraftMaxTokens   int
+	RopeScaling        string
+	RopeScale          float64
+	RopeFreqBase       float64
+	RopeFreqScale      float64
+	DraftModelPath     string
+	DraftMaxTokens     int
 }
 
 // VLLMLoadParams contains vLLM-specific load parameters
 type VLLMLoadParams struct {
-	DataType         string   // --dtype (e.g., "auto", "float16", "bfloat16")
-	MaxModelLen      int      // --max-model-len
+	DataType             string  // --dtype (e.g., "auto", "float16", "bfloat16")
+	MaxModelLen          int     // --max-model-len
 	GPUMemoryUtilization float64 // --gpu-memory-utilization (0.0-1.0)
-	TensorParallelSize int    // --tensor-parallel-size
-	PipelineParallelSize int   // --pipeline-parallel-size
-	TrustRemoteCode  bool     // --trust-remote-code
-	ServedModelName  string   // --served-model-name
-	Quantization     string   // --quantization (e.g., "awq", "gptq")
-	MaxNumSeqs       int      // --max-num-seqs
-	MaxNumBatchedTokens int   // --max-num-batched-tokens
-	EnablePrefixCaching bool  // --enable-prefix-caching
-	EnableChunkedPrefill bool // --enable-chunked-prefill
-	DisableLogRequests bool   // --disable-log-requests
-	ExtraArgs        string   // Additional CLI arguments
+	TensorParallelSize   int     // --tensor-parallel-size
+	PipelineParallelSize int     // --pipeline-parallel-size
+	TrustRemoteCode      bool    // --trust-remote-code
+	ServedModelName      string  // --served-model-name
+	Quantization         string  // --quantization (e.g., "awq", "gptq")
+	MaxNumSeqs           int     // --max-num-seqs
+	MaxNumBatchedTokens  int     // --max-num-batched-tokens
+	EnablePrefixCaching  bool    // --enable-prefix-caching
+	EnableChunkedPrefill bool    // --enable-chunked-prefill
+	DisableLogRequests   bool    // --disable-log-requests
+	ExtraArgs            string  // Additional CLI arguments
 }
 
 // VLLOmniLoadParams contains vLLM-omni-specific load parameters
 type VLLOmniLoadParams struct {
-	VLLMLoadParams     // Embed base vLLM params
+	VLLMLoadParams           // Embed base vLLM params
 	VideoPruningRate float64 // --video-pruning-rate
 	MMTensorIPC      bool    // --mm-tensor-ipc
 }

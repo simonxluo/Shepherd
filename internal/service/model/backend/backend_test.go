@@ -241,9 +241,9 @@ func TestVLLMBackend_BuildStartConfig(t *testing.T) {
 		Port:      8000,
 		CtxSize:   4096,
 		VLLMParams: &VLLMLoadParams{
-			DataType:          "auto",
+			DataType:           "auto",
 			TensorParallelSize: 2,
-			TrustRemoteCode:   true,
+			TrustRemoteCode:    true,
 		},
 	}
 

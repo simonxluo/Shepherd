@@ -258,6 +258,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		Duration: duration,
 	}, nil
 }
+
 // isLoading 检查模型是否正在加载
 func (m *Manager) isLoading(modelID string) bool {
 	m.mu.RLock()
