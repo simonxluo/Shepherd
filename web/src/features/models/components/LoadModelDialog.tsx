@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { LoadModelParams } from '@/types';
-import { useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
+import { useModels, useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
 import { useOnlineNodes } from '@/features/cluster/hooks';
 import type { UnifiedNode } from '@/types';
 import { useToast } from '@/hooks/useToast';
@@ -206,6 +206,9 @@ export function LoadModelDialog({
 
   const { data: llamacppBackends = [] } = useLlamacppBackends();
 
+  const { data: modelsData } = useModels();
+  const allModels = modelsData ?? [];
+
   const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
   const saveModelLoadConfig = useSaveModelLoadConfig();
   const deleteModelLoadConfig = useDeleteModelLoadConfig();
@@ -281,6 +284,8 @@ export function LoadModelDialog({
     mmprojOffload: true,
     unloadAfterMinutes: 0,
     concurrencyLimit: 0,
+    draftModelId: '',
+    draftMaxTokens: 16,
     enabled: {
       ctxSize: true,
       batchSize: true,
@@ -335,6 +340,8 @@ export function LoadModelDialog({
       reasoningFormat: true,
       reasoningBudget: true,
       mmprojOffload: true,
+      draftModel: false,
+      draftMaxTokens: false,
       unloadAfterMinutes: true,
       concurrencyLimit: true,
       extraArgs: true,
@@ -562,6 +569,7 @@ export function LoadModelDialog({
       'ropeScaling', 'ropeScale', 'ropeFreqBase', 'ropeFreqScale',
       'noWebUI', 'reasoning', 'reasoningFormat', 'reasoningBudget', 'mmprojOffload',
       'unloadAfterMinutes', 'concurrencyLimit',
+      'draftModelId', 'draftMaxTokens',
     ];
 
     for (const key of paramKeys) {
@@ -673,6 +681,8 @@ export function LoadModelDialog({
       mmprojOffload: true,
       unloadAfterMinutes: 0,
       concurrencyLimit: 0,
+      draftModelId: '',
+      draftMaxTokens: 16,
       enabled: {
         ctxSize: true,
         batchSize: true,
@@ -728,6 +738,8 @@ export function LoadModelDialog({
         reasoningFormat: true,
         reasoningBudget: true,
         mmprojOffload: true,
+        draftModel: false,
+        draftMaxTokens: false,
         unloadAfterMinutes: true,
         concurrencyLimit: true,
       },
@@ -933,6 +945,60 @@ export function LoadModelDialog({
                     <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
                       请在服务器配置中添加 llama.cpp 路径
                     </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">推测解码 (Draft 模型)</label>
+                    <Switch
+                      checked={params.enabled?.draftModel ?? false}
+                      onCheckedChange={(checked) =>
+                        setParams(prev => ({
+                          ...prev,
+                          enabled: { ...prev.enabled, draftModel: checked },
+                          draftModelId: checked ? prev.draftModelId : '',
+                        }))
+                      }
+                    />
+                  </div>
+                  {params.enabled?.draftModel && (
+                    <Select
+                      value={params.draftModelId || '_none'}
+                      onValueChange={(val) =>
+                        setParams(prev => ({ ...prev, draftModelId: val === '_none' ? '' : val }))
+                      }
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="选择 Draft 模型" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">不使用</SelectItem>
+                        {(() => {
+                          const mainModel = allModels.find(m => m.id === modelId);
+                          const mainArch = mainModel?.metadata?.architecture;
+                          if (!mainArch) return null;
+                          const compatible = allModels.filter(
+                            m => m.id !== modelId
+                              && m.metadata?.architecture === mainArch
+                              && m.status === 'stopped'
+                          );
+                          if (compatible.length === 0) {
+                            return <SelectItem value="_empty" disabled>没有找到同架构的候选模型</SelectItem>;
+                          }
+                          return compatible.map(m => {
+                            const sizeGB = m.totalSize
+                              ? (m.totalSize / 1024 / 1024 / 1024).toFixed(1)
+                              : (m.size / 1024 / 1024 / 1024).toFixed(1);
+                            return (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.displayName} ({sizeGB}GB)
+                              </SelectItem>
+                            );
+                          });
+                        })()}
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
 
@@ -1606,6 +1672,44 @@ export function LoadModelDialog({
                   </div>
                 </div>
               </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase">
+                    推测解码
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={params.enabled?.draftMaxTokens ?? false}
+                      onCheckedChange={(checked) =>
+                        setParams(prev => ({
+                          ...prev,
+                          enabled: { ...prev.enabled, draftMaxTokens: checked },
+                        }))
+                      }
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-xs font-medium">Draft 最大 token 数</label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>每轮推测解码中 draft 模型生成的最大 token 数（默认 16）</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                    <NumberInput
+                      value={params.draftMaxTokens ?? 16}
+                      onChange={(val) => setParams(prev => ({ ...prev, draftMaxTokens: val }))}
+                      disabled={!params.enabled?.draftMaxTokens}
+                      min={1}
+                      max={256}
+                      step={1}
+                      placeholder="16"
+                      className="w-20 h-7 text-xs"
+                    />
+                  </div>
+                </div>
 
                 {/* Other params */}
                 <div className="space-y-3">
