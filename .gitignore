@@ -43,7 +43,7 @@ dist/
 bin/
 
 # Logs
-logs/
+./logs/*
 *.log
 
 # OS
