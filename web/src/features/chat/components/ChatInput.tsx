@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 interface ChatInputProps {
@@ -52,7 +53,7 @@ export function ChatInput({
     <form onSubmit={handleSubmit} className="border-t p-4 bg-background">
       <div className="flex items-end gap-3">
         <div className="flex-1 relative">
-          <textarea
+          <Textarea
             ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}

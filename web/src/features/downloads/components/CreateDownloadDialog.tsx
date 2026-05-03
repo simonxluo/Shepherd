@@ -1,7 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { X, Cloud, Database, Loader2, File, Check } from 'lucide-react';
+import { Cloud, Database, Loader2, File, Check, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useModelFiles } from '@/features/downloads/hooks';
 import type { DownloadSource, CreateDownloadParams } from '@/types';
 import type { ModelFileInfo } from '@/lib/api/downloads';
@@ -89,22 +93,13 @@ export function CreateDownloadDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">
-            创建下载任务
-          </h2>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>创建下载任务</DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               下载来源
@@ -143,7 +138,7 @@ export function CreateDownloadDialog({
             <label className="block text-sm font-medium text-foreground mb-1">
               仓库 ID <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               type="text"
               value={repoId}
               onChange={(e) => setRepoId(e.target.value)}
@@ -161,7 +156,7 @@ export function CreateDownloadDialog({
               文件名
             </label>
             <div className="flex gap-2">
-              <input
+              <Input
                 type="text"
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}
@@ -188,9 +183,12 @@ export function CreateDownloadDialog({
                     加载中...
                   </div>
                 ) : filesError ? (
-                  <div className="text-sm text-red-600 dark:text-red-400 py-2">
-                    加载失败: {filesError.message}
-                  </div>
+                  <Alert variant="destructive" className="py-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      加载失败: {filesError.message}
+                    </AlertDescription>
+                  </Alert>
                 ) : availableFiles.length === 0 ? (
                   <div className="text-sm text-muted-foreground py-2">
                     {repoId ? '该仓库没有 GGUF 文件' : '请先输入仓库 ID'}
@@ -230,7 +228,7 @@ export function CreateDownloadDialog({
             <label className="block text-sm font-medium text-foreground mb-1">
               保存路径（可选）
             </label>
-            <input
+            <Input
               type="text"
               value={path}
               onChange={(e) => setPath(e.target.value)}
@@ -242,45 +240,47 @@ export function CreateDownloadDialog({
             </p>
           </div>
 
-          <details className="group">
-            <summary className="cursor-pointer text-sm font-medium text-foreground list-none flex items-center gap-2">
-              <span className="transform group-open:rotate-90 transition-transform">▶</span>
+          <Collapsible>
+            <CollapsibleTrigger className="cursor-pointer text-sm font-medium text-foreground list-none flex items-center gap-2">
+              <span>▶</span>
               高级选项
-            </summary>
+            </CollapsibleTrigger>
 
-            <div className="mt-3 space-y-3 pl-5">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  最大重试次数
-                </label>
-                <input
-                  type="number"
-                  value={maxRetries}
-                  onChange={(e) => setMaxRetries(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-input text-foreground"
-                  min={0}
-                  max={10}
-                />
+            <CollapsibleContent>
+              <div className="mt-3 space-y-3 pl-5">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    最大重试次数
+                  </label>
+                  <Input
+                    type="number"
+                    value={maxRetries}
+                    onChange={(e) => setMaxRetries(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-input text-foreground"
+                    min={0}
+                    max={10}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">
+                    分块大小（字节）
+                  </label>
+                  <Input
+                    type="number"
+                    value={chunkSize}
+                    onChange={(e) => setChunkSize(e.target.value)}
+                    placeholder="默认: 10485760 (10MB)"
+                    className="w-full px-3 py-2 border border-border rounded-md bg-input text-foreground"
+                    min={1024}
+                    step={1024}
+                  />
+                </div>
               </div>
+            </CollapsibleContent>
+          </Collapsible>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  分块大小（字节）
-                </label>
-                <input
-                  type="number"
-                  value={chunkSize}
-                  onChange={(e) => setChunkSize(e.target.value)}
-                  placeholder="默认: 10485760 (10MB)"
-                  className="w-full px-3 py-2 border border-border rounded-md bg-input text-foreground"
-                  min={1024}
-                  step={1024}
-                />
-              </div>
-            </div>
-          </details>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+          <DialogFooter className="pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"
@@ -296,9 +296,9 @@ export function CreateDownloadDialog({
             >
               {isLoading ? '创建中...' : '创建任务'}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

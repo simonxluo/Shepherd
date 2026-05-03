@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { X, Loader2, Gauge, RotateCcw, Play } from 'lucide-react';
+import { Loader2, Gauge, RotateCcw, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   useBenchmarkParams,
   useLlamaCppVersions,
@@ -212,25 +216,27 @@ export function BenchmarkDialog({
               </span>
             )}
           </label>
-          <select
-            id={id}
+          <Select
             value={value}
-            onChange={(e) => handleParamChange(param.fullName, e.target.value)}
+            onValueChange={(v) => handleParamChange(param.fullName, v)}
             disabled={isLoading}
-            className={cn(
+          >
+            <SelectTrigger className={cn(
               "w-full px-2 py-1.5 text-sm",
               "border border-border rounded-md",
               "bg-input text-foreground",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
               "disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
-          >
-            {param.values.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
+            )}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {param.values.map((v) => (
+                <SelectItem key={v} value={v}>
+                  {v}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       );
     }
@@ -252,22 +258,24 @@ export function BenchmarkDialog({
               </span>
             )}
           </label>
-          <select
-            id={id}
+          <Select
             value={value || 'false'}
-            onChange={(e) => handleParamChange(param.fullName, e.target.value)}
+            onValueChange={(v) => handleParamChange(param.fullName, v)}
             disabled={isLoading}
-            className={cn(
+          >
+            <SelectTrigger className={cn(
               "w-full px-2 py-1.5 text-sm",
               "border border-border rounded-md",
               "bg-input text-foreground",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
               "disabled:opacity-50 disabled:cursor-not-allowed"
-            )}
-          >
-            <option value="true">true</option>
-            <option value="false">false</option>
-          </select>
+            )}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true">true</SelectItem>
+              <SelectItem value="false">false</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       );
     }
@@ -289,7 +297,7 @@ export function BenchmarkDialog({
               </span>
             )}
           </label>
-          <input
+          <Input
             id={id}
             type="number"
             value={value}
@@ -324,7 +332,7 @@ export function BenchmarkDialog({
               </span>
             )}
           </label>
-          <input
+          <Input
             id={id}
             type="number"
             step="0.01"
@@ -359,7 +367,7 @@ export function BenchmarkDialog({
             </span>
           )}
         </label>
-        <input
+        <Input
           id={id}
           type="text"
           value={value}
@@ -382,24 +390,14 @@ export function BenchmarkDialog({
   const sortedParams = [...benchmarkParams].sort((a, b) => (a.sort || 0) - (b.sort || 0));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-card rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <div className="flex items-center gap-2">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-4 py-3 border-b border-border flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2">
             <Gauge className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold text-foreground">
-              模型性能测试
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+            模型性能测试
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Form content - two-column layout */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col min-h-0">
@@ -428,28 +426,31 @@ export function BenchmarkDialog({
                     <label className="block text-xs font-medium text-foreground mb-1">
                       Llama.cpp 版本
                     </label>
-                    <select
+                    <Select
                       value={llamaCppPath}
-                      onChange={(e) => setLlamaCppPath(e.target.value)}
+                      onValueChange={setLlamaCppPath}
                       disabled={isLoading || versionsLoading}
-                      className={cn(
+                    >
+                      <SelectTrigger className={cn(
                         "w-full px-3 py-2 text-sm",
                         "border border-border rounded-md",
                         "bg-input text-foreground",
-                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
                         "disabled:opacity-50 disabled:cursor-not-allowed"
-                      )}
-                    >
-                      {llamaCppVersions.length > 0 ? (
-                        llamaCppVersions.map((version) => (
-                          <option key={version.path} value={version.path}>
-                            {version.name || version.path} {version.description && `(${version.description})`}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="">未配置 llama.cpp 路径</option>
-                      )}
-                    </select>
+                      )}>
+                        <SelectValue placeholder="未配置 llama.cpp 路径" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {llamaCppVersions.length > 0 ? (
+                          llamaCppVersions.map((version) => (
+                            <SelectItem key={version.path} value={version.path}>
+                              {version.name || version.path} {version.description && `(${version.description})`}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled>未配置 llama.cpp 路径</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Device selection */}
@@ -490,12 +491,11 @@ export function BenchmarkDialog({
                                 key={index}
                                 className="flex items-start gap-2 text-xs text-foreground cursor-pointer hover:bg-accent p-1.5 rounded transition-colors"
                               >
-                                <input
-                                  type="checkbox"
+                                <Checkbox
                                   checked={selectedDevices.includes(device)}
-                                  onChange={() => handleDeviceToggle(device)}
+                                  onCheckedChange={() => handleDeviceToggle(device)}
                                   disabled={isLoading}
-                                  className="rounded border-border text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 mt-0.5 flex-shrink-0"
+                                  className="rounded border-border w-3.5 h-3.5 mt-0.5 flex-shrink-0"
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-foreground">{deviceId}</div>
@@ -551,7 +551,7 @@ export function BenchmarkDialog({
         </form>
 
         {/* Footer */}
-        <div className="flex justify-end items-center gap-2 px-4 py-3 border-t border-border bg-card flex-shrink-0">
+        <DialogFooter className="px-4 py-3 border-t border-border bg-card flex-shrink-0">
           <Button
             type="button"
             variant="ghost"
@@ -590,8 +590,8 @@ export function BenchmarkDialog({
               </>
             )}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

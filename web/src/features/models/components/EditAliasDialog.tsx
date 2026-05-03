@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface EditAliasDialogProps {
   isOpen: boolean;
@@ -29,33 +31,22 @@ export function EditAliasDialog({
     }
   }, [isOpen, currentAlias]);
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onConfirm(alias.trim());
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-card rounded-lg shadow-xl max-w-md w-full">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <Pencil className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-foreground">
-              编辑模型别名
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+            编辑模型别名
+          </DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               模型名称
@@ -69,7 +60,7 @@ export function EditAliasDialog({
             <label className="block text-sm font-medium text-foreground mb-1">
               别名
             </label>
-            <input
+            <Input
               type="text"
               value={alias}
               onChange={(e) => setAlias(e.target.value)}
@@ -82,7 +73,7 @@ export function EditAliasDialog({
             </p>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+          <DialogFooter className="pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"
@@ -97,9 +88,9 @@ export function EditAliasDialog({
             >
               {isLoading ? '保存中...' : '保存'}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

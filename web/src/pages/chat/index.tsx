@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChatMessage } from '@/features/chat/components/ChatMessage';
 import { ChatInput } from '@/features/chat/components/ChatInput';
 import { useStreamingChat, getLoadedModels } from '@/features/chat/hooks';
@@ -146,18 +147,21 @@ export function ChatPage() {
 
         <div className="flex items-center gap-2">
           {/* Model selector */}
-          <select
+          <Select
             value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="px-3 py-1.5 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+            onValueChange={setSelectedModel}
           >
-            <option value="">选择模型</option>
-            {models.map((model) => (
-              <option key={model} value={model}>
-                {model}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[200px] px-3 py-1.5 border rounded-md bg-background text-sm">
+              <SelectValue placeholder="选择模型" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model} value={model}>
+                  {model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <button
             onClick={handleNewChat}

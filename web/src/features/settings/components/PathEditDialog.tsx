@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FolderOpen, CheckCircle2, XCircle, Loader2, AlertCircle } from 'lucide-react';
+import { FolderOpen, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { DirectoryBrowser } from '@/features/settings/components/DirectoryBrowser';
 import { cn } from '@/lib/utils';
 import type { LlamaCppPathConfig, ModelPathConfig, BackendPathConfig, MultimodalPathConfig } from '@/lib/config';
@@ -211,13 +214,11 @@ export function PathEditDialog({
           <div className="space-y-4 p-6">
             {/* Error alert */}
             {submitError && (
-              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm text-destructive font-medium">保存失败</p>
-                  <p className="text-xs text-destructive/80 mt-1">{submitError}</p>
-                </div>
-              </div>
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertTitle>保存失败</AlertTitle>
+                <AlertDescription>{submitError}</AlertDescription>
+              </Alert>
             )}
 
             {/* Path input (required) */}
@@ -228,7 +229,7 @@ export function PathEditDialog({
               </label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
-                  <input
+                  <Input
                     id="path"
                     type="text"
                     value={formData.path}
@@ -298,7 +299,7 @@ export function PathEditDialog({
               <label htmlFor="name" className="text-xs font-medium">
                 名称 <span className="text-muted-foreground">（可选）</span>
               </label>
-              <input
+              <Input
                 id="name"
                 type="text"
                 value={formData.name}
@@ -319,7 +320,7 @@ export function PathEditDialog({
               <label htmlFor="description" className="text-xs font-medium">
                 描述 <span className="text-muted-foreground">（可选）</span>
               </label>
-              <textarea
+              <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) =>

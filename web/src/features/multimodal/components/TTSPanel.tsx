@@ -1,6 +1,11 @@
 import { useState, useRef } from 'react';
 import { Volume2, Loader2, Play, Pause, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Progress } from '@/components/ui/progress';
 import { useTTS } from '../hooks';
 import { useToast } from '@/hooks/useToast';
 
@@ -80,23 +85,26 @@ export function TTSPanel({ models }: TTSPanelProps) {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1.5">TTS 模型</label>
-          <select
+          <Select
             value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+            onValueChange={setModel}
           >
-            <option value="">选择 TTS 模型</option>
-            {models.map((m) => (
-              <option key={m.id} value={m.alias || m.name}>
-                {m.alias || m.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+              <SelectValue placeholder="选择 TTS 模型" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((m) => (
+                <SelectItem key={m.id} value={m.alias || m.name}>
+                  {m.alias || m.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
           <label className="block text-sm font-medium mb-1.5">输入文本</label>
-          <textarea
+          <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="输入要转换为语音的文本..."
@@ -108,7 +116,7 @@ export function TTSPanel({ models }: TTSPanelProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">语音 (Voice)</label>
-            <input
+            <Input
               type="text"
               value={voice}
               onChange={(e) => setVoice(e.target.value)}
@@ -118,13 +126,12 @@ export function TTSPanel({ models }: TTSPanelProps) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">语速: {speed}x</label>
-            <input
-              type="range"
-              min="0.25"
-              max="4"
-              step="0.25"
-              value={speed}
-              onChange={(e) => setSpeed(Number(e.target.value))}
+            <Slider
+              value={[speed]}
+              onValueChange={([val]) => setSpeed(val)}
+              min={0.25}
+              max={4}
+              step={0.25}
               className="w-full mt-2"
             />
           </div>
@@ -163,9 +170,7 @@ export function TTSPanel({ models }: TTSPanelProps) {
             <Button variant="outline" size="icon" onClick={handlePlayPause}>
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </Button>
-            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full transition-all" style={{ width: '100%' }} />
-            </div>
+            <Progress value={100} className="flex-1 h-2" />
             <Button variant="outline" size="icon" onClick={handleDownload} title="下载音频">
               <Download className="w-4 h-4" />
             </Button>

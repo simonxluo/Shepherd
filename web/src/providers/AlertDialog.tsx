@@ -1,4 +1,14 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 
 export interface AlertDialogOptions {
   title: string;
@@ -10,9 +20,6 @@ export interface AlertDialogOptions {
 
 interface AlertDialogContextValue {
   confirm: (options: AlertDialogOptions) => Promise<boolean>;
-  state: AlertDialogOptions | null;
-  resolve: (value: boolean) => void;
-  close: () => void;
 }
 
 const AlertDialogContext = createContext<AlertDialogContextValue | null>(null);
@@ -34,13 +41,32 @@ export function AlertDialogProvider({ children }: { children: ReactNode }) {
     setResolver(null);
   }, [resolver]);
 
-  const close = useCallback(() => {
-    handleResolve(false);
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      handleResolve(false);
+    }
   }, [handleResolve]);
 
   return (
-    <AlertDialogContext.Provider value={{ confirm, state, resolve: handleResolve, close }}>
+    <AlertDialogContext.Provider value={{ confirm }}>
       {children}
+      <AlertDialog open={state !== null} onOpenChange={handleOpenChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{state?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{state?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{state?.cancelText || 'Cancel'}</AlertDialogCancel>
+            <AlertDialogAction
+              variant={state?.variant === 'destructive' ? 'destructive' : 'default'}
+              onClick={() => handleResolve(true)}
+            >
+              {state?.confirmText || 'Confirm'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AlertDialogContext.Provider>
   );
 }

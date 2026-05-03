@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { Search, Radar, Server, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Search, Radar, Server, CheckCircle2, XCircle, Clock, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   useClients,
   useClusterTasks,
@@ -180,7 +183,7 @@ export function ClusterPage() {
         <div className="flex items-center gap-3 p-4 bg-card rounded-lg border border-border">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -189,17 +192,20 @@ export function ClusterPage() {
             />
           </div>
 
-          <select
+          <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as ClientStatus | '')}
-            className="px-3 py-2 border border-border rounded-lg bg-input text-foreground"
+            onValueChange={(v) => setStatusFilter(v as ClientStatus | '')}
           >
-            <option value="">所有状态</option>
-            <option value="online">在线</option>
-            <option value="busy">忙碌</option>
-            <option value="offline">离线</option>
-            <option value="error">错误</option>
-          </select>
+            <SelectTrigger className="px-3 py-2 border border-border rounded-lg bg-input text-foreground w-[140px]">
+              <SelectValue placeholder="所有状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="online">在线</SelectItem>
+              <SelectItem value="busy">忙碌</SelectItem>
+              <SelectItem value="offline">离线</SelectItem>
+              <SelectItem value="error">错误</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       )}
 
@@ -273,9 +279,10 @@ export function ClusterPage() {
                   )}
 
                   {task.error && (
-                    <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300">
-                      {task.error}
-                    </div>
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">{task.error}</AlertDescription>
+                    </Alert>
                   )}
                 </div>
               ))}

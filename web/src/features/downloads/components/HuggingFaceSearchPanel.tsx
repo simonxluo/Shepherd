@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { Search, Download, ExternalLink, Loader2, Settings, Key, Globe, File } from 'lucide-react';
+import { Search, Download, ExternalLink, Loader2, Settings, Key, Globe, File, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useHuggingFaceSearch, useModelRepoConfig, useAvailableEndpoints, useUpdateModelRepoConfig, useModelFiles } from '@/features/downloads/hooks';
 import type { HuggingFaceModel } from '@/lib/api/downloads';
 import { cn } from '@/lib/utils';
@@ -79,7 +82,7 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
         <form onSubmit={handleSearch} className="flex gap-2 flex-1 items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
+            <Input
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -88,40 +91,46 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
             />
           </div>
           
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => {
+              setPageSize(Number(v));
               if (searchInput.trim()) {
                 setQuery(searchInput.trim());
               }
             }}
-            className="px-3 py-2 border border-border rounded-md bg-input text-foreground text-sm"
-            title="每页条数"
           >
-            <option value={10}>10 条</option>
-            <option value={20}>20 条</option>
-            <option value={50}>50 条</option>
-            <option value={100}>100 条</option>
-          </select>
+            <SelectTrigger className="px-3 py-2 border border-border rounded-md bg-input text-foreground text-sm w-[100px]" title="每页条数">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10 条</SelectItem>
+              <SelectItem value="20">20 条</SelectItem>
+              <SelectItem value="50">50 条</SelectItem>
+              <SelectItem value="100">100 条</SelectItem>
+            </SelectContent>
+          </Select>
           
-          <select
+          <Select
             value={searchFormat}
-            onChange={(e) => {
-              setSearchFormat(e.target.value);
+            onValueChange={(v) => {
+              setSearchFormat(v);
               if (searchInput.trim()) {
                 setQuery(searchInput.trim());
               }
             }}
-            className="px-3 py-2 border border-border rounded-md bg-input text-foreground text-sm"
-            title="文件格式"
           >
-            <option value="gguf">GGUF</option>
-            <option value="safetensors">SafeTensors</option>
-            <option value="onnx">ONNX</option>
-            <option value="mlx">MLX</option>
-            <option value="all">所有格式</option>
-          </select>
+            <SelectTrigger className="px-3 py-2 border border-border rounded-md bg-input text-foreground text-sm w-[130px]" title="文件格式">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gguf">GGUF</SelectItem>
+              <SelectItem value="safetensors">SafeTensors</SelectItem>
+              <SelectItem value="onnx">ONNX</SelectItem>
+              <SelectItem value="mlx">MLX</SelectItem>
+              <SelectItem value="all">所有格式</SelectItem>
+            </SelectContent>
+          </Select>
           
           <Button
             type="submit"
@@ -172,24 +181,28 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
               <Globe className="w-4 h-4" />
               API 端点
             </label>
-            <select
-              id="endpoint-select"
+            <Select
               defaultValue={config?.endpoint || 'huggingface.co'}
               disabled={configLoading}
-              className="w-full px-3 py-2 border border-border rounded-md bg-input text-foreground"
+              onValueChange={() => {}}
             >
-              {endpoints && Object.entries(endpoints).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label} ({value})
-                </option>
-              ))}
-              {!endpoints && (
-                <>
-                  <option value="huggingface.co">HuggingFace 官方 (huggingface.co)</option>
-                  <option value="hf-mirror.com">HuggingFace 镜像 (hf-mirror.com)</option>
-                </>
-              )}
-            </select>
+              <SelectTrigger className="w-full px-3 py-2 border border-border rounded-md bg-input text-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {endpoints && Object.entries(endpoints).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label} ({value})
+                  </SelectItem>
+                ))}
+                {!endpoints && (
+                  <>
+                    <SelectItem value="huggingface.co">HuggingFace 官方 (huggingface.co)</SelectItem>
+                    <SelectItem value="hf-mirror.com">HuggingFace 镜像 (hf-mirror.com)</SelectItem>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground mt-1">
               如果官方站点访问缓慢，可尝试使用镜像站点
             </p>
@@ -200,7 +213,7 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
               <Key className="w-4 h-4" />
               Access Token (可选)
             </label>
-            <input
+            <Input
               type="password"
               value={tokenInput}
               onChange={(e) => setTokenInput(e.target.value)}
@@ -232,14 +245,17 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
       )}
 
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
-          搜索失败: {error.message}
-          {error.message?.includes('timeout') && (
-            <p className="text-sm mt-1">
-              建议尝试切换至镜像站点，点击上方的设置按钮修改端点
-            </p>
-          )}
-        </div>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            搜索失败: {error.message}
+            {error.message?.includes('timeout') && (
+              <p className="text-sm mt-1">
+                建议尝试切换至镜像站点，点击上方的设置按钮修改端点
+              </p>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
 
       {searchResult && searchResult.models.length === 0 && (
@@ -368,18 +384,21 @@ function ModelFilesList({
             <File className="w-4 h-4" />
             可用模型文件
           </h4>
-          <select
+          <Select
             value={fileFormat}
-            onChange={(e) => setFileFormat(e.target.value)}
-            className="px-2 py-1 border border-border rounded text-xs bg-input text-foreground"
-            title="文件格式"
+            onValueChange={setFileFormat}
           >
-            <option value="gguf">GGUF</option>
-            <option value="safetensors">SafeTensors</option>
-            <option value="onnx">ONNX</option>
-            <option value="mlx">MLX</option>
-            <option value="all">所有格式</option>
-          </select>
+            <SelectTrigger className="px-2 py-1 border border-border rounded text-xs bg-input text-foreground h-7 w-[110px]" title="文件格式">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gguf">GGUF</SelectItem>
+              <SelectItem value="safetensors">SafeTensors</SelectItem>
+              <SelectItem value="onnx">ONNX</SelectItem>
+              <SelectItem value="mlx">MLX</SelectItem>
+              <SelectItem value="all">所有格式</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Button
           variant="outline"
@@ -397,9 +416,12 @@ function ModelFilesList({
           加载文件列表...
         </div>
       ) : error ? (
-        <div className="text-sm text-red-600 dark:text-red-400 py-2">
-          加载失败: {error.message}
-        </div>
+        <Alert variant="destructive" className="py-2">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            加载失败: {error.message}
+          </AlertDescription>
+        </Alert>
       ) : !filteredFiles || filteredFiles.length === 0 ? (
         <div className="text-sm text-muted-foreground py-4 text-center bg-muted/50 rounded-md">
           {fileFormat === 'all' ? '未找到模型文件' : `未找到 ${fileFormat} 格式的模型文件`}

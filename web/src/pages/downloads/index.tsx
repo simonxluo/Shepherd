@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Plus, Trash2, CloudDownload, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   useDownloads,
   useCreateDownload,
@@ -156,7 +158,7 @@ export function DownloadsPage() {
           <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-lg border border-border">
             <div className="relative flex-1 min-w-[200px]">
               <CloudDownload className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
+              <Input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -165,27 +167,33 @@ export function DownloadsPage() {
               />
             </div>
 
-            <select
+            <Select
               value={stateFilter}
-              onChange={(e) => setStateFilter(e.target.value as DownloadState | '')}
-              className="px-3 py-2 border border-border rounded-lg bg-input text-foreground"
+              onValueChange={(v) => setStateFilter(v as DownloadState | '')}
             >
-              <option value="">所有状态</option>
-              <option value="downloading">下载中</option>
-              <option value="paused">已暂停</option>
-              <option value="completed">已完成</option>
-              <option value="failed">失败</option>
-            </select>
+              <SelectTrigger className="px-3 py-2 border border-border rounded-lg bg-input text-foreground w-[130px]">
+                <SelectValue placeholder="所有状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="downloading">下载中</SelectItem>
+                <SelectItem value="paused">已暂停</SelectItem>
+                <SelectItem value="completed">已完成</SelectItem>
+                <SelectItem value="failed">失败</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <select
+            <Select
               value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value as DownloadSource | '')}
-              className="px-3 py-2 border border-border rounded-lg bg-input text-foreground"
+              onValueChange={(v) => setSourceFilter(v as DownloadSource | '')}
             >
-              <option value="">所有来源</option>
-              <option value="huggingface">HuggingFace</option>
-              <option value="modelscope">ModelScope</option>
-            </select>
+              <SelectTrigger className="px-3 py-2 border border-border rounded-lg bg-input text-foreground w-[140px]">
+                <SelectValue placeholder="所有来源" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="huggingface">HuggingFace</SelectItem>
+                <SelectItem value="modelscope">ModelScope</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Download list */}

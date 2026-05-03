@@ -8,6 +8,8 @@ import { BenchmarkDialog } from '@/features/models/components/BenchmarkDialog';
 import { BenchmarkResultsDialog } from '@/features/models/components/BenchmarkResultsDialog';
 import { ModelDetailDialog } from '@/features/models/components/ModelDetailDialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { Model, ModelStatus, BenchmarkConfig, LoadModelParams } from '@/types';
 import { useAlertDialog } from '@/providers/AlertDialog';
@@ -235,7 +237,7 @@ export function ModelsPage() {
       <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-lg border border-border">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -244,17 +246,20 @@ export function ModelsPage() {
           />
         </div>
 
-        <select
+        <Select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as ModelStatus | '')}
-          className="px-3 py-2 border border-border rounded-lg bg-input text-foreground"
+          onValueChange={(v) => setStatusFilter(v as ModelStatus | '')}
         >
-          <option value="">所有状态</option>
-          <option value="running">运行中</option>
-          <option value="stopped">已停止</option>
-          <option value="loading">加载中</option>
-          <option value="error">错误</option>
-        </select>
+          <SelectTrigger className="px-3 py-2 border border-border rounded-lg bg-input text-foreground w-[130px]">
+            <SelectValue placeholder="所有状态" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="running">运行中</SelectItem>
+            <SelectItem value="stopped">已停止</SelectItem>
+            <SelectItem value="loading">加载中</SelectItem>
+            <SelectItem value="error">错误</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Button
           onClick={() => setFavouriteFilter(!favouriteFilter)}

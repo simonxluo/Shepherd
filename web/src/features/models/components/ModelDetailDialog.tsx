@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { X, ArrowLeft, Star, Copy, Check, Info } from 'lucide-react';
+import { Star, Copy, Check, Info } from 'lucide-react';
 import { useModel } from '@/features/models';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { Model } from '@/types';
 
@@ -90,31 +91,14 @@ function DetailSection({ title, icon, children }: { title: string; icon: React.R
 export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: ModelDetailDialogProps) {
   const { data: model, isLoading } = useModel(modelId);
 
-  if (!isOpen) return null;
-
   const modelData = model as Model | undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden bg-card rounded-xl shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-            </button>
-            <h2 className="text-xl font-bold text-foreground">{modelData?.alias || modelData?.displayName || modelName}</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-muted rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle className="text-xl font-bold">{modelData?.alias || modelData?.displayName || modelName}</DialogTitle>
+        </DialogHeader>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -217,24 +201,26 @@ export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: Model
 
         {/* Footer */}
         {modelData && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
-            <div className="flex items-center gap-2">
-              <Star
-                className={cn(
-                  'w-5 h-5 transition-colors',
-                  modelData.favourite ? 'text-yellow-500 fill-current' : 'text-muted-foreground'
-                )}
-              />
-              <span className="text-sm text-muted-foreground">
-                {modelData.favourite ? '已收藏' : '未收藏'}
-              </span>
+          <DialogFooter className="px-6 py-4 border-t border-border bg-muted/30">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Star
+                  className={cn(
+                    'w-5 h-5 transition-colors',
+                    modelData.favourite ? 'text-yellow-500 fill-current' : 'text-muted-foreground'
+                  )}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {modelData.favourite ? '已收藏' : '未收藏'}
+                </span>
+              </div>
+              <Button onClick={onClose} variant="default" size="sm">
+                关闭
+              </Button>
             </div>
-            <Button onClick={onClose} variant="default" size="sm">
-              关闭
-            </Button>
-          </div>
+          </DialogFooter>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

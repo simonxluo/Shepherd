@@ -15,7 +15,7 @@ import { useSSE } from './hooks/useSSE';
 import type { SSEEvent } from './types';
 import { AlertDialogProvider } from './providers/AlertDialog';
 import { AlertDialog } from './components/ui/alert-dialog';
-import { Toaster } from './components/ui/toaster';
+import { Toaster } from './components/ui/sonner';
 import { WebSocketProvider } from './providers/WebSocketProvider';
 
 import 'highlight.js/styles/github-dark.css';

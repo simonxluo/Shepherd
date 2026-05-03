@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useClient, useNodeConfig, useTestNodeLlamacpp } from '@/features/cluster/hooks';
 import { cn } from '@/lib/utils';
 import type { Client, GPUInfo, LlamacppTestResult } from '@/types';
@@ -279,12 +280,7 @@ function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
               </span>
               <span className="font-medium">{gpu.utilization.toFixed(1)}%</span>
             </div>
-            <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500"
-                style={{ width: `${gpu.utilization}%` }}
-              />
-            </div>
+            <Progress value={gpu.utilization} className="h-1.5" />
           </div>
 
           <div className="space-y-1">
@@ -295,12 +291,7 @@ function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
               </span>
               <span className="font-medium">{vramPercent.toFixed(1)}%</span>
             </div>
-            <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
-                style={{ width: `${vramPercent}%` }}
-              />
-            </div>
+            <Progress value={vramPercent} className="h-1.5" />
           </div>
         </div>
 
