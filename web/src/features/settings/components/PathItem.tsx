@@ -1,9 +1,11 @@
 import { Bug, FolderOpen, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { LlamaCppPathConfig, ModelPathConfig } from '@/lib/config';
+import type { LlamaCppPathConfig, ModelPathConfig, BackendPathConfig, MultimodalPathConfig } from '@/lib/config';
+
+type AnyPathConfig = LlamaCppPathConfig | ModelPathConfig | BackendPathConfig | MultimodalPathConfig;
 
 interface PathItemProps {
-  path: LlamaCppPathConfig | ModelPathConfig;
+  path: AnyPathConfig;
   onEdit: () => void;
   onRemove: () => void;
   onTest?: () => Promise<void>;

@@ -3,37 +3,86 @@ import { Plus, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PathItem } from './PathItem';
 import { PathEditDialog } from './PathEditDialog';
-import { llamacppPathsApi, modelPathsApi } from '@/lib/api/paths';
-import type { LlamaCppPathConfig, ModelPathConfig } from '@/lib/config';
+import {
+  llamacppPathsApi,
+  modelPathsApi,
+  vllmPathsApi,
+  vllmOmniPathsApi,
+  multimodalPathsApi,
+} from '@/lib/api/paths';
+import type {
+  LlamaCppPathConfig,
+  ModelPathConfig,
+  BackendPathConfig,
+  MultimodalPathConfig,
+} from '@/lib/config';
 import { useToast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 
+type PathType = 'llamacpp' | 'models' | 'vllm' | 'vllm_omni' | 'multimodal';
+type AnyPathConfig = LlamaCppPathConfig | ModelPathConfig | BackendPathConfig | MultimodalPathConfig;
+
 interface PathConfigPanelProps {
-  type: 'llamacpp' | 'models';
+  type: PathType;
 }
+
+const PATH_META: Record<PathType, { title: string; description: string }> = {
+  llamacpp: {
+    title: 'llama.cpp 路径',
+    description: '配置 llama.cpp 可执行文件所在的目录',
+  },
+  models: {
+    title: '模型目录',
+    description: '配置用于扫描和管理 GGUF 模型文件的目录',
+  },
+  vllm: {
+    title: 'vLLM 路径',
+    description: '配置 vLLM 可执行文件所在的目录',
+  },
+  vllm_omni: {
+    title: 'vLLM-Omni 路径',
+    description: '配置 vLLM-Omni (多模态 vLLM) 可执行文件所在的目录',
+  },
+  multimodal: {
+    title: '多模态模型目录',
+    description: '配置用于扫描 safetensors/多模态模型 (TTS/ASR/图像生成) 的目录',
+  },
+};
 
 export function PathConfigPanel({ type }: PathConfigPanelProps) {
   const toast = useToast();
   const alertDialog = useAlertDialog();
 
-  const [paths, setPaths] = useState<(LlamaCppPathConfig | ModelPathConfig)[]>(
-    []
-  );
+  const [paths, setPaths] = useState<AnyPathConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPath, setEditingPath] = useState<
-    LlamaCppPathConfig | ModelPathConfig | undefined
-  >(undefined);
+  const [editingPath, setEditingPath] = useState<AnyPathConfig | undefined>(
+    undefined
+  );
 
   const loadPaths = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response =
-        type === 'llamacpp'
-          ? await llamacppPathsApi.list()
-          : await modelPathsApi.list();
+      let response;
+      switch (type) {
+        case 'llamacpp':
+          response = await llamacppPathsApi.list();
+          break;
+        case 'models':
+          response = await modelPathsApi.list();
+          break;
+        case 'vllm':
+          response = await vllmPathsApi.list();
+          break;
+        case 'vllm_omni':
+          response = await vllmOmniPathsApi.list();
+          break;
+        case 'multimodal':
+          response = await multimodalPathsApi.list();
+          break;
+      }
 
-      if (response.success) {
+      if (response?.success) {
         setPaths(response.data?.items || []);
       }
     } catch (error) {
@@ -47,17 +96,31 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     loadPaths();
   }, [loadPaths]);
 
-  const handleAdd = async (data: LlamaCppPathConfig | ModelPathConfig) => {
+  const handleAdd = async (data: AnyPathConfig) => {
     try {
-      const response =
-        type === 'llamacpp'
-          ? await llamacppPathsApi.add(data as LlamaCppPathConfig)
-          : await modelPathsApi.add(data as ModelPathConfig);
+      let response;
+      switch (type) {
+        case 'llamacpp':
+          response = await llamacppPathsApi.add(data as LlamaCppPathConfig);
+          break;
+        case 'models':
+          response = await modelPathsApi.add(data as ModelPathConfig);
+          break;
+        case 'vllm':
+          response = await vllmPathsApi.add(data as BackendPathConfig);
+          break;
+        case 'vllm_omni':
+          response = await vllmOmniPathsApi.add(data as BackendPathConfig);
+          break;
+        case 'multimodal':
+          response = await multimodalPathsApi.add(data as MultimodalPathConfig);
+          break;
+      }
 
-      if (response.success) {
+      if (response?.success) {
         await loadPaths();
       } else {
-        throw new Error(response.error || '添加失败');
+        throw new Error(response?.error || '添加失败');
       }
     } catch (error) {
       console.error('Failed to add path:', error);
@@ -65,17 +128,27 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     }
   };
 
-  const handleUpdate = async (data: LlamaCppPathConfig | ModelPathConfig) => {
+  const handleUpdate = async (data: AnyPathConfig) => {
     try {
-      const response =
-        type === 'llamacpp'
-          ? await llamacppPathsApi.update(data as LlamaCppPathConfig)
-          : await modelPathsApi.update(data as ModelPathConfig);
+      let response;
+      switch (type) {
+        case 'llamacpp':
+          response = await llamacppPathsApi.update(data as LlamaCppPathConfig);
+          break;
+        case 'models':
+          response = await modelPathsApi.update(data as ModelPathConfig);
+          break;
+        case 'multimodal':
+          response = await multimodalPathsApi.update(data as MultimodalPathConfig);
+          break;
+        default:
+          throw new Error('此路径类型不支持更新');
+      }
 
-      if (response.success) {
+      if (response?.success) {
         await loadPaths();
       } else {
-        throw new Error(response.error || '更新失败');
+        throw new Error(response?.error || '更新失败');
       }
     } catch (error) {
       console.error('Failed to update path:', error);
@@ -83,7 +156,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     }
   };
 
-  const handleRemove = async (path: LlamaCppPathConfig | ModelPathConfig) => {
+  const handleRemove = async (path: AnyPathConfig) => {
     const confirmed = await alertDialog.confirm({
       title: '删除路径',
       description: `确定要删除路径 "${path.name || path.path}" 吗？`,
@@ -93,16 +166,30 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     if (!confirmed) return;
 
     try {
-      const response =
-        type === 'llamacpp'
-          ? await llamacppPathsApi.remove(path.path)
-          : await modelPathsApi.remove(path.path);
+      let response;
+      switch (type) {
+        case 'llamacpp':
+          response = await llamacppPathsApi.remove(path.path);
+          break;
+        case 'models':
+          response = await modelPathsApi.remove(path.path);
+          break;
+        case 'vllm':
+          response = await vllmPathsApi.remove(path.path);
+          break;
+        case 'vllm_omni':
+          response = await vllmOmniPathsApi.remove(path.path);
+          break;
+        case 'multimodal':
+          response = await multimodalPathsApi.remove(path.path);
+          break;
+      }
 
-      if (response.success) {
+      if (response?.success) {
         await loadPaths();
         toast.success('删除成功', '路径已成功删除');
       } else {
-        throw new Error(response.error || '删除失败');
+        throw new Error(response?.error || '删除失败');
       }
     } catch (error) {
       console.error('Failed to delete path:', error);
@@ -111,7 +198,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     }
   };
 
-  const handleTest = async (path: LlamaCppPathConfig | ModelPathConfig) => {
+  const handleTest = async (path: AnyPathConfig) => {
     if (type !== 'llamacpp') return;
 
     try {
@@ -133,20 +220,15 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     setIsDialogOpen(true);
   };
 
-  const handleOpenEditDialog = (path: LlamaCppPathConfig | ModelPathConfig) => {
+  const handleOpenEditDialog = (path: AnyPathConfig) => {
     setEditingPath(path);
     setIsDialogOpen(true);
   };
 
-  const title = type === 'llamacpp' ? 'llama.cpp 路径' : '模型目录';
-  const description =
-    type === 'llamacpp'
-      ? '配置 llama.cpp 可执行文件所在的目录'
-      : '配置用于扫描和管理模型文件的目录';
+  const { title, description } = PATH_META[type];
 
   return (
     <div className="space-y-3">
-      {/* Title and add button */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">{title}</h3>
@@ -158,7 +240,6 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         </Button>
       </div>
 
-      {/* Path list */}
       {isLoading ? (
         <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
           加载中...
@@ -185,7 +266,6 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         </div>
       )}
 
-      {/* Edit dialog */}
       <PathEditDialog
         open={isDialogOpen}
         type={type}

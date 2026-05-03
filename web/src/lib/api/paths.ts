@@ -6,6 +6,8 @@ import { apiClient } from './client';
 import type {
   LlamaCppPathConfig,
   ModelPathConfig,
+  BackendPathConfig,
+  MultimodalPathConfig,
   PathListResponse,
 } from '@/lib/config';
 
@@ -101,5 +103,40 @@ export const modelPathsApi = {
   remove: (path: string) =>
     apiClient.delete<PathMutationResponse>(
       `/config/models/paths?path=${encodeURIComponent(path)}`
+    ),
+};
+
+export const vllmPathsApi = {
+  list: () =>
+    apiClient.get<PathListResponse<BackendPathConfig>>('/config/vllm/paths'),
+  add: (data: BackendPathConfig) =>
+    apiClient.post<PathMutationResponse>('/config/vllm/paths', data),
+  remove: (path: string) =>
+    apiClient.delete<PathMutationResponse>(
+      `/config/vllm/paths?path=${encodeURIComponent(path)}`
+    ),
+};
+
+export const vllmOmniPathsApi = {
+  list: () =>
+    apiClient.get<PathListResponse<BackendPathConfig>>('/config/vllm_omni/paths'),
+  add: (data: BackendPathConfig) =>
+    apiClient.post<PathMutationResponse>('/config/vllm_omni/paths', data),
+  remove: (path: string) =>
+    apiClient.delete<PathMutationResponse>(
+      `/config/vllm_omni/paths?path=${encodeURIComponent(path)}`
+    ),
+};
+
+export const multimodalPathsApi = {
+  list: () =>
+    apiClient.get<PathListResponse<MultimodalPathConfig>>('/config/multimodal/paths'),
+  add: (data: MultimodalPathConfig) =>
+    apiClient.post<PathMutationResponse>('/config/multimodal/paths', data),
+  update: (data: MultimodalPathConfig) =>
+    apiClient.put<PathMutationResponse>('/config/multimodal/paths', data),
+  remove: (path: string) =>
+    apiClient.delete<PathMutationResponse>(
+      `/config/multimodal/paths?path=${encodeURIComponent(path)}`
     ),
 };

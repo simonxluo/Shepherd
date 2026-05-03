@@ -494,6 +494,27 @@ function PathsSettingsPanel() {
       <div className="rounded-lg border bg-card p-4">
         <PathConfigPanel type="models" />
       </div>
+
+      <div className="border-t" />
+
+      {/* Multimodal model path config */}
+      <div className="rounded-lg border bg-card p-4">
+        <PathConfigPanel type="multimodal" />
+      </div>
+
+      <div className="border-t" />
+
+      {/* vLLM path config */}
+      <div className="rounded-lg border bg-card p-4">
+        <PathConfigPanel type="vllm" />
+      </div>
+
+      <div className="border-t" />
+
+      {/* vLLM-Omni path config */}
+      <div className="rounded-lg border bg-card p-4">
+        <PathConfigPanel type="vllm_omni" />
+      </div>
     </div>
   );
 }

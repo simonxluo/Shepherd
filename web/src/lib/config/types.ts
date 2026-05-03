@@ -169,6 +169,25 @@ export interface ModelPathConfig {
 }
 
 /**
+ * Backend binary path configuration (vLLM / vLLM-Omni)
+ */
+export interface BackendPathConfig {
+  name: string;
+  path: string;
+  description: string;
+}
+
+/**
+ * Multimodal model path configuration (safetensors directories)
+ */
+export interface MultimodalPathConfig {
+  path: string;
+  name: string;
+  description?: string;
+  backend?: string;
+}
+
+/**
  * Path list response
  */
 export interface PathListResponse<T> {

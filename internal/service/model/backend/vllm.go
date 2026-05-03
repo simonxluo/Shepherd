@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,18 +29,42 @@ func (b *VLLMBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 		Name: "vLLM",
 	}
 
-	if cfg == nil || cfg.CondaEnv == "" {
+	if cfg == nil {
 		info.Available = false
 		return info, nil
 	}
 
-	// Check if vllm is accessible via conda
+	if cfg.ServeBin != "" {
+		if output, err := exec.Command(cfg.ServeBin, "--version").CombinedOutput(); err == nil {
+			info.Version = strings.TrimSpace(string(output))
+			info.Available = true
+			info.BinPath = cfg.ServeBin
+			return info, nil
+		}
+	}
+
+	if len(cfg.BinPaths) > 0 {
+		for _, p := range cfg.BinPaths {
+			candidate := filepath.Join(p, "vllm")
+			if output, err := exec.Command(candidate, "--version").CombinedOutput(); err == nil {
+				info.Version = strings.TrimSpace(string(output))
+				info.Available = true
+				info.BinPath = candidate
+				return info, nil
+			}
+		}
+	}
+
+	if cfg.CondaEnv == "" {
+		info.Available = false
+		return info, nil
+	}
+
 	condaPath := cfg.CondaPath
 	if condaPath == "" {
 		condaPath = "conda"
 	}
 
-	// Try running vllm --version via conda
 	cmd := exec.Command(condaPath, "run", "--no-banner", "-n", cfg.CondaEnv, "vllm", "--version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -53,7 +78,6 @@ func (b *VLLMBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 	info.Available = true
 	info.CondaEnv = cfg.CondaEnv
 
-	// Set BinPath to conda env lib directory for process management
 	if cfg.ServeBin != "" {
 		info.BinPath = cfg.ServeBin
 	}

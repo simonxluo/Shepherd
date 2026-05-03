@@ -68,6 +68,7 @@ export interface Model {
   tags?: string[];
   mmprojPath?: string;
   scannedAt: string;
+  sourceType?: string;
 }
 
 /**

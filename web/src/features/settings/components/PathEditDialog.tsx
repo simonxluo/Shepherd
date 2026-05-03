@@ -10,15 +10,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { DirectoryBrowser } from '@/features/settings/components/DirectoryBrowser';
 import { cn } from '@/lib/utils';
-import type { LlamaCppPathConfig, ModelPathConfig } from '@/lib/config';
+import type { LlamaCppPathConfig, ModelPathConfig, BackendPathConfig, MultimodalPathConfig } from '@/lib/config';
 import { useToast } from '@/hooks/useToast';
 import { llamacppPathsApi } from '@/lib/api/paths';
 
+type AnyPathConfig = LlamaCppPathConfig | ModelPathConfig | BackendPathConfig | MultimodalPathConfig;
+
 interface PathEditDialogProps {
   open: boolean;
-  type: 'llamacpp' | 'models';
-  path?: LlamaCppPathConfig | ModelPathConfig;
-  onSave: (path: LlamaCppPathConfig | ModelPathConfig) => Promise<void>;
+  type: 'llamacpp' | 'models' | 'vllm' | 'vllm_omni' | 'multimodal';
+  path?: AnyPathConfig;
+  onSave: (path: AnyPathConfig) => Promise<void>;
   onClose: () => void;
 }
 
@@ -31,7 +33,11 @@ export function PathEditDialog({
 }: PathEditDialogProps) {
   const toast = useToast();
   const isEdit = !!path;
-  const typeLabel = type === 'llamacpp' ? 'Llama.cpp' : '模型';
+  const typeLabel = type === 'llamacpp' ? 'Llama.cpp'
+    : type === 'models' ? '模型'
+    : type === 'vllm' ? 'vLLM'
+    : type === 'vllm_omni' ? 'vLLM-Omni'
+    : '多模态模型';
 
   const [formData, setFormData] = useState({
     name: '',
@@ -229,7 +235,12 @@ export function PathEditDialog({
                     onChange={(e) =>
                       setFormData({ ...formData, path: e.target.value })
                     }
-                    placeholder={type === 'llamacpp' ? '/usr/local/bin/llama.cpp' : '~/.cache/huggingface/hub'}
+                    placeholder={
+                      type === 'llamacpp' ? '/usr/local/bin/llama.cpp'
+                      : type === 'models' ? '~/.cache/huggingface/hub'
+                      : type === 'multimodal' ? './models/multimodal'
+                      : '/usr/local/bin/'
+                    }
                     className={cn(
                       "w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm",
                       "focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all",
@@ -263,7 +274,11 @@ export function PathEditDialog({
                 <p className="text-[11px] text-muted-foreground">
                   {type === 'llamacpp'
                     ? 'llama.cpp 可执行文件所在目录的绝对路径'
-                    : '包含 GGUF 模型文件的目录绝对路径'}
+                    : type === 'multimodal'
+                    ? '包含 safetensors 多模态模型 (含 config.json) 的目录绝对路径'
+                    : type === 'models'
+                    ? '包含 GGUF 模型文件的目录绝对路径'
+                    : `${typeLabel} 可执行文件所在目录的绝对路径`}
                 </p>
                 {pathValidation.message && (
                   <p className={cn(

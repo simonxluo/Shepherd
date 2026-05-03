@@ -10,11 +10,12 @@
 backend:
   # 后端 API 地址（可配置多个，按优先级使用）
   urls:
+    - "http://10.0.0.193:9190"
     - "http://localhost:9190"
   # 当前使用的后端索引（0 表示第一个）
   currentIndex: 0
   # 连接超时时间（毫秒）
-  timeout: 3000
+  timeout: 30000
   # 连接重试配置
   retry:
     count: 3
@@ -22,7 +23,6 @@ backend:
 
 # 前端服务器配置
 server:
-  host: "0.0.0.0"
   # 开发服务器端口
   port: 3030
   # 是否启用 HTTPS
@@ -36,7 +36,7 @@ cors:
   # 允许的后端源
   allowedOrigins:
     - "http://localhost:9190"
-    - "http://192.168.10.1:9190"
+    - "http://192.168.1.100:9190"
   # 是否发送凭据
   credentials: false
 

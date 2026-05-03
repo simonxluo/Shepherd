@@ -439,13 +439,11 @@ func (h *Handler) validateAndNormalizePath(path string) (string, error) {
 		return "", fmt.Errorf("path cannot be empty")
 	}
 
-	// Convert to absolute path
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
-	// Check if path exists
 	info, err := os.Stat(absPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -454,21 +452,17 @@ func (h *Handler) validateAndNormalizePath(path string) (string, error) {
 		return "", fmt.Errorf("failed to access path: %w", err)
 	}
 
-	// Check if it's a directory
 	if !info.IsDir() {
 		return "", fmt.Errorf("path is not a directory: %s", absPath)
 	}
 
-	// Check for symlinks (security consideration)
 	if info.Mode()&os.ModeSymlink != 0 {
-		// Resolve symlink
 		realPath, err := filepath.EvalSymlinks(absPath)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve symlink: %w", err)
 		}
 		absPath = realPath
 
-		// Check if real path is a directory
 		info, err = os.Stat(absPath)
 		if err != nil {
 			return "", fmt.Errorf("failed to access resolved path: %w", err)
@@ -478,6 +472,371 @@ func (h *Handler) validateAndNormalizePath(path string) (string, error) {
 		}
 	}
 
-	// Clean the path
 	return filepath.Clean(absPath), nil
+}
+
+// GetMultimodalPaths returns all configured multimodal model paths
+func (h *Handler) GetMultimodalPaths(c *gin.Context) {
+	cfg := h.configManager.Get()
+	paths := cfg.Backends.MultimodalPaths
+	if paths == nil {
+		paths = []config.MultimodalPath{}
+	}
+	handler.Success(c, gin.H{
+		"items": paths,
+		"count": len(paths),
+	})
+}
+
+// AddMultimodalPath adds a new multimodal model path
+func (h *Handler) AddMultimodalPath(c *gin.Context) {
+	var req config.MultimodalPath
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body")
+		return
+	}
+
+	if req.Path == "" {
+		handler.BadRequest(c, "Path is required")
+		return
+	}
+
+	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	if err != nil {
+		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
+		return
+	}
+	req.Path = normalizedPath
+
+	cfg := h.configManager.Get()
+
+	for _, p := range cfg.Backends.MultimodalPaths {
+		if p.Path == req.Path {
+			handler.Error(c, types.ErrConflict, "Path already exists")
+			return
+		}
+	}
+
+	cfg.Backends.MultimodalPaths = append(cfg.Backends.MultimodalPaths, req)
+
+	if err := h.configManager.Save(cfg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{
+		"message": "Multimodal path added successfully",
+		"added":   req,
+		"count":   len(cfg.Backends.MultimodalPaths),
+	})
+}
+
+// UpdateMultimodalPath updates an existing multimodal model path
+func (h *Handler) UpdateMultimodalPath(c *gin.Context) {
+	var req struct {
+		OriginalPath string `json:"originalPath"`
+		Path         string `json:"path"`
+		Name         string `json:"name"`
+		Description  string `json:"description"`
+		Backend      string `json:"backend"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if req.Path == "" {
+		handler.BadRequest(c, "Path is required")
+		return
+	}
+
+	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	if err != nil {
+		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
+		return
+	}
+
+	cfg := h.configManager.Get()
+
+	found := false
+	updatedIndex := -1
+	for i, p := range cfg.Backends.MultimodalPaths {
+		if req.OriginalPath != "" && p.Path == req.OriginalPath {
+			updatedIndex = i
+			found = true
+			break
+		}
+		if !found && p.Path == req.Path {
+			updatedIndex = i
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		handler.NotFound(c, "Path not found")
+		return
+	}
+
+	cfg.Backends.MultimodalPaths[updatedIndex] = config.MultimodalPath{
+		Path:        normalizedPath,
+		Name:        req.Name,
+		Description: req.Description,
+		Backend:     req.Backend,
+	}
+
+	if err := h.configManager.Save(cfg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{
+		"message": "Multimodal path updated successfully",
+		"updated": cfg.Backends.MultimodalPaths[updatedIndex],
+	})
+}
+
+// RemoveMultimodalPath removes a multimodal model path
+func (h *Handler) RemoveMultimodalPath(c *gin.Context) {
+	path := c.Query("path")
+	if path == "" {
+		handler.BadRequest(c, "Path query parameter is required")
+		return
+	}
+
+	cfg := h.configManager.Get()
+
+	found := false
+	newPaths := make([]config.MultimodalPath, 0, len(cfg.Backends.MultimodalPaths))
+	for _, p := range cfg.Backends.MultimodalPaths {
+		if p.Path != path {
+			newPaths = append(newPaths, p)
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		handler.NotFound(c, "Path")
+		return
+	}
+
+	cfg.Backends.MultimodalPaths = newPaths
+
+	if err := h.configManager.Save(cfg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{
+		"message": "Multimodal path removed successfully",
+		"removed": path,
+		"count":   len(cfg.Backends.MultimodalPaths),
+	})
+}
+
+// GetVLLMPaths returns all configured vLLM paths
+func (h *Handler) GetVLLMPaths(c *gin.Context) {
+	cfg := h.configManager.Get()
+	if cfg.Backends.VLLM == nil {
+		handler.Success(c, gin.H{"items": []config.BackendPath{}, "count": 0})
+		return
+	}
+	paths := cfg.Backends.VLLM.Paths
+	if paths == nil {
+		paths = []config.BackendPath{}
+	}
+	handler.Success(c, gin.H{"items": paths, "count": len(paths)})
+}
+
+// AddVLLMPath adds a new vLLM path
+func (h *Handler) AddVLLMPath(c *gin.Context) {
+	var req config.BackendPath
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body")
+		return
+	}
+
+	if req.Path == "" {
+		handler.BadRequest(c, "Path is required")
+		return
+	}
+
+	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	if err != nil {
+		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
+		return
+	}
+	req.Path = normalizedPath
+
+	cfg := h.configManager.Get()
+	if cfg.Backends.VLLM == nil {
+		cfg.Backends.VLLM = &config.VLLMBackendConfig{Enabled: true}
+	}
+
+	for _, p := range cfg.Backends.VLLM.Paths {
+		if p.Path == req.Path {
+			handler.Error(c, types.ErrConflict, "Path already exists")
+			return
+		}
+	}
+
+	cfg.Backends.VLLM.Paths = append(cfg.Backends.VLLM.Paths, req)
+
+	if err := h.configManager.Save(cfg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{
+		"message": "vLLM path added successfully",
+		"added":   req,
+		"count":   len(cfg.Backends.VLLM.Paths),
+	})
+}
+
+// RemoveVLLMPath removes a vLLM path
+func (h *Handler) RemoveVLLMPath(c *gin.Context) {
+	path := c.Query("path")
+	if path == "" {
+		handler.BadRequest(c, "Path query parameter is required")
+		return
+	}
+
+	cfg := h.configManager.Get()
+	if cfg.Backends.VLLM == nil {
+		handler.NotFound(c, "vLLM not configured")
+		return
+	}
+
+	found := false
+	newPaths := make([]config.BackendPath, 0, len(cfg.Backends.VLLM.Paths))
+	for _, p := range cfg.Backends.VLLM.Paths {
+		if p.Path != path {
+			newPaths = append(newPaths, p)
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		handler.NotFound(c, "Path")
+		return
+	}
+
+	cfg.Backends.VLLM.Paths = newPaths
+
+	if err := h.configManager.Save(cfg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{
+		"message": "vLLM path removed successfully",
+		"removed": path,
+		"count":   len(cfg.Backends.VLLM.Paths),
+	})
+}
+
+// GetVLLMOmniPaths returns all configured vLLM-Omni paths
+func (h *Handler) GetVLLMOmniPaths(c *gin.Context) {
+	cfg := h.configManager.Get()
+	if cfg.Backends.VLLMOmni == nil {
+		handler.Success(c, gin.H{"items": []config.BackendPath{}, "count": 0})
+		return
+	}
+	paths := cfg.Backends.VLLMOmni.Paths
+	if paths == nil {
+		paths = []config.BackendPath{}
+	}
+	handler.Success(c, gin.H{"items": paths, "count": len(paths)})
+}
+
+// AddVLLMOmniPath adds a new vLLM-Omni path
+func (h *Handler) AddVLLMOmniPath(c *gin.Context) {
+	var req config.BackendPath
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body")
+		return
+	}
+
+	if req.Path == "" {
+		handler.BadRequest(c, "Path is required")
+		return
+	}
+
+	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	if err != nil {
+		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
+		return
+	}
+	req.Path = normalizedPath
+
+	cfg := h.configManager.Get()
+	if cfg.Backends.VLLMOmni == nil {
+		cfg.Backends.VLLMOmni = &config.VLLMOmniBackendConfig{Enabled: true}
+	}
+
+	for _, p := range cfg.Backends.VLLMOmni.Paths {
+		if p.Path == req.Path {
+			handler.Error(c, types.ErrConflict, "Path already exists")
+			return
+		}
+	}
+
+	cfg.Backends.VLLMOmni.Paths = append(cfg.Backends.VLLMOmni.Paths, req)
+
+	if err := h.configManager.Save(cfg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{
+		"message": "vLLM-Omni path added successfully",
+		"added":   req,
+		"count":   len(cfg.Backends.VLLMOmni.Paths),
+	})
+}
+
+// RemoveVLLMOmniPath removes a vLLM-Omni path
+func (h *Handler) RemoveVLLMOmniPath(c *gin.Context) {
+	path := c.Query("path")
+	if path == "" {
+		handler.BadRequest(c, "Path query parameter is required")
+		return
+	}
+
+	cfg := h.configManager.Get()
+	if cfg.Backends.VLLMOmni == nil {
+		handler.NotFound(c, "vLLM-Omni not configured")
+		return
+	}
+
+	found := false
+	newPaths := make([]config.BackendPath, 0, len(cfg.Backends.VLLMOmni.Paths))
+	for _, p := range cfg.Backends.VLLMOmni.Paths {
+		if p.Path != path {
+			newPaths = append(newPaths, p)
+		} else {
+			found = true
+		}
+	}
+
+	if !found {
+		handler.NotFound(c, "Path")
+		return
+	}
+
+	cfg.Backends.VLLMOmni.Paths = newPaths
+
+	if err := h.configManager.Save(cfg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{
+		"message": "vLLM-Omni path removed successfully",
+		"removed": path,
+		"count":   len(cfg.Backends.VLLMOmni.Paths),
+	})
 }

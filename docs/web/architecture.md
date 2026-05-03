@@ -133,7 +133,7 @@ useSSEConnection (基础) → useSSE (Query 失效)
 - `useSSE`：监听 SSE 事件（`/events`），自动失效对应 React Query 缓存
 - 重连时全量刷新所有 Query（`models`、`downloads`、`clients`、`cluster`、`tasks`、`system`、`nodes`）
 
-`useLogStream` 是 feature-specific hook（位于 `features/logs/hooks.ts`），直接使用 `useSSEConnection` 连接 `/logs/stream`，不经过 `useSSE`。
+`useLogStream` 是 feature-specific hook（位于 `features/logs/hooks.ts`），使用 `fetch + ReadableStream` 消费 chunked 文本流（`/logs/stream/text`），不经过 SSE。支持传入节点 URL 查看远程节点日志。
 
 ### WebSocket（辅助）
 
