@@ -1,8 +1,9 @@
-import { Bell, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
+import { NotificationToggle } from '@/components/ui/NotificationToggle';
 import { useUIStore } from '@/stores/uiStore';
 
 export function Header() {
@@ -28,9 +29,7 @@ export function Header() {
       <div className="flex items-center gap-2">
         <LanguageToggle />
         <ThemeToggle />
-        <Button variant="ghost" size="icon" aria-label={t('header.notifications')}>
-          <Bell size={20} />
-        </Button>
+        <NotificationToggle />
       </div>
     </header>
   );
