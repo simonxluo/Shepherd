@@ -5,10 +5,14 @@ import rehypeRaw from 'rehype-raw';
 import { User, Bot, Copy, Check } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import type { ChatMessage as ChatMessageType } from '@/features/chat';
+interface ChatMessageData {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: number;
+}
 
 interface ChatMessageProps {
-  message: ChatMessageType;
+  message: ChatMessageData;
   isStreaming?: boolean;
 }
 

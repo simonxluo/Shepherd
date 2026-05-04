@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '@/stores/uiStore';
 import { useConfig } from '@/lib/config';
 import { cn } from '@/lib/utils';
 import { UserMenu } from './UserMenu';
+import { systemApi } from '@/lib/api/system';
 import {
   LayoutDashboard,
   Package,
@@ -38,8 +40,17 @@ export function Sidebar({ overlay = false }: SidebarProps) {
   const { sidebarOpen, toggleSidebar, setMobileMenuOpen } = useUIStore();
   const config = useConfig();
   const { t } = useTranslation();
+  const [version, setVersion] = useState<string>('');
 
   const isExpanded = overlay || sidebarOpen;
+
+  useEffect(() => {
+    systemApi.getInfo().then((res) => {
+      if (res.success && res.data?.version) {
+        setVersion(res.data.version);
+      }
+    }).catch(() => {});
+  }, []);
 
   const navItems = allNavItems.filter(
     (item) => config.features[item.feature as keyof typeof config.features] !== false
@@ -120,7 +131,7 @@ export function Sidebar({ overlay = false }: SidebarProps) {
 
         {isExpanded && (
           <div className="text-xs text-muted-foreground pt-2 border-t">
-            <div>Shepherd v0.4.0</div>
+            <div>Shepherd {version || ''}</div>
             <div className="mt-1">{t('footer.copyright')}</div>
           </div>
         )}

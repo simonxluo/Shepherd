@@ -3,6 +3,7 @@ package storage
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
@@ -206,6 +207,138 @@ func (h *Handler) DeleteConversation(c *gin.Context) {
 	}
 
 	handler.SuccessWithMessage(c, "Conversation deleted successfully")
+}
+
+// CreateConversationRequest create conversation request body
+type CreateConversationRequest struct {
+	Model        string `json:"model" binding:"required"`
+	Title        string `json:"title"`
+	SystemPrompt string `json:"systemPrompt"`
+}
+
+// UpdateConversationRequest update conversation request body
+type UpdateConversationRequest struct {
+	Title        string `json:"title"`
+	SystemPrompt string `json:"systemPrompt"`
+}
+
+// CreateMessageRequest create message request body
+type CreateMessageRequest struct {
+	Role       string `json:"role" binding:"required,oneof=system user assistant"`
+	Content    string `json:"content" binding:"required"`
+	TokenCount int    `json:"tokenCount"`
+}
+
+// CreateConversation creates a new conversation
+// POST /api/conversations
+func (h *Handler) CreateConversation(c *gin.Context) {
+	if h.storageMgr == nil {
+		handler.Error(c, types.ErrInternalError, "Storage not initialized")
+		return
+	}
+
+	var req CreateConversationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body: "+err.Error())
+		return
+	}
+
+	conv := &storage.Conversation{
+		Model:        req.Model,
+		Title:        req.Title,
+		SystemPrompt: req.SystemPrompt,
+	}
+
+	store := h.storageMgr.GetStore()
+	if err := store.CreateConversation(c.Request.Context(), conv); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to create conversation", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{"conversation": conv})
+}
+
+// UpdateConversation updates an existing conversation
+// PUT /api/conversations/:id
+func (h *Handler) UpdateConversation(c *gin.Context) {
+	if h.storageMgr == nil {
+		handler.Error(c, types.ErrInternalError, "Storage not initialized")
+		return
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		handler.BadRequest(c, "Conversation ID is required")
+		return
+	}
+
+	var req UpdateConversationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body: "+err.Error())
+		return
+	}
+
+	store := h.storageMgr.GetStore()
+	conv, err := store.GetConversation(c.Request.Context(), id)
+	if err != nil {
+		if err == storage.ErrConversationNotFound {
+			handler.NotFound(c, "Conversation")
+		} else {
+			handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to retrieve conversation", err.Error())
+		}
+		return
+	}
+
+	if req.Title != "" {
+		conv.Title = req.Title
+	}
+	if req.SystemPrompt != "" {
+		conv.SystemPrompt = req.SystemPrompt
+	}
+	conv.UpdatedAt = time.Now()
+
+	if err := store.UpdateConversation(c.Request.Context(), conv); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to update conversation", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{"conversation": conv})
+}
+
+// CreateMessage adds a message to a conversation
+// POST /api/conversations/:id/messages
+func (h *Handler) CreateMessage(c *gin.Context) {
+	if h.storageMgr == nil {
+		handler.Error(c, types.ErrInternalError, "Storage not initialized")
+		return
+	}
+
+	convID := c.Param("id")
+	if convID == "" {
+		handler.BadRequest(c, "Conversation ID is required")
+		return
+	}
+
+	var req CreateMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body: "+err.Error())
+		return
+	}
+
+	msg := &storage.Message{
+		ConversationID: convID,
+		Role:           req.Role,
+		Content:        req.Content,
+		TokenCount:     req.TokenCount,
+	}
+
+	store := h.storageMgr.GetStore()
+	if err := store.CreateMessage(c.Request.Context(), msg); err != nil {
+		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to create message", err.Error())
+		return
+	}
+
+	handler.Success(c, gin.H{"message": msg})
 }
 
 // Helper function to parse query parameters with bounds

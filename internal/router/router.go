@@ -245,8 +245,11 @@ func registerConversationRoutes(apiGroup *gin.RouterGroup, h *Handlers) {
 	conversations := apiGroup.Group("/conversations")
 	{
 		conversations.GET("", h.Storage.GetConversations)
+		conversations.POST("", h.Storage.CreateConversation)
 		conversations.GET("/:id", h.Storage.GetConversation)
+		conversations.PUT("/:id", h.Storage.UpdateConversation)
 		conversations.DELETE("/:id", h.Storage.DeleteConversation)
+		conversations.POST("/:id/messages", h.Storage.CreateMessage)
 	}
 }
 

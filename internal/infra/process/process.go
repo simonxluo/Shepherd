@@ -46,6 +46,8 @@ type Process struct {
 
 	mu          sync.Mutex
 	readersDone int32 // counter for finished output readers (0, 1, or 2)
+	cmdDone     chan struct{}
+	exitCode    int
 }
 
 // Handler is a callback function for process output
@@ -129,6 +131,14 @@ func (p *Process) Start() error {
 	cmdArgs := args[1:]
 	p.cmd = exec.CommandContext(p.ctx, binPath, cmdArgs...)
 
+	// Set platform-specific process attributes (Pdeathsig on Unix)
+	setSysProcAttr(p.cmd)
+
+	// Graceful shutdown: send SIGTERM (Unix) or Kill (Windows) on context cancel,
+	// then SIGKILL after 10s if process hasn't exited
+	setCmdCancel(p.cmd)
+	p.cmd.WaitDelay = 10 * time.Second
+
 	// Setup environment
 	if err := p.setupEnvironment(p.cmd, binPath); err != nil {
 		return fmt.Errorf("failed to setup environment: %w", err)
@@ -160,38 +170,49 @@ func (p *Process) Start() error {
 
 	p.PID = p.cmd.Process.Pid
 	p.Running = true
+	p.exitCode = -1
 
-	// 验证进程是否真正运行（防止立即崩溃）
-	// 延迟 500ms 让进程初始化
-	// 注意：必须在释放锁后进行睡眠和检查，避免死锁
-	// 因为 IsRunning() 也会获取 p.mu 锁
-	p.mu.Unlock() // 临时释放锁，允许睡眠期间其他 goroutine 访问
-	time.Sleep(500 * time.Millisecond)
-
-	// 使用 Signal(0) 检查进程是否仍在运行
-	// 重新获取锁进行状态检查
-	p.mu.Lock()
-	isRunning := p.checkRunningUnsafe() // 使用不获取锁的内部方法
-	p.mu.Unlock()
-
-	if !isRunning {
-		// 进程已退出，清理状态
-		p.mu.Lock()
-		p.Running = false
-		p.mu.Unlock()
-		return fmt.Errorf("process exited immediately (PID: %d)", p.PID)
-	}
-
-	p.mu.Lock() // 重新获取锁，保持函数语义一致
-
-	// Start output processor first (it will drain any remaining lines)
+	// Start output processor and readers BEFORE cmd.Wait(),
+	// per Go docs: "It is incorrect to call Wait before all reads from the pipe have completed."
 	p.wg.Add(1)
 	go p.processOutput()
-
-	// Start output readers (they close the channel when done)
 	p.wg.Add(2)
 	go p.readOutput(p.stdoutPipe, "stdout")
 	go p.readOutput(p.stderrPipe, "stderr")
+
+	// Background goroutine: wait for process exit and capture exit code
+	p.cmdDone = make(chan struct{})
+	go func() {
+		defer close(p.cmdDone)
+		if err := p.cmd.Wait(); err != nil {
+			if status, ok := err.(*exec.ExitError); ok {
+				if ws, ok := status.Sys().(syscall.WaitStatus); ok {
+					p.mu.Lock()
+					p.exitCode = ws.ExitStatus()
+					p.mu.Unlock()
+				}
+			}
+		} else {
+			p.mu.Lock()
+			p.exitCode = 0
+			p.mu.Unlock()
+		}
+		p.mu.Lock()
+		p.Running = false
+		p.mu.Unlock()
+	}()
+
+	// Check if the process survived the first 500ms
+	p.mu.Unlock()
+	time.Sleep(500 * time.Millisecond)
+	p.mu.Lock()
+
+	select {
+	case <-p.cmdDone:
+		p.Running = false
+		return fmt.Errorf("process exited immediately (PID: %d)", p.PID)
+	default:
+	}
 
 	return nil
 }
@@ -233,8 +254,8 @@ func (p *Process) setupEnvironment(cmd *exec.Cmd, binPath string) error {
 func (p *Process) readOutput(pipe io.ReadCloser, name string) {
 	defer p.wg.Done()
 	defer func() {
-		utils.CloseQuietly(pipe)
-		// Decrement reader count and close channel if we're the last reader
+		// Decrement reader count and close channel if we're the last reader.
+		// Note: do NOT close the pipe here; cmd.Wait() manages pipe lifecycle.
 		if atomic.AddInt32(&p.readersDone, 1) == 2 {
 			close(p.outputChan)
 		}
@@ -288,15 +309,9 @@ func (p *Process) handleOutputLine(line string) {
 		return
 	}
 
-	// 发送到日志系统
-	// 使用 outputHandler 进行日志转发，由外部决定如何处理日志
-	// 默认情况下，非日志行会打印到控制台
 	if len(line) > 0 && line[0] != '[' {
-		// 非日志行（可能是服务器输出）
 		fmt.Printf("[%s] %s\n", p.Name, line)
 	}
-
-	// 日志行（以 [ 开头）已通过 outputHandler 处理，这里不再重复打印
 }
 
 // Send sends input to the process stdin
@@ -312,50 +327,41 @@ func (p *Process) Send(input string) error {
 	return err
 }
 
-// Stop stops the process
+// Stop stops the process gracefully.
+// Context cancel triggers cmd.Cancel (SIGTERM), then cmd.WaitDelay (10s) before SIGKILL.
 func (p *Process) Stop() error {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 
 	if !p.Running {
+		p.mu.Unlock()
 		return nil
 	}
 
 	p.Running = false
+	cmdDone := p.cmdDone
+	p.mu.Unlock()
 
-	// Send cancel signal
+	// Cancel context → triggers cmd.Cancel (SIGTERM) → WaitDelay → SIGKILL
 	p.cancel()
 
-	// Close stdin
+	// Close stdin to unblock any pending reads
+	p.mu.Lock()
 	if p.stdinPipe != nil {
 		utils.CloseQuietly(p.stdinPipe)
 		p.stdinPipe = nil
 	}
+	p.mu.Unlock()
 
-	// Try graceful shutdown first
-	if p.cmd != nil && p.cmd.Process != nil {
-		// Send SIGTERM
-		utils.SignalQuietly(p.cmd.Process, syscall.SIGTERM)
-
-		// Wait for up to 5 seconds
-		done := make(chan error, 1)
-		go func() {
-			_, err := p.cmd.Process.Wait()
-			done <- err
-		}()
-
+	// Wait for cmd.Wait() goroutine to finish (process fully exited)
+	if cmdDone != nil {
 		select {
-		case <-done:
-			// Process exited gracefully
-		case <-time.After(5 * time.Second):
-			// Timeout, force kill
-			utils.KillQuietly(p.cmd.Process)
-			<-done // Wait for the goroutine to finish
+		case <-cmdDone:
+		case <-time.After(12 * time.Second):
+			// Safety timeout beyond WaitDelay (10s)
 		}
 	}
 
 	// Wait for output readers to finish
-	// Note: Don't wait forever in case something is stuck
 	done := make(chan struct{})
 	go func() {
 		p.wg.Wait()
@@ -365,7 +371,6 @@ func (p *Process) Stop() error {
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
-		// Give up waiting
 	}
 
 	return nil
@@ -385,10 +390,14 @@ func (p *Process) checkRunningUnsafe() bool {
 		return false
 	}
 
-	// Check if process is still alive
-	if err := p.cmd.Process.Signal(syscall.Signal(0)); err != nil {
-		p.Running = false
-		return false
+	// Check if cmd.Wait() goroutine has returned
+	if p.cmdDone != nil {
+		select {
+		case <-p.cmdDone:
+			p.Running = false
+			return false
+		default:
+		}
 	}
 
 	return true
@@ -406,32 +415,25 @@ func (p *Process) GetExitCode() (int, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if p.cmd == nil || p.cmd.Process == nil {
+	if p.cmd == nil {
 		return 0, fmt.Errorf("process not started")
 	}
 
-	// Try to get exit code (non-blocking)
-	err := p.cmd.Process.Signal(syscall.Signal(0))
-	if err == nil {
-		// Process still running
+	// Check if process is still running
+	if p.Running {
 		return 0, fmt.Errorf("process still running")
 	}
 
-	// Process has exited, get exit code
-	status, err := p.cmd.Process.Wait()
-	if err != nil {
-		return 0, err
+	// Wait for cmd.Wait() goroutine to capture exit code
+	if p.cmdDone != nil {
+		select {
+		case <-p.cmdDone:
+		default:
+			return 0, fmt.Errorf("process still exiting")
+		}
 	}
 
-	if status.Success() {
-		return 0, nil
-	}
-
-	if status, ok := status.Sys().(syscall.WaitStatus); ok {
-		return status.ExitStatus(), nil
-	}
-
-	return 0, fmt.Errorf("unable to get exit status")
+	return p.exitCode, nil
 }
 
 // splitCommandLineArgs splits a command line string into arguments

@@ -1,2 +1,11 @@
-export type { ChatMessage, ChatCompletionParams, ChatHistoryItem } from './hooks';
-export { useStreamingChat, getLoadedModels, loadChatHistory, saveChatHistory, createChatSession, deleteChatSession, CHAT_HISTORY_KEY } from './hooks';
+export type { ChatModelInfo, Conversation, Message } from './hooks';
+export {
+  useChatModels,
+  useConversations,
+  useConversation,
+  useCreateConversation,
+  useDeleteConversation,
+  useSaveMessage,
+  useStreamingChat,
+  chatKeys,
+} from './hooks';

@@ -172,6 +172,62 @@ func (m *Manager) StreamPrompt(ctx context.Context, modelID string, messages []l
 	return respChan, nil
 }
 
+// ChatModelInfo represents a model's info for the chat UI
+type ChatModelInfo struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Alias    string `json:"alias,omitempty"`
+	State    string `json:"state"`
+	IsLoaded bool   `json:"isLoaded"`
+	Port     int    `json:"port,omitempty"`
+}
+
+// GetChatModels returns all models with their status for the chat UI
+func (m *Manager) GetChatModels() []ChatModelInfo {
+	models := m.modelMgr.ListModels()
+	statuses := m.modelMgr.ListStatus()
+
+	result := make([]ChatModelInfo, 0, len(models))
+	for _, mdl := range models {
+		info := ChatModelInfo{
+			ID:   mdl.ID,
+			Name: mdl.Name,
+		}
+		if mdl.Alias != "" {
+			info.Alias = mdl.Alias
+		}
+		if st, ok := statuses[mdl.ID]; ok {
+			info.State = st.State.String()
+			info.IsLoaded = st.State == model.StateLoaded
+			info.Port = st.Port
+			if st.Name != "" {
+				info.Name = st.Name
+			}
+		} else {
+			info.State = "unloaded"
+			info.IsLoaded = false
+		}
+		result = append(result, info)
+	}
+	return result
+}
+
+// EnsureModelLoaded ensures a model is loaded, loading it synchronously if necessary.
+// Returns the port the model is listening on.
+func (m *Manager) EnsureModelLoaded(modelID string) (int, error) {
+	port, err := m.modelMgr.EnsureLoaded(modelID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to ensure model %s is loaded: %w", modelID, err)
+	}
+
+	// Invalidate cached LLM instance so a fresh one is created with the correct port
+	m.mu.Lock()
+	delete(m.llmInstances, modelID)
+	m.mu.Unlock()
+
+	return port, nil
+}
+
 // ===== 统计信息 =====
 
 // GetStats 获取统计信息

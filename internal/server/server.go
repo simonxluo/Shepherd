@@ -46,9 +46,11 @@ type ModelDTO struct {
 	ShardFiles  []string               `json:"shardFiles,omitempty"` // 所有分卷文件路径
 	MmprojPath  string                 `json:"mmprojPath,omitempty"` // mmproj 文件路径
 	Favourite   bool                   `json:"favourite"`
+	Tags        []string               `json:"tags,omitempty"`
 	Metadata    map[string]interface{} `json:"metadata"`
 	Status      string                 `json:"status"`
 	IsLoaded    bool                   `json:"isLoaded"`
+	Port        int                    `json:"port,omitempty"`
 	ScannedAt   string                 `json:"scannedAt,omitempty"`   // 扫描时间（ISO 8601 格式）
 	BackendType string                 `json:"backendType,omitempty"` // 推荐后端类型 (llamacpp/vllm/vllm_omni)
 }

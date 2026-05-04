@@ -633,12 +633,16 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 		ShardFiles:  m.ShardFiles,
 		MmprojPath:  m.MmprojPath,
 		Favourite:   m.Favourite,
+		Tags:        m.Tags,
 		Status:      status,
 		IsLoaded:    isLoaded,
 		ScannedAt:   scannedAt,
 	}
 
-	// Auto-detect recommended backend type from model path
+	if st, ok := statuses[m.ID]; ok && st.Port > 0 {
+		dto.Port = st.Port
+	}
+
 	modelPath := m.Path
 	if len(m.ShardFiles) > 0 {
 		modelPath = m.ShardFiles[0]
@@ -648,16 +652,28 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 	} else if backend.IsSafeTensorsModel(modelPath) {
 		dto.BackendType = "vllm"
 	} else if filepath.Ext(modelPath) == "" {
-		// Directory-based model (HuggingFace format)
 		dto.BackendType = "vllm"
 	}
 
 	if m.Metadata != nil {
 		dto.Metadata = map[string]interface{}{
-			"architecture":  m.Metadata.Architecture,
-			"quantization":  m.Metadata.GetQuantizationString(),
-			"contextLength": m.Metadata.ContextLength,
-			"parameters":    m.Metadata.Parameters,
+			"architecture":       m.Metadata.Architecture,
+			"quantization":       m.Metadata.GetQuantizationString(),
+			"contextLength":      m.Metadata.ContextLength,
+			"parameters":         m.Metadata.Parameters,
+			"fileTypeDescriptor": m.Metadata.FileTypeDescriptor,
+			"url":                m.Metadata.URL,
+			"author":             m.Metadata.Author,
+			"embeddingLength":    m.Metadata.EmbeddingLength,
+			"layerCount":         m.Metadata.BlockSize,
+			"headCount":          m.Metadata.HeadCount,
+			"license":            m.Metadata.License,
+			"bitsPerWeight":      m.Metadata.BitsPerWeight,
+			"fileSize":           m.Metadata.FileSize,
+			"modelSize":          m.Metadata.ModelSize,
+			"headCountKV":        m.Metadata.HeadCountKV,
+			"tokenCount":         m.Metadata.TokenCount,
+			"poolingType":        m.Metadata.PoolingType,
 		}
 	}
 
