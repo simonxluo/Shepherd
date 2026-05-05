@@ -205,7 +205,12 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}, cmdErr
 	}
 
-	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath)
+	// 从后端配置中附加环境变量
+	if len(bcfg.EnvVars) > 0 {
+		startCfg.EnvVars = bcfg.EnvVars
+	}
+
+	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath, startCfg.SkipLDLibraryPath, startCfg.EnvVars)
 	if err != nil {
 		m.portAllocator.Release(port)
 		status.transitionTo(StateError)
@@ -229,6 +234,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	status.ProcessID = proc.ID
 	status.Port = port
 	status.LoadedAt = time.Now()
+	status.BackendType = b.Type().String()
 	m.mu.Unlock()
 
 	duration := time.Since(startTime)
@@ -496,4 +502,36 @@ func (m *Manager) Close() error {
 // GetProcessManager returns the process manager
 func (m *Manager) GetProcessManager() *process.Manager {
 	return m.processMgr
+}
+
+// GetModelCapabilities 从存储获取模型能力信息
+func (m *Manager) GetModelCapabilities(modelID string) *storage.Capabilities {
+	if m.storageMgr == nil {
+		return nil
+	}
+	ctx := context.Background()
+	meta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, modelID)
+	if err != nil {
+		return nil
+	}
+	return meta.Capabilities
+}
+
+// GetBackendForModel 根据已加载模型的后端类型获取后端实例
+func (m *Manager) GetBackendForModel(modelID string) backend.Backend {
+	m.mu.RLock()
+	status, exists := m.statuses[modelID]
+	m.mu.RUnlock()
+	if !exists || status.BackendType == "" {
+		return nil
+	}
+	bt, err := backend.ParseBackendType(status.BackendType)
+	if err != nil {
+		return nil
+	}
+	b, _, err := m.backendRegistry.Resolve("", bt)
+	if err != nil {
+		return nil
+	}
+	return b
 }

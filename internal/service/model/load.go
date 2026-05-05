@@ -67,7 +67,12 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 		return nil, 0, nil, err
 	}
 
-	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath)
+	// 从后端配置中附加环境变量
+	if len(bcfg.EnvVars) > 0 {
+		startCfg.EnvVars = bcfg.EnvVars
+	}
+
+	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath, startCfg.SkipLDLibraryPath, startCfg.EnvVars)
 	if err != nil {
 		m.portAllocator.Release(allocatedPort)
 		status.transitionTo(StateError)
@@ -254,6 +259,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		status.ProcessID = proc.ID
 		status.Port = port
 		status.LoadedAt = time.Now()
+		status.BackendType = b.Type().String()
 		m.mu.Unlock()
 		status.LoadWait.Done()
 		duration := time.Since(startTime)
@@ -362,9 +368,46 @@ func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port 
 	bt, _ := backend.ParseBackendType(req.BackendType)
 	switch bt {
 	case backend.BackendVLLM:
-		br.VLLMParams = &backend.VLLMLoadParams{}
+		br.VLLMParams = &backend.VLLMLoadParams{
+			DataType:             req.DataType,
+			MaxModelLen:          req.MaxModelLen,
+			GPUMemoryUtilization: req.GPUMemoryUtilization,
+			TensorParallelSize:   req.TensorParallelSize,
+			PipelineParallelSize: req.PipelineParallelSize,
+			TrustRemoteCode:      req.TrustRemoteCode,
+			ServedModelName:      req.ServedModelName,
+			Quantization:         req.Quantization,
+			MaxNumSeqs:           req.MaxNumSeqs,
+			MaxNumBatchedTokens:  req.MaxNumBatchedTokens,
+			EnablePrefixCaching:  req.EnablePrefixCaching,
+			EnableChunkedPrefill: req.EnableChunkedPrefill,
+			DisableLogRequests:   req.DisableLogRequests,
+			EnforceEager:         req.EnforceEager,
+			ExtraArgs:            req.ExtraParams,
+		}
 	case backend.BackendVLLMOmni:
-		br.VLLOmniParams = &backend.VLLOmniLoadParams{}
+		br.VLLOmniParams = &backend.VLLOmniLoadParams{
+			VLLMLoadParams: backend.VLLMLoadParams{
+				DataType:             req.DataType,
+				MaxModelLen:          req.MaxModelLen,
+				GPUMemoryUtilization: req.GPUMemoryUtilization,
+				TensorParallelSize:   req.TensorParallelSize,
+				PipelineParallelSize: req.PipelineParallelSize,
+				TrustRemoteCode:      req.TrustRemoteCode,
+				ServedModelName:      req.ServedModelName,
+				Quantization:         req.Quantization,
+				MaxNumSeqs:           req.MaxNumSeqs,
+				MaxNumBatchedTokens:  req.MaxNumBatchedTokens,
+				EnablePrefixCaching:  req.EnablePrefixCaching,
+				EnableChunkedPrefill: req.EnableChunkedPrefill,
+				DisableLogRequests:   req.DisableLogRequests,
+				EnforceEager:         req.EnforceEager,
+				ExtraArgs:            req.ExtraParams,
+			},
+			Omni:             req.Omni,
+			VideoPruningRate: req.VideoPruningRate,
+			MMTensorIPC:      req.MMTensorIPC,
+		}
 	default:
 		// Default: map to llama.cpp params (backward compatible)
 		br.LlamacppParams = &backend.LlamacppLoadParams{

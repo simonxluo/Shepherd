@@ -352,6 +352,11 @@ func (b *LlamaCppBackend) SupportsModel(modelPath string) bool {
 	return IsGGUFModel(modelPath)
 }
 
+// SupportedEndpoints returns the endpoints supported by llama.cpp
+func (b *LlamaCppBackend) SupportedEndpoints() map[string]bool {
+	return endpointsWithoutAudio()
+}
+
 // quoteAndJoin joins arguments into a command string with proper quoting
 func quoteAndJoin(args []string) string {
 	var result string

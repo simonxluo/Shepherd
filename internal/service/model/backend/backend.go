@@ -41,11 +41,12 @@ type BackendConfig struct {
 	BinPath  string   // Directory containing llama-server binary
 	BinPaths []string // All configured binary paths (tried in order)
 	// vLLM / vLLM-omni specific
-	CondaEnv    string // Conda environment name
-	CondaPath   string // Path to conda executable
-	ServeBin    string // Custom path to the serve binary (e.g., vllm)
-	ExtraArgs   string // Additional CLI arguments from config
-	DefaultPort int    // Default port from config
+	CondaEnv    string   // Conda environment name
+	CondaPath   string   // Path to conda executable
+	ServeBin    string   // Custom path to the serve binary (e.g., vllm)
+	ExtraArgs   string   // Additional CLI arguments from config
+	DefaultPort int      // Default port from config
+	EnvVars     []string // Additional environment variables (e.g., "KEY=VALUE")
 }
 
 // BackendInfo contains discovered information about a backend
@@ -56,6 +57,7 @@ type BackendInfo struct {
 	Version   string // Detected version
 	Available bool   // Whether the backend is usable
 	CondaEnv  string // Conda env name (if applicable)
+	CondaPath string // Conda 可执行文件路径 (if applicable)
 }
 
 // StartConfig contains the command and metadata needed to start a backend process
@@ -63,7 +65,9 @@ type StartConfig struct {
 	Command           string // Full command string to execute
 	BinPath           string // Binary/library path for the process manager
 	BackendType       BackendType
-	SkipLDLibraryPath bool // If true, skip setting LD_LIBRARY_PATH (for conda-based backends)
+	SkipLDLibraryPath bool     // If true, skip setting LD_LIBRARY_PATH (for conda-based backends)
+	CondaPath         string   // Conda 可执行文件路径 (传递给 process 层使用)
+	EnvVars           []string // Additional environment variables (e.g., "KEY=VALUE")
 }
 
 // HealthResult contains the result of a health check
@@ -115,6 +119,9 @@ type Backend interface {
 
 	// SupportsModel returns true if this backend can serve the given model path
 	SupportsModel(modelPath string) bool
+
+	// SupportedEndpoints returns the set of API endpoints this backend supports
+	SupportedEndpoints() map[string]bool
 }
 
 // LlamacppLoadParams contains llama.cpp-specific load parameters
@@ -192,12 +199,14 @@ type VLLMLoadParams struct {
 	EnablePrefixCaching  bool    // --enable-prefix-caching
 	EnableChunkedPrefill bool    // --enable-chunked-prefill
 	DisableLogRequests   bool    // --disable-log-requests
+	EnforceEager         bool    // --enforce-eager
 	ExtraArgs            string  // Additional CLI arguments
 }
 
 // VLLOmniLoadParams contains vLLM-omni-specific load parameters
 type VLLOmniLoadParams struct {
 	VLLMLoadParams           // Embed base vLLM params
+	Omni             bool    // --omni (启用 omni 多模态模式)
 	VideoPruningRate float64 // --video-pruning-rate
 	MMTensorIPC      bool    // --mm-tensor-ipc
 }
@@ -211,4 +220,34 @@ func (r *LoadRequest) Validate() error {
 		return fmt.Errorf("port must be positive")
 	}
 	return nil
+}
+
+// baseEndpoints 返回所有后端共有的基础端点集合
+func baseEndpoints() map[string]bool {
+	return map[string]bool{
+		"/v1/chat/completions": true,
+		"/v1/completions":      true,
+		"/v1/models":           true,
+		"/v1/embeddings":       true,
+	}
+}
+
+// endpointsWithoutAudio 返回不支持音频端点的基础端点集合
+func endpointsWithoutAudio() map[string]bool {
+	ep := baseEndpoints()
+	ep["/v1/audio/speech"] = false
+	ep["/v1/audio/voices"] = false
+	ep["/v1/audio/transcriptions"] = false
+	ep["/v1/audio/translations"] = false
+	return ep
+}
+
+// endpointsWithAudio 返回支持全部音频端点的端点集合
+func endpointsWithAudio() map[string]bool {
+	ep := baseEndpoints()
+	ep["/v1/audio/speech"] = true
+	ep["/v1/audio/voices"] = true
+	ep["/v1/audio/transcriptions"] = true
+	ep["/v1/audio/translations"] = true
+	return ep
 }

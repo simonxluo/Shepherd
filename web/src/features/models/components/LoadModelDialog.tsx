@@ -134,6 +134,7 @@ interface LoadModelDialogProps {
   modelName: string;
   modelPath?: string;
   isLoading?: boolean;
+  backendType?: string; // 推荐后端类型 (llamacpp/vllm/vllm_omni)
 }
 
 // Parameter help descriptions
@@ -189,6 +190,22 @@ const PARAM_HELP = {
   mmprojOffload: 'mmproj投影层GPU卸载',
   unloadAfterMinutes: '空闲自动卸载时间（分钟）。0=永不自动卸载，>0=自定义分钟数',
   concurrencyLimit: '最大并发请求数。0=不限，>0=自定义限制',
+  // vLLM 参数帮助
+  vllmMaxModelLen: '模型能处理的最大序列长度（token 数），即上下文窗口大小',
+  vllmGpuMemUtil: 'GPU 显存使用比例（0-1），默认 0.92。值越大分配越多显存给模型',
+  vllmDtype: '模型权重数据类型。auto 自动选择，float16/bfloat16 半精度，float32 全精度',
+  vllmTensorParallel: '张量并行使用的 GPU 数量，多 GPU 时设置可加速推理',
+  vllmTrustRemoteCode: '允许执行模型仓库中的自定义代码，存在安全风险',
+  vllmServedModelName: 'API 中使用的模型名称别名，用于替换实际模型路径',
+  vllmQuantization: '模型量化方法，如 awq/gptq 可减少显存占用',
+  vllmMaxNumSeqs: '单个迭代批次中最大并发序列数',
+  vllmMaxNumBatchedTokens: '单次迭代中处理的最大 token 数量',
+  vllmPrefixCaching: '启用前缀缓存，对相同前缀的请求可复用 KV 缓存',
+  vllmChunkedPrefill: '启用分块预填充，将长 prompt 分块处理以降低延迟',
+  vllmPipelineParallel: '流水线并行组数，用于跨节点分布式推理',
+  vllmDisableLogRequests: '禁用请求日志输出，减少日志量',
+  vllmVideoPruningRate: '视频 token 裁剪率（0-1），用于多模态模型的视频输入优化',
+  vllmMmTensorIPC: '启用多模态张量 IPC，优化多模态模型的数据传输',
 };
 
 export function LoadModelDialog({
@@ -199,6 +216,7 @@ export function LoadModelDialog({
   modelName,
   modelPath,
   isLoading = false,
+  backendType,
 }: LoadModelDialogProps) {
   const { data: onlineNodes = [] } = useOnlineNodes();
 
@@ -543,6 +561,10 @@ export function LoadModelDialog({
 
   if (!isOpen) return null;
 
+  const isLlamaCpp = !backendType || backendType === 'llamacpp';
+  const isVllmOmni = backendType === 'vllm_omni';
+  const backendLabel = isVllmOmni ? 'vLLM-Omni' : backendType === 'vllm' ? 'vLLM' : 'llama.cpp';
+
   const filterEnabledParams = (allParams: LoadModelParams): Partial<LoadModelParams> => {
     const enabled = allParams.enabled;
     if (!enabled) return allParams;
@@ -552,6 +574,37 @@ export function LoadModelDialog({
       nodeId: allParams.nodeId,
     };
 
+    // vLLM 后端：只发送 vLLM 相关参数
+    if (!isLlamaCpp) {
+      const vllmKeys: (keyof LoadModelParams)[] = [
+        'ctxSize', 'maxModelLen',
+        'dtype', 'gpuMemoryUtilization', 'tensorParallelSize', 'pipelineParallelSize',
+        'trustRemoteCode', 'servedModelName', 'quantization',
+        'maxNumSeqs', 'maxNumBatchedTokens',
+        'enablePrefixCaching', 'enableChunkedPrefill', 'disableLogRequests',
+        'unloadAfterMinutes', 'concurrencyLimit',
+      ];
+
+      // vLLM-Omni 专属
+      if (isVllmOmni) {
+        vllmKeys.push('videoPruningRate', 'mmTensorIPC');
+      }
+
+      for (const key of vllmKeys) {
+        if (allParams[key] !== undefined && allParams[key] !== '' && allParams[key] !== 0 && allParams[key] !== false) {
+          (filtered as Record<string, unknown>)[key] = allParams[key];
+        }
+      }
+
+      if (allParams.extraArgs) {
+        filtered.extraArgs = allParams.extraArgs;
+      }
+
+      filtered.backendType = backendType;
+      return filtered;
+    }
+
+    // llama.cpp 后端：原有逻辑
     const paramKeys: (keyof LoadModelParams)[] = [
       'ctxSize', 'batchSize', 'threads', 'threadsBatch', 'gpuLayers',
       'temperature', 'topP', 'topK', 'repeatPenalty', 'repeatLastN',
@@ -586,6 +639,11 @@ export function LoadModelDialog({
       filtered.extraArgs = allParams.extraArgs;
     }
 
+    // 传递后端类型
+    if (backendType && backendType !== 'llamacpp') {
+      filtered.backendType = backendType;
+    }
+
     return filtered;
   };
 
@@ -605,6 +663,615 @@ export function LoadModelDialog({
     const filteredParams = filterEnabledParams(params);
     onConfirm(filteredParams);
   };
+
+  // Dropdown select using shadcn Select
+  interface SelectOption {
+    value: string;
+    label: string;
+    disabled?: boolean;
+  }
+
+  interface SelectOptionGroup {
+    label: string;
+    options: SelectOption[];
+  }
+
+  const SelectInput = ({
+    value,
+    onValueChange,
+    disabled,
+    options,
+    groups,
+    className = '',
+  }: {
+    value: string | number | undefined;
+    onValueChange: (value: string) => void;
+    disabled?: boolean;
+    options?: SelectOption[];
+    groups?: SelectOptionGroup[];
+    className?: string;
+  }) => (
+    <Select
+      value={String(value ?? '')}
+      onValueChange={onValueChange}
+      disabled={disabled}
+    >
+      <SelectTrigger className={cn("h-8 w-full text-sm", className)}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent position="popper" sideOffset={4}>
+        {groups ? (
+          groups.map((group) => (
+            <SelectGroup key={group.label}>
+              <SelectLabel>{group.label}</SelectLabel>
+              {group.options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ))
+        ) : (
+          options?.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+              {opt.label}
+            </SelectItem>
+          ))
+        )}
+      </SelectContent>
+    </Select>
+  );
+
+  // 非 llama.cpp 后端使用 vLLM 参数对话框
+  const [showAdvancedVllm, setShowAdvancedVllm] = useState(false);
+
+  if (!isLlamaCpp) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose(); }}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-4 border-b border-border flex-shrink-0">
+            <DialogTitle className="text-lg font-semibold text-foreground">
+              加载模型配置 — {backendLabel}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="flex flex-col gap-4 p-4 overflow-y-auto flex-1">
+              {/* 模型信息 */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">模型</label>
+                <div className="px-3 py-2 bg-muted rounded-md text-foreground text-sm">
+                  {modelName}
+                </div>
+                {modelPath && (
+                  <div className="mt-1 text-xs text-muted-foreground truncate">{modelPath}</div>
+                )}
+              </div>
+
+              {/* 后端类型标签 */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-medium">
+                  {backendLabel}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  此模型需要使用 {backendLabel} 后端加载
+                </span>
+              </div>
+
+              {/* 基本参数 */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase">基本参数</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                      --max-model-len
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                              ?
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-sm">{PARAM_HELP.vllmMaxModelLen}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <NumberInput
+                      value={params.maxModelLen || params.ctxSize}
+                      onChange={(v) => setParams({ ...params, maxModelLen: v, ctxSize: v })}
+                      disabled={isLoading}
+                      min={0}
+                      max={modelMaxCtxSize}
+                      step={256}
+                      placeholder="8192"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                      --gpu-memory-utilization
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                              ?
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-sm">{PARAM_HELP.vllmGpuMemUtil}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <NumberInput
+                      value={params.gpuMemoryUtilization ?? 0.92}
+                      onChange={(v) => setParams({ ...params, gpuMemoryUtilization: v })}
+                      disabled={isLoading}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      placeholder="0.92"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                      --dtype
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                              ?
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-sm">{PARAM_HELP.vllmDtype}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <SelectInput
+                      value={params.dtype || 'auto'}
+                      onValueChange={(v) => setParams({ ...params, dtype: v === 'auto' ? '' : v })}
+                      disabled={isLoading}
+                      options={[
+                        { value: 'auto', label: 'auto (默认)' },
+                        { value: 'float16', label: 'float16' },
+                        { value: 'bfloat16', label: 'bfloat16' },
+                        { value: 'float32', label: 'float32' },
+                      ]}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                      --tensor-parallel-size
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                              ?
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-sm">{PARAM_HELP.vllmTensorParallel}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <NumberInput
+                      value={params.tensorParallelSize}
+                      onChange={(v) => setParams({ ...params, tensorParallelSize: v })}
+                      disabled={isLoading}
+                      min={1}
+                      max={16}
+                      step={1}
+                      placeholder="1"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={params.trustRemoteCode || false}
+                        onChange={(e) => setParams({ ...params, trustRemoteCode: e.target.checked })}
+                        disabled={isLoading}
+                        className="rounded border-border text-blue-600 focus:ring-blue-500 w-4 h-4"
+                      />
+                      <span>--trust-remote-code</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                              ?
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-sm">{PARAM_HELP.vllmTrustRemoteCode}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 高级参数（折叠区域） */}
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedVllm(!showAdvancedVllm)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase hover:text-foreground transition-colors"
+                >
+                  {showAdvancedVllm ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                  高级参数
+                </button>
+
+                {showAdvancedVllm && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                        --served-model-name
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmServedModelName}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Input
+                        value={params.servedModelName || ''}
+                        onChange={(e) => setParams({ ...params, servedModelName: e.target.value })}
+                        disabled={isLoading}
+                        className="h-8 text-sm"
+                        placeholder="模型名称别名"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                        --quantization
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmQuantization}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <SelectInput
+                        value={params.quantization || 'auto'}
+                        onValueChange={(v) => setParams({ ...params, quantization: v === 'auto' ? '' : v })}
+                        disabled={isLoading}
+                        options={[
+                          { value: 'auto', label: 'auto (默认)' },
+                          { value: 'awq', label: 'awq' },
+                          { value: 'gptq', label: 'gptq' },
+                          { value: 'gptq_marlin', label: 'gptq_marlin' },
+                          { value: 'gptq_marlin_24', label: 'gptq_marlin_24' },
+                          { value: 'aqlm', label: 'aqlm' },
+                          { value: 'fp8', label: 'fp8' },
+                          { value: 'bitsandbytes', label: 'bitsandbytes' },
+                          { value: 'gguf', label: 'gguf' },
+                        ]}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                        --max-num-seqs
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmMaxNumSeqs}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <NumberInput
+                        value={params.maxNumSeqs}
+                        onChange={(v) => setParams({ ...params, maxNumSeqs: v })}
+                        disabled={isLoading}
+                        min={1}
+                        max={1024}
+                        step={1}
+                        placeholder="256"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                        --max-num-batched-tokens
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmMaxNumBatchedTokens}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <NumberInput
+                        value={params.maxNumBatchedTokens}
+                        onChange={(v) => setParams({ ...params, maxNumBatchedTokens: v })}
+                        disabled={isLoading}
+                        min={1}
+                        max={1048576}
+                        step={256}
+                        placeholder="自动"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                        --pipeline-parallel-size
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmPipelineParallel}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <NumberInput
+                        value={params.pipelineParallelSize}
+                        onChange={(v) => setParams({ ...params, pipelineParallelSize: v })}
+                        disabled={isLoading}
+                        min={1}
+                        max={16}
+                        step={1}
+                        placeholder="1"
+                      />
+                    </div>
+
+                    <div className="flex flex-col justify-end gap-2">
+                      <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={params.enablePrefixCaching || false}
+                          onChange={(e) => setParams({ ...params, enablePrefixCaching: e.target.checked })}
+                          disabled={isLoading}
+                          className="rounded border-border text-blue-600 focus:ring-blue-500 w-4 h-4"
+                        />
+                        <span>--enable-prefix-caching</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmPrefixCaching}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={params.enableChunkedPrefill || false}
+                          onChange={(e) => setParams({ ...params, enableChunkedPrefill: e.target.checked })}
+                          disabled={isLoading}
+                          className="rounded border-border text-blue-600 focus:ring-blue-500 w-4 h-4"
+                        />
+                        <span>--enable-chunked-prefill</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmChunkedPrefill}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={params.disableLogRequests || false}
+                          onChange={(e) => setParams({ ...params, disableLogRequests: e.target.checked })}
+                          disabled={isLoading}
+                          className="rounded border-border text-blue-600 focus:ring-blue-500 w-4 h-4"
+                        />
+                        <span>--disable-log-requests</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmDisableLogRequests}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* vLLM-Omni 专属参数 */}
+              {isVllmOmni && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase">
+                    vLLM-Omni 专属参数
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
+                        --video-pruning-rate
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="ml-1.5 w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmVideoPruningRate}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <NumberInput
+                        value={params.videoPruningRate}
+                        onChange={(v) => setParams({ ...params, videoPruningRate: v })}
+                        disabled={isLoading}
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        placeholder="0"
+                      />
+                    </div>
+
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={params.mmTensorIPC || false}
+                          onChange={(e) => setParams({ ...params, mmTensorIPC: e.target.checked })}
+                          disabled={isLoading}
+                          className="rounded border-border text-blue-600 focus:ring-blue-500 w-4 h-4"
+                        />
+                        <span>--mm-tensor-ipc</span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="w-2.5 h-2.5 rounded-full text-muted-foreground text-[10px] font-medium flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900/40 dark:hover:to-blue-800/40 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 cursor-help shadow-sm hover:shadow">
+                                ?
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-sm">{PARAM_HELP.vllmMmTensorIPC}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* GPU 选择 */}
+              {gpus.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">主GPU</label>
+                  <SelectInput
+                    value={params.mainGpu || 'default'}
+                    onValueChange={(v) => setParams({ ...params, mainGpu: v })}
+                    disabled={isLoading}
+                    options={[
+                      { value: 'default', label: '默认' },
+                      ...gpus.map((gpu: SystemGPUInfo) => ({
+                        value: gpu.id,
+                        label: gpu.name,
+                      })),
+                    ]}
+                  />
+                </div>
+              )}
+
+              {/* 运行时管理 */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase">运行时管理</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">空闲自动卸载(分钟)</label>
+                    <NumberInput
+                      value={params.unloadAfterMinutes}
+                      onChange={(v) => setParams({ ...params, unloadAfterMinutes: v })}
+                      disabled={isLoading}
+                      min={0}
+                      max={10080}
+                      step={1}
+                      placeholder="0为永不自动卸载"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">最大并发请求数</label>
+                    <NumberInput
+                      value={params.concurrencyLimit}
+                      onChange={(v) => setParams({ ...params, concurrencyLimit: v })}
+                      disabled={isLoading}
+                      min={0}
+                      max={10000}
+                      step={1}
+                      placeholder="0为不限"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 额外参数 */}
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">额外参数</label>
+                <textarea
+                  value={params.extraArgs || ''}
+                  onChange={(e) => setParams({ ...params, extraArgs: e.target.value })}
+                  disabled={isLoading}
+                  rows={2}
+                  placeholder="附加命令行参数，如 --disable-log-requests"
+                  className="w-full px-2 py-1.5 text-sm border-2 border-border rounded-md bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+                />
+              </div>
+            </div>
+
+            {/* 底部按钮 */}
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-border flex-shrink-0">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+                取消
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    加载中...
+                  </>
+                ) : (
+                  '开始加载'
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const applyPreset = (presetParams: Partial<LoadModelParams>) => {
     setParams(prev => ({ ...prev, ...presetParams }));
@@ -829,64 +1496,6 @@ export function LoadModelDialog({
   const getInputDisabled = (paramKey: string): boolean => {
     return isLoading || !isParamEnabled(paramKey);
   };
-
-  // Dropdown select using shadcn Select
-  interface SelectOption {
-    value: string;
-    label: string;
-    disabled?: boolean;
-  }
-
-  interface SelectOptionGroup {
-    label: string;
-    options: SelectOption[];
-  }
-
-  const SelectInput = ({
-    value,
-    onValueChange,
-    disabled,
-    options,
-    groups,
-    className = '',
-  }: {
-    value: string | number | undefined;
-    onValueChange: (value: string) => void;
-    disabled?: boolean;
-    options?: SelectOption[];
-    groups?: SelectOptionGroup[];
-    className?: string;
-  }) => (
-    <Select
-      value={String(value ?? '')}
-      onValueChange={onValueChange}
-      disabled={disabled}
-    >
-      <SelectTrigger className={cn("h-8 w-full text-sm", className)}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent position="popper" sideOffset={4}>
-        {groups ? (
-          groups.map((group) => (
-            <SelectGroup key={group.label}>
-              <SelectLabel>{group.label}</SelectLabel>
-              {group.options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          ))
-        ) : (
-          options?.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
-              {opt.label}
-            </SelectItem>
-          ))
-        )}
-      </SelectContent>
-    </Select>
-  );
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose(); }}>

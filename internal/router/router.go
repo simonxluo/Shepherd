@@ -97,6 +97,7 @@ type ServerHandlers interface {
 	HandleCreateTranscription(c *gin.Context)
 	HandleCreateTranslation(c *gin.Context)
 	HandleCreateImage(c *gin.Context)
+	HandleListVoices(c *gin.Context)
 }
 
 // Config holds router-level configuration.
@@ -345,6 +346,7 @@ func registerCompatibilityRoutes(engine *gin.Engine, sh ServerHandlers) {
 		openai.POST("/completions", sh.HandleOpenAIComplete)
 		openai.GET("/models", sh.HandleOpenAIModels)
 		openai.POST("/audio/speech", sh.HandleCreateSpeech)
+		openai.GET("/audio/voices", sh.HandleListVoices)
 		openai.POST("/audio/transcriptions", sh.HandleCreateTranscription)
 		openai.POST("/audio/translations", sh.HandleCreateTranslation)
 		openai.POST("/images/generations", sh.HandleCreateImage)

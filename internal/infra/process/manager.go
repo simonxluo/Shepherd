@@ -22,7 +22,7 @@ func NewManager() *Manager {
 }
 
 // Start starts a new llama.cpp process for a model
-func (m *Manager) Start(modelID, name, cmd, binPath string) (*Process, error) {
+func (m *Manager) Start(modelID, name, cmd, binPath string, skipLDLibraryPath bool, envVars []string) (*Process, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -37,7 +37,7 @@ func (m *Manager) Start(modelID, name, cmd, binPath string) (*Process, error) {
 	}
 
 	// Create process
-	process := NewProcess(modelID, name, cmd, binPath)
+	process := NewProcess(modelID, name, cmd, binPath, skipLDLibraryPath, envVars)
 
 	// Add to loading map
 	m.loading[modelID] = process

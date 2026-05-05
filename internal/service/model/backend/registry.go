@@ -128,6 +128,7 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 			ServeBin:    cfg.Backends.VLLM.ServeBin,
 			ExtraArgs:   cfg.Backends.VLLM.ExtraArgs,
 			DefaultPort: cfg.Backends.VLLM.DefaultPort,
+			EnvVars:     cfg.Backends.VLLM.Env,
 		}
 		if len(cfg.Backends.VLLM.Paths) > 0 {
 			vllmCfg.BinPath = cfg.Backends.VLLM.Paths[0].Path
@@ -149,6 +150,7 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 			ServeBin:    cfg.Backends.VLLMOmni.ServeBin,
 			ExtraArgs:   cfg.Backends.VLLMOmni.ExtraArgs,
 			DefaultPort: cfg.Backends.VLLMOmni.DefaultPort,
+			EnvVars:     cfg.Backends.VLLMOmni.Env,
 		}
 		if len(cfg.Backends.VLLMOmni.Paths) > 0 {
 			omniCfg.BinPath = cfg.Backends.VLLMOmni.Paths[0].Path

@@ -39,7 +39,7 @@ cors:
   # 允许的后端源
   allowedOrigins:
     - "http://localhost:9190"
-    - "http://192.168.10.1:9190"
+    - "http://192.168.1.100:9190"
   # 是否发送凭据
   credentials: false
 

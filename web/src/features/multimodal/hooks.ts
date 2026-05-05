@@ -6,6 +6,7 @@ export interface LoadedModel {
   id: string;
   name: string;
   alias?: string;
+  backendType?: string;
   capabilities?: ModelCapabilities;
 }
 
@@ -13,6 +14,12 @@ interface LoadedModelsResponse {
   success: boolean;
   models: LoadedModel[];
 }
+
+export const BACKEND_LABELS: Record<string, string> = {
+  llamacpp: 'llama.cpp',
+  vllm: 'vLLM',
+  vllm_omni: 'vLLM-Omni',
+};
 
 export function useLoadedModels() {
   return useQuery({
@@ -32,6 +39,7 @@ export interface TTSRequest {
   response_format?: string;
   speed?: number;
   language?: string;
+  stream?: boolean;
 }
 
 export function useTTS() {
@@ -51,6 +59,30 @@ export function useTTS() {
       const blob = await response.blob();
       return { blob, contentType: response.headers.get('Content-Type') || 'audio/mpeg' };
     },
+  });
+}
+
+export interface VoicesResponse {
+  voices?: Array<{ id: string; name?: string }>;
+}
+
+export function useVoices(model?: string) {
+  return useQuery({
+    queryKey: ['voices', model],
+    queryFn: async () => {
+      if (!model) return [];
+      const params = new URLSearchParams({ model });
+      const response = await fetch(`/v1/audio/voices?${params}`);
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+        throw new Error(err.error?.message || `获取语音列表失败 (${response.status})`);
+      }
+
+      const res = await response.json() as VoicesResponse;
+      return res.voices ?? [];
+    },
+    enabled: !!model,
   });
 }
 

@@ -95,7 +95,8 @@ export function ModelsPage() {
   const handleLoadConfirm = (params: Partial<LoadModelParams>) => {
     loadModel.mutate(params, {
       onSuccess: () => {
-        toast.success('模型加载成功', `${params.modelId} 已成功启动`);
+        // 异步加载：API 返回 202 表示已接受，模型正在后台加载
+        toast.info('模型正在加载', `${params.modelId} 已提交加载请求，请稍候查看状态`);
         setDialogModel(null);
       },
       onError: (error) => {
@@ -408,7 +409,9 @@ export function ModelsPage() {
           onConfirm={handleLoadConfirm}
           modelId={dialogModel.id}
           modelName={dialogModel.alias || dialogModel.name}
+          modelPath={dialogModel.path}
           isLoading={loadModel.isPending}
+          backendType={dialogModel.backendType}
         />
       )}
 
