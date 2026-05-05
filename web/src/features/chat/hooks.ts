@@ -1,198 +1,126 @@
-import { useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getChatModels,
+  listConversations,
+  getConversation,
+  createConversation,
+  deleteConversation,
+  createMessage,
+  streamingChatCompletion,
+  type ChatModelInfo,
+  type Conversation,
+  type Message,
+  type StreamingChatParams,
+} from '@/lib/api/chat';
 
-/**
- * Chat message
- */
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp?: number;
+// ===== Query keys =====
+export const chatKeys = {
+  models: ['chat', 'models'] as const,
+  conversations: ['chat', 'conversations'] as const,
+  conversation: (id: string) => ['chat', 'conversations', id] as const,
+};
+
+// ===== Model hooks =====
+
+export function useChatModels() {
+  return useQuery({
+    queryKey: chatKeys.models,
+    queryFn: getChatModels,
+    refetchInterval: 10_000,
+    staleTime: 5_000,
+  });
 }
 
-/**
- * Chat completion request parameters
- */
-export interface ChatCompletionParams {
-  model: string;
-  messages: ChatMessage[];
-  stream?: boolean;
-  temperature?: number;
-  topP?: number;
-  topK?: number;
-  maxTokens?: number;
-  repeatPenalty?: number;
-  stop?: string[];
+// ===== Conversation hooks =====
+
+export function useConversations() {
+  return useQuery({
+    queryKey: chatKeys.conversations,
+    queryFn: () => listConversations(50, 0).then((r) => r.items ?? []),
+  });
 }
 
-/**
- * Streaming chat completion hook
- */
-export function useStreamingChat() {
+export function useConversation(id: string | null) {
+  return useQuery({
+    queryKey: chatKeys.conversation(id ?? ''),
+    queryFn: () => getConversation(id!),
+    enabled: !!id,
+  });
+}
+
+export function useCreateConversation() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (
-      params: ChatCompletionParams & {
-        onChunk?: (chunk: string) => void;
-        onComplete?: (message: string) => void;
-        onError?: (error: Error) => void;
-      }
-    ) => {
-      const { onChunk, onComplete, onError, ...requestParams } = params;
-
-      try {
-        const response = await fetch('/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...requestParams,
-            stream: true,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let fullMessage = '';
-        let buffer = '';
-
-        if (!reader) {
-          throw new Error('No reader available');
-        }
-
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
-
-            if (trimmed.startsWith('data: ')) {
-              const data = trimmed.slice(6);
-
-              if (data === '[DONE]') {
-                onComplete?.(fullMessage);
-                return { success: true, message: fullMessage };
-              }
-
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
-
-                if (content) {
-                  fullMessage += content;
-                  onChunk?.(content);
-                }
-              } catch (e) {
-                console.error('Failed to parse SSE data:', e);
-              }
-            }
-          }
-        }
-
-        onComplete?.(fullMessage);
-        return { success: true, message: fullMessage };
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error('Unknown error');
-        onError?.(err);
-        throw err;
-      }
+    mutationFn: (body: { model: string; title?: string }) =>
+      createConversation(body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: chatKeys.conversations });
     },
   });
 }
 
-/**
- * Fetch loaded model list for chat
- */
-export async function getLoadedModels(): Promise<string[]> {
-  try {
-    const response = await fetch('/api/models/loaded');
-    const data = await response.json();
-
-    if (data.success && data.models) {
-      return data.models.map((m: { alias?: string; name: string }) => m.alias || m.name);
-    }
-
-    return [];
-  } catch (error) {
-    console.error('Failed to get loaded models:', error);
-    return [];
-  }
+export function useDeleteConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteConversation,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: chatKeys.conversations });
+    },
+  });
 }
 
-/**
- * Chat history storage key
- */
-export const CHAT_HISTORY_KEY = 'shepherd_chat_history';
-
-/**
- * Chat history item
- */
-export interface ChatHistoryItem {
-  id: string;
-  title: string;
-  messages: ChatMessage[];
-  model: string;
-  createdAt: number;
-  updatedAt: number;
+export function useSaveMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      conversationId,
+      role,
+      content,
+    }: {
+      conversationId: string;
+      role: string;
+      content: string;
+    }) => createMessage(conversationId, { role, content }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({
+        queryKey: chatKeys.conversation(variables.conversationId),
+      });
+      qc.invalidateQueries({ queryKey: chatKeys.conversations });
+    },
+  });
 }
 
-/**
- * Load chat history
- */
-export function loadChatHistory(): ChatHistoryItem[] {
-  try {
-    const stored = localStorage.getItem(CHAT_HISTORY_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Failed to load chat history:', error);
-  }
-  return [];
+// ===== Streaming chat hook =====
+
+export interface UseStreamingChatOptions {
+  onChunk?: (text: string) => void;
+  onComplete?: (fullText: string) => void;
+  onError?: (error: Error) => void;
 }
 
-/**
- * Save chat history
- */
-export function saveChatHistory(history: ChatHistoryItem[]): void {
-  try {
-    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(history));
-  } catch (error) {
-    console.error('Failed to save chat history:', error);
-  }
-}
+export function useStreamingChat(opts?: UseStreamingChatOptions) {
+  let abortController: AbortController | null = null;
 
-/**
- * Create a new chat session
- */
-export function createChatSession(model: string): ChatHistoryItem {
-  return {
-    id: `chat_${Date.now()}`,
-    title: '新对话',
-    messages: [],
-    model,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
+  const send = (params: Omit<StreamingChatParams, 'onChunk' | 'onComplete' | 'onError' | 'signal'>) => {
+    abortController?.abort();
+    abortController = new AbortController();
+
+    streamingChatCompletion({
+      ...params,
+      signal: abortController.signal,
+      onChunk: opts?.onChunk ?? (() => {}),
+      onComplete: opts?.onComplete ?? (() => {}),
+      onError: opts?.onError ?? (() => {}),
+    });
   };
+
+  const abort = () => {
+    abortController?.abort();
+    abortController = null;
+  };
+
+  return { send, abort };
 }
 
-/**
- * Delete a chat session
- */
-export function deleteChatSession(sessionId: string): void {
-  const history = loadChatHistory();
-  const filtered = history.filter((item) => item.id !== sessionId);
-  saveChatHistory(filtered);
-}
-
-
+// ===== Re-export types =====
+export type { ChatModelInfo, Conversation, Message };

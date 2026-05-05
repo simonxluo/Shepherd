@@ -15,7 +15,7 @@ export interface ServerInfoResponse {
     gitCommit: string;
     name: string;
     status: string;
-    mode: string;
+    role: string;
     ports: {
       web: number;
       anthropic: number;

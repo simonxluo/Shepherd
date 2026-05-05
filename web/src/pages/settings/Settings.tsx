@@ -352,7 +352,7 @@ function AboutPanel() {
     version: string;
     buildTime: string;
     gitCommit: string;
-    mode: string;
+    role: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -365,7 +365,7 @@ function AboutPanel() {
             version: response.data.version,
             buildTime: response.data.buildTime,
             gitCommit: response.data.gitCommit,
-            mode: response.data.mode,
+            role: response.data.role,
           });
         }
       } catch (error) {
@@ -393,14 +393,14 @@ function AboutPanel() {
     return commit.length > 8 ? commit.substring(0, 8) : commit;
   };
 
-  const formatMode = (mode: string | undefined) => {
-    if (!mode) return '未知';
-    const modeMap: Record<string, string> = {
+  const formatRole = (role: string | undefined) => {
+    if (!role) return '未知';
+    const roleMap: Record<string, string> = {
       master: '主节点',
       client: '工作节点',
       hybrid: '混合节点',
     };
-    return modeMap[mode] || mode;
+    return roleMap[role] || role;
   };
 
   return (
@@ -441,7 +441,7 @@ function AboutPanel() {
             <div className="flex items-center justify-between py-1.5 border-b">
               <span className="text-sm text-muted-foreground">运行模式</span>
               <span className="font-mono text-xs">
-                {formatMode(serverInfo?.mode)}
+                {formatRole(serverInfo?.role)}
               </span>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">

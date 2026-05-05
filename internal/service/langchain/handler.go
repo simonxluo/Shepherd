@@ -2,10 +2,16 @@
 package langchain
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 	"github.com/tmc/langchaingo/llms"
 )
 
@@ -286,8 +292,263 @@ func (h *Handler) RegisterRoutes(router *gin.RouterGroup) {
 		langchain.POST("/stream", h.HandleStreamPrompt)
 		langchain.GET("/models", h.HandleListModels)
 		langchain.GET("/stats", h.HandleGetStats)
+
+		// Chat-specific endpoints
+		chat := langchain.Group("/chat")
+		{
+			chat.GET("/models", h.HandleChatModels)
+			chat.POST("/completions", h.HandleChatCompletions)
+		}
 	}
 
 	h.log.Infof("LangChainGo API 路由已注册: /api/langchain/*")
 }
 
+// ===== 错误处理 =====
+
+// ErrorWithDetails 发送带详细信息的错误响应
+func ErrorWithDetails(c *gin.Context, code types.ErrorCode, message, details string) {
+	c.JSON(http.StatusBadRequest, gin.H{
+		"error":   message,
+		"code":    string(code),
+		"details": details,
+	})
+}
+
+// ===== Chat-specific endpoints =====
+
+// ChatCompletionsRequest OpenAI-compatible chat completion request for the chat UI
+type ChatCompletionsRequest struct {
+	Model       string                 `json:"model"`
+	Messages    []ChatCompletionsMsg   `json:"messages"`
+	Stream      bool                   `json:"stream,omitempty"`
+	Temperature float64                `json:"temperature,omitempty"`
+	MaxTokens   int                    `json:"max_tokens,omitempty"`
+	TopP        float64                `json:"top_p,omitempty"`
+	Stop        []string               `json:"stop,omitempty"`
+}
+
+// ChatCompletionsMsg message in a chat completion request
+type ChatCompletionsMsg struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+// HandleChatModels returns all models with their loaded status for the chat UI
+// GET /api/langchain/chat/models
+func (h *Handler) HandleChatModels(c *gin.Context) {
+	models := h.manager.GetChatModels()
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"models":  models,
+		"total":   len(models),
+	})
+}
+
+// HandleChatCompletions handles OpenAI-compatible streaming chat completions
+// POST /api/langchain/chat/completions
+func (h *Handler) HandleChatCompletions(c *gin.Context) {
+	var req ChatCompletionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid request format",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	if req.Model == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "model is required"})
+		return
+	}
+
+	if len(req.Messages) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "messages is required"})
+		return
+	}
+
+	// Ensure the model is loaded (auto-load if needed)
+	port, err := h.manager.EnsureModelLoaded(req.Model)
+	if err != nil {
+		h.log.Errorf("Failed to ensure model loaded: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to load model",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Build the upstream llama.cpp URL
+	upstreamURL := fmt.Sprintf("http://127.0.0.1:%d/v1/chat/completions", port)
+
+	// Forward the request body, ensuring stream:true
+	forwardBody := map[string]any{
+		"model":    req.Model,
+		"messages": req.Messages,
+		"stream":   true,
+	}
+	if req.Temperature > 0 {
+		forwardBody["temperature"] = req.Temperature
+	}
+	if req.MaxTokens > 0 {
+		forwardBody["max_tokens"] = req.MaxTokens
+	}
+	if req.TopP > 0 {
+		forwardBody["top_p"] = req.TopP
+	}
+	if len(req.Stop) > 0 {
+		forwardBody["stop"] = req.Stop
+	}
+
+	bodyBytes, err := json.Marshal(forwardBody)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal request"})
+		return
+	}
+
+	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", upstreamURL, strings.NewReader(string(bodyBytes)))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upstream request"})
+		return
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	h.log.Infof("Chat completions: forwarding to %s (model=%s, temp=%.2f, max_tokens=%d, top_p=%.2f)",
+		upstreamURL, req.Model, req.Temperature, req.MaxTokens, req.TopP)
+
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to connect to model server",
+			"details": err.Error(),
+		})
+		return
+	}
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(httpResp.Body)
+		h.log.Errorf("Upstream returned %d: %s", httpResp.StatusCode, string(respBody))
+		c.JSON(httpResp.StatusCode, gin.H{
+			"error":   "Model server error",
+			"details": string(respBody),
+		})
+		return
+	}
+
+	h.log.Infof("Upstream responded 200, Content-Type=%s, streaming back to client", httpResp.Header.Get("Content-Type"))
+
+	// Stream the SSE response back to the client as-is (OpenAI format)
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Streaming not supported"})
+		return
+	}
+
+	buf := make([]byte, 4096)
+	for {
+		n, readErr := httpResp.Body.Read(buf)
+		if n > 0 {
+			c.Writer.Write(buf[:n])
+			flusher.Flush()
+		}
+		if readErr != nil {
+			break
+		}
+	}
+
+	// Ensure [DONE] is sent
+	c.Writer.Write([]byte("data: [DONE]\n\n"))
+	flusher.Flush()
+}
+
+// HandleChatCompletionsNonStream handles non-streaming chat completions
+func (h *Handler) HandleChatCompletionsNonStream(c *gin.Context) {
+	var req ChatCompletionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid request format",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	if req.Model == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "model is required"})
+		return
+	}
+
+	// Ensure model is loaded
+	if _, err := h.manager.EnsureModelLoaded(req.Model); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to load model",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Convert messages to langchain format
+	messages := make([]llms.MessageContent, len(req.Messages))
+	for i, msg := range req.Messages {
+		var role llms.ChatMessageType
+		switch msg.Role {
+		case "system":
+			role = llms.ChatMessageTypeSystem
+		case "user":
+			role = llms.ChatMessageTypeHuman
+		case "assistant":
+			role = llms.ChatMessageTypeAI
+		default:
+			role = llms.ChatMessageTypeGeneric
+		}
+		messages[i] = llms.MessageContent{
+			Role:  role,
+			Parts: []llms.ContentPart{llms.TextPart(msg.Content)},
+		}
+	}
+
+	// Build options
+	var opts []llms.CallOption
+	if req.Temperature > 0 {
+		opts = append(opts, llms.WithTemperature(req.Temperature))
+	}
+	if req.MaxTokens > 0 {
+		opts = append(opts, llms.WithMaxTokens(req.MaxTokens))
+	}
+
+	response, err := h.manager.ChatPrompt(c.Request.Context(), req.Model, messages, opts...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to generate response",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	content := ""
+	if len(response.Choices) > 0 {
+		content = response.Choices[0].Content
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":      fmt.Sprintf("chatcmpl-%d", time.Now().UnixMilli()),
+		"object":  "chat.completion",
+		"created": time.Now().Unix(),
+		"model":   req.Model,
+		"choices": []gin.H{
+			{
+				"index": 0,
+				"message": gin.H{
+					"role":    "assistant",
+					"content": content,
+				},
+				"finish_reason": "stop",
+			},
+		},
+	})
+}

@@ -21,15 +21,15 @@ type HFModelIndex struct {
 }
 
 type HFModelInfo struct {
-	Name           string
-	DirName        string
-	ModelType      string
-	Architectures  []string
-	PipelineTag    string
-	IsDiffusers    bool
-	DiffuserClass  string
-	DirPath        string
-	TotalSize      int64
+	Name          string
+	DirName       string
+	ModelType     string
+	Architectures []string
+	PipelineTag   string
+	IsDiffusers   bool
+	DiffuserClass string
+	DirPath       string
+	TotalSize     int64
 }
 
 func ReadModelInfo(dirPath string) (*HFModelInfo, error) {

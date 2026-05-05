@@ -39,10 +39,11 @@ export function useModel(modelId: string) {
   return useQuery({
     queryKey: ['models', modelId],
     queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: { model: Model } }>(`/models/${modelId}`);
-      return response.data.model;
+      const response = await apiClient.get<{ success: boolean; data: Model }>(`/models/${modelId}`);
+      return response.data;
     },
     enabled: !!modelId,
+    staleTime: 30_000,
   });
 }
 
