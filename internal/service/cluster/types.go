@@ -86,6 +86,28 @@ type Command struct {
 	Payload map[string]interface{} `json:"payload"`
 }
 
+// Heartbeat represents a heartbeat message from client to master
+type Heartbeat struct {
+	ClientID  string                 `json:"clientId"`
+	Timestamp time.Time              `json:"timestamp"`
+	Status    ClientStatus           `json:"status"`
+	Resources *ResourceUsage         `json:"resources,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ResourceUsage represents current resource usage
+type ResourceUsage struct {
+	CPUPercent     float64 `json:"cpuPercent"`
+	MemoryUsed     int64   `json:"memoryUsed"`  // bytes
+	MemoryTotal    int64   `json:"memoryTotal"` // bytes
+	GPUPercent     float64 `json:"gpuPercent"`
+	GPUMemoryUsed  int64   `json:"gpuMemoryUsed"`  // bytes
+	GPUMemoryTotal int64   `json:"gpuMemoryTotal"` // bytes
+	DiskPercent    float64 `json:"diskPercent"`
+	Uptime         int64   `json:"uptime"` // seconds
+}
+
+
 // DiscoveredClient represents a client found during network scan
 type DiscoveredClient struct {
 	Address      string        `json:"address"`

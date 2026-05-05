@@ -27,6 +27,7 @@ backends:
         serve_bin: ""
         extra_args: ""
         default_port: 8000
+        env: []
         paths:
             - path: /usr/local/bin/
               name: Default
@@ -38,6 +39,7 @@ backends:
         serve_bin: ""
         extra_args: ""
         default_port: 8000
+        env: []
         video_pruning_rate: 0
         mm_tensor_ipc: false
         paths:

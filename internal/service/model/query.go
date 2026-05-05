@@ -405,6 +405,19 @@ func (m *Manager) saveModels() {
 	}
 }
 
+// GetModelTokenCounts returns token usage for a model
+func (m *Manager) GetModelTokenCounts(modelID string) (prompt, completion int64, found bool) {
+	m.mu.RLock()
+	status, exists := m.statuses[modelID]
+	m.mu.RUnlock()
+	if !exists {
+		return 0, 0, false
+	}
+	p, c := status.GetTokenCounts()
+	return p, c, true
+}
+
+
 func (m *Manager) GetLoadedModelCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -417,4 +430,3 @@ func (m *Manager) GetLoadedModelCount() int {
 	}
 	return count
 }
-

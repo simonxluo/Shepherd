@@ -34,8 +34,12 @@ func (b *VLLMBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 		return info, nil
 	}
 
+	env := buildEnvWithVars(cfg.EnvVars)
+
 	if cfg.ServeBin != "" {
-		if output, err := exec.Command(cfg.ServeBin, "--version").CombinedOutput(); err == nil {
+		cmd := exec.Command(cfg.ServeBin, "--version")
+		cmd.Env = env
+		if output, err := cmd.CombinedOutput(); err == nil {
 			info.Version = strings.TrimSpace(string(output))
 			info.Available = true
 			info.BinPath = cfg.ServeBin
@@ -46,7 +50,9 @@ func (b *VLLMBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 	if len(cfg.BinPaths) > 0 {
 		for _, p := range cfg.BinPaths {
 			candidate := filepath.Join(p, "vllm")
-			if output, err := exec.Command(candidate, "--version").CombinedOutput(); err == nil {
+			cmd := exec.Command(candidate, "--version")
+			cmd.Env = env
+			if output, err := cmd.CombinedOutput(); err == nil {
 				info.Version = strings.TrimSpace(string(output))
 				info.Available = true
 				info.BinPath = candidate
@@ -66,9 +72,9 @@ func (b *VLLMBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 	}
 
 	cmd := exec.Command(condaPath, "run", "--no-banner", "-n", cfg.CondaEnv, "vllm", "--version")
+	cmd.Env = env
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		logger.Warnf("vLLM discovery failed: condaEnv=%s, error=%v, output=%s", cfg.CondaEnv, err, string(output))
 		info.Available = false
 		return info, nil
 	}
@@ -77,6 +83,7 @@ func (b *VLLMBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 	info.Version = version
 	info.Available = true
 	info.CondaEnv = cfg.CondaEnv
+	info.CondaPath = cfg.CondaPath
 
 	if cfg.ServeBin != "" {
 		info.BinPath = cfg.ServeBin
@@ -106,7 +113,10 @@ func (b *VLLMBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) (*St
 	if info.BinPath != "" {
 		args = append(args, info.BinPath, "serve", req.ModelPath)
 	} else {
-		condaPath := "conda"
+		condaPath := info.CondaPath
+		if condaPath == "" {
+			condaPath = "conda"
+		}
 		args = append(args, condaPath, "run", "--no-banner", "-n", info.CondaEnv, "vllm", "serve", req.ModelPath)
 	}
 
@@ -186,6 +196,11 @@ func (b *VLLMBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) (*St
 		args = append(args, "--disable-log-requests")
 	}
 
+	// Enforce eager execution
+	if p.EnforceEager {
+		args = append(args, "--enforce-eager")
+	}
+
 	// GPU layers (mapped to -ngl for compatibility, though vLLM handles GPU automatically)
 	// vLLM doesn't use -ngl, but we log if it's set
 	if req.GPULayers > 0 {
@@ -204,6 +219,7 @@ func (b *VLLMBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) (*St
 		BinPath:           info.BinPath,
 		BackendType:       BackendVLLM,
 		SkipLDLibraryPath: true,
+		CondaPath:         info.CondaPath,
 	}, nil
 }
 
@@ -232,4 +248,9 @@ func (b *VLLMBackend) CheckHealth(port int) (*HealthResult, error) {
 // SupportsModel returns true for safetensors/HuggingFace directories
 func (b *VLLMBackend) SupportsModel(modelPath string) bool {
 	return IsSafeTensorsModel(modelPath)
+}
+
+// SupportedEndpoints returns the endpoints supported by vLLM
+func (b *VLLMBackend) SupportedEndpoints() map[string]bool {
+	return endpointsWithoutAudio()
 }

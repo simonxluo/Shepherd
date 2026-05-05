@@ -229,19 +229,4 @@ func cStringToGo(cstr *goamdsmi.C.char) string {
 	return string(buf)
 }
 
-// Sensor constants (exported for testing)
-const (
-	sensorTypeGPU      = 0 // GPU temperature sensor
-	sensorTypeJunction = 1 // Junction temperature sensor
-	metricTypeCurrent  = 0 // Current value metric
 
-	// Error values returned by AMD SMI on failure
-	uint16MaxError = 0xFFFF
-	uint32MaxError = 0xFFFFFFFF
-	uint64MaxError = 0xFFFFFFFFFFFFFFFF
-)
-
-// convertMicrowattsToWatts converts power from microwatts to watts.
-func convertMicrowattsToWatts(microwatts uint64) float64 {
-	return float64(microwatts) / 1000000.0
-}

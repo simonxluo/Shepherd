@@ -185,7 +185,7 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		args = append(args, "-kvu")
 	}
 	if p.KVCacheSize > 0 {
-		args = append(args, "--cache-ram", strconv.Itoa(p.KVCacheSize))
+		args = append(args, "--kv-cache-size", strconv.Itoa(p.KVCacheSize))
 	}
 
 	// Runtime configuration
@@ -350,6 +350,11 @@ func (b *LlamaCppBackend) CheckHealth(port int) (*HealthResult, error) {
 // SupportsModel returns true for GGUF files
 func (b *LlamaCppBackend) SupportsModel(modelPath string) bool {
 	return IsGGUFModel(modelPath)
+}
+
+// SupportedEndpoints returns the endpoints supported by llama.cpp
+func (b *LlamaCppBackend) SupportedEndpoints() map[string]bool {
+	return endpointsWithoutAudio()
 }
 
 // quoteAndJoin joins arguments into a command string with proper quoting

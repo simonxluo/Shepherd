@@ -192,3 +192,19 @@ type NodeConfig struct {
 	Version             string            `json:"version"`
 }
 
+// NodeMetrics contains metrics about a node
+type NodeMetrics struct {
+	NodeID      string    `json:"nodeId"`
+	Timestamp   time.Time `json:"timestamp"`
+	CPUUsage    float64   `json:"cpuUsage"`    // percentage
+	MemoryUsage float64   `json:"memoryUsage"` // percentage
+	DiskUsage   float64   `json:"diskUsage"`   // percentage
+	NetworkRx   int64     `json:"networkRx"`   // bytes per second
+	NetworkTx   int64     `json:"networkTx"`   // bytes per second
+	ActiveTasks int       `json:"activeTasks"`
+	TotalTasks  int64     `json:"totalTasks"`
+	FailedTasks int64     `json:"failedTasks"`
+	Uptime      int64     `json:"uptime"` // seconds
+	LoadAverage []float64 `json:"loadAverage,omitempty"`
+}
+

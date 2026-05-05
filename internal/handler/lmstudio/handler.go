@@ -2,7 +2,6 @@ package lmstudio
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/compat"
@@ -345,37 +344,6 @@ type ErrorDetail struct {
 	Type    string `json:"type"`
 	Param   string `json:"param,omitempty"`
 	Code    string `json:"code,omitempty"`
-}
-
-func NewChatCompletionResponse(id, modelName string, choices []ChatCompletionChoice, usage *Usage) *ChatCompletionResponse {
-	return &ChatCompletionResponse{
-		ID:      id,
-		Object:  "chat.completion",
-		Created: time.Now().Unix(),
-		Model:   modelName,
-		Choices: choices,
-		Usage:   usage,
-	}
-}
-
-func NewCompletionResponse(id, modelName string, choices []CompletionChoice, usage *Usage) *CompletionResponse {
-	return &CompletionResponse{
-		ID:      id,
-		Object:  "text_completion",
-		Created: time.Now().Unix(),
-		Model:   modelName,
-		Choices: choices,
-		Usage:   usage,
-	}
-}
-
-func NewEmbeddingResponse(modelName string, data []EmbeddingData, usage *Usage) *EmbeddingResponse {
-	return &EmbeddingResponse{
-		Object: "list",
-		Data:   data,
-		Model:  modelName,
-		Usage:  usage,
-	}
 }
 
 func NewModelsResponse(models []Model) *ModelsResponse {

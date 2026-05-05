@@ -25,6 +25,10 @@ type Process struct {
 	Cmd     string
 	BinPath string
 
+	// 启动选项
+	SkipLDLibraryPath bool     // 跳过 LD_LIBRARY_PATH 设置（conda 后端使用）
+	EnvVars           []string // 额外的环境变量 (e.g., "KEY=VALUE")
+
 	// Runtime state
 	PID     int
 	Running bool
@@ -54,17 +58,19 @@ type Process struct {
 type Handler func(line string)
 
 // NewProcess creates a new process wrapper
-func NewProcess(id, name, cmd, binPath string) *Process {
+func NewProcess(id, name, cmd, binPath string, skipLDLibraryPath bool, envVars []string) *Process {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Process{
-		ID:         id,
-		Name:       name,
-		Cmd:        cmd,
-		BinPath:    binPath,
-		ctx:        ctx,
-		cancel:     cancel,
-		outputChan: make(chan string, 100),
+		ID:                id,
+		Name:              name,
+		Cmd:               cmd,
+		BinPath:           binPath,
+		SkipLDLibraryPath: skipLDLibraryPath,
+		EnvVars:           envVars,
+		ctx:               ctx,
+		cancel:            cancel,
+		outputChan:        make(chan string, 100),
 	}
 }
 
@@ -87,13 +93,6 @@ func (p *Process) GetCtxSize() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.CtxSize
-}
-
-// SetPort sets the port number
-func (p *Process) SetPort(port int) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.Port = port
 }
 
 // GetPort returns the port number
@@ -221,6 +220,32 @@ func (p *Process) Start() error {
 func (p *Process) setupEnvironment(cmd *exec.Cmd, binPath string) error {
 	// Get current environment
 	env := os.Environ()
+
+	// 应用配置中的自定义环境变量
+	for _, ev := range p.EnvVars {
+		if idx := strings.Index(ev, "="); idx > 0 {
+			key := ev[:idx]
+			// 替换已有的同名变量
+			prefix := key + "="
+			found := false
+			for i, e := range env {
+				if strings.HasPrefix(e, prefix) {
+					env[i] = ev
+					found = true
+					break
+				}
+			}
+			if !found {
+				env = append(env, ev)
+			}
+		}
+	}
+
+	// conda 后端（vLLM/vLLM-omni）通过 conda run 管理环境，跳过 LD_LIBRARY_PATH 修改
+	if p.SkipLDLibraryPath {
+		cmd.Env = env
+		return nil
+	}
 
 	// Add bin directory to library path on Unix-like systems
 	if strings.HasPrefix(binPath, "/") {
@@ -435,6 +460,7 @@ func (p *Process) GetExitCode() (int, error) {
 
 	return p.exitCode, nil
 }
+
 
 // splitCommandLineArgs splits a command line string into arguments
 // Handles quoted strings and escape sequences (ported from Java)

@@ -1,9 +1,11 @@
 package openai
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
@@ -27,6 +29,7 @@ func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
 		ResponseFormat string  `json:"response_format,omitempty"`
 		Speed          float64 `json:"speed,omitempty"`
 		Language       string  `json:"language,omitempty"`
+		Stream         bool    `json:"stream,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.sendError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
@@ -49,13 +52,36 @@ func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
 		return
 	}
 
+	// 验证模型具备 TTS 能力
+	caps := h.ModelMgr.GetModelCapabilities(actualModelID)
+	if caps == nil || !caps.TTS {
+		h.sendError(c, http.StatusBadRequest, "invalid_model", fmt.Sprintf("模型 %q 不支持 TTS（语音合成），请选择支持 TTS 的模型", req.Model), "model")
+		return
+	}
+
+	// 验证后端支持 /v1/audio/speech 端点
+	b := h.ModelMgr.GetBackendForModel(actualModelID)
+	if b != nil {
+		endpoints := b.SupportedEndpoints()
+		if supported, ok := endpoints["/v1/audio/speech"]; !ok || !supported {
+			h.sendError(c, http.StatusBadRequest, "backend_not_supported",
+				fmt.Sprintf("当前后端 %q 不支持 TTS 端点，请使用 vLLM-Omni 后端加载模型", b.Type()), "model")
+			return
+		}
+	}
+
 	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
 		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 		return
 	}
 
-	h.ForwardBinaryRequest(c, port, "/v1/audio/speech", actualModelID, &req)
+	if req.Stream {
+		logger.Infof("TTS 流式请求: model=%s, port=%d", req.Model, port)
+		h.ForwardStreamRequest(c, port, "/v1/audio/speech", actualModelID, &req)
+	} else {
+		h.ForwardBinaryRequest(c, port, "/v1/audio/speech", actualModelID, &req)
+	}
 }
 
 // HandleCreateTranscription proxies POST /v1/audio/transcriptions (ASR) to the backend model.
@@ -70,6 +96,13 @@ func (h *AudioHandler) HandleCreateTranscription(c *gin.Context) {
 	actualModelID, err := h.FindModel(modelName)
 	if err != nil {
 		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		return
+	}
+
+	// 验证模型具备 ASR 能力
+	caps := h.ModelMgr.GetModelCapabilities(actualModelID)
+	if caps == nil || !caps.ASR {
+		h.sendError(c, http.StatusBadRequest, "invalid_model", fmt.Sprintf("模型 %q 不支持 ASR（语音识别），请选择支持 ASR 的模型", modelName), "model")
 		return
 	}
 
@@ -122,4 +155,27 @@ func (h *AudioHandler) HandleCreateTranslation(c *gin.Context) {
 	}
 
 	h.ForwardMultipartRequest(c, port, "/v1/audio/translations", actualModelID, formFields)
+}
+
+// HandleListVoices 代理 GET /v1/audio/voices 到后端，返回可用语音列表
+func (h *AudioHandler) HandleListVoices(c *gin.Context) {
+	modelName := c.Query("model")
+	if modelName == "" {
+		h.sendError(c, http.StatusBadRequest, "invalid_request", "缺少必要参数: model", "model")
+		return
+	}
+
+	actualModelID, err := h.FindModel(modelName)
+	if err != nil {
+		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		return
+	}
+
+	port, err := h.GetModelPort(actualModelID)
+	if err != nil {
+		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		return
+	}
+
+	h.ForwardGetRequest(c, port, "/v1/audio/voices")
 }

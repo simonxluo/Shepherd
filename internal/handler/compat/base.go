@@ -147,9 +147,6 @@ func (b *BaseHandler) ForwardStreamRequest(c *gin.Context, port int, path string
 		c.Request.ContentLength = int64(len(body))
 		c.Request.Header.Set("Content-Type", "application/json")
 	}
-	if auth := c.Request.Header.Get("Authorization"); auth != "" {
-		c.Request.Header.Set("Authorization", auth)
-	}
 
 	proxy.ServeHTTP(c.Writer, c.Request)
 }
@@ -368,6 +365,40 @@ func (b *BaseHandler) ForwardMultipartRequest(c *gin.Context, port int, path str
 	}
 
 	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+	httpReq.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
+
+	resp, err := b.Client.Do(httpReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+	defer utils.CloseQuietly(resp.Body)
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	for key, values := range resp.Header {
+		for _, value := range values {
+			c.Header(key, value)
+		}
+	}
+	c.Status(resp.StatusCode)
+	utils.WriteQuietly(c.Writer, respBody)
+}
+
+// ForwardGetRequest 代理 GET 请求到后端模型服务
+func (b *BaseHandler) ForwardGetRequest(c *gin.Context, port int, path string) {
+	reqURL := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
+
+	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "GET", reqURL, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	httpReq.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
 
 	resp, err := b.Client.Do(httpReq)

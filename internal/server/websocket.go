@@ -13,25 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Event types
-const (
-	EventModelLoadStart    = "model_load_start"
-	EventModelLoadProgress = "model_load_progress"
-	EventModelLoadComplete = "model_load_complete"
-	EventModelLoadError    = "model_load_error"
-	EventModelUnload       = "model_unload"
-	EventModelStatusChange = "model_status_changed"
-	EventProcessMetrics    = "process_metrics"
-	EventProcessLog        = "process_log"
-)
-
-// Event represents a WebSocket event
-type Event struct {
-	Type      string      `json:"type"`
-	Data      interface{} `json:"data"`
-	Timestamp int64       `json:"timestamp"`
-}
-
 // WebSocketClient represents a connected WebSocket client
 type WebSocketClient struct {
 	ID   string
@@ -95,7 +76,11 @@ func (h *WebSocketHub) Run() {
 
 // Emit broadcasts an event to all connected clients
 func (h *WebSocketHub) Emit(eventType string, data interface{}) {
-	event := Event{
+	event := struct {
+		Type      string      `json:"type"`
+		Data      interface{} `json:"data"`
+		Timestamp int64       `json:"timestamp"`
+	}{
 		Type:      eventType,
 		Data:      data,
 		Timestamp: time.Now().Unix(),
@@ -121,13 +106,6 @@ func (h *WebSocketHub) Register(client *WebSocketClient) {
 // Unregister removes a client
 func (h *WebSocketHub) Unregister(client *WebSocketClient) {
 	h.unregister <- client
-}
-
-// ClientCount returns the number of connected clients
-func (h *WebSocketHub) ClientCount() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.clients)
 }
 
 // WritePump pumps messages from the hub to the WebSocket connection

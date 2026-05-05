@@ -69,6 +69,7 @@ export interface Model {
   mmprojPath?: string;
   scannedAt: string;
   sourceType?: string;
+  backendType?: string; // 推荐后端类型 (llamacpp/vllm/vllm_omni)
 }
 
 /**
@@ -107,6 +108,7 @@ export interface LoadModelParams {
   // Backend config
   llamaCppPath?: string;      // llama.cpp executable path
   mainGpu?: number | string;  // Primary GPU selection
+  backendType?: string;       // Explicit backend type (llamacpp/vllm/vllm_omni)
 
   // Capability toggles
   capabilities?: ModelCapabilities & {
@@ -205,6 +207,26 @@ export interface LoadModelParams {
   unloadAfterMinutes?: number;   // Auto-unload idle time (minutes). 0=never, >0=custom
   concurrencyLimit?: number;     // Max concurrent requests. 0=unlimited, >0=custom limit
 
+  // vLLM 专用参数
+  dtype?: string;                      // Data type: auto/float16/bfloat16/float32
+  maxModelLen?: number;                // Maximum context length
+  gpuMemoryUtilization?: number;       // GPU memory utilization ratio (0-1), default 0.92
+  tensorParallelSize?: number;         // Tensor parallelism GPU count
+  pipelineParallelSize?: number;       // Pipeline parallelism group count
+  trustRemoteCode?: boolean;           // Trust remote code
+  servedModelName?: string;            // API model name alias
+  quantization?: string;               // Quantization method
+  maxNumSeqs?: number;                 // Maximum concurrent sequences
+  maxNumBatchedTokens?: number;        // Maximum tokens per iteration
+  enablePrefixCaching?: boolean;       // Prefix caching
+  enableChunkedPrefill?: boolean;      // Chunked prefill
+  disableLogRequests?: boolean;        // Disable request logging
+  enforceEager?: boolean;              // Enforce eager execution mode
+  // vLLM-Omni 专用参数
+  omni?: boolean;                      // 启用 omni 多模态模式
+  videoPruningRate?: number;           // Video token pruning rate (0-1)
+  mmTensorIPC?: boolean;               // Multimodal tensor IPC
+
   // Parameter enable flags: false = use llama-server defaults
   enabled?: {
     // Basic parameters
@@ -295,6 +317,26 @@ export interface LoadModelParams {
     // Runtime management
     unloadAfterMinutes?: boolean;
     concurrencyLimit?: boolean;
+
+    // vLLM parameters
+    dtype?: boolean;
+    maxModelLen?: boolean;
+    gpuMemoryUtilization?: boolean;
+    tensorParallelSize?: boolean;
+    pipelineParallelSize?: boolean;
+    trustRemoteCode?: boolean;
+    servedModelName?: boolean;
+    quantization?: boolean;
+    maxNumSeqs?: boolean;
+    maxNumBatchedTokens?: boolean;
+    enablePrefixCaching?: boolean;
+    enableChunkedPrefill?: boolean;
+    disableLogRequests?: boolean;
+    enforceEager?: boolean;
+    // vLLM-Omni parameters
+    omni?: boolean;
+    videoPruningRate?: boolean;
+    mmTensorIPC?: boolean;
   };
 }
 

@@ -52,14 +52,15 @@ type Model struct {
 }
 
 type ModelStatus struct {
-	ID        string
-	Name      string
-	State     LoadState
-	ProcessID string
-	Port      int
-	CtxSize   int
-	LoadedAt  time.Time
-	Error     error
+	ID          string
+	Name        string
+	State       LoadState
+	ProcessID   string
+	Port        int
+	CtxSize     int
+	LoadedAt    time.Time
+	BackendType string // 加载时使用的后端类型 (llamacpp/vllm/vllm_omni)
+	Error       error
 
 	mu sync.Mutex
 
@@ -133,16 +134,6 @@ func isValidTransition(from, to LoadState) bool {
 		}
 	}
 	return false
-}
-
-// ScanConfig contains configuration for model scanning
-type ScanConfig struct {
-	Paths          []string
-	Recursive      bool
-	FollowSymlinks bool
-	MaxDepth       int
-	IncludePattern string // Regex pattern for files to include
-	ExcludePattern string // Regex pattern for files to exclude
 }
 
 // ScanResult represents the result of a scan operation
@@ -272,6 +263,26 @@ type LoadRequest struct {
 	// Runtime management
 	UnloadAfterMinutes int `json:"unloadAfterMinutes"` // TTL: idle minutes before auto-unload. 0 = never unload, >0 = custom minutes
 	ConcurrencyLimit   int `json:"concurrencyLimit"`   // Max concurrent requests. 0 = unlimited, >0 = custom limit
+
+	// vLLM 专用参数
+	DataType             string  `json:"dtype,omitempty"`
+	MaxModelLen          int     `json:"maxModelLen,omitempty"`
+	GPUMemoryUtilization float64 `json:"gpuMemoryUtilization,omitempty"`
+	TensorParallelSize   int     `json:"tensorParallelSize,omitempty"`
+	PipelineParallelSize int     `json:"pipelineParallelSize,omitempty"`
+	TrustRemoteCode      bool    `json:"trustRemoteCode"`
+	ServedModelName      string  `json:"servedModelName,omitempty"`
+	Quantization         string  `json:"quantization,omitempty"`
+	MaxNumSeqs           int     `json:"maxNumSeqs,omitempty"`
+	MaxNumBatchedTokens  int     `json:"maxNumBatchedTokens,omitempty"`
+	EnablePrefixCaching  bool    `json:"enablePrefixCaching"`
+	EnableChunkedPrefill bool    `json:"enableChunkedPrefill"`
+	DisableLogRequests   bool    `json:"disableLogRequests"`
+	EnforceEager         bool    `json:"enforceEager"`
+	// vLLM-Omni 专用参数
+	Omni             bool    `json:"omni"`
+	VideoPruningRate float64 `json:"videoPruningRate,omitempty"`
+	MMTensorIPC      bool    `json:"mmTensorIPC"`
 }
 
 // LoadResult represents the result of a load operation

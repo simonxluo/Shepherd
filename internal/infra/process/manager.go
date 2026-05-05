@@ -22,7 +22,7 @@ func NewManager() *Manager {
 }
 
 // Start starts a new llama.cpp process for a model
-func (m *Manager) Start(modelID, name, cmd, binPath string) (*Process, error) {
+func (m *Manager) Start(modelID, name, cmd, binPath string, skipLDLibraryPath bool, envVars []string) (*Process, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -37,7 +37,7 @@ func (m *Manager) Start(modelID, name, cmd, binPath string) (*Process, error) {
 	}
 
 	// Create process
-	process := NewProcess(modelID, name, cmd, binPath)
+	process := NewProcess(modelID, name, cmd, binPath, skipLDLibraryPath, envVars)
 
 	// Add to loading map
 	m.loading[modelID] = process
@@ -134,20 +134,6 @@ func (m *Manager) ListAll() (running, loading map[string]*Process) {
 	return running, loading
 }
 
-// GetRunningCount returns the number of running processes
-func (m *Manager) GetRunningCount() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return len(m.processes)
-}
-
-// GetLoadingCount returns the number of loading processes
-func (m *Manager) GetLoadingCount() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return len(m.loading)
-}
-
 // IsRunning returns true if a model is currently running
 func (m *Manager) IsRunning(modelID string) bool {
 	m.mu.RLock()
@@ -185,7 +171,7 @@ func (m *Manager) StopAll() []error {
 	return errs
 }
 
-// quoteAndJoin joins arguments into a command string with proper quoting
+
 func quoteAndJoin(args []string) string {
 	var result string
 	for i, arg := range args {
@@ -193,7 +179,6 @@ func quoteAndJoin(args []string) string {
 			result += " "
 		}
 
-		// Quote arguments that contain spaces or special characters
 		if needsQuoting(arg) {
 			result += `"` + escapeQuotes(arg) + `"`
 		} else {
@@ -203,7 +188,6 @@ func quoteAndJoin(args []string) string {
 	return result
 }
 
-// needsQuoting returns true if an argument needs to be quoted
 func needsQuoting(arg string) bool {
 	for _, c := range arg {
 		if c == ' ' || c == '\t' || c == '"' || c == '\'' || c == '\\' {
@@ -213,7 +197,6 @@ func needsQuoting(arg string) bool {
 	return false
 }
 
-// escapeQuotes escapes quotes in a string
 func escapeQuotes(s string) string {
 	result := strings.Builder{}
 	for _, c := range s {

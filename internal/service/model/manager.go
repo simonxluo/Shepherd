@@ -87,15 +87,11 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 	return m
 }
 
-// isGGUFFile checks if a file is specifically a GGUF model file (deprecated, use isModelFile)
-// 保留此方法以兼容性，内部调用 isModelFile
 func (m *Manager) isGGUFFile(path string) bool {
 	return m.isModelFile(path)
 }
 
-// Load loads a model
 func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
-	// Get model
 	model, exists := m.GetModel(req.ModelID)
 	if !exists {
 		logger.Warnf("模型加载失败: 模型不存在: modelId=%s", req.ModelID)
@@ -104,7 +100,6 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 
 	logger.Infof("开始加载模型: modelId=%s, modelName=%s, ctxSize=%d, gpuLayers=%s", req.ModelID, model.Name, req.CtxSize, req.GPULayers)
 
-	// Phase 1: 检查状态并创建初始 status（加锁）
 	var status *ModelStatus
 	m.mu.Lock()
 	if existingStatus, exists := m.statuses[req.ModelID]; exists {
@@ -124,7 +119,6 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}
 	}
 
-	// Create initial status
 	status = &ModelStatus{
 		ID:   req.ModelID,
 		Name: model.Name,
@@ -145,15 +139,12 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 
 	startTime := time.Now()
 
-	// Phase 2: 准备工作（无锁）- 使用后端接口
-	// Determine model path
 	modelPath := model.Path
 	if len(model.ShardFiles) > 0 {
 		modelPath = model.ShardFiles[0]
 		fmt.Printf("[INFO] 使用分卷模型主文件: %s (共 %d 个分卷)\n", modelPath, len(model.ShardFiles))
 	}
 
-	// Resolve backend
 	bt, parseErr := backend.ParseBackendType(req.BackendType)
 	if parseErr != nil {
 		status.transitionTo(StateError)
@@ -177,7 +168,6 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}, status.Error
 	}
 
-	// Discover backend
 	info, discoverErr := b.Discover(bcfg)
 	if discoverErr != nil {
 		status.transitionTo(StateError)
@@ -201,7 +191,6 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}, status.Error
 	}
 
-	// Allocate port using centralized PortAllocator
 	port, err := m.portAllocator.NextPort()
 	if err != nil {
 		status.transitionTo(StateError)
@@ -214,7 +203,6 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}, status.Error
 	}
 
-	// Build command via backend interface
 	backendReq := m.toBackendLoadRequest(req, modelPath, port)
 	startCfg, cmdErr := b.BuildStartConfig(info, backendReq)
 	if cmdErr != nil {
@@ -228,8 +216,12 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}, cmdErr
 	}
 
-	// Start process
-	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath)
+	// 从后端配置中附加环境变量
+	if len(bcfg.EnvVars) > 0 {
+		startCfg.EnvVars = bcfg.EnvVars
+	}
+
+	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath, startCfg.SkipLDLibraryPath, startCfg.EnvVars)
 	if err != nil {
 		m.portAllocator.Release(port)
 		status.transitionTo(StateError)
@@ -242,9 +234,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		}, err
 	}
 
-	// 设置输出处理器转发日志
 	proc.SetOutputHandler(func(line string) {
-		// 过滤掉过于频繁的日志
 		if !strings.Contains(line, "update_slots") && !strings.Contains(line, "log_server_r") {
 			logger.Debug(fmt.Sprintf("[%s] %s", req.ModelID, line))
 		}
@@ -255,6 +245,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	status.ProcessID = proc.ID
 	status.Port = port
 	status.LoadedAt = time.Now()
+	status.BackendType = b.Type().String()
 	m.mu.Unlock()
 
 	duration := time.Since(startTime)
@@ -270,6 +261,37 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	}, nil
 }
 
+func (m *Manager) isLoading(modelID string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if status, exists := m.statuses[modelID]; exists {
+		return status.State == StateLoading
+	}
+	return false
+}
+
+func (m *Manager) findAvailablePort() int {
+	basePort := 8081
+
+	statuses := m.ListStatus()
+	usedPorts := make(map[int]bool)
+	for _, status := range statuses {
+		if status.Port > 0 {
+			usedPorts[status.Port] = true
+		}
+	}
+
+	for port := basePort; port < basePort+100; port++ {
+		if !usedPorts[port] {
+			return port
+		}
+	}
+
+	return basePort
+}
+
+
 // SearchModels searches and filters models based on criteria
 // 如果内存中没有模型，会自动触发一次扫描
 func (m *Manager) SearchModels(filter *ModelFilter, sort *ModelSort) *ModelSearchResult {
@@ -279,23 +301,23 @@ func (m *Manager) SearchModels(filter *ModelFilter, sort *ModelSort) *ModelSearc
 
 	// 如果内存中没有模型，自动触发一次扫描
 	if modelCount == 0 {
-		fmt.Printf("[INFO] SearchModels: 内存中没有模型，触发自动扫描\n")
+		logger.Info("SearchModels: 内存中没有模型，触发自动扫描")
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 
 		done := make(chan bool, 1)
 		go func() {
 			if _, err := m.Scan(ctx); err != nil {
-				fmt.Printf("[WARN] SearchModels: 自动扫描失败: %v\n", err)
+				logger.Warnf("SearchModels: 自动扫描失败: %v", err)
 			}
 			done <- true
 		}()
 
 		select {
 		case <-done:
-			fmt.Printf("[INFO] SearchModels: 自动扫描完成\n")
+			logger.Info("SearchModels: 自动扫描完成")
 		case <-time.After(10 * time.Second):
-			fmt.Printf("[WARN] SearchModels: 自动扫描超时\n")
+			logger.Warn("SearchModels: 自动扫描超时")
 		}
 	}
 
@@ -491,4 +513,36 @@ func (m *Manager) Close() error {
 // GetProcessManager returns the process manager
 func (m *Manager) GetProcessManager() *process.Manager {
 	return m.processMgr
+}
+
+// GetModelCapabilities 从存储获取模型能力信息
+func (m *Manager) GetModelCapabilities(modelID string) *storage.Capabilities {
+	if m.storageMgr == nil {
+		return nil
+	}
+	ctx := context.Background()
+	meta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, modelID)
+	if err != nil {
+		return nil
+	}
+	return meta.Capabilities
+}
+
+// GetBackendForModel 根据已加载模型的后端类型获取后端实例
+func (m *Manager) GetBackendForModel(modelID string) backend.Backend {
+	m.mu.RLock()
+	status, exists := m.statuses[modelID]
+	m.mu.RUnlock()
+	if !exists || status.BackendType == "" {
+		return nil
+	}
+	bt, err := backend.ParseBackendType(status.BackendType)
+	if err != nil {
+		return nil
+	}
+	b, _, err := m.backendRegistry.Resolve("", bt)
+	if err != nil {
+		return nil
+	}
+	return b
 }

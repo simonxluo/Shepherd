@@ -9,13 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	webDevFlag     bool
-	webBuildFlag   bool
-	webPreviewFlag bool
-	webInstallFlag bool
-)
-
 var webCmd = &cobra.Command{
 	Use:   "web",
 	Short: "管理前端",

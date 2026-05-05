@@ -289,17 +289,6 @@ func (m *Manager) HandleWebSocket(c *gin.Context) {
 	}
 }
 
-// ConfirmConnection confirms a WebSocket connection
-func (m *Manager) ConfirmConnection(connID string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if _, ok := m.connections[connID]; ok {
-		m.connectionStatus[connID] = true
-		logger.Infof("WebSocket 连接已确认: %s", connID)
-	}
-}
-
 // GetConnectionCount returns the total number of connections
 func (m *Manager) GetConnectionCount() int {
 	m.mu.RLock()
@@ -336,55 +325,4 @@ func (m *Manager) closeConnection(connID string) {
 	}
 }
 
-// Event broadcast helpers
 
-// BroadcastModelLoadStart broadcasts a model load start event
-func (m *Manager) BroadcastModelLoadStart(modelID string, port int, message string) {
-	m.Broadcast(NewModelLoadStartEvent(modelID, port, message))
-}
-
-// BroadcastModelLoad broadcasts a model load event
-func (m *Manager) BroadcastModelLoad(modelID string, success bool, message string, port int) {
-	m.Broadcast(NewModelLoadEvent(modelID, success, message, port))
-}
-
-// BroadcastModelStop broadcasts a model stop event
-func (m *Manager) BroadcastModelStop(modelID string, success bool, message string) {
-	m.Broadcast(NewModelStopEvent(modelID, success, message))
-}
-
-// BroadcastModelSlots broadcasts a model slots update event
-func (m *Manager) BroadcastModelSlots(modelID string, slots any) {
-	m.Broadcast(NewModelSlotsEvent(modelID, slots))
-}
-
-// BroadcastConsoleLine broadcasts a console line event
-func (m *Manager) BroadcastConsoleLine(modelID string, line string) {
-	m.Broadcast(NewConsoleLineEvent(modelID, line))
-}
-
-// BroadcastDownloadStatus broadcasts a download status event
-func (m *Manager) BroadcastDownloadStatus(taskID, state string, downloadedBytes, totalBytes int64,
-	partsCompleted, partsTotal int, fileName, errorMessage string) {
-
-	m.Broadcast(NewDownloadStatusEvent(taskID, state, downloadedBytes, totalBytes,
-		partsCompleted, partsTotal, fileName, errorMessage))
-}
-
-// BroadcastDownloadProgress broadcasts a download progress event
-func (m *Manager) BroadcastDownloadProgress(taskID string, downloadedBytes, totalBytes int64,
-	partsCompleted, partsTotal int, progressRatio float64) {
-
-	m.Broadcast(NewDownloadProgressEvent(taskID, downloadedBytes, totalBytes,
-		partsCompleted, partsTotal, progressRatio))
-}
-
-// BroadcastScanProgress broadcasts a scan progress event
-func (m *Manager) BroadcastScanProgress(directory string, scanned, total int) {
-	m.Broadcast(NewScanProgressEvent(directory, scanned, total))
-}
-
-// BroadcastScanComplete broadcasts a scan complete event
-func (m *Manager) BroadcastScanComplete(foundModels int, duration time.Duration) {
-	m.Broadcast(NewScanCompleteEvent(foundModels, duration))
-}

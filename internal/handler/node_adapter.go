@@ -46,18 +46,7 @@ func (a *NodeAdapter) SetEventCallback(callback func(eventType string, data inte
 	a.eventCallback = callback
 }
 
-// GetScheduler 返回调度器实例（供 server 使用模型加载分发）
-func (a *NodeAdapter) GetScheduler() *scheduler.Scheduler {
-	return a.scheduler
-}
 
-// GetNodeID 返回当前节点 ID
-func (a *NodeAdapter) GetNodeID() string {
-	if a.node == nil {
-		return "local"
-	}
-	return a.node.GetID()
-}
 
 // nodeClientManager 将 node.Node 适配为 scheduler.ClientManager 接口
 type nodeClientManager struct {
@@ -67,30 +56,10 @@ type nodeClientManager struct {
 // GetOnlineClients 返回所有在线客户端
 func (m *nodeClientManager) GetOnlineClients() []*cluster.Client {
 	clients := m.node.ListClients()
-
 	result := make([]*cluster.Client, 0, len(clients))
 	for _, info := range clients {
-		client := &cluster.Client{
-			ID:           info.ID,
-			Name:         info.Name,
-			Address:      info.Address,
-			Port:         info.Port,
-			Tags:         info.Tags,
-			Capabilities: convertNodeCapabilitiesToCluster(info.Capabilities),
-			Status:       cluster.ClientStatus(info.Status),
-			LastSeen:     info.LastSeen,
-			Metadata:     make(map[string]string),
-			Connected:    info.Status == node.NodeStatusOnline,
-		}
-
-		// 复制 metadata
-		for k, v := range info.Metadata {
-			client.Metadata[k] = v
-		}
-
-		result = append(result, client)
+		result = append(result, nodeInfoToClusterClient(info))
 	}
-
 	return result
 }
 
@@ -100,7 +69,10 @@ func (m *nodeClientManager) GetClient(clientID string) (*cluster.Client, bool) {
 	if err != nil {
 		return nil, false
 	}
+	return nodeInfoToClusterClient(info), true
+}
 
+func nodeInfoToClusterClient(info *node.NodeInfo) *cluster.Client {
 	client := &cluster.Client{
 		ID:           info.ID,
 		Name:         info.Name,
@@ -113,13 +85,10 @@ func (m *nodeClientManager) GetClient(clientID string) (*cluster.Client, bool) {
 		Metadata:     make(map[string]string),
 		Connected:    info.Status == node.NodeStatusOnline,
 	}
-
-	// 复制 metadata
 	for k, v := range info.Metadata {
 		client.Metadata[k] = v
 	}
-
-	return client, true
+	return client
 }
 
 // SendCommand 向客户端发送命令
@@ -658,17 +627,6 @@ func (a *NodeAdapter) deprecationWarningMiddleware() gin.HandlerFunc {
 
 // ==================== 辅助方法 ====================
 
-// GetNodeInstance 返回底层 Node 实例
-// 供需要直接访问 Node 的场景使用
-func (a *NodeAdapter) GetNodeInstance() *node.Node {
-	return a.node
-}
-
-// SetNodeInstance 设置底层 Node 实例
-func (a *NodeAdapter) SetNodeInstance(n *node.Node) {
-	a.node = n
-}
-
 // HandleScanClients 处理客户端扫描请求
 // POST /api/master/scan
 func (a *NodeAdapter) HandleScanClients(c *gin.Context) {
@@ -805,79 +763,9 @@ func (a *NodeAdapter) ListClients(c *gin.Context) {
 	clients := a.node.ListClients()
 	total, online, offline, busy := a.node.GetClientCount()
 
-	// 转换为前端期望的格式
 	clientList := make([]gin.H, len(clients))
 	for i, client := range clients {
-		// 计算 GPU 内存总量
-		var gpuMemoryTotal int64 = 0
-		var gpuMemoryUsed int64 = 0
-		var gpuPercent float64 = 0
-		gpuInfoList := make([]gin.H, 0)
-
-		if client.Resources != nil && len(client.Resources.GPUInfo) > 0 {
-			for _, gpu := range client.Resources.GPUInfo {
-				gpuMemoryTotal += gpu.TotalMemory
-				gpuMemoryUsed += gpu.UsedMemory
-				gpuPercent += gpu.Utilization
-
-				gpuInfoList = append(gpuInfoList, gin.H{
-					"index":         gpu.Index,
-					"name":          gpu.Name,
-					"vendor":        gpu.Vendor,
-					"totalMemory":   gpu.TotalMemory,
-					"usedMemory":    gpu.UsedMemory,
-					"temperature":   gpu.Temperature,
-					"utilization":   gpu.Utilization,
-					"powerUsage":    gpu.PowerUsage,
-					"driverVersion": gpu.DriverVersion,
-				})
-			}
-			// 平均GPU使用率
-			gpuPercent = gpuPercent / float64(len(client.Resources.GPUInfo))
-		}
-
-		// 计算CPU使用率百分比
-		var cpuPercent float64 = 0
-		if client.Resources != nil && client.Resources.CPUTotal > 0 {
-			cpuPercent = float64(client.Resources.CPUUsed) / float64(client.Resources.CPUTotal) * 100
-		}
-
-		clientList[i] = gin.H{
-			"id":        client.ID,
-			"name":      client.Name,
-			"address":   client.Address,
-			"port":      client.Port,
-			"tags":      client.Tags,
-			"status":    client.Status,
-			"lastSeen":  client.LastSeen.Format(time.RFC3339),
-			"connected": client.Status == "online",
-			"metadata":  client.Metadata,
-			"capabilities": gin.H{
-				"cpuCount":       client.Capabilities.CPUCount,
-				"memory":         client.Capabilities.Memory,
-				"gpuCount":       client.Capabilities.GPUCount,
-				"gpuMemory":      gpuMemoryTotal,
-				"supportsLlama":  client.Capabilities.SupportsLlama,
-				"supportsPython": client.Capabilities.SupportsPython,
-			},
-		}
-
-		// 添加资源信息（如果存在）
-		if client.Resources != nil {
-			clientList[i]["resources"] = gin.H{
-				"cpuPercent":     cpuPercent,
-				"memoryUsed":     client.Resources.MemoryUsed,
-				"memoryTotal":    client.Resources.MemoryTotal,
-				"gpuPercent":     gpuPercent,
-				"gpuMemoryUsed":  gpuMemoryUsed,
-				"gpuMemoryTotal": gpuMemoryTotal,
-				"diskUsed":       client.Resources.DiskUsed,
-				"diskTotal":      client.Resources.DiskTotal,
-				"gpuInfo":        gpuInfoList,
-				"rocmVersion":    client.Resources.ROCmVersion,
-				"kernelVersion":  client.Resources.KernelVersion,
-			}
-		}
+		clientList[i] = a.convertNodeToFrontendFormat(client)
 	}
 
 	Success(c, gin.H{

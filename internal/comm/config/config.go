@@ -161,6 +161,7 @@ type VLLMBackendConfig struct {
 	ExtraArgs   string        `mapstructure:"extra_args" yaml:"extra_args" json:"extraArgs"`
 	DefaultPort int           `mapstructure:"default_port" yaml:"default_port" json:"defaultPort"`
 	Paths       []BackendPath `mapstructure:"paths" yaml:"paths" json:"paths"`
+	Env         []string      `mapstructure:"env" yaml:"env" json:"env,omitempty"`
 }
 
 // SchedulerConfig contains task scheduler configuration

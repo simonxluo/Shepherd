@@ -54,13 +54,6 @@ func (r *Registry) Configure(bt BackendType, cfg *BackendConfig) {
 	r.configs[bt] = cfg
 }
 
-// GetConfig returns the configuration for a backend type
-func (r *Registry) GetConfig(bt BackendType) *BackendConfig {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.configs[bt]
-}
-
 // Resolve determines which backend to use for a given model path.
 // It uses explicit type first, then auto-detects from model format, then defaults to llama.cpp.
 func (r *Registry) Resolve(modelPath string, explicitType BackendType) (Backend, *BackendConfig, error) {
@@ -135,6 +128,7 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 			ServeBin:    cfg.Backends.VLLM.ServeBin,
 			ExtraArgs:   cfg.Backends.VLLM.ExtraArgs,
 			DefaultPort: cfg.Backends.VLLM.DefaultPort,
+			EnvVars:     cfg.Backends.VLLM.Env,
 		}
 		if len(cfg.Backends.VLLM.Paths) > 0 {
 			vllmCfg.BinPath = cfg.Backends.VLLM.Paths[0].Path
@@ -156,6 +150,7 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 			ServeBin:    cfg.Backends.VLLMOmni.ServeBin,
 			ExtraArgs:   cfg.Backends.VLLMOmni.ExtraArgs,
 			DefaultPort: cfg.Backends.VLLMOmni.DefaultPort,
+			EnvVars:     cfg.Backends.VLLMOmni.Env,
 		}
 		if len(cfg.Backends.VLLMOmni.Paths) > 0 {
 			omniCfg.BinPath = cfg.Backends.VLLMOmni.Paths[0].Path

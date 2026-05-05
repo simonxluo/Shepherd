@@ -96,16 +96,6 @@ func IsHuggingFaceModelDir(path string) bool {
 	return false
 }
 
-func HasConfigJSON(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil || !info.IsDir() {
-		return false
-	}
-	configPath := filepath.Join(path, "config.json")
-	_, err = os.Stat(configPath)
-	return err == nil
-}
-
 func hasSafetensorsFiles(dir string) bool {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

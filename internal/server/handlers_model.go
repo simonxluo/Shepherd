@@ -20,6 +20,20 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model/backend"
 )
 
+// loadedModelInfo 用于 /api/models/loaded 响应的已加载模型信息
+type loadedModelInfo struct {
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	Alias        string                `json:"alias,omitempty"`
+	State        string                `json:"state"`
+	ProcessID    string                `json:"processId"`
+	Port         int                   `json:"port"`
+	CtxSize      int                   `json:"ctxSize"`
+	BackendType  string                `json:"backendType,omitempty"`
+	LoadedAt     string                `json:"loadedAt,omitempty"`
+	Capabilities *storage.Capabilities `json:"capabilities,omitempty"`
+}
+
 func (s *Server) HandleListModels(c *gin.Context) {
 	models := s.modelMgr.ListModels()
 
@@ -40,30 +54,30 @@ func (s *Server) HandleListModels(c *gin.Context) {
 func (s *Server) HandleListLoadedModels(c *gin.Context) {
 	statuses := s.modelMgr.ListStatus()
 
-	type LoadedModelInfo struct {
-		ID        string `json:"id"`
-		Name      string `json:"name"`
-		State     string `json:"state"`
-		ProcessID string `json:"processId"`
-		Port      int    `json:"port"`
-		CtxSize   int    `json:"ctxSize"`
-		LoadedAt  string `json:"loadedAt,omitempty"`
-	}
-
-	loaded := make([]LoadedModelInfo, 0)
+	loaded := make([]loadedModelInfo, 0)
 	for id, st := range statuses {
 		if st.State == model.StateLoaded || st.State == model.StateLoading {
-			info := LoadedModelInfo{
-				ID:        id,
-				Name:      st.Name,
-				State:     st.State.String(),
-				ProcessID: st.ProcessID,
-				Port:      st.Port,
-				CtxSize:   st.CtxSize,
+			info := loadedModelInfo{
+				ID:          id,
+				Name:        st.Name,
+				State:       st.State.String(),
+				ProcessID:   st.ProcessID,
+				Port:        st.Port,
+				CtxSize:     st.CtxSize,
+				BackendType: st.BackendType,
 			}
 			if !st.LoadedAt.IsZero() {
 				info.LoadedAt = st.LoadedAt.Format(time.RFC3339)
 			}
+
+			// 获取模型别名和 capabilities
+			if m, exists := s.modelMgr.GetModel(id); exists {
+				info.Alias = m.Alias
+			}
+			if caps := s.modelMgr.GetModelCapabilities(id); caps != nil {
+				info.Capabilities = caps
+			}
+
 			loaded = append(loaded, info)
 		}
 	}
@@ -169,6 +183,22 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	}
 	if req.RepeatPenalty == 0 {
 		req.RepeatPenalty = 1.1
+	}
+
+	// 根据模型能力自动设置后端类型（如果前端未指定）
+	if req.BackendType == "" {
+		caps := s.modelMgr.GetModelCapabilities(id)
+		mdl, _ := s.modelMgr.GetModel(id)
+		if caps != nil && mdl != nil {
+			mPath := mdl.Path
+			if len(mdl.ShardFiles) > 0 {
+				mPath = mdl.ShardFiles[0]
+			}
+			if !backend.IsGGUFModel(mPath) && (caps.TTS || caps.ASR) {
+				req.BackendType = "vllm_omni"
+				logger.Infof("根据模型能力自动设置后端类型: modelId=%s, backendType=vllm_omni", id)
+			}
+		}
 	}
 
 	result, err := s.modelMgr.LoadAsync(&req)
@@ -643,16 +673,21 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 		dto.Port = st.Port
 	}
 
+	// Auto-detect recommended backend type from model path + capabilities
 	modelPath := m.Path
 	if len(m.ShardFiles) > 0 {
 		modelPath = m.ShardFiles[0]
 	}
 	if backend.IsGGUFModel(modelPath) {
 		dto.BackendType = "llamacpp"
-	} else if backend.IsSafeTensorsModel(modelPath) {
-		dto.BackendType = "vllm"
-	} else if filepath.Ext(modelPath) == "" {
-		dto.BackendType = "vllm"
+	} else if backend.IsSafeTensorsModel(modelPath) || filepath.Ext(modelPath) == "" {
+		// safetensors 或目录格式模型，根据能力决定后端类型
+		caps := s.modelMgr.GetModelCapabilities(m.ID)
+		if caps != nil && (caps.TTS || caps.ASR) {
+			dto.BackendType = "vllm_omni"
+		} else {
+			dto.BackendType = "vllm"
+		}
 	}
 
 	if m.Metadata != nil {
