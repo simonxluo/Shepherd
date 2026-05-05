@@ -80,7 +80,7 @@ func (b *BaseHandler) ForwardRequest(c *gin.Context, port int, path string, mode
 	resp, err := b.Client.Do(httpReq)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
-		logger.Errorf("转发请求到 llama.cpp 失败: %v", err)
+		logger.Errorf("转发请求到后端失败: %v", err)
 		return
 	}
 	defer utils.CloseQuietly(resp.Body)
@@ -129,7 +129,7 @@ func (b *BaseHandler) ForwardStreamRequest(c *gin.Context, port int, path string
 		return nil
 	}
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		logger.Errorf("转发流式请求到 llama.cpp 失败: %v", err)
+		logger.Errorf("转发流式请求到后端失败: %v", err)
 		w.WriteHeader(http.StatusBadGateway)
 		w.Write([]byte(fmt.Sprintf(`{"error":"%s"}`, err.Error())))
 	}

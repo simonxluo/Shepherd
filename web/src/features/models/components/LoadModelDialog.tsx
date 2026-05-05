@@ -413,10 +413,6 @@ export function LoadModelDialog({
   };
 
   useEffect(() => {
-    console.log('[LoadModelDialog] params.enabled changed:', params.enabled);
-  }, [params.enabled]);
-
-  useEffect(() => {
     if (isOpen) {
       setSaveStatus('idle');
       setEstimateResult(null);
@@ -582,11 +578,13 @@ export function LoadModelDialog({
         'trustRemoteCode', 'servedModelName', 'quantization',
         'maxNumSeqs', 'maxNumBatchedTokens',
         'enablePrefixCaching', 'enableChunkedPrefill', 'disableLogRequests',
+        'enforceEager',
         'unloadAfterMinutes', 'concurrencyLimit',
       ];
 
-      // vLLM-Omni 专属
+      // vLLM-Omni 专属：始终启用 omni 模式
       if (isVllmOmni) {
+        filtered.omni = true;
         vllmKeys.push('videoPruningRate', 'mmTensorIPC');
       }
 
@@ -598,6 +596,10 @@ export function LoadModelDialog({
 
       if (allParams.extraArgs) {
         filtered.extraArgs = allParams.extraArgs;
+      }
+
+      if (allParams.envVars && allParams.envVars.length > 0) {
+        filtered.envVars = allParams.envVars;
       }
 
       filtered.backendType = backendType;
@@ -1101,6 +1103,17 @@ export function LoadModelDialog({
                       <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
                         <input
                           type="checkbox"
+                          checked={params.enforceEager || false}
+                          onChange={(e) => setParams({ ...params, enforceEager: e.target.checked })}
+                          disabled={isLoading}
+                          className="rounded border-border text-blue-600 focus:ring-blue-500 w-4 h-4"
+                        />
+                        <span>--enforce-eager</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
+                        <input
+                          type="checkbox"
                           checked={params.disableLogRequests || false}
                           onChange={(e) => setParams({ ...params, disableLogRequests: e.target.checked })}
                           disabled={isLoading}
@@ -1249,6 +1262,58 @@ export function LoadModelDialog({
                   className="w-full px-2 py-1.5 text-sm border-2 border-border rounded-md bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
                 />
               </div>
+
+              {/* 环境变量配置 */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-foreground">环境变量</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = params.envVars || [];
+                      setParams({ ...params, envVars: [...current, ''] });
+                    }}
+                    disabled={isLoading}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
+                  >
+                    + 添加
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  {(params.envVars || []).length === 0 ? (
+                    <div className="text-xs text-muted-foreground py-2 text-center border border-dashed border-border rounded-md">
+                      点击"添加"配置环境变量，如 LD_LIBRARY_PATH=/path/to/lib
+                    </div>
+                  ) : (
+                    (params.envVars || []).map((env, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <input
+                          value={env}
+                          onChange={(e) => {
+                            const newEnvs = [...(params.envVars || [])];
+                            newEnvs[idx] = e.target.value;
+                            setParams({ ...params, envVars: newEnvs });
+                          }}
+                          disabled={isLoading}
+                          placeholder="KEY=VALUE"
+                          className="flex-1 px-2 py-1 text-sm border-2 border-border rounded-md bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newEnvs = (params.envVars || []).filter((_, i) => i !== idx);
+                            setParams({ ...params, envVars: newEnvs });
+                          }}
+                          disabled={isLoading}
+                          className="p-1 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* 底部按钮 */}
@@ -1272,10 +1337,6 @@ export function LoadModelDialog({
       </Dialog>
     );
   }
-
-  const applyPreset = (presetParams: Partial<LoadModelParams>) => {
-    setParams(prev => ({ ...prev, ...presetParams }));
-  };
 
   const handleResetConfig = async () => {
     try {

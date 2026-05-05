@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Server, Cpu, HardDrive, Clock, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 import { ClientInfoDialog } from './ClientInfoDialog';
 import type { Client, ClientStatus } from '@/types';
 
@@ -35,22 +35,6 @@ const STATUS_LABELS: Record<ClientStatus, string> = {
   degraded: '降级',
   disabled: '已禁用',
 };
-
-/**
- * Format byte size
- */
-function formatSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`;
-}
 
 /**
  * Format last seen time
@@ -129,7 +113,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
           <div className="flex items-center gap-2 text-sm">
             <HardDrive className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">
-              {formatSize(client.capabilities.memory)}
+              {formatBytes(client.capabilities.memory)}
             </span>
           </div>
           {(client.resources?.gpuInfo?.length ?? 0) > 0 && (
@@ -143,7 +127,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
               <div className="flex items-center gap-2 text-sm">
                 <HardDrive className="w-4 h-4 text-purple-500" />
                 <span className="text-muted-foreground">
-                  {client.capabilities.gpuMemory ? formatSize(client.capabilities.gpuMemory) : 'N/A'}
+                  {client.capabilities.gpuMemory ? formatBytes(client.capabilities.gpuMemory) : 'N/A'}
                 </span>
               </div>
             </>
@@ -190,7 +174,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
               <span>内存</span>
               <span>
-                {formatSize(client.resources.memoryUsed)} / {formatSize(client.resources.memoryTotal)}
+                {formatBytes(client.resources.memoryUsed)} / {formatBytes(client.resources.memoryTotal)}
               </span>
             </div>
             <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
@@ -230,7 +214,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                   <span>GPU 内存</span>
                   <span>
-                    {formatSize(client.resources.gpuMemoryUsed ?? 0)} / {formatSize(client.resources.gpuMemoryTotal ?? 0)}
+                    {formatBytes(client.resources.gpuMemoryUsed ?? 0)} / {formatBytes(client.resources.gpuMemoryTotal ?? 0)}
                   </span>
                 </div>
                 <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">

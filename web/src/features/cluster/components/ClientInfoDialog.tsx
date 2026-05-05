@@ -37,7 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useClient, useNodeConfig, useTestNodeLlamacpp } from '@/features/cluster/hooks';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 import type { Client, GPUInfo, LlamacppTestResult } from '@/types';
 import { useToast } from '@/hooks/useToast';
 
@@ -45,23 +45,6 @@ interface ClientInfoDialogProps {
   client: Client | null;
   open: boolean;
   onClose: () => void;
-}
-
-/**
- * Format byte size
- */
-function formatSize(bytes: number): string {
-  if (bytes === 0 || bytes === undefined) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
 /**
@@ -322,7 +305,7 @@ function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>显存使用</span>
             <span className="font-mono">
-              {formatSize(gpu.usedMemory)} / {formatSize(gpu.totalMemory)}
+              {formatBytes(gpu.usedMemory)} / {formatBytes(gpu.totalMemory)}
             </span>
           </div>
         </div>
@@ -399,7 +382,7 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
             <HeaderStatCard
               icon={HardDrive}
               label="内存"
-              value={formatSize(capabilities?.memory || 0)}
+              value={formatBytes(capabilities?.memory || 0)}
               color="green"
             />
             <HeaderStatCard
@@ -462,13 +445,13 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
               <CircularProgress
                 value={memoryPercent}
                 label="内存"
-                subLabel={formatSize(resources?.memoryUsed || 0)}
+                subLabel={formatBytes(resources?.memoryUsed || 0)}
                 color={memoryPercent > 80 ? 'stroke-red-500' : memoryPercent > 50 ? 'stroke-amber-500' : 'stroke-emerald-500'}
               />
               <CircularProgress
                 value={diskPercent}
                 label="磁盘"
-                subLabel={formatSize(resources?.diskUsed || 0)}
+                subLabel={formatBytes(resources?.diskUsed || 0)}
                 color={diskPercent > 80 ? 'stroke-red-500' : diskPercent > 50 ? 'stroke-amber-500' : 'stroke-violet-500'}
               />
             </div>
@@ -484,15 +467,15 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
               <MetricCard
                 icon={HardDrive}
                 title="内存使用"
-                value={formatSize(resources?.memoryUsed || 0)}
-                subValue={`/ ${formatSize(resources?.memoryTotal || 0)} (${memoryPercent.toFixed(1)}%)`}
+                value={formatBytes(resources?.memoryUsed || 0)}
+                subValue={`/ ${formatBytes(resources?.memoryTotal || 0)} (${memoryPercent.toFixed(1)}%)`}
                 colorClass={memoryPercent > 80 ? 'text-red-600' : memoryPercent > 50 ? 'text-amber-600' : 'text-emerald-600'}
               />
               <MetricCard
                 icon={Layers}
                 title="磁盘使用"
-                value={formatSize(resources?.diskUsed || 0)}
-                subValue={`/ ${formatSize(resources?.diskTotal || 0)} (${diskPercent.toFixed(1)}%)`}
+                value={formatBytes(resources?.diskUsed || 0)}
+                subValue={`/ ${formatBytes(resources?.diskTotal || 0)} (${diskPercent.toFixed(1)}%)`}
                 colorClass={diskPercent > 80 ? 'text-red-600' : diskPercent > 50 ? 'text-amber-600' : 'text-violet-600'}
               />
             </div>
@@ -571,7 +554,7 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
                       <HardDrive className="w-4 h-4" />
                       总内存
                     </span>
-                    <Badge variant="outline">{formatSize(capabilities?.memory || 0)}</Badge>
+                    <Badge variant="outline">{formatBytes(capabilities?.memory || 0)}</Badge>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
                     <span className="text-muted-foreground flex items-center gap-2">
@@ -587,7 +570,7 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
                     </span>
                     <Badge variant="outline">
                       {resources?.gpuInfo && resources.gpuInfo.length > 0
-                        ? formatSize(resources.gpuInfo.reduce((sum, gpu) => sum + gpu.totalMemory, 0))
+                        ? formatBytes(resources.gpuInfo.reduce((sum, gpu) => sum + gpu.totalMemory, 0))
                         : 'N/A'}
                     </Badge>
                   </div>

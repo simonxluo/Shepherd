@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { Star, Loader2, Play, Square, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModelIcon } from '@/features/models/components/ModelIcon';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 import type { Model, ModelStatus, ModelCapabilities } from '@/types';
 
 interface ModelCardProps {
@@ -34,19 +34,6 @@ const CAPABILITY_BADGES: Record<string, { label: string; className: string }> = 
   imageGeneration: { label: '图像生成', className: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20' },
   music: { label: '音乐', className: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' },
 };
-
-function formatSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`;
-}
 
 function hasAnyCapability(capabilities?: ModelCapabilities): boolean {
   if (!capabilities) return false;
@@ -106,7 +93,7 @@ export function ModelCard({ model, capabilities, onLoad, onUnload, onToggleFavou
             <span className="shrink-0">|</span>
             <span className="truncate">{quantizationLabel}</span>
             <span className="shrink-0">|</span>
-            <span className="shrink-0">{formatSize(model.totalSize ?? model.size)}</span>
+            <span className="shrink-0">{formatBytes(model.totalSize ?? model.size)}</span>
             {model.sourceType === 'huggingface' && (
               <>
                 <span className="shrink-0">|</span>

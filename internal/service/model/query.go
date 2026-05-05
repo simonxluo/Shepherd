@@ -133,35 +133,13 @@ func (m *Manager) SetAlias(modelID, alias string) error {
 
 	model.Alias = alias
 
-	// Save to database
-	if m.storageMgr != nil {
-		store := m.storageMgr.GetStore()
-
-		// 获取或创建元数据
-		metadata, err := store.GetModelMetadata(m.ctx, modelID)
-		if err != nil {
-			// 元数据不存在，创建新的
-			metadata = &storage.ModelMetadata{
-				ModelID:     modelID,
-				StoragePath: filepath.Dir(model.Path),
-				Favourite:   model.Favourite,
-				Tags:        model.Tags,
-				LoadCount:   model.LoadCount,
-			}
-			if !model.LastLoaded.IsZero() {
-				metadata.LastLoaded = &model.LastLoaded
-			}
-			metadata.TotalTokens = model.TotalTokens
-		}
-
-		metadata.Alias = alias
-
-		if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
-			logger.Errorf("保存模型别名到数据库失败: modelId=%s, error=%v", modelID, err)
-			return fmt.Errorf("failed to save alias to database: %w", err)
-		}
-		logger.Infof("模型别名已保存到数据库: modelId=%s, alias=%s", modelID, alias)
+	if err := m.updateModelMetadata(modelID, model, func(meta *storage.ModelMetadata) {
+		meta.Alias = alias
+	}); err != nil {
+		logger.Errorf("保存模型别名到数据库失败: modelId=%s, error=%v", modelID, err)
+		return err
 	}
+	logger.Infof("模型别名已保存到数据库: modelId=%s, alias=%s", modelID, alias)
 
 	return nil
 }
@@ -178,35 +156,13 @@ func (m *Manager) SetFavourite(modelID string, favourite bool) error {
 
 	model.Favourite = favourite
 
-	// Save to database
-	if m.storageMgr != nil {
-		store := m.storageMgr.GetStore()
-
-		// 获取或创建元数据
-		metadata, err := store.GetModelMetadata(m.ctx, modelID)
-		if err != nil {
-			// 元数据不存在，创建新的
-			metadata = &storage.ModelMetadata{
-				ModelID:     modelID,
-				StoragePath: filepath.Dir(model.Path),
-				Alias:       model.Alias,
-				Tags:        model.Tags,
-				LoadCount:   model.LoadCount,
-			}
-			if !model.LastLoaded.IsZero() {
-				metadata.LastLoaded = &model.LastLoaded
-			}
-			metadata.TotalTokens = model.TotalTokens
-		}
-
-		metadata.Favourite = favourite
-
-		if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
-			logger.Errorf("保存模型收藏状态到数据库失败: modelId=%s, error=%v", modelID, err)
-			return fmt.Errorf("failed to save favourite to database: %w", err)
-		}
-		logger.Infof("模型收藏状态已保存到数据库: modelId=%s, favourite=%v", modelID, favourite)
+	if err := m.updateModelMetadata(modelID, model, func(meta *storage.ModelMetadata) {
+		meta.Favourite = favourite
+	}); err != nil {
+		logger.Errorf("保存模型收藏状态到数据库失败: modelId=%s, error=%v", modelID, err)
+		return err
 	}
+	logger.Infof("模型收藏状态已保存到数据库: modelId=%s, favourite=%v", modelID, favourite)
 
 	return nil
 }
@@ -223,22 +179,7 @@ func (m *Manager) AutoDetectCapabilities(modelId string) (*storage.Capabilities,
 	}
 
 	detectedCaps := DetectCapabilities(model.Metadata)
-
-	ctx := context.Background()
-	existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, modelId)
-	if err == nil && existingMeta != nil {
-		existingMeta.Capabilities = detectedCaps
-		if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); err != nil {
-			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelId, err)
-		}
-	} else {
-		if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
-			ModelID:      modelId,
-			Capabilities: detectedCaps,
-		}); err != nil {
-			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelId, err)
-		}
-	}
+	m.saveCapabilities(modelId, detectedCaps)
 
 	return detectedCaps, nil
 }
@@ -428,4 +369,54 @@ func (m *Manager) GetLoadedModelCount() int {
 		}
 	}
 	return count
+}
+
+// saveCapabilities 将检测到的模型能力保存到数据库
+func (m *Manager) saveCapabilities(modelID string, caps *storage.Capabilities) {
+	ctx := context.Background()
+	existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, modelID)
+	if err == nil && existingMeta != nil {
+		existingMeta.Capabilities = caps
+		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); saveErr != nil {
+			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelID, saveErr)
+		}
+	} else {
+		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
+			ModelID:      modelID,
+			Capabilities: caps,
+		}); saveErr != nil {
+			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelID, saveErr)
+		}
+	}
+}
+
+// updateModelMetadata 获取或创建模型元数据，应用更新函数后保存
+func (m *Manager) updateModelMetadata(modelID string, model *Model, updateFn func(*storage.ModelMetadata)) error {
+	if m.storageMgr == nil {
+		return nil
+	}
+	store := m.storageMgr.GetStore()
+
+	metadata, err := store.GetModelMetadata(m.ctx, modelID)
+	if err != nil {
+		metadata = &storage.ModelMetadata{
+			ModelID:     modelID,
+			StoragePath: filepath.Dir(model.Path),
+			Alias:       model.Alias,
+			Favourite:   model.Favourite,
+			Tags:        model.Tags,
+			LoadCount:   model.LoadCount,
+		}
+		if !model.LastLoaded.IsZero() {
+			metadata.LastLoaded = &model.LastLoaded
+		}
+		metadata.TotalTokens = model.TotalTokens
+	}
+
+	updateFn(metadata)
+
+	if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
+		return fmt.Errorf("failed to save model metadata: %w", err)
+	}
+	return nil
 }

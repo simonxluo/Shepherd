@@ -2,7 +2,7 @@ import { Pause, Play, X, RotateCcw, CloudDownload, CheckCircle2, XCircle, AlertC
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 import type { DownloadTask, DownloadState } from '@/types';
 
 interface DownloadCardProps {
@@ -42,26 +42,10 @@ const STATE_LABELS: Record<DownloadState, string> = {
 };
 
 /**
- * Format file size
- */
-function formatSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`;
-}
-
-/**
  * Format speed
  */
 function formatSpeed(bytesPerSecond: number): string {
-  return `${formatSize(bytesPerSecond)}/s`;
+  return `${formatBytes(bytesPerSecond)}/s`;
 }
 
 /**
@@ -141,7 +125,7 @@ export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: Dow
       <div className="mb-3">
         <div className="flex items-center justify-between text-sm mb-1">
           <span className="text-muted-foreground">
-            {formatSize(task.downloadedBytes)} / {formatSize(task.totalBytes)}
+            {formatBytes(task.downloadedBytes)} / {formatBytes(task.totalBytes)}
           </span>
           <span className="font-medium text-foreground">{progressPercent}%</span>
         </div>

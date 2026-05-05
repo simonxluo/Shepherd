@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -419,25 +418,7 @@ func (m *Manager) loadModel(path string) (*Model, error) {
 	// Auto-detect and save capabilities
 	if model.Metadata != nil {
 		detectedCaps := DetectCapabilities(model.Metadata)
-
-		// Save capabilities to database
-		ctx := context.Background()
-		existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, model.ID)
-		if err == nil && existingMeta != nil {
-			// Update existing metadata, preserve user settings
-			existingMeta.Capabilities = detectedCaps
-			if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); err != nil {
-				logger.Warnf("保存模型能力失败: modelId=%s, error=%v", model.ID, err)
-			}
-		} else {
-			// Create new metadata entry with capabilities
-			if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
-				ModelID:      model.ID,
-				Capabilities: detectedCaps,
-			}); err != nil {
-				logger.Warnf("保存模型能力失败: modelId=%s, error=%v", model.ID, err)
-			}
-		}
+		m.saveCapabilities(model.ID, detectedCaps)
 	}
 
 	return model, nil
@@ -522,21 +503,7 @@ func (m *Manager) loadHuggingFaceModel(dirPath string) (*Model, error) {
 	}
 
 	detectedCaps := DetectCapabilitiesFromHF(hfInfo)
-	ctx := context.Background()
-	existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, model.ID)
-	if err == nil && existingMeta != nil {
-		existingMeta.Capabilities = detectedCaps
-		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); saveErr != nil {
-			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", model.ID, saveErr)
-		}
-	} else {
-		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
-			ModelID:      model.ID,
-			Capabilities: detectedCaps,
-		}); saveErr != nil {
-			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", model.ID, saveErr)
-		}
-	}
+	m.saveCapabilities(model.ID, detectedCaps)
 
 	return model, nil
 }
@@ -577,17 +544,13 @@ func (m *Manager) findMmproj(modelPath string) string {
 
 // expandPath expands ~ to the user's home directory and converts relative paths to absolute.
 func expandPath(path string) string {
-	if strings.HasPrefix(path, "~/") {
+	if strings.HasPrefix(path, "~/") || path == "~" {
 		if home, err := os.UserHomeDir(); err == nil {
-			path = filepath.Join(home, path[2:])
-		} else if u, err := user.Current(); err == nil {
-			path = filepath.Join(u.HomeDir, path[2:])
-		}
-	} else if path == "~" {
-		if home, err := os.UserHomeDir(); err == nil {
-			path = home
-		} else if u, err := user.Current(); err == nil {
-			path = u.HomeDir
+			if path == "~" {
+				path = home
+			} else {
+				path = filepath.Join(home, path[2:])
+			}
 		}
 	}
 	if abs, err := filepath.Abs(path); err == nil {

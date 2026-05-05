@@ -3,6 +3,7 @@ package openai
 
 import (
 	"encoding/json"
+	"strconv"
 )
 
 // ChatCompletionRequest represents a chat completion request
@@ -217,7 +218,7 @@ func NewErrorResponse(message, errorType, param string, statusCode int) *ErrorRe
 			Message: message,
 			Type:    errorType,
 			Param:   param,
-			Code:    string(rune(statusCode)),
+			Code:    strconv.Itoa(statusCode),
 		},
 	}
 }

@@ -32,14 +32,6 @@ export interface ModelMetadata {
   layerCount?: number;
   headCount?: number;
 
-  // Retained for backward compatibility (backend no longer returns these)
-  blockSize?: number;
-  feedForwardLength?: number;
-  attentionHeadCount?: number;
-  attentionHeadCountKeyValue?: number;
-  ropeDimensionCount?: number;
-  ggmlFileType?: string;
-  tokenizer?: string;
 }
 
 /**
@@ -112,14 +104,7 @@ export interface LoadModelParams {
 
   // Capability toggles
   capabilities?: ModelCapabilities & {
-    thinking?: boolean;
-    tools?: boolean;
     translation?: boolean;
-    embedding?: boolean;
-    tts?: boolean;
-    asr?: boolean;
-    imageGeneration?: boolean;
-    music?: boolean;
   };
 
   // Context & acceleration
@@ -226,6 +211,9 @@ export interface LoadModelParams {
   omni?: boolean;                      // 启用 omni 多模态模式
   videoPruningRate?: number;           // Video token pruning rate (0-1)
   mmTensorIPC?: boolean;               // Multimodal tensor IPC
+
+  // 环境变量配置（适用于 vllm/vllm_omni 后端）
+  envVars?: string[];                  // 附加环境变量，格式: "KEY=VALUE"
 
   // Parameter enable flags: false = use llama-server defaults
   enabled?: {
@@ -337,6 +325,8 @@ export interface LoadModelParams {
     omni?: boolean;
     videoPruningRate?: boolean;
     mmTensorIPC?: boolean;
+    // 环境变量
+    envVars?: boolean;
   };
 }
 
@@ -361,16 +351,6 @@ export interface ModelCapabilities {
   asr?: boolean;              // Automatic speech recognition
   imageGeneration?: boolean;  // Image generation (text-to-image)
   music?: boolean;            // Music generation (text-to-music)
-}
-
-/**
- * Model capabilities response
- */
-export interface ModelCapabilitiesResponse {
-  modelId: string;
-  capabilities: ModelCapabilities;
-  success?: boolean;
-  error?: string;
 }
 
 /**
@@ -399,16 +379,6 @@ export interface BenchmarkParamsResponse {
   success: boolean;
   params?: BenchmarkParam[];
   error?: string;
-}
-
-/**
- * Compute device info
- */
-export interface ComputeDevice {
-  id: string;              // Device identifier
-  name: string;            // Device name
-  type: 'CPU' | 'GPU' | 'Accelerator'; // Device type
-  selected?: boolean;      // Whether selected
 }
 
 /**
@@ -494,26 +464,6 @@ export interface BenchmarkResultFile {
 }
 
 /**
- * Benchmark list response
- */
-export interface BenchmarkListResponse {
-  success: boolean;
-  data?: {
-    benchmarks: Benchmark[]; // Backend returns benchmarks array
-  };
-  error?: string;
-}
-
-/**
- * Benchmark result detail response
- */
-export interface BenchmarkResultResponse {
-  success: boolean;
-  data?: BenchmarkResult;
-  error?: string;
-}
-
-/**
  * Create benchmark request
  */
 export interface CreateBenchmarkRequest {
@@ -533,45 +483,5 @@ export interface CreateBenchmarkResponse {
   error?: string;
 }
 
-/**
- * Save benchmark config request
- */
-export interface SaveBenchmarkConfigRequest {
-  name: string;            // Config name
-  config: BenchmarkConfig;
-}
 
-/**
- * Save benchmark config response
- */
-export interface SaveBenchmarkConfigResponse {
-  success: boolean;
-  error?: string;
-}
 
-/**
- * Load benchmark config response
- */
-export interface LoadBenchmarkConfigResponse {
-  success: boolean;
-  data?: {
-    configs: Array<{
-      name: string;
-      config: BenchmarkConfig;
-      createdAt: string;
-    }>;
-  };
-  error?: string;
-}
-
-/**
- * Benchmark list data response
- */
-export interface BenchmarkListDataResponse {
-  success: boolean;
-  data?: {
-    benchmarks: Benchmark[];
-    total: number;
-  };
-  error?: string;
-}

@@ -2,7 +2,15 @@
 // (llama.cpp, vLLM, vLLM-omni) and provides a registry for managing them.
 package backend
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+)
 
 // BackendType identifies the type of inference backend
 type BackendType string
@@ -250,4 +258,102 @@ func endpointsWithAudio() map[string]bool {
 	ep["/v1/audio/transcriptions"] = true
 	ep["/v1/audio/translations"] = true
 	return ep
+}
+
+// buildEnvWithVars 构建包含自定义环境变量的进程环境
+func buildEnvWithVars(envVars []string) []string {
+	env := os.Environ()
+	for _, ev := range envVars {
+		if idx := strings.Index(ev, "="); idx > 0 {
+			key := ev[:idx]
+			prefix := key + "="
+			found := false
+			for i, e := range env {
+				if strings.HasPrefix(e, prefix) {
+					env[i] = ev
+					found = true
+					break
+				}
+			}
+			if !found {
+				env = append(env, ev)
+			}
+		}
+	}
+	return env
+}
+
+// discoverVLLMVariant 是 VLLM 和 VLLMOmni 共享的发现逻辑
+// binaryName 是要查找的二进制名称 ("vllm" 或 "vllm-omni")
+func discoverVLLMVariant(cfg *BackendConfig, backendType BackendType, name, binaryName string) (*BackendInfo, error) {
+	info := &BackendInfo{
+		Type: backendType,
+		Name: name,
+	}
+
+	if cfg == nil {
+		info.Available = false
+		return info, nil
+	}
+
+	env := buildEnvWithVars(cfg.EnvVars)
+
+	// 优先检查 ServeBin（直接指定二进制路径）
+	if cfg.ServeBin != "" {
+		cmd := exec.Command(cfg.ServeBin, "--version")
+		cmd.Env = env
+		if output, err := cmd.CombinedOutput(); err == nil {
+			info.Version = strings.TrimSpace(string(output))
+			info.Available = true
+			info.BinPath = cfg.ServeBin
+			return info, nil
+		}
+	}
+
+	// 检查 BinPaths 配置的路径中是否有二进制
+	if len(cfg.BinPaths) > 0 {
+		for _, p := range cfg.BinPaths {
+			candidate := filepath.Join(p, binaryName)
+			cmd := exec.Command(candidate, "--version")
+			cmd.Env = env
+			if output, err := cmd.CombinedOutput(); err == nil {
+				info.Version = strings.TrimSpace(string(output))
+				info.Available = true
+				info.BinPath = candidate
+				return info, nil
+			}
+		}
+	}
+
+	if cfg.CondaEnv == "" {
+		info.Available = false
+		return info, nil
+	}
+
+	// 通过 conda run 检查是否可用
+	condaPath := cfg.CondaPath
+	if condaPath == "" {
+		condaPath = "conda"
+	}
+
+	cmd := exec.Command(condaPath, "run", "--no-banner", "-n", cfg.CondaEnv, binaryName, "--version")
+	cmd.Env = env
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Warnf("%s discovery failed: condaEnv=%s, error=%v, output=%s", name, cfg.CondaEnv, err, string(output))
+		info.Available = false
+		return info, nil
+	}
+
+	version := strings.TrimSpace(string(output))
+	info.Version = version
+	info.Available = true
+	info.CondaEnv = cfg.CondaEnv
+	info.CondaPath = cfg.CondaPath
+
+	if cfg.ServeBin != "" {
+		info.BinPath = cfg.ServeBin
+	}
+
+	return info, nil
 }
