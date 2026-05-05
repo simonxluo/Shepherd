@@ -23,12 +23,10 @@ type NodeStatus = types.NodeState
 
 // NodeStatus constants - 使用统一的 NodeState 常量
 const (
-	NodeStatusOffline  NodeStatus = types.StateOffline
-	NodeStatusOnline   NodeStatus = types.StateOnline
-	NodeStatusBusy     NodeStatus = types.StateBusy
-	NodeStatusError    NodeStatus = types.StateError
-	NodeStatusDegraded NodeStatus = types.StateDegraded
-	NodeStatusDisabled NodeStatus = types.StateDisabled
+	NodeStatusOffline NodeStatus = types.StateOffline
+	NodeStatusOnline  NodeStatus = types.StateOnline
+	NodeStatusBusy    NodeStatus = types.StateBusy
+	NodeStatusError   NodeStatus = types.StateError
 )
 
 // 向后兼容：旧的代码可以继续使用 NodeStatus，实际上使用的是统一的 NodeState
@@ -47,7 +45,6 @@ type NodeCapabilities struct {
 	PythonVersion     string            `json:"pythonVersion,omitempty"`
 	CondaPath         string            `json:"condaPath,omitempty"`
 	CondaEnvironments map[string]string `json:"condaEnvironments,omitempty"`
-	CondaEnvs         []string          `json:"condaEnvs,omitempty"` // 已废弃，使用 CondaEnvironments
 	DockerEnabled     bool              `json:"dockerEnabled,omitempty"`
 }
 
@@ -84,25 +81,6 @@ type LlamacppInfo struct {
 	Binaries         map[string]string `json:"binaries,omitempty"` // binary name -> path
 }
 
-// ModelInfo contains information about a model
-type ModelInfo struct {
-	Path         string            `json:"path"`
-	Name         string            `json:"name"`
-	Alias        string            `json:"alias,omitempty"`
-	Size         int64             `json:"size"`   // bytes
-	Format       string            `json:"format"` // gguf, etc.
-	Architecture string            `json:"architecture,omitempty"`
-	Parameters   string            `json:"parameters,omitempty"`   // 7B, 13B, etc.
-	Quantization string            `json:"quantization,omitempty"` // q4_0, q5_1, etc.
-	ContextSize  int               `json:"contextSize,omitempty"`
-	Embedding    bool              `json:"embedding"`
-	Tags         []string          `json:"tags,omitempty"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
-	Loaded       bool              `json:"loaded"`
-	LoadedAt     *time.Time        `json:"loadedAt,omitempty"`
-	LoadedBy     string            `json:"loadedBy,omitempty"` // node ID
-}
-
 // CommandType represents the type of command
 type CommandType string
 
@@ -114,10 +92,6 @@ const (
 	CommandTypeUpdateConfig CommandType = "update_config"
 	CommandTypeCollectLogs  CommandType = "collect_logs"
 	CommandTypeScanModels   CommandType = "scan_models"
-	CommandTypeStartTask    CommandType = "start_task"
-	CommandTypeStopTask     CommandType = "stop_task"
-	CommandTypeRestart      CommandType = "restart"
-	CommandTypeShutdown     CommandType = "shutdown"
 	CommandTypeTestLlamacpp CommandType = "test_llamacpp"
 	CommandTypeGetConfig    CommandType = "get_config"
 )
@@ -218,97 +192,3 @@ type NodeConfig struct {
 	Version             string            `json:"version"`
 }
 
-// NodeConnection represents a connection between nodes
-type NodeConnection struct {
-	FromNodeID    string    `json:"fromNodeId"`
-	ToNodeID      string    `json:"toNodeId"`
-	Status        string    `json:"status"` // connected, disconnected, error
-	ConnectedAt   time.Time `json:"connectedAt"`
-	LastActivity  time.Time `json:"lastActivity"`
-	BytesSent     int64     `json:"bytesSent"`
-	BytesReceived int64     `json:"bytesReceived"`
-	Latency       int64     `json:"latency"` // milliseconds
-}
-
-// NodeMetrics contains metrics about a node
-type NodeMetrics struct {
-	NodeID      string    `json:"nodeId"`
-	Timestamp   time.Time `json:"timestamp"`
-	CPUUsage    float64   `json:"cpuUsage"`    // percentage
-	MemoryUsage float64   `json:"memoryUsage"` // percentage
-	DiskUsage   float64   `json:"diskUsage"`   // percentage
-	NetworkRx   int64     `json:"networkRx"`   // bytes per second
-	NetworkTx   int64     `json:"networkTx"`   // bytes per second
-	ActiveTasks int       `json:"activeTasks"`
-	TotalTasks  int64     `json:"totalTasks"`
-	FailedTasks int64     `json:"failedTasks"`
-	Uptime      int64     `json:"uptime"` // seconds
-	LoadAverage []float64 `json:"loadAverage,omitempty"`
-}
-
-// TaskExecution represents a task being executed on a node
-type TaskExecution struct {
-	TaskID        string            `json:"taskId"`
-	NodeID        string            `json:"nodeId"`
-	Type          string            `json:"type"`
-	Status        string            `json:"status"`
-	Priority      int               `json:"priority"`
-	Progress      float64           `json:"progress"` // 0-1
-	StartedAt     time.Time         `json:"startedAt"`
-	EstimatedEnd  *time.Time        `json:"estimatedEnd,omitempty"`
-	ResourceUsage *NodeResources    `json:"resourceUsage,omitempty"`
-	Metadata      map[string]string `json:"metadata,omitempty"`
-}
-
-// NodeEvent represents an event that occurred on a node
-type NodeEvent struct {
-	ID        string                 `json:"id"`
-	NodeID    string                 `json:"nodeId"`
-	Type      string                 `json:"type"`     // status_change, error, resource_alert, etc.
-	Severity  string                 `json:"severity"` // info, warning, error, critical
-	Message   string                 `json:"message"`
-	Details   map[string]interface{} `json:"details,omitempty"`
-	Timestamp time.Time              `json:"timestamp"`
-	Source    string                 `json:"source,omitempty"`
-}
-
-// NetworkInterface represents a network interface
-type NetworkInterface struct {
-	Name       string `json:"name"`
-	IPAddress  string `json:"ipAddress"`
-	Netmask    string `json:"netmask"`
-	Gateway    string `json:"gateway,omitempty"`
-	MAC        string `json:"mac,omitempty"`
-	IsUp       bool   `json:"isUp"`
-	IsLoopback bool   `json:"isLoopback"`
-	Speed      int64  `json:"speed,omitempty"` // bits per second
-}
-
-// SystemInfo contains system-level information
-type SystemInfo struct {
-	OS                string             `json:"os"`
-	Arch              string             `json:"arch"`
-	Kernel            string             `json:"kernel"`
-	Hostname          string             `json:"hostname"`
-	BootTime          time.Time          `json:"bootTime"`
-	Timezone          string             `json:"timezone"`
-	NetworkInterfaces []NetworkInterface `json:"networkInterfaces,omitempty"`
-	Processes         int                `json:"processes"`
-	Users             []string           `json:"users,omitempty"`
-}
-
-// ProcessInfo contains information about a process
-type ProcessInfo struct {
-	PID         int               `json:"pid"`
-	Name        string            `json:"name"`
-	CmdLine     string            `json:"cmdLine"`
-	Status      string            `json:"status"`
-	CPUUsage    float64           `json:"cpuUsage"`    // percentage
-	MemoryUsage int64             `json:"memoryUsage"` // bytes
-	StartTime   time.Time         `json:"startTime"`
-	User        string            `json:"user"`
-	ParentPID   int               `json:"parentPid"`
-	Children    []int             `json:"children,omitempty"`
-	Tags        []string          `json:"tags,omitempty"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
-}

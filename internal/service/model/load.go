@@ -86,21 +86,22 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 		return nil, fmt.Errorf("model not found: %s", req.ModelID)
 	}
 
-	// Check if already loaded
-	m.mu.RLock()
-	if status, exists := m.statuses[req.ModelID]; exists {
-		if status.State == StateLoaded {
-			m.mu.RUnlock()
+	// Use write lock for both check-and-set to prevent TOCTOU race:
+	// Two concurrent callers could both pass an RLock check and overwrite each other's status.
+	m.mu.Lock()
+	if existing, exists := m.statuses[req.ModelID]; exists {
+		if existing.State == StateLoaded {
+			m.mu.Unlock()
 			return &LoadResult{
 				Success:       true,
 				ModelID:       req.ModelID,
-				Port:          status.Port,
+				Port:          existing.Port,
 				Async:         true,
 				AlreadyLoaded: true,
 			}, nil
 		}
-		if status.State == StateLoading {
-			m.mu.RUnlock()
+		if existing.State == StateLoading {
+			m.mu.Unlock()
 			return &LoadResult{
 				Success: true,
 				ModelID: req.ModelID,
@@ -109,9 +110,7 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 			}, nil
 		}
 	}
-	m.mu.RUnlock()
 
-	m.mu.Lock()
 	status := &ModelStatus{
 		ID:   req.ModelID,
 		Name: model.Name,

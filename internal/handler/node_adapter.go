@@ -163,7 +163,6 @@ func convertNodeCapabilitiesToCluster(cap *node.NodeCapabilities) *cluster.Capab
 		Memory:         cap.Memory,
 		SupportsLlama:  cap.SupportsLlama,
 		SupportsPython: cap.SupportsPython,
-		CondaEnvs:      cap.CondaEnvs,
 	}
 }
 

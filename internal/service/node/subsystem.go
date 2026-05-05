@@ -450,7 +450,6 @@ func (rs *RegistrationSubsystem) registerWithMaster(ctx context.Context) {
 			GPUCount:       rs.node.capabilities.GPUCount,
 			CPUCount:       rs.node.capabilities.CPUCount,
 			Memory:         rs.node.capabilities.Memory,
-			CondaEnvs:      rs.node.capabilities.CondaEnvs,
 		},
 		Resources:    rs.node.GetResources(),
 		LastSeen:     time.Now(),

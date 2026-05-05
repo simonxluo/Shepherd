@@ -557,34 +557,3 @@ func (rm *ResourceMonitor) detectKernelVersion() string {
 	return ""
 }
 
-// Watch sets a callback function to be called when resources are updated
-func (rm *ResourceMonitor) Watch(callback func(*NodeResources)) {
-	rm.mu.Lock()
-	defer rm.mu.Unlock()
-	rm.callback = callback
-}
-
-// SetUpdateInterval sets the resource monitoring update interval
-func (rm *ResourceMonitor) SetUpdateInterval(interval time.Duration) {
-	rm.mu.Lock()
-	defer rm.mu.Unlock()
-	rm.interval = interval
-}
-
-// GetMetrics returns the current node metrics
-func (rm *ResourceMonitor) GetMetrics() *NodeMetrics {
-	rm.mu.RLock()
-	defer rm.mu.RUnlock()
-
-	return &NodeMetrics{
-		NodeID:      "", // Will be filled by caller
-		Timestamp:   rm.lastUpdate,
-		CPUUsage:    float64(rm.resources.CPUUsed) / float64(rm.resources.CPUTotal) * 100,
-		MemoryUsage: float64(rm.resources.MemoryUsed) / float64(rm.resources.MemoryTotal) * 100,
-		DiskUsage:   float64(rm.resources.DiskUsed) / float64(rm.resources.DiskTotal) * 100,
-		NetworkRx:   rm.resources.NetworkRx,
-		NetworkTx:   rm.resources.NetworkTx,
-		Uptime:      rm.resources.Uptime,
-		LoadAverage: rm.resources.LoadAverage,
-	}
-}

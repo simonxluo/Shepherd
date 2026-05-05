@@ -107,10 +107,21 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	// Phase 1: 检查状态并创建初始 status（加锁）
 	var status *ModelStatus
 	m.mu.Lock()
-	if existingStatus, exists := m.statuses[req.ModelID]; exists && existingStatus.State == StateLoading {
-		m.mu.Unlock()
-		logger.Warnf("模型加载失败: 模型正在加载中: modelId=%s", req.ModelID)
-		return nil, fmt.Errorf("model already loading: %s", req.ModelID)
+	if existingStatus, exists := m.statuses[req.ModelID]; exists {
+		if existingStatus.State == StateLoaded {
+			m.mu.Unlock()
+			logger.Infof("模型已加载，跳过: modelId=%s, port=%d", req.ModelID, existingStatus.Port)
+			return &LoadResult{
+				Success: true,
+				ModelID: req.ModelID,
+				Port:    existingStatus.Port,
+			}, nil
+		}
+		if existingStatus.State == StateLoading {
+			m.mu.Unlock()
+			logger.Warnf("模型加载失败: 模型正在加载中: modelId=%s", req.ModelID)
+			return nil, fmt.Errorf("model already loading: %s", req.ModelID)
+		}
 	}
 
 	// Create initial status
@@ -257,39 +268,6 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		CtxSize:  req.CtxSize,
 		Duration: duration,
 	}, nil
-}
-
-// isLoading 检查模型是否正在加载
-func (m *Manager) isLoading(modelID string) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	if status, exists := m.statuses[modelID]; exists {
-		return status.State == StateLoading
-	}
-	return false
-}
-
-// findAvailablePort finds an available port for the model server
-func (m *Manager) findAvailablePort() int {
-	// Start from base port and find available
-	basePort := 8081
-
-	statuses := m.ListStatus()
-	usedPorts := make(map[int]bool)
-	for _, status := range statuses {
-		if status.Port > 0 {
-			usedPorts[status.Port] = true
-		}
-	}
-
-	for port := basePort; port < basePort+100; port++ {
-		if !usedPorts[port] {
-			return port
-		}
-	}
-
-	return basePort
 }
 
 // SearchModels searches and filters models based on criteria

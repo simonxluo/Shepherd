@@ -76,20 +76,6 @@ type ModelStatus struct {
 	tokenMu               sync.Mutex
 }
 
-func (s *ModelStatus) swapState(expected, newState LoadState) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.State != expected {
-		return fmt.Errorf("invalid state transition: expected %s but current is %s (target %s)", expected, s.State, newState)
-	}
-	if !isValidTransition(expected, newState) {
-		return fmt.Errorf("forbidden state transition: %s -> %s", expected, newState)
-	}
-	s.State = newState
-	return nil
-}
-
 func (s *ModelStatus) transitionTo(newState LoadState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -405,18 +405,6 @@ func (m *Manager) saveModels() {
 	}
 }
 
-// GetLoadedModelCount returns the number of currently loaded models
-func (m *Manager) GetModelTokenCounts(modelID string) (prompt, completion int64, found bool) {
-	m.mu.RLock()
-	status, exists := m.statuses[modelID]
-	m.mu.RUnlock()
-	if !exists {
-		return 0, 0, false
-	}
-	p, c := status.GetTokenCounts()
-	return p, c, true
-}
-
 func (m *Manager) GetLoadedModelCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -430,78 +418,3 @@ func (m *Manager) GetLoadedModelCount() int {
 	return count
 }
 
-// ValidationResult represents the result of model validation
-type ValidationResult struct {
-	Valid         bool
-	Errors        []string
-	Warnings      []string
-	ModelCount    int
-	InvalidModels []string
-	MissingFiles  []string
-}
-
-// ValidateModels validates all models in the cache
-func (m *Manager) ValidateModels() *ValidationResult {
-	result := &ValidationResult{
-		Valid:         true,
-		Errors:        []string{},
-		Warnings:      []string{},
-		InvalidModels: []string{},
-		MissingFiles:  []string{},
-	}
-
-	m.mu.RLock()
-	models := make(map[string]*Model)
-	for id, model := range m.models {
-		models[id] = model
-	}
-	m.mu.RUnlock()
-
-	result.ModelCount = len(models)
-
-	for id, model := range models {
-		// Check if file exists
-		if _, err := os.Stat(model.Path); err != nil {
-			result.Valid = false
-			result.Errors = append(result.Errors, fmt.Sprintf("模型 %s 文件不存在: %v", id, err))
-			result.MissingFiles = append(result.MissingFiles, model.Path)
-			result.InvalidModels = append(result.InvalidModels, id)
-			continue
-		}
-
-		// Check file size consistency
-		if info, err := os.Stat(model.Path); err == nil {
-			if info.Size() != model.Size {
-				result.Warnings = append(result.Warnings,
-					fmt.Sprintf("模型 %s 文件大小已变更: 缓存 %d, 实际 %d", id, model.Size, info.Size()))
-			}
-		}
-
-		// Validate metadata
-		if model.Metadata == nil {
-			result.Valid = false
-			result.Errors = append(result.Errors, fmt.Sprintf("模型 %s 缺少元数据", id))
-			result.InvalidModels = append(result.InvalidModels, id)
-		}
-	}
-
-	return result
-}
-
-// CleanInvalidModels removes invalid models from cache
-func (m *Manager) CleanInvalidModels() int {
-	result := m.ValidateModels()
-	if !result.Valid {
-		m.mu.Lock()
-		for _, id := range result.InvalidModels {
-			delete(m.models, id)
-			delete(m.statuses, id)
-		}
-		m.mu.Unlock()
-
-		// Save updated models
-		m.saveModels()
-	}
-
-	return len(result.InvalidModels)
-}
