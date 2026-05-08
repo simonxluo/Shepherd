@@ -24,31 +24,6 @@ export interface GPUInfo {
 }
 
 /**
- * llama.cpp info
- */
-export interface LlamacppInfo {
-  path: string;
-  version: string;
-  buildType: string;
-  gpuBackend?: string;
-  supportsGPU: boolean;
-  available: boolean;
-}
-
-/**
- * Model info
- */
-export interface NodeModelInfo {
-  path: string;
-  name: string;
-  size: number;
-  format: string;
-  loaded: boolean;
-  loadedAt?: string;
-  loadedBy?: string;
-}
-
-/**
  * Node resources
  */
 export interface NodeResources {
@@ -90,73 +65,6 @@ export interface NodeCapabilities {
 }
 
 /**
- * Heartbeat message
- */
-export interface HeartbeatMessage {
-  nodeId: string;
-  timestamp: string;
-  status: NodeStatus;
-  role: NodeRole;
-  resources?: NodeResources;
-  capabilities?: NodeCapabilities;
-  metadata?: Record<string, unknown>;
-  sequence: number;
-}
-
-/**
- * Command type
- */
-export type CommandType =
-  | 'load_model'
-  | 'unload_model'
-  | 'run_llamacpp'
-  | 'stop_process'
-  | 'update_config'
-  | 'collect_logs'
-  | 'scan_models';
-
-/**
- * Command
- */
-export interface NodeCommand {
-  id: string;
-  type: CommandType;
-  fromNodeId: string;
-  toNodeId?: string;
-  payload: Record<string, unknown>;
-  createdAt: string;
-  timeout?: number;
-  priority: number;
-  retryCount: number;
-  maxRetries: number;
-}
-
-/**
- * Command result
- */
-export interface CommandResult {
-  commandId: string;
-  fromNodeId: string;
-  toNodeId: string;
-  success: boolean;
-  result?: Record<string, unknown>;
-  error?: string;
-  completedAt: string;
-  duration: number;
-  metadata?: Record<string, string>;
-}
-
-/**
- * Node statistics
- */
-export interface NodeStats {
-  total: number;
-  online: number;
-  offline: number;
-  busy: number;
-}
-
-/**
  * ==================== Unified Node Types (v0.2.0+) ====================
  */
 
@@ -182,78 +90,14 @@ export interface UnifiedNode {
   registeredAt?: string;
 }
 
-// ==================== Type Aliases (Backward Compatibility) ====================
-
 /**
- * @deprecated Use UnifiedNode instead
+ * ==================== Type Aliases (Backward Compatibility) ====================
  */
-export type DistributedNode = UnifiedNode;
 
 /**
  * @deprecated Use UnifiedNode instead
  */
 export type Client = UnifiedNode;
-
-/**
- * @deprecated Use NodeCapabilities instead
- */
-export type Capabilities = NodeCapabilities;
-
-/**
- * @deprecated Use NodeResources instead
- */
-export interface ResourceUsage extends NodeResources {
-  cpuPercent?: number; // Retained for compatibility
-  gpuPercent?: number;
-}
-
-/**
- * Node list response — matches backend GET /api/master/nodes
- */
-export interface NodeListResponse {
-  nodes: DistributedNode[];
-  stats: NodeStats;
-}
-
-/**
- * Node register request
- */
-export interface NodeRegisterRequest {
-  id: string;
-  name: string;
-  address: string;
-  port: number;
-  role: NodeRole;
-  capabilities: NodeCapabilities;
-  metadata?: Record<string, string>;
-}
-
-/**
- * Node register response
- */
-export interface NodeRegisterResponse {
-  message: string;
-  node: DistributedNode;
-}
-
-/**
- * Send command request
- */
-export interface SendCommandRequest {
-  type: CommandType;
-  payload: Record<string, unknown>;
-  timeout?: number;
-  priority?: number;
-}
-
-/**
- * Send command response
- */
-export interface SendCommandResponse {
-  message: string;
-  command: NodeCommand;
-}
-
 
 /**
  * llama.cpp path info

@@ -7,4 +7,3 @@ export type {
 } from './types';
 
 export { configLoader, useConfig } from './loader';
-export { updateApiClientUrl } from '@/lib/api/client';

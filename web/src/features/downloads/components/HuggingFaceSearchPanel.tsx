@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useHuggingFaceSearch, useModelRepoConfig, useAvailableEndpoints, useUpdateModelRepoConfig, useModelFiles } from '@/features/downloads/hooks';
 import type { HuggingFaceModel } from '@/lib/api/downloads';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 
 interface HuggingFaceSearchPanelProps {
   onDownload: (model: HuggingFaceModel, fileName?: string) => void;
@@ -20,6 +20,7 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null);
   const [pageSize, setPageSize] = useState<number>(20);
   const [searchFormat, setSearchFormat] = useState<string>('gguf'); // Default to GGUF
+  const [selectedEndpoint, setSelectedEndpoint] = useState<string>('');
   
   const { data: searchResult, isLoading, error } = useHuggingFaceSearch(query, pageSize, searchFormat);
   const { data: config, isLoading: configLoading } = useModelRepoConfig();
@@ -27,11 +28,8 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
   const updateConfig = useUpdateModelRepoConfig();
   const handleSaveSettings = () => {
     const updates: { endpoint?: string; token?: string } = {};
-    if (config && endpoints) {
-      const selectedEndpoint = (document.getElementById('endpoint-select') as HTMLSelectElement)?.value;
-      if (selectedEndpoint && selectedEndpoint !== config.endpoint) {
-        updates.endpoint = selectedEndpoint;
-      }
+    if (config && selectedEndpoint && selectedEndpoint !== config.endpoint) {
+      updates.endpoint = selectedEndpoint;
     }
     if (tokenInput) {
       updates.token = tokenInput;
@@ -63,17 +61,6 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
       return (num / 1000).toFixed(1) + 'K';
     }
     return num.toString();
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let size = bytes;
-    let unitIndex = 0;
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
   };
 
   return (
@@ -182,9 +169,9 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
               API 端点
             </label>
             <Select
-              defaultValue={config?.endpoint || 'huggingface.co'}
+              value={selectedEndpoint || config?.endpoint || 'huggingface.co'}
               disabled={configLoading}
-              onValueChange={() => {}}
+              onValueChange={setSelectedEndpoint}
             >
               <SelectTrigger className="w-full px-3 py-2 border border-border rounded-md bg-input text-foreground">
                 <SelectValue />
@@ -336,10 +323,9 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
               </div>
 
               {expandedModelId === model.modelId && (
-                <ModelFilesList 
-                  model={model} 
-                  onDownload={onDownload} 
-                  formatFileSize={formatFileSize} 
+                <ModelFilesList
+                  model={model}
+                  onDownload={onDownload}
                 />
               )}
             </div>
@@ -350,14 +336,12 @@ export function HuggingFaceSearchPanel({ onDownload }: HuggingFaceSearchPanelPro
   );
 }
 
-function ModelFilesList({ 
-  model, 
-  onDownload, 
-  formatFileSize
-  }: { 
-  model: HuggingFaceModel; 
+function ModelFilesList({
+  model,
+  onDownload,
+  }: {
+  model: HuggingFaceModel;
   onDownload: (model: HuggingFaceModel, fileName?: string) => void;
-  formatFileSize: (bytes: number) => string;
   }) {
   const { data: files, isLoading, error } = useModelFiles('huggingface', model.modelId);
   const [fileFormat, setFileFormat] = useState<string>('gguf'); // Default to GGUF
@@ -445,7 +429,7 @@ function ModelFilesList({
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    <span>{formatFileSize(file.size)}</span>
+                    <span>{formatBytes(file.size)}</span>
                     {quant && (
                       <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded font-mono">
                         {quant}

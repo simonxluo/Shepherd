@@ -10,10 +10,8 @@ export interface User {
 }
 
 export interface UserSettings {
-  theme: 'light' | 'dark' | 'system';
   language: string;
   notifications: boolean;
-  autoSave: boolean;
   defaultModel?: string;
 }
 
@@ -29,10 +27,8 @@ export interface UpdateProfileRequest {
 }
 
 export interface UpdateSettingsRequest {
-  theme?: 'light' | 'dark' | 'system';
   language?: string;
   notifications?: boolean;
-  autoSave?: boolean;
   defaultModel?: string;
 }
 

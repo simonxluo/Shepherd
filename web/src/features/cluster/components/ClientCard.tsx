@@ -4,37 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn, formatBytes } from '@/lib/utils';
 import { ClientInfoDialog } from './ClientInfoDialog';
-import type { Client, ClientStatus } from '@/types';
+import { STATUS_COLORS, STATUS_LABELS, getResourcePercentages } from '../utils';
+import type { Client } from '@/types';
 
 interface ClientCardProps {
   client: Client;
   onDisconnect?: () => void;
   actions?: React.ReactNode;
 }
-
-/**
- * Client status color mapping
- */
-const STATUS_COLORS: Record<ClientStatus, string> = {
-  online: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-  offline: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  busy: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
-  error: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
-  degraded: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
-  disabled: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
-};
-
-/**
- * Client status labels
- */
-const STATUS_LABELS: Record<ClientStatus, string> = {
-  online: '在线',
-  offline: '离线',
-  busy: '忙碌',
-  error: '错误',
-  degraded: '降级',
-  disabled: '已禁用',
-};
 
 /**
  * Format last seen time
@@ -56,14 +33,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
   const statusLabel = STATUS_LABELS[client.status];
   const isConnected = client.status === 'online' || client.status === 'busy';
 
-  const cpuPercent = client.resources?.cpuPercent ?? 0;
-  const memoryPercent = client.resources?.memoryUsed
-    ? (client.resources.memoryUsed / (client.resources.memoryTotal ?? 1)) * 100
-    : 0;
-  const gpuPercent = client.resources?.gpuPercent ?? 0;
-  const gpuMemoryPercent = client.resources?.gpuMemoryUsed && client.resources?.gpuMemoryTotal
-    ? (client.resources.gpuMemoryUsed / client.resources.gpuMemoryTotal) * 100
-    : 0;
+  const { cpu: cpuPercent, memory: memoryPercent, gpu: gpuPercent, gpuMemory: gpuMemoryPercent } = getResourcePercentages(client.resources);
 
   return (
     <>

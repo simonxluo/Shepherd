@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useImageGeneration } from '../hooks';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
+import { ModelSelect } from './ModelSelect';
 
 interface ImageGenPanelProps {
   models: Array<{ id: string; name: string; alias?: string }>;
 }
 
 export function ImageGenPanel({ models }: ImageGenPanelProps) {
-  const toast = useToast();
   const imageGen = useImageGeneration();
 
   const [model, setModel] = useState('');
@@ -60,24 +60,13 @@ export function ImageGenPanel({ models }: ImageGenPanelProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1.5">图像生成模型</label>
-          <Select
-            value={model}
-            onValueChange={setModel}
-          >
-            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-              <SelectValue placeholder="选择模型" />
-            </SelectTrigger>
-            <SelectContent>
-              {models.map((m) => (
-                <SelectItem key={m.id} value={m.alias || m.name}>
-                  {m.alias || m.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ModelSelect
+          models={models}
+          value={model}
+          onValueChange={setModel}
+          placeholder="选择模型"
+          label="图像生成模型"
+        />
 
         <div>
           <label className="block text-sm font-medium mb-1.5">图像描述</label>

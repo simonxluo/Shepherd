@@ -16,25 +16,12 @@ export interface DirectoryItem {
 /**
  * Directory list response
  */
-export interface DirectoryListResponse {
+interface DirectoryListResponse {
   currentPath: string;
   parentPath: string;
   folders: DirectoryItem[];
   files: DirectoryItem[];
   roots?: DirectoryItem[];
-  error?: string;
-}
-
-/**
- * Path validation result
- */
-export interface PathValidationResult {
-  success: boolean;
-  valid: boolean;
-  exists?: boolean;
-  isDirectory?: boolean;
-  isReadable?: boolean;
-  normalizedPath?: string;
   error?: string;
 }
 
@@ -48,11 +35,4 @@ export const filesystemApi = {
    */
   listDirectory: (path?: string): Promise<{ success: boolean; data: DirectoryListResponse }> =>
     apiClient.get<{ success: boolean; data: DirectoryListResponse }>('/system/filesystem', path ? { path } : undefined),
-
-  /**
-   * Validate a path
-   * @param path Path to validate
-   */
-  validatePath: (path: string): Promise<PathValidationResult> =>
-    apiClient.post<PathValidationResult>('/system/filesystem/validate', { path }),
 };

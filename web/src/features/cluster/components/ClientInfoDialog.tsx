@@ -23,8 +23,6 @@ import {
   XCircle,
   Loader2,
   AlertTriangle,
-  Terminal as TerminalIcon,
-
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,61 +36,14 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useClient, useNodeConfig, useTestNodeLlamacpp } from '@/features/cluster/hooks';
 import { cn, formatBytes } from '@/lib/utils';
+import { getStatusConfig, getResourcePercentages } from '../utils';
 import type { Client, GPUInfo, LlamacppTestResult } from '@/types';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
 
 interface ClientInfoDialogProps {
   client: Client | null;
   open: boolean;
   onClose: () => void;
-}
-
-/**
- * Get status color configuration
- */
-function getStatusConfig(status: string) {
-  switch (status) {
-    case 'online':
-      return {
-        color: 'text-emerald-600 dark:text-emerald-400',
-        bg: 'bg-emerald-50 dark:bg-emerald-950/30',
-        border: 'border-emerald-200 dark:border-emerald-800',
-        label: '在线',
-        indicator: 'bg-emerald-500',
-      };
-    case 'busy':
-      return {
-        color: 'text-amber-600 dark:text-amber-400',
-        bg: 'bg-amber-50 dark:bg-amber-950/30',
-        border: 'border-amber-200 dark:border-amber-800',
-        label: '忙碌',
-        indicator: 'bg-amber-500',
-      };
-    case 'offline':
-      return {
-        color: 'text-slate-600 dark:text-slate-400',
-        bg: 'bg-slate-50 dark:bg-slate-950/30',
-        border: 'border-slate-200 dark:border-slate-800',
-        label: '离线',
-        indicator: 'bg-slate-500',
-      };
-    case 'error':
-      return {
-        color: 'text-red-600 dark:text-red-400',
-        bg: 'bg-red-50 dark:bg-red-950/30',
-        border: 'border-red-200 dark:border-red-800',
-        label: '错误',
-        indicator: 'bg-red-500',
-      };
-    default:
-      return {
-        color: 'text-slate-600 dark:text-slate-400',
-        bg: 'bg-slate-50 dark:bg-slate-950/30',
-        border: 'border-slate-200 dark:border-slate-800',
-        label: status,
-        indicator: 'bg-slate-500',
-      };
-  }
 }
 
 /**
@@ -327,13 +278,7 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
   const capabilities = displayClient?.capabilities;
   const status = getStatusConfig(displayClient?.status || 'offline');
 
-  const cpuPercent = resources?.cpuPercent ?? 0;
-  const memoryPercent = resources?.memoryTotal
-    ? ((resources.memoryUsed || 0) / resources.memoryTotal) * 100
-    : 0;
-  const diskPercent = resources?.diskTotal
-    ? ((resources.diskUsed || 0) / resources.diskTotal) * 100
-    : 0;
+  const { cpu: cpuPercent, memory: memoryPercent, disk: diskPercent } = getResourcePercentages(resources);
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
@@ -652,7 +597,6 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
 function NodeConfigPanel({ clientId }: { clientId: string }) {
   const { data: config, isLoading } = useNodeConfig(clientId, { enabled: !!clientId });
   const testLlamacpp = useTestNodeLlamacpp();
-  const toastHelpers = useToast();
   const [testResult, setTestResult] = useState<LlamacppTestResult | null>(null);
 
   const handleTest = async () => {
@@ -660,12 +604,12 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
       const result = await testLlamacpp.mutateAsync(clientId);
       setTestResult(result);
       if (result.success) {
-        toastHelpers.success('测试成功', `llama.cpp 版本: ${result.version || '未知'}`);
+        toast.success('测试成功', `llama.cpp 版本: ${result.version || '未知'}`);
       } else {
-        toastHelpers.error('测试失败', result.error || '未知错误');
+        toast.error('测试失败', result.error || '未知错误');
       }
     } catch (error) {
-      toastHelpers.error('测试失败', error instanceof Error ? error.message : '请求失败');
+      toast.error('测试失败', error instanceof Error ? error.message : '请求失败');
     }
   };
 
@@ -691,7 +635,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
       <div className="flex items-center justify-between p-4 bg-card rounded-xl border border-border">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 dark:bg-primary/20 rounded-lg">
-            <TerminalIcon className="w-5 h-5 text-primary" />
+            <Terminal className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h3 className="font-semibold">llama.cpp 测试</h3>

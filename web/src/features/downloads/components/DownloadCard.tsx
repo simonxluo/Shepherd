@@ -4,6 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn, formatBytes } from '@/lib/utils';
 import type { DownloadTask, DownloadState } from '@/types';
+import { ACTIVE_DOWNLOAD_STATES } from '@/features/downloads/hooks';
 
 interface DownloadCardProps {
   task: DownloadTask;
@@ -87,7 +88,7 @@ function getSourceLabel(source: 'huggingface' | 'modelscope'): string {
 
 export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: DownloadCardProps) {
   const progressPercent = Math.round(task.progress * 100);
-  const isActive = ['preparing', 'downloading', 'merging', 'verifying'].includes(task.state);
+  const isActive = ACTIVE_DOWNLOAD_STATES.includes(task.state);
   const canPause = task.state === 'downloading';
   const canResume = task.state === 'paused';
   const canCancel = !task.completedAt && task.state !== 'completed';

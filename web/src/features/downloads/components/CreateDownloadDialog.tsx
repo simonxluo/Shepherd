@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Cloud, Database, Loader2, File, Check, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -77,19 +77,6 @@ export function CreateDownloadDialog({
   const handleSelectFile = (file: ModelFileInfo) => {
     setFileName(file.name);
     setShowFileBrowser(false);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let size = bytes;
-    let unitIndex = 0;
-
-    while (size >= 1024 && unitIndex < units.length - 1) {
-      size /= 1024;
-      unitIndex++;
-    }
-
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
   };
 
   return (
@@ -211,7 +198,7 @@ export function CreateDownloadDialog({
                         <File className="w-4 h-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
                         <span className="flex-1 text-sm truncate">{file.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {formatFileSize(file.size)}
+                          {formatBytes(file.size)}
                         </span>
                         {fileName === file.name && (
                           <Check className="w-4 h-4 text-green-600 dark:text-green-400" />

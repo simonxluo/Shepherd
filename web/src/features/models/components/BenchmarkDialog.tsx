@@ -14,7 +14,29 @@ import type {
   BenchmarkConfig,
   BenchmarkParam,
 } from '@/types';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
+
+/**
+ * Parameter label with optional abbreviation and description tooltip
+ */
+function ParamLabel({ name, abbreviation, description }: { name: string; abbreviation?: string; description?: string }) {
+  return (
+    <label className="flex items-center text-xs font-medium text-foreground">
+      {name}
+      {abbreviation && (
+        <span className="ml-1 text-muted-foreground">({abbreviation})</span>
+      )}
+      {description && (
+        <span
+          className="ml-1 text-muted-foreground cursor-help"
+          title={description}
+        >
+          ⓘ
+        </span>
+      )}
+    </label>
+  );
+}
 
 interface BenchmarkDialogProps {
   isOpen: boolean;
@@ -37,8 +59,6 @@ export function BenchmarkDialog({
   modelName,
   isLoading = false,
 }: BenchmarkDialogProps) {
-  const toast = useToast();
-
   const { data: benchmarkParams = [], isLoading: paramsLoading } = useBenchmarkParams();
 
   const { data: llamaCppVersions = [], isLoading: versionsLoading } = useLlamaCppVersions();
@@ -152,22 +172,8 @@ export function BenchmarkDialog({
     setParamValues((prev) => ({ ...prev, [fullName]: value }));
   };
 
-  const buildCommand = (): string => {
-    const parts: string[] = [];
-
-    Object.entries(paramValues).forEach(([key, value]) => {
-      if (value === 'true') {
-        parts.push(key);
-      } else if (value !== 'false' && value !== '') {
-        parts.push(key, value);
-      }
-    });
-
-    if (selectedDevices.length > 0 && selectedDevices.length < availableDevices.length) {
-      parts.push('-dev', selectedDevices.join('/'));
-    }
-
-    return parts.join(' ');
+  const hasConfiguredParams = (): boolean => {
+    return Object.values(paramValues).some((value) => value !== '' && value !== 'false');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -178,8 +184,7 @@ export function BenchmarkDialog({
       return;
     }
 
-    const cmd = buildCommand();
-    if (!cmd) {
+    if (!hasConfiguredParams()) {
       toast.warning('请配置压测参数');
       return;
     }
@@ -202,20 +207,7 @@ export function BenchmarkDialog({
     if (param.values && param.values.length > 0) {
       return (
         <div key={param.fullName} className="space-y-1">
-          <label className="flex items-center text-xs font-medium text-foreground">
-            {param.name}
-            {param.abbreviation && (
-              <span className="ml-1 text-muted-foreground">({param.abbreviation})</span>
-            )}
-            {param.description && (
-              <span
-                className="ml-1 text-muted-foreground cursor-help"
-                title={param.description}
-              >
-                ⓘ
-              </span>
-            )}
-          </label>
+          <ParamLabel name={param.name} abbreviation={param.abbreviation} description={param.description} />
           <Select
             value={value}
             onValueChange={(v) => handleParamChange(param.fullName, v)}
@@ -244,20 +236,7 @@ export function BenchmarkDialog({
     if (param.type === 'LOGIC') {
       return (
         <div key={param.fullName} className="space-y-1">
-          <label className="flex items-center text-xs font-medium text-foreground">
-            {param.name}
-            {param.abbreviation && (
-              <span className="ml-1 text-muted-foreground">({param.abbreviation})</span>
-            )}
-            {param.description && (
-              <span
-                className="ml-1 text-muted-foreground cursor-help"
-                title={param.description}
-              >
-                ⓘ
-              </span>
-            )}
-          </label>
+          <ParamLabel name={param.name} abbreviation={param.abbreviation} description={param.description} />
           <Select
             value={value || 'false'}
             onValueChange={(v) => handleParamChange(param.fullName, v)}
@@ -283,20 +262,7 @@ export function BenchmarkDialog({
     if (param.type === 'INTEGER') {
       return (
         <div key={param.fullName} className="space-y-1">
-          <label className="flex items-center text-xs font-medium text-foreground">
-            {param.name}
-            {param.abbreviation && (
-              <span className="ml-1 text-muted-foreground">({param.abbreviation})</span>
-            )}
-            {param.description && (
-              <span
-                className="ml-1 text-muted-foreground cursor-help"
-                title={param.description}
-              >
-                ⓘ
-              </span>
-            )}
-          </label>
+          <ParamLabel name={param.name} abbreviation={param.abbreviation} description={param.description} />
           <Input
             id={id}
             type="number"
@@ -318,20 +284,7 @@ export function BenchmarkDialog({
     if (param.type === 'FLOAT') {
       return (
         <div key={param.fullName} className="space-y-1">
-          <label className="flex items-center text-xs font-medium text-foreground">
-            {param.name}
-            {param.abbreviation && (
-              <span className="ml-1 text-muted-foreground">({param.abbreviation})</span>
-            )}
-            {param.description && (
-              <span
-                className="ml-1 text-muted-foreground cursor-help"
-                title={param.description}
-              >
-                ⓘ
-              </span>
-            )}
-          </label>
+          <ParamLabel name={param.name} abbreviation={param.abbreviation} description={param.description} />
           <Input
             id={id}
             type="number"
@@ -353,20 +306,7 @@ export function BenchmarkDialog({
 
     return (
       <div key={param.fullName} className="space-y-1">
-        <label className="flex items-center text-xs font-medium text-foreground">
-          {param.name}
-          {param.abbreviation && (
-            <span className="ml-1 text-muted-foreground">({param.abbreviation})</span>
-          )}
-          {param.description && (
-            <span
-              className="ml-1 text-muted-foreground cursor-help"
-              title={param.description}
-            >
-              ⓘ
-            </span>
-          )}
-        </label>
+        <ParamLabel name={param.name} abbreviation={param.abbreviation} description={param.description} />
         <Input
           id={id}
           type="text"

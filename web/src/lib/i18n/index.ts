@@ -33,25 +33,7 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 export const DEFAULT_LANGUAGE: SupportedLanguage = 'zh-CN';
 
 // localStorage key for language preference
-export const LANGUAGE_STORAGE_KEY = 'shepherd_language';
-
-/**
- * Get stored language preference
- */
-export function getStoredLanguage(): SupportedLanguage | null {
-  const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  if (stored && SUPPORTED_LANGUAGES.some(lang => lang.code === stored)) {
-    return stored as SupportedLanguage;
-  }
-  return null;
-}
-
-/**
- * Store language preference
- */
-export function setStoredLanguage(language: SupportedLanguage): void {
-  localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-}
+const LANGUAGE_STORAGE_KEY = 'shepherd_language';
 
 /**
  * Initialize i18n

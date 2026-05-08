@@ -17,10 +17,9 @@ import {
   useDeleteConversation,
   useSaveMessage,
   useStreamingChat,
-  type ChatModelInfo,
 } from '@/features/chat';
-import { getConversation } from '@/lib/api/chat';
-import { useToast } from '@/hooks/useToast';
+import { getConversation, type ChatModelInfo } from '@/lib/api/chat';
+import { toast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 
 interface DisplayMessage {
@@ -30,7 +29,6 @@ interface DisplayMessage {
 }
 
 export function ChatPage() {
-  const toast = useToast();
   const alertDialog = useAlertDialog();
 
   // Models
@@ -97,11 +95,6 @@ export function ChatPage() {
     }
   }, [messages, currentResponse]);
 
-  // Sync messagesRef
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
   // Find selected model info
   const selectedModelInfo = models.find(
     (m) => m.id === selectedModel || m.alias === selectedModel || m.name === selectedModel,
@@ -148,9 +141,7 @@ export function ChatPage() {
 
       // Model loading state clears after first chunk or timeout
       const loadingTimeout = setTimeout(() => setModelLoading(false), 15_000);
-      const origOnChunk = streaming.send;
       // The model will be auto-loaded by the backend; once we get chunks, loading is done
-      // We use a simple timer + first-chunk detection
       return () => clearTimeout(loadingTimeout);
     },
     [selectedModel, activeConvId, selectedModelInfo, saveMessage, streaming, toast],

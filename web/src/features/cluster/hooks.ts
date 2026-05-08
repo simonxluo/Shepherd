@@ -190,40 +190,6 @@ export function useFilteredClients(
 }
 
 /**
- * Filter tasks hook
- */
-export function useFilteredTasks(
-  tasks: ClusterTask[] | undefined,
-  filters: {
-    search?: string;
-    status?: string;
-    type?: string;
-    assignedTo?: string;
-  }
-) {
-  return useMemo(() => {
-    if (!tasks) return [];
-
-    return tasks.filter((task) => {
-      if (filters.search) {
-        const search = filters.search.toLowerCase();
-        const matchId = task.id.toLowerCase().includes(search);
-        if (!matchId) return false;
-      }
-
-      if (filters.status && task.status !== filters.status) return false;
-
-      if (filters.type && task.type !== filters.type) return false;
-
-      if (filters.assignedTo && task.assignedTo !== filters.assignedTo) return false;
-
-      return true;
-    });
-  }, [tasks, filters.search, filters.status, filters.type, filters.assignedTo]);
-}
-
-
-/**
  * Online nodes hook for node selection
  */
 export function useOnlineNodes() {

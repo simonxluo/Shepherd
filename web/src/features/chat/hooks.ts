@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getChatModels,
   listConversations,
-  getConversation,
   createConversation,
   deleteConversation,
   createMessage,
@@ -14,7 +13,7 @@ import {
 } from '@/lib/api/chat';
 
 // ===== Query keys =====
-export const chatKeys = {
+const chatKeys = {
   models: ['chat', 'models'] as const,
   conversations: ['chat', 'conversations'] as const,
   conversation: (id: string) => ['chat', 'conversations', id] as const,
@@ -37,14 +36,6 @@ export function useConversations() {
   return useQuery({
     queryKey: chatKeys.conversations,
     queryFn: () => listConversations(50, 0).then((r) => r.items ?? []),
-  });
-}
-
-export function useConversation(id: string | null) {
-  return useQuery({
-    queryKey: chatKeys.conversation(id ?? ''),
-    queryFn: () => getConversation(id!),
-    enabled: !!id,
   });
 }
 
@@ -121,6 +112,3 @@ export function useStreamingChat(opts?: UseStreamingChatOptions) {
 
   return { send, abort };
 }
-
-// ===== Re-export types =====
-export type { ChatModelInfo, Conversation, Message };

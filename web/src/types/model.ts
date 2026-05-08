@@ -446,33 +446,6 @@ export interface BenchmarkConfig {
 }
 
 /**
- * Benchmark status
- */
-export type BenchmarkStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
-
-/**
- * Benchmark task
- */
-export interface Benchmark {
-  id: string;              // Benchmark ID
-  modelId: string;         // Model ID
-  modelName: string;       // Model name
-  status: BenchmarkStatus; // Status
-  command: string;         // Executed command
-  config: Record<string, unknown>; // Benchmark config
-  createdAt: string;       // Created at
-  startedAt?: string;      // Started at
-  finishedAt?: string;     // Finished at
-  error?: string;          // Error message
-  metrics?: {
-    total_time_ms?: number;
-    tokens_per_second?: number;
-    raw_output?: string;
-    [key: string]: unknown;
-  };
-}
-
-/**
  * Benchmark result
  */
 export interface BenchmarkResult {

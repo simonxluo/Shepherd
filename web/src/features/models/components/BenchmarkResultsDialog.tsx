@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FileText, Loader2, RefreshCw, Trash2, PlusCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 import type { BenchmarkResultFile, BenchmarkResult } from '@/types';
 
@@ -24,7 +24,6 @@ export function BenchmarkResultsDialog({
   modelId,
   modelName,
 }: BenchmarkResultsDialogProps) {
-  const toast = useToast();
   const alertDialog = useAlertDialog();
 
   const [resultFiles, setResultFiles] = useState<BenchmarkResultFile[]>([]);
@@ -58,12 +57,6 @@ export function BenchmarkResultsDialog({
       setResultContent('');
     }
   }, [isOpen, modelId, loadResultFiles]);
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
 
   const appendResult = (result: BenchmarkResult, fileName: string) => {
     let text = '';
@@ -219,7 +212,7 @@ export function BenchmarkResultsDialog({
                           </div>
                           <div className="mt-1 text-xs text-muted-foreground space-y-0.5">
                             <div>修改时间: {file.modified || '-'}</div>
-                            <div>大小: {formatFileSize(file.size)}</div>
+                            <div>大小: {formatBytes(file.size)}</div>
                           </div>
                         </div>
                         <div className="flex flex-col gap-1 flex-shrink-0">

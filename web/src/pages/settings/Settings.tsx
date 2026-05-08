@@ -11,7 +11,7 @@ import { PathConfigPanel } from '@/features/settings/components/PathConfigPanel'
 import { ApiConfigCard, type ApiConfig } from '@/features/settings/components/ApiConfigCard';
 import { compatibilityApi } from '@/lib/api/compatibility';
 import { useServerInfo } from '@/hooks/useServerInfo';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
 
 /**
  * Settings tab type
@@ -96,8 +96,6 @@ export function SettingsPage() {
  * General settings panel
  */
 function GeneralSettingsPanel() {
-  const toast = useToast();
-
   const [ollamaEnabled, setOllamaEnabled] = useState(false);
   const [ollamaPort, setOllamaPort] = useState(11434);
   const [lmstudioEnabled, setLmstudioEnabled] = useState(false);

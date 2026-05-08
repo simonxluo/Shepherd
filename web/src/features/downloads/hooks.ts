@@ -7,6 +7,11 @@ import type {
 } from '@/types';
 
 /**
+ * Active download states that indicate ongoing work
+ */
+export const ACTIVE_DOWNLOAD_STATES: DownloadState[] = ['preparing', 'downloading', 'merging', 'verifying'];
+
+/**
  * Download task list hook
  */
 export function useDownloads() {
@@ -20,8 +25,7 @@ export function useDownloads() {
     refetchInterval: (query) => {
       const data = query.state.data as DownloadTask[] | undefined;
       if (!data || data.length === 0) return false;
-      const activeStates: DownloadState[] = ['preparing', 'downloading', 'merging', 'verifying'];
-      const hasActiveTasks = data.some(task => activeStates.includes(task.state));
+      const hasActiveTasks = data.some(task => ACTIVE_DOWNLOAD_STATES.includes(task.state));
       return hasActiveTasks ? 1000 : false;
     },
   });
@@ -128,9 +132,9 @@ export function useClearCompletedDownloads() {
 }
 
 /**
- * Filter download tasks hook
+ * Filter download tasks
  */
-export function useFilteredDownloads(
+export function filterDownloads(
   downloads: DownloadTask[] | undefined,
   filters: {
     search?: string;
@@ -158,9 +162,9 @@ export function useFilteredDownloads(
 }
 
 /**
- * Download statistics hook
+ * Download statistics
  */
-export function useDownloadStats(downloads: DownloadTask[] | undefined) {
+export function computeDownloadStats(downloads: DownloadTask[] | undefined) {
   if (!downloads) {
     return {
       total: 0,
@@ -173,7 +177,7 @@ export function useDownloadStats(downloads: DownloadTask[] | undefined) {
   }
 
   const total = downloads.length;
-  const active = downloads.filter((d) => ['preparing', 'downloading', 'merging', 'verifying'].includes(d.state)).length;
+  const active = downloads.filter((d) => ACTIVE_DOWNLOAD_STATES.includes(d.state)).length;
   const completed = downloads.filter((d) => d.state === 'completed').length;
   const failed = downloads.filter((d) => d.state === 'failed').length;
   const totalBytes = downloads.reduce((sum, d) => sum + d.totalBytes, 0);

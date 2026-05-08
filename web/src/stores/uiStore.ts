@@ -13,27 +13,10 @@ interface UIState {
   // Sidebar
   sidebarOpen: boolean;
   toggleSidebar: () => void;
-  setSidebarOpen: (open: boolean) => void;
 
   // Theme
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
-
-  // Current view
-  currentView: string;
-  setCurrentView: (view: string) => void;
-
-  // Modals
-  activeModal: string | null;
-  openModal: (modal: string) => void;
-  closeModal: () => void;
-
-  // Filters
-  modelStatusFilter: string;
-  setModelStatusFilter: (status: string) => void;
-  showFavouritesOnly: boolean;
-  setShowFavouritesOnly: (show: boolean) => void;
 
   // Model view mode
   modelViewMode: 'grid' | 'list';
@@ -46,7 +29,6 @@ interface UIState {
 
   // Mobile More panel
   morePanelOpen: boolean;
-  toggleMorePanel: () => void;
   setMorePanelOpen: (open: boolean) => void;
 }
 
@@ -73,11 +55,10 @@ function applyTheme(theme: Theme) {
  */
 export const useUIStore = create<UIState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Sidebar
       sidebarOpen: true,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
       // Theme
       theme: 'system',
@@ -85,28 +66,6 @@ export const useUIStore = create<UIState>()(
         set({ theme });
         applyTheme(theme);
       },
-      toggleTheme: () => {
-        const currentTheme = get().theme;
-        const themes: Theme[] = ['light', 'dark', 'system'];
-        const currentIndex = themes.indexOf(currentTheme);
-        const nextTheme = themes[(currentIndex + 1) % themes.length];
-        get().setTheme(nextTheme);
-      },
-
-      // Current view
-      currentView: 'dashboard',
-      setCurrentView: (currentView) => set({ currentView }),
-
-      // Modals
-      activeModal: null,
-      openModal: (activeModal) => set({ activeModal }),
-      closeModal: () => set({ activeModal: null }),
-
-      // Filters
-      modelStatusFilter: 'all',
-      setModelStatusFilter: (modelStatusFilter) => set({ modelStatusFilter }),
-      showFavouritesOnly: false,
-      setShowFavouritesOnly: (showFavouritesOnly) => set({ showFavouritesOnly }),
 
       // Model view mode
       modelViewMode: 'grid',
@@ -119,7 +78,6 @@ export const useUIStore = create<UIState>()(
 
       // Mobile More panel
       morePanelOpen: false,
-      toggleMorePanel: () => set((s) => ({ morePanelOpen: !s.morePanelOpen })),
       setMorePanelOpen: (morePanelOpen) => set({ morePanelOpen }),
     }),
     {

@@ -7,7 +7,7 @@ import { apiClient } from './client';
 /**
  * API compatibility configuration
  */
-export interface CompatibilityConfig {
+interface CompatibilityConfig {
   ollama: {
     enabled: boolean;
     port: number;

@@ -14,71 +14,12 @@ export type WebSocketConnectionStatus =
   | 'error';        // Connection error
 
 /**
- * WebSocket message types
- */
-export type WebSocketMessageType =
-  | 'ping'          // Heartbeat request
-  | 'pong'          // Heartbeat response
-  | 'event'         // Event message
-  | 'notification'  // Notification
-  | 'error';        // Error message
-
-/**
  * Base WebSocket message interface
  */
 export interface WebSocketMessage<T = unknown> {
-  type: WebSocketMessageType;
+  type: 'ping' | 'pong' | 'event' | 'notification' | 'error';
   timestamp: number;
   payload: T;
-}
-
-/**
- * Ping message
- */
-export interface PingMessage extends WebSocketMessage {
-  type: 'ping';
-}
-
-/**
- * Pong message
- */
-export interface PongMessage extends WebSocketMessage {
-  type: 'pong';
-}
-
-/**
- * Event message
- */
-export interface EventMessage<T = unknown> extends Omit<WebSocketMessage<T>, 'payload'> {
-  type: 'event';
-  payload: {
-    eventType: string;
-    data: T;
-  };
-}
-
-/**
- * Notification message
- */
-export interface NotificationMessage extends WebSocketMessage {
-  type: 'notification';
-  payload: {
-    title: string;
-    message: string;
-    level: 'info' | 'success' | 'warning' | 'error';
-  };
-}
-
-/**
- * Error message
- */
-export interface ErrorMessage extends WebSocketMessage {
-  type: 'error';
-  payload: {
-    code: string;
-    message: string;
-    details?: Record<string, unknown>;
-  };
 }
 
 /**
@@ -119,9 +60,9 @@ export interface WebSocketEventHandlers {
 }
 
 /**
- * WebSocket hook return value
+ * WebSocket context value
  */
-export interface UseWebSocketReturn {
+export interface WebSocketContextValue {
   /** Current connection status */
   connectionStatus: WebSocketConnectionStatus;
   /** Last received message */
@@ -140,12 +81,6 @@ export interface UseWebSocketReturn {
   isConnected: boolean;
   /** Connecting */
   isConnecting: boolean;
-}
-
-/**
- * WebSocket context value
- */
-export interface WebSocketContextValue extends UseWebSocketReturn {
   /** Subscribe to specific event type */
   subscribe: <T = unknown>(
     eventType: string,

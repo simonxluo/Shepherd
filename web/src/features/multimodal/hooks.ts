@@ -15,6 +15,14 @@ interface LoadedModelsResponse {
   models: LoadedModel[];
 }
 
+/**
+ * Handle API error responses with consistent error message extraction
+ */
+async function handleApiError(response: Response, context: string): Promise<never> {
+  const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+  throw new Error(err.error?.message || `${context}请求失败 (${response.status})`);
+}
+
 export const BACKEND_LABELS: Record<string, string> = {
   llamacpp: 'llama.cpp',
   vllm: 'vLLM',
@@ -52,8 +60,7 @@ export function useTTS() {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
-        throw new Error(err.error?.message || `TTS 请求失败 (${response.status})`);
+        await handleApiError(response, 'TTS ');
       }
 
       const blob = await response.blob();
@@ -62,7 +69,7 @@ export function useTTS() {
   });
 }
 
-export interface VoicesResponse {
+interface VoicesResponse {
   voices?: Array<{ id: string; name?: string }>;
 }
 
@@ -75,8 +82,7 @@ export function useVoices(model?: string) {
       const response = await fetch(`/v1/audio/voices?${params}`);
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
-        throw new Error(err.error?.message || `获取语音列表失败 (${response.status})`);
+        await handleApiError(response, '获取语音列表');
       }
 
       const res = await response.json() as VoicesResponse;
@@ -118,8 +124,7 @@ export function useASR() {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
-        throw new Error(err.error?.message || `ASR 请求失败 (${response.status})`);
+        await handleApiError(response, 'ASR ');
       }
 
       return response.json() as Promise<ASRResponse>;
@@ -155,8 +160,7 @@ export function useImageGeneration() {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
-        throw new Error(err.error?.message || `图像生成请求失败 (${response.status})`);
+        await handleApiError(response, '图像生成');
       }
 
       return response.json() as Promise<ImageGenerationResponse>;

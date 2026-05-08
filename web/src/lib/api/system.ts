@@ -7,7 +7,7 @@ import { apiClient } from './client';
 /**
  * Server info response
  */
-export interface ServerInfoResponse {
+interface ServerInfoResponse {
   success: boolean;
   data?: {
     version: string;

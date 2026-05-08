@@ -19,9 +19,8 @@ export type {
   TaskListResponse,
 } from './task';
 
-// Cluster-specific types (ScanStatus, ClusterOverview, etc.)
+// Cluster-specific types (ClusterOverview, etc.)
 export type {
-  ScanStatus,
   ClusterOverview,
   ClientListResponse,
 } from './cluster';

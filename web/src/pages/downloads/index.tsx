@@ -11,8 +11,8 @@ import {
   useCancelDownload,
   useRetryDownload,
   useClearCompletedDownloads,
-  useFilteredDownloads,
-  useDownloadStats,
+  filterDownloads,
+  computeDownloadStats,
 } from '@/features/downloads/hooks';
 import { DownloadCard } from '@/features/downloads/components/DownloadCard';
 import { CreateDownloadDialog } from '@/features/downloads/components/CreateDownloadDialog';
@@ -40,9 +40,9 @@ export function DownloadsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [preFillParams, setPreFillParams] = useState<{ source: DownloadSource; repoId: string; fileName?: string } | null>(null);
 
-  const stats = useDownloadStats(downloads);
+  const stats = computeDownloadStats(downloads);
 
-  const filteredDownloads = useFilteredDownloads(downloads, {
+  const filteredDownloads = filterDownloads(downloads, {
     search,
     state: stateFilter || undefined,
     source: sourceFilter || undefined,
