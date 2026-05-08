@@ -5,13 +5,11 @@ import type { User, UserSettings, UpdateProfileRequest } from '@/types/user';
 interface UserState {
   // Current user
   user: User | null;
-  isAuthenticated: boolean;
 
   // User settings
   settings: UserSettings;
 
   // Actions
-  setUser: (user: User | null) => void;
   updateProfile: (data: UpdateProfileRequest) => void;
   updateSettings: (settings: Partial<UserSettings>) => void;
   logout: () => void;
@@ -24,10 +22,8 @@ interface UserState {
 }
 
 const defaultSettings: UserSettings = {
-  theme: 'system',
   language: 'zh-CN',
   notifications: true,
-  autoSave: true,
 };
 
 export const useUserStore = create<UserState>()(
@@ -35,15 +31,9 @@ export const useUserStore = create<UserState>()(
     (set, get) => ({
       // Initial state
       user: null,
-      isAuthenticated: false,
       settings: defaultSettings,
 
       // Actions
-      setUser: (user) => set({
-        user,
-        isAuthenticated: !!user
-      }),
-
       updateProfile: (data) => {
         const { user } = get();
         if (user) {
@@ -61,7 +51,6 @@ export const useUserStore = create<UserState>()(
 
       logout: () => set({
         user: null,
-        isAuthenticated: false,
       }),
 
       // UI State
@@ -74,7 +63,6 @@ export const useUserStore = create<UserState>()(
       name: 'shepherd-user-storage',
       partialize: (state) => ({
         user: state.user,
-        isAuthenticated: state.isAuthenticated,
         settings: state.settings,
       }),
     }

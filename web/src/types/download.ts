@@ -49,11 +49,3 @@ export interface CreateDownloadParams {
   maxRetries?: number;
   chunkSize?: number;
 }
-
-/**
- * Download list response
- */
-export interface DownloadListResponse {
-  downloads: DownloadTask[];
-  total: number;
-}

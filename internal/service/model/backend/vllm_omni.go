@@ -2,12 +2,7 @@ package backend
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
-
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 )
 
 // VLLMOmniBackend implements Backend for vLLM-omni (multimodal vLLM fork)
@@ -22,101 +17,9 @@ func NewVLLMOmniBackend() *VLLMOmniBackend {
 
 func (b *VLLMOmniBackend) Type() BackendType { return BackendVLLMOmni }
 
-// buildEnvWithVars 构建包含自定义环境变量的进程环境
-func buildEnvWithVars(envVars []string) []string {
-	env := os.Environ()
-	for _, ev := range envVars {
-		if idx := strings.Index(ev, "="); idx > 0 {
-			key := ev[:idx]
-			prefix := key + "="
-			found := false
-			for i, e := range env {
-				if strings.HasPrefix(e, prefix) {
-					env[i] = ev
-					found = true
-					break
-				}
-			}
-			if !found {
-				env = append(env, ev)
-			}
-		}
-	}
-	return env
-}
-
 // Discover validates that vllm-omni is available in the configured conda environment
 func (b *VLLMOmniBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
-	info := &BackendInfo{
-		Type: BackendVLLMOmni,
-		Name: "vLLM-Omni",
-	}
-
-	if cfg == nil {
-		info.Available = false
-		return info, nil
-	}
-
-	env := buildEnvWithVars(cfg.EnvVars)
-
-	// 优先检查 ServeBin（直接指定 vllm-omni 二进制路径）
-	if cfg.ServeBin != "" {
-		cmd := exec.Command(cfg.ServeBin, "--version")
-		cmd.Env = env
-		if output, err := cmd.CombinedOutput(); err == nil {
-			info.Version = strings.TrimSpace(string(output))
-			info.Available = true
-			info.BinPath = cfg.ServeBin
-			return info, nil
-		}
-	}
-
-	// 检查 BinPaths 配置的路径中是否有 vllm-omni 二进制
-	if len(cfg.BinPaths) > 0 {
-		for _, p := range cfg.BinPaths {
-			candidate := filepath.Join(p, "vllm-omni")
-			cmd := exec.Command(candidate, "--version")
-			cmd.Env = env
-			if output, err := cmd.CombinedOutput(); err == nil {
-				info.Version = strings.TrimSpace(string(output))
-				info.Available = true
-				info.BinPath = candidate
-				return info, nil
-			}
-		}
-	}
-
-	if cfg.CondaEnv == "" {
-		info.Available = false
-		return info, nil
-	}
-
-	// 通过 conda run 检查 vllm-omni 是否可用
-	condaPath := cfg.CondaPath
-	if condaPath == "" {
-		condaPath = "conda"
-	}
-
-	cmd := exec.Command(condaPath, "run", "--no-banner", "-n", cfg.CondaEnv, "vllm-omni", "--version")
-	cmd.Env = env
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		logger.Warnf("vLLM-omni discovery failed: condaEnv=%s, error=%v, output=%s", cfg.CondaEnv, err, string(output))
-		info.Available = false
-		return info, nil
-	}
-
-	version := strings.TrimSpace(string(output))
-	info.Version = version
-	info.Available = true
-	info.CondaEnv = cfg.CondaEnv
-	info.CondaPath = cfg.CondaPath
-
-	if cfg.ServeBin != "" {
-		info.BinPath = cfg.ServeBin
-	}
-
-	return info, nil
+	return discoverVLLMVariant(cfg, BackendVLLMOmni, "vLLM-Omni", "vllm-omni")
 }
 
 // BuildStartConfig constructs the vllm-omni serve command with multimodal parameters
@@ -153,10 +56,8 @@ func (b *VLLMOmniBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 	cmd := startCfg.Command
 	cmd = strings.Replace(cmd, "vllm serve", "vllm-omni serve", 1)
 
-	// 添加 --omni 标志（启用 omni 多模态模式）
-	if p.Omni {
-		cmd += " --omni"
-	}
+	// vllm_omni 后端始终启用 --omni（这是使用此后端的核心目的）
+	cmd += " --omni"
 
 	// Append multimodal-specific parameters
 	if p.VideoPruningRate > 0 {

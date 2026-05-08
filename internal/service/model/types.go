@@ -301,6 +301,9 @@ type LoadRequest struct {
 	Omni             bool    `json:"omni"`
 	VideoPruningRate float64 `json:"videoPruningRate,omitempty"`
 	MMTensorIPC      bool    `json:"mmTensorIPC"`
+
+	// 环境变量配置（适用于 vllm/vllm_omni 后端）
+	EnvVars []string `json:"envVars,omitempty"` // 附加环境变量，格式: "KEY=VALUE"
 }
 
 // LoadResult represents the result of a load operation

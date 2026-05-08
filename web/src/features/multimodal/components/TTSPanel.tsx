@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { useTTS, useVoices, BACKEND_LABELS } from '../hooks';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
+import { ModelSelect } from './ModelSelect';
 
 interface TTSPanelProps {
   models: Array<{ id: string; name: string; alias?: string; backendType?: string }>;
@@ -23,7 +23,6 @@ const AUDIO_FORMATS = [
 ];
 
 export function TTSPanel({ models }: TTSPanelProps) {
-  const toast = useToast();
   const tts = useTTS();
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -35,7 +34,6 @@ export function TTSPanel({ models }: TTSPanelProps) {
   const [stream, setStream] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
   const { data: voices = [] } = useVoices(model);
 
@@ -70,7 +68,6 @@ export function TTSPanel({ models }: TTSPanelProps) {
       {
         onSuccess: ({ blob, contentType }) => {
           const typedBlob = new Blob([blob], { type: contentType });
-          setAudioBlob(typedBlob);
           const url = URL.createObjectURL(typedBlob);
           setAudioUrl(url);
           toast.success('语音合成完成');
@@ -100,7 +97,7 @@ export function TTSPanel({ models }: TTSPanelProps) {
   };
 
   const handleDownload = () => {
-    if (!audioBlob || !audioUrl) return;
+    if (!audioUrl) return;
     const ext = responseFormat || 'mp3';
     const a = document.createElement('a');
     a.href = audioUrl;
@@ -112,22 +109,14 @@ export function TTSPanel({ models }: TTSPanelProps) {
     <div className="space-y-6">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1.5">TTS 模型</label>
-          <Select value={model} onValueChange={(v) => { setModel(v); setVoice(''); }}>
-            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-              <SelectValue placeholder="选择 TTS 模型" />
-            </SelectTrigger>
-            <SelectContent>
-              {models.map((m) => (
-                <SelectItem key={m.id} value={m.alias || m.name}>
-                  {m.alias || m.name}
-                  {m.backendType && (
-                    <span className="ml-2 text-xs text-muted-foreground">({BACKEND_LABELS[m.backendType] || m.backendType})</span>
-                  )}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ModelSelect
+            models={models}
+            value={model}
+            onValueChange={(v) => { setModel(v); setVoice(''); }}
+            placeholder="选择 TTS 模型"
+            label="TTS 模型"
+            showBackend
+          />
           {backendLabel && (
             <p className="text-xs text-muted-foreground mt-1">后端: {backendLabel}</p>
           )}
@@ -231,7 +220,6 @@ export function TTSPanel({ models }: TTSPanelProps) {
             <Button variant="outline" size="icon" onClick={handlePlayPause}>
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </Button>
-            <Progress value={100} className="flex-1 h-2" />
             <Button variant="outline" size="icon" onClick={handleDownload} title="下载音频">
               <Download className="w-4 h-4" />
             </Button>

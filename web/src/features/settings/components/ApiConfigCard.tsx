@@ -37,23 +37,22 @@ export function ApiConfigCard({
   const title = type === 'ollama' ? 'Ollama API' : 'LM Studio API';
   const defaultPort = type === 'ollama' ? 11434 : 1234;
 
-  if (!config.enabled && prevEnabled) {
-    setPrevEnabled(false);
-    setConnectionStatus('unknown');
-  }
-  if (config.enabled && !prevEnabled) {
-    setPrevEnabled(true);
-  }
-
-  if (config.port !== prevPort) {
-    setPrevPort(config.port);
-    setLocalPort(config.port.toString());
-  }
-
   useEffect(() => {
-    if (config.enabled && prevEnabled && config.port === prevPort) return;
-    failedNotifiedRef.current = false;
-  }, [config.enabled, prevEnabled, config.port, prevPort]);
+    if (!config.enabled && prevEnabled) {
+      setPrevEnabled(false);
+      setConnectionStatus('unknown');
+    }
+    if (config.enabled && !prevEnabled) {
+      setPrevEnabled(true);
+    }
+    if (config.port !== prevPort) {
+      setPrevPort(config.port);
+      setLocalPort(config.port.toString());
+    }
+    if ((config.enabled !== prevEnabled) || (config.port !== prevPort)) {
+      failedNotifiedRef.current = false;
+    }
+  }, [config.enabled, config.port, prevEnabled, prevPort]);
 
   const clearTimers = useCallback(() => {
     if (intervalRef.current) {

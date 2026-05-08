@@ -14,7 +14,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { DirectoryBrowser } from '@/features/settings/components/DirectoryBrowser';
 import { cn } from '@/lib/utils';
 import type { LlamaCppPathConfig, ModelPathConfig, BackendPathConfig, MultimodalPathConfig } from '@/lib/config';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
 import { llamacppPathsApi } from '@/lib/api/paths';
 
 type AnyPathConfig = LlamaCppPathConfig | ModelPathConfig | BackendPathConfig | MultimodalPathConfig;
@@ -34,7 +34,6 @@ export function PathEditDialog({
   onSave,
   onClose,
 }: PathEditDialogProps) {
-  const toast = useToast();
   const isEdit = !!path;
   const typeLabel = type === 'llamacpp' ? 'Llama.cpp'
     : type === 'models' ? '模型'

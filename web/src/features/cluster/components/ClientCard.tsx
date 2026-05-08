@@ -2,54 +2,15 @@ import { useState } from 'react';
 import { Server, Cpu, HardDrive, Clock, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 import { ClientInfoDialog } from './ClientInfoDialog';
-import type { Client, ClientStatus } from '@/types';
+import { STATUS_COLORS, STATUS_LABELS, getResourcePercentages } from '../utils';
+import type { Client } from '@/types';
 
 interface ClientCardProps {
   client: Client;
   onDisconnect?: () => void;
   actions?: React.ReactNode;
-}
-
-/**
- * Client status color mapping
- */
-const STATUS_COLORS: Record<ClientStatus, string> = {
-  online: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-  offline: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  busy: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
-  error: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
-  degraded: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
-  disabled: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
-};
-
-/**
- * Client status labels
- */
-const STATUS_LABELS: Record<ClientStatus, string> = {
-  online: '在线',
-  offline: '离线',
-  busy: '忙碌',
-  error: '错误',
-  degraded: '降级',
-  disabled: '已禁用',
-};
-
-/**
- * Format byte size
- */
-function formatSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`;
 }
 
 /**
@@ -72,14 +33,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
   const statusLabel = STATUS_LABELS[client.status];
   const isConnected = client.status === 'online' || client.status === 'busy';
 
-  const cpuPercent = client.resources?.cpuPercent ?? 0;
-  const memoryPercent = client.resources?.memoryUsed
-    ? (client.resources.memoryUsed / (client.resources.memoryTotal ?? 1)) * 100
-    : 0;
-  const gpuPercent = client.resources?.gpuPercent ?? 0;
-  const gpuMemoryPercent = client.resources?.gpuMemoryUsed && client.resources?.gpuMemoryTotal
-    ? (client.resources.gpuMemoryUsed / client.resources.gpuMemoryTotal) * 100
-    : 0;
+  const { cpu: cpuPercent, memory: memoryPercent, gpu: gpuPercent, gpuMemory: gpuMemoryPercent } = getResourcePercentages(client.resources);
 
   return (
     <>
@@ -129,7 +83,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
           <div className="flex items-center gap-2 text-sm">
             <HardDrive className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">
-              {formatSize(client.capabilities.memory)}
+              {formatBytes(client.capabilities.memory)}
             </span>
           </div>
           {(client.resources?.gpuInfo?.length ?? 0) > 0 && (
@@ -143,7 +97,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
               <div className="flex items-center gap-2 text-sm">
                 <HardDrive className="w-4 h-4 text-purple-500" />
                 <span className="text-muted-foreground">
-                  {client.capabilities.gpuMemory ? formatSize(client.capabilities.gpuMemory) : 'N/A'}
+                  {client.capabilities.gpuMemory ? formatBytes(client.capabilities.gpuMemory) : 'N/A'}
                 </span>
               </div>
             </>
@@ -190,7 +144,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
               <span>内存</span>
               <span>
-                {formatSize(client.resources.memoryUsed)} / {formatSize(client.resources.memoryTotal)}
+                {formatBytes(client.resources.memoryUsed)} / {formatBytes(client.resources.memoryTotal)}
               </span>
             </div>
             <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
@@ -230,7 +184,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                   <span>GPU 内存</span>
                   <span>
-                    {formatSize(client.resources.gpuMemoryUsed ?? 0)} / {formatSize(client.resources.gpuMemoryTotal ?? 0)}
+                    {formatBytes(client.resources.gpuMemoryUsed ?? 0)} / {formatBytes(client.resources.gpuMemoryTotal ?? 0)}
                   </span>
                 </div>
                 <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">

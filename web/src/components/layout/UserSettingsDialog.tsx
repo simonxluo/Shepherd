@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
-  Settings, 
-  Moon, 
-  Sun, 
-  Monitor, 
-  Bell, 
+import {
+  Settings,
+  Moon,
+  Sun,
+  Monitor,
+  Bell,
   Mail,
-  Save,
   Palette,
-  Sparkles,
   Check,
   Laptop,
   Globe
@@ -120,7 +118,7 @@ export function UserSettingsDialog() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="px-6">
-            <TabsList className="w-full grid grid-cols-3 bg-muted/50 p-1 rounded-xl">
+            <TabsList className="w-full grid grid-cols-2 bg-muted/50 p-1 rounded-xl">
               <TabsTrigger value="appearance" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Palette className="w-4 h-4 mr-2" />
                 {t('settings.appearance')}
@@ -128,10 +126,6 @@ export function UserSettingsDialog() {
               <TabsTrigger value="notifications" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Bell className="w-4 h-4 mr-2" />
                 {t('settings.notifications')}
-              </TabsTrigger>
-              <TabsTrigger value="general" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <Sparkles className="w-4 h-4 mr-2" />
-                {t('settings.general')}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -283,35 +277,6 @@ export function UserSettingsDialog() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="general" className="mt-0 space-y-4">
-              <Card className="border-none shadow-md">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Save className="w-5 h-5 text-primary" />
-                    {t('settings.data')}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between p-4 rounded-xl border bg-card">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Save className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">{t('settings.autoSave')}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {t('settings.autoSaveDescription')}
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={localSettings.autoSave}
-                      onCheckedChange={(checked) => handleSettingChange('autoSave', checked)}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </div>
         </Tabs>
 

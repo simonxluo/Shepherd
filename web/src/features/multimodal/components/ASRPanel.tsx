@@ -2,16 +2,16 @@ import { useState, useRef } from 'react';
 import { Mic, Loader2, Upload, FileAudio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useASR } from '../hooks';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
+import { formatBytes } from '@/lib/utils';
+import { ModelSelect } from './ModelSelect';
 
 interface ASRPanelProps {
   models: Array<{ id: string; name: string; alias?: string }>;
 }
 
 export function ASRPanel({ models }: ASRPanelProps) {
-  const toast = useToast();
   const asr = useASR();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,33 +64,16 @@ export function ASRPanel({ models }: ASRPanelProps) {
     );
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1.5">ASR 模型</label>
-          <Select
-            value={model}
-            onValueChange={setModel}
-          >
-            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-              <SelectValue placeholder="选择 ASR 模型" />
-            </SelectTrigger>
-            <SelectContent>
-              {models.map((m) => (
-                <SelectItem key={m.id} value={m.alias || m.name}>
-                  {m.alias || m.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ModelSelect
+          models={models}
+          value={model}
+          onValueChange={setModel}
+          placeholder="选择 ASR 模型"
+          label="ASR 模型"
+        />
 
         <div>
           <label className="block text-sm font-medium mb-1.5">音频文件</label>
@@ -111,7 +94,7 @@ export function ASRPanel({ models }: ASRPanelProps) {
               <div className="flex items-center justify-center gap-2">
                 <FileAudio className="w-5 h-5 text-primary" />
                 <span className="text-sm">{file.name}</span>
-                <span className="text-xs text-muted-foreground">({formatFileSize(file.size)})</span>
+                <span className="text-xs text-muted-foreground">({formatBytes(file.size)})</span>
               </div>
             ) : (
               <div className="space-y-2">

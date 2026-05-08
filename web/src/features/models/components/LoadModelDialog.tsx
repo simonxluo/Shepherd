@@ -11,7 +11,7 @@ import type { LoadModelParams } from '@/types';
 import { useModels, useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
 import { useOnlineNodes } from '@/features/cluster/hooks';
 import type { UnifiedNode } from '@/types';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
 
 // NumberInput component
 interface NumberInputProps {
@@ -160,7 +160,8 @@ const PARAM_HELP = {
   uBatchSize: '微批大小，用于优化内存使用',
   parallelSlots: '并发处理的槽位数',
   kvCacheUnified: '启用共享KV缓存，提升多任务效率',
-  kvCacheType: 'KV缓存的数据类型，f16精度较高，f32精度最高',
+  kvCacheTypeK: 'Key缓存的数据类型，f16精度较高，f32精度最高',
+  kvCacheTypeV: 'Value缓存的数据类型，f16精度较高，f32精度最高',
   splitMode: '多GPU分割模式：none=单GPU，layer=按层分割，row=按行分割',
   tensorSplit: '多GPU张量分割比例，逗号分隔如"3,1"表示GPU0占75%',
   contBatching: '启用连续批处理（动态批处理），提升多请求吞吐量',
@@ -207,34 +208,11 @@ const PARAM_HELP = {
   vllmMmTensorIPC: '启用多模态张量 IPC，优化多模态模型的数据传输',
 };
 
-export function LoadModelDialog({
-  isOpen,
-  onClose,
-  onConfirm,
-  modelId,
-  modelName,
-  modelPath,
-  isLoading = false,
-  backendType,
-}: LoadModelDialogProps) {
-  const { data: onlineNodes = [] } = useOnlineNodes();
-
-  const { data: llamacppBackends = [] } = useLlamacppBackends();
-
-  const { data: modelsData } = useModels();
-  const allModels = modelsData ?? [];
-  const currentModel = allModels.find(m => m.id === modelId);
-  const modelMaxCtxSize = currentModel?.metadata?.contextLength;
-
-  const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
-  const saveModelLoadConfig = useSaveModelLoadConfig();
-  const deleteModelLoadConfig = useDeleteModelLoadConfig();
-
-  const autoDetectCapabilities = useAutoDetectCapabilities();
-
-  const toast = useToast();
-
-  const [params, setParams] = useState<LoadModelParams>({
+/**
+ * Create default load model params for a given model ID
+ */
+function getDefaultLoadModelParams(modelId: string): LoadModelParams {
+  return {
     modelId,
     ctxSize: 8192,
     batchSize: 4096,
@@ -347,6 +325,7 @@ export function LoadModelDialog({
       ropeFreqScale: false,
       contextShift: true,
       directIo: true,
+      extraArgs: true,
       logitsAll: false,
       reranking: false,
       timeout: false,
@@ -360,12 +339,38 @@ export function LoadModelDialog({
       specDecoding: false,
       unloadAfterMinutes: true,
       concurrencyLimit: true,
-      extraArgs: true,
     },
-  });
+  };
+}
+
+export function LoadModelDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  modelId,
+  modelName,
+  modelPath,
+  isLoading = false,
+  backendType,
+}: LoadModelDialogProps) {
+  const { data: onlineNodes = [] } = useOnlineNodes();
+
+  const { data: llamacppBackends = [] } = useLlamacppBackends();
+
+  const { data: modelsData } = useModels();
+  const allModels = modelsData ?? [];
+  const currentModel = allModels.find(m => m.id === modelId);
+  const modelMaxCtxSize = currentModel?.metadata?.contextLength;
+
+  const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
+  const saveModelLoadConfig = useSaveModelLoadConfig();
+  const deleteModelLoadConfig = useDeleteModelLoadConfig();
+
+  const autoDetectCapabilities = useAutoDetectCapabilities();
+
+  const [params, setParams] = useState<LoadModelParams>(() => getDefaultLoadModelParams(modelId));
 
   const [estimateResult, setEstimateResult] = useState<string | null>(null);
-  const [loadingStatus, setLoadingStatus] = useState<string>('就绪');
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -417,10 +422,6 @@ export function LoadModelDialog({
       setSelectedConfigName('');
     }
   };
-
-  useEffect(() => {
-    console.log('[LoadModelDialog] params.enabled changed:', params.enabled);
-  }, [params.enabled]);
 
   useEffect(() => {
     if (isOpen) {
@@ -588,11 +589,13 @@ export function LoadModelDialog({
         'trustRemoteCode', 'servedModelName', 'quantization',
         'maxNumSeqs', 'maxNumBatchedTokens',
         'enablePrefixCaching', 'enableChunkedPrefill', 'disableLogRequests',
+        'enforceEager',
         'unloadAfterMinutes', 'concurrencyLimit',
       ];
 
-      // vLLM-Omni 专属
+      // vLLM-Omni 专属：始终启用 omni 模式
       if (isVllmOmni) {
+        filtered.omni = true;
         vllmKeys.push('videoPruningRate', 'mmTensorIPC');
       }
 
@@ -604,6 +607,10 @@ export function LoadModelDialog({
 
       if (allParams.extraArgs) {
         filtered.extraArgs = allParams.extraArgs;
+      }
+
+      if (allParams.envVars && allParams.envVars.length > 0) {
+        filtered.envVars = allParams.envVars;
       }
 
       filtered.backendType = backendType;
@@ -659,8 +666,6 @@ export function LoadModelDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoadingStatus('加载中...');
-
     try {
       await saveModelLoadConfig.mutateAsync({
         modelId,
@@ -1111,6 +1116,17 @@ export function LoadModelDialog({
                       <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
                         <input
                           type="checkbox"
+                          checked={params.enforceEager || false}
+                          onChange={(e) => setParams({ ...params, enforceEager: e.target.checked })}
+                          disabled={isLoading}
+                          className="rounded border-border text-blue-600 focus:ring-blue-500 w-4 h-4"
+                        />
+                        <span>--enforce-eager</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
+                        <input
+                          type="checkbox"
                           checked={params.disableLogRequests || false}
                           onChange={(e) => setParams({ ...params, disableLogRequests: e.target.checked })}
                           disabled={isLoading}
@@ -1259,6 +1275,58 @@ export function LoadModelDialog({
                   className="w-full px-2 py-1.5 text-sm border-2 border-border rounded-md bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
                 />
               </div>
+
+              {/* 环境变量配置 */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-foreground">环境变量</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const current = params.envVars || [];
+                      setParams({ ...params, envVars: [...current, ''] });
+                    }}
+                    disabled={isLoading}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
+                  >
+                    + 添加
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  {(params.envVars || []).length === 0 ? (
+                    <div className="text-xs text-muted-foreground py-2 text-center border border-dashed border-border rounded-md">
+                      点击"添加"配置环境变量，如 LD_LIBRARY_PATH=/path/to/lib
+                    </div>
+                  ) : (
+                    (params.envVars || []).map((env, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <input
+                          value={env}
+                          onChange={(e) => {
+                            const newEnvs = [...(params.envVars || [])];
+                            newEnvs[idx] = e.target.value;
+                            setParams({ ...params, envVars: newEnvs });
+                          }}
+                          disabled={isLoading}
+                          placeholder="KEY=VALUE"
+                          className="flex-1 px-2 py-1 text-sm border-2 border-border rounded-md bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newEnvs = (params.envVars || []).filter((_, i) => i !== idx);
+                            setParams({ ...params, envVars: newEnvs });
+                          }}
+                          disabled={isLoading}
+                          className="p-1 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-50"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* 底部按钮 */}
@@ -1283,10 +1351,6 @@ export function LoadModelDialog({
     );
   }
 
-  const applyPreset = (presetParams: Partial<LoadModelParams>) => {
-    setParams(prev => ({ ...prev, ...presetParams }));
-  };
-
   const handleResetConfig = async () => {
     try {
       await deleteModelLoadConfig.mutateAsync(modelId);
@@ -1294,135 +1358,7 @@ export function LoadModelDialog({
       console.error('Failed to delete load config:', error);
     }
 
-    setParams({
-      modelId,
-      ctxSize: 8192,
-      batchSize: 4096,
-      threads: 4,
-      gpuLayers: 99,
-      temperature: 0.7,
-      topP: 0.95,
-      topK: 40,
-      repeatPenalty: 1.1,
-      seed: -1,
-      nPredict: -1,
-      llamaCppPath: '/usr/local/bin',
-      mainGpu: 'default',
-      capabilities: {
-        thinking: false,
-        tools: false,
-        translation: false,
-        embedding: false,
-        tts: false,
-        asr: false,
-        imageGeneration: false,
-        music: false,
-      },
-      flashAttention: true,
-      noMmap: false,
-      lockMemory: false,
-      logitsAll: false,
-      reranking: false,
-      minP: 0.05,
-      presencePenalty: 0.0,
-      frequencyPenalty: 0.0,
-      uBatchSize: 512,
-      parallelSlots: 4,
-      kvCacheUnified: true,
-      kvCacheTypeK: 'f16',
-      kvCacheTypeV: 'f16',
-      directIo: 'default',
-      disableJinja: false,
-      chatTemplate: '',
-      contextShift: false,
-      extraArgs: '',
-      threadsBatch: 0,
-      repeatLastN: 0,
-      typicalP: 1.0,
-      ignoreEos: false,
-      splitMode: '',
-      tensorSplit: '',
-      contBatching: true,
-      cachePrompt: true,
-      grammar: '',
-      grammarFile: '',
-      lora: '',
-      loraScaled: '',
-      chatTemplateKwargs: '',
-      ropeScaling: '',
-      ropeScale: 0,
-      ropeFreqBase: 0,
-      ropeFreqScale: 0,
-      embedding: false,
-      noWebUI: true,
-      reasoning: 'auto',
-      reasoningFormat: 'auto',
-      reasoningBudget: -1,
-      mmprojOffload: true,
-      unloadAfterMinutes: 0,
-      concurrencyLimit: 0,
-      specDecoding: {
-        specType: 'none',
-      },
-      enabled: {
-        ctxSize: true,
-        batchSize: true,
-        threads: true,
-        threadsBatch: false,
-        gpuLayers: true,
-        temperature: true,
-        topP: true,
-        topK: true,
-        repeatPenalty: true,
-        repeatLastN: false,
-        seed: true,
-        nPredict: true,
-        minP: true,
-        typicalP: false,
-        presencePenalty: false,
-        frequencyPenalty: false,
-        ignoreEos: false,
-        uBatchSize: true,
-        parallelSlots: true,
-        contBatching: false,
-        cachePrompt: false,
-        kvCacheUnified: true,
-        kvCacheTypeK: true,
-        kvCacheTypeV: true,
-        flashAttention: true,
-        noMmap: true,
-        lockMemory: false,
-        splitMode: false,
-        tensorSplit: false,
-        grammar: false,
-        grammarFile: false,
-        lora: false,
-        loraScaled: false,
-        chatTemplate: true,
-        chatTemplateKwargs: false,
-        disableJinja: true,
-        ropeScaling: false,
-        ropeScale: false,
-        ropeFreqBase: false,
-        ropeFreqScale: false,
-        contextShift: true,
-        directIo: true,
-        extraArgs: true,
-        logitsAll: false,
-        reranking: false,
-        timeout: false,
-        alias: false,
-        embedding: false,
-        noWebUI: true,
-        reasoning: true,
-        reasoningFormat: true,
-        reasoningBudget: true,
-        mmprojOffload: true,
-        specDecoding: false,
-        unloadAfterMinutes: true,
-        concurrencyLimit: true,
-      },
-    });
+    setParams(getDefaultLoadModelParams(modelId));
   };
 
   const ParamControl = ({ paramKey, showToggle = true }: { paramKey: string; showToggle?: boolean }) => {
@@ -1884,13 +1820,13 @@ export function LoadModelDialog({
                     加载状态
                   </label>
                   <div className="px-3 py-2 bg-muted rounded-md min-h-[40px] text-sm">
-                    {isLoading && loadingStatus === '加载中...' ? (
+                    {isLoading ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {loadingStatus}
+                        加载中...
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">{loadingStatus}</span>
+                      <span className="text-muted-foreground">就绪</span>
                     )}
                   </div>
                 </div>
@@ -2263,9 +2199,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       -ctk
-                    </label>
+                      {renderHelpButton('kvCacheTypeK')}
+                    </div>
                     <SelectInput
                       value={params.kvCacheTypeK || 'f16'}
                       onValueChange={(v) => setParams({ ...params, kvCacheTypeK: v })}
@@ -2285,9 +2222,10 @@ export function LoadModelDialog({
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-foreground mb-1">
+                    <div className="flex items-center text-xs font-medium text-foreground mb-1">
                       -ctv
-                    </label>
+                      {renderHelpButton('kvCacheTypeV')}
+                    </div>
                     <SelectInput
                       value={params.kvCacheTypeV || 'f16'}
                       onValueChange={(v) => setParams({ ...params, kvCacheTypeV: v })}

@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { Model, ModelStatus, BenchmarkConfig, LoadModelParams, ModelCapabilities } from '@/types';
 import { useAlertDialog } from '@/providers/AlertDialog';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
 import { APIError } from '@/lib/api/client';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -38,7 +38,6 @@ const STATUS_CHIPS: { value: ModelStatus | ''; label: string; dot?: string }[] =
 
 export function ModelsPage() {
   const alertDialog = useAlertDialog();
-  const toast = useToast();
   const { data: models = [], isLoading } = useModels();
   const loadModel = useLoadModel();
   const unloadModel = useUnloadModel();

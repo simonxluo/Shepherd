@@ -144,35 +144,13 @@ func (m *Manager) SetAlias(modelID, alias string) error {
 
 	model.Alias = alias
 
-	// Save to database
-	if m.storageMgr != nil {
-		store := m.storageMgr.GetStore()
-
-		// 获取或创建元数据
-		metadata, err := store.GetModelMetadata(m.ctx, modelID)
-		if err != nil {
-			// 元数据不存在，创建新的
-			metadata = &storage.ModelMetadata{
-				ModelID:     modelID,
-				StoragePath: filepath.Dir(model.Path),
-				Favourite:   model.Favourite,
-				Tags:        model.Tags,
-				LoadCount:   model.LoadCount,
-			}
-			if !model.LastLoaded.IsZero() {
-				metadata.LastLoaded = &model.LastLoaded
-			}
-			metadata.TotalTokens = model.TotalTokens
-		}
-
-		metadata.Alias = alias
-
-		if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
-			logger.Errorf("保存模型别名到数据库失败: modelId=%s, error=%v", modelID, err)
-			return fmt.Errorf("failed to save alias to database: %w", err)
-		}
-		logger.Infof("模型别名已保存到数据库: modelId=%s, alias=%s", modelID, alias)
+	if err := m.updateModelMetadata(modelID, model, func(meta *storage.ModelMetadata) {
+		meta.Alias = alias
+	}); err != nil {
+		logger.Errorf("保存模型别名到数据库失败: modelId=%s, error=%v", modelID, err)
+		return err
 	}
+	logger.Infof("模型别名已保存到数据库: modelId=%s, alias=%s", modelID, alias)
 
 	return nil
 }
@@ -189,35 +167,13 @@ func (m *Manager) SetFavourite(modelID string, favourite bool) error {
 
 	model.Favourite = favourite
 
-	// Save to database
-	if m.storageMgr != nil {
-		store := m.storageMgr.GetStore()
-
-		// 获取或创建元数据
-		metadata, err := store.GetModelMetadata(m.ctx, modelID)
-		if err != nil {
-			// 元数据不存在，创建新的
-			metadata = &storage.ModelMetadata{
-				ModelID:     modelID,
-				StoragePath: filepath.Dir(model.Path),
-				Alias:       model.Alias,
-				Tags:        model.Tags,
-				LoadCount:   model.LoadCount,
-			}
-			if !model.LastLoaded.IsZero() {
-				metadata.LastLoaded = &model.LastLoaded
-			}
-			metadata.TotalTokens = model.TotalTokens
-		}
-
-		metadata.Favourite = favourite
-
-		if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
-			logger.Errorf("保存模型收藏状态到数据库失败: modelId=%s, error=%v", modelID, err)
-			return fmt.Errorf("failed to save favourite to database: %w", err)
-		}
-		logger.Infof("模型收藏状态已保存到数据库: modelId=%s, favourite=%v", modelID, favourite)
+	if err := m.updateModelMetadata(modelID, model, func(meta *storage.ModelMetadata) {
+		meta.Favourite = favourite
+	}); err != nil {
+		logger.Errorf("保存模型收藏状态到数据库失败: modelId=%s, error=%v", modelID, err)
+		return err
 	}
+	logger.Infof("模型收藏状态已保存到数据库: modelId=%s, favourite=%v", modelID, favourite)
 
 	return nil
 }
@@ -234,22 +190,7 @@ func (m *Manager) AutoDetectCapabilities(modelId string) (*storage.Capabilities,
 	}
 
 	detectedCaps := DetectCapabilities(model.Metadata)
-
-	ctx := context.Background()
-	existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, modelId)
-	if err == nil && existingMeta != nil {
-		existingMeta.Capabilities = detectedCaps
-		if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); err != nil {
-			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelId, err)
-		}
-	} else {
-		if err := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
-			ModelID:      modelId,
-			Capabilities: detectedCaps,
-		}); err != nil {
-			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelId, err)
-		}
-	}
+	m.saveCapabilities(modelId, detectedCaps)
 
 	return detectedCaps, nil
 }
@@ -440,4 +381,252 @@ func (m *Manager) GetLoadedModelCount() int {
 		}
 	}
 	return count
+}
+
+// saveCapabilities 将检测到的模型能力保存到数据库
+func (m *Manager) saveCapabilities(modelID string, caps *storage.Capabilities) {
+	ctx := context.Background()
+	existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, modelID)
+	if err == nil && existingMeta != nil {
+		existingMeta.Capabilities = caps
+		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, existingMeta); saveErr != nil {
+			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelID, saveErr)
+		}
+	} else {
+		if saveErr := m.storageMgr.GetStore().SaveModelMetadata(ctx, &storage.ModelMetadata{
+			ModelID:      modelID,
+			Capabilities: caps,
+		}); saveErr != nil {
+			logger.Warnf("保存模型能力失败: modelId=%s, error=%v", modelID, saveErr)
+		}
+	}
+}
+
+// updateModelMetadata 获取或创建模型元数据，应用更新函数后保存
+func (m *Manager) updateModelMetadata(modelID string, model *Model, updateFn func(*storage.ModelMetadata)) error {
+	if m.storageMgr == nil {
+		return nil
+	}
+	store := m.storageMgr.GetStore()
+
+	metadata, err := store.GetModelMetadata(m.ctx, modelID)
+	if err != nil {
+		metadata = &storage.ModelMetadata{
+			ModelID:     modelID,
+			StoragePath: filepath.Dir(model.Path),
+			Alias:       model.Alias,
+			Favourite:   model.Favourite,
+			Tags:        model.Tags,
+			LoadCount:   model.LoadCount,
+		}
+		if !model.LastLoaded.IsZero() {
+			metadata.LastLoaded = &model.LastLoaded
+		}
+		metadata.TotalTokens = model.TotalTokens
+	}
+
+	updateFn(metadata)
+
+	if err := store.SaveModelMetadata(m.ctx, metadata); err != nil {
+		return fmt.Errorf("failed to save model metadata: %w", err)
+	}
+	return nil
+}
+
+// SearchModels 搜索和过滤模型
+// 如果内存中没有模型，会自动触发一次扫描
+func (m *Manager) SearchModels(filter *ModelFilter, sort *ModelSort) *ModelSearchResult {
+	m.mu.RLock()
+	modelCount := len(m.models)
+	m.mu.RUnlock()
+
+	// 如果内存中没有模型，自动触发一次扫描
+	if modelCount == 0 {
+		logger.Info("SearchModels: 内存中没有模型，触发自动扫描")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+
+		done := make(chan bool, 1)
+		go func() {
+			if _, err := m.Scan(ctx); err != nil {
+				logger.Warnf("SearchModels: 自动扫描失败: %v", err)
+			}
+			done <- true
+		}()
+
+		select {
+		case <-done:
+			logger.Info("SearchModels: 自动扫描完成")
+		case <-time.After(10 * time.Second):
+			logger.Warn("SearchModels: 自动扫描超时")
+		}
+	}
+
+	m.mu.RLock()
+	allModels := make([]*Model, 0, len(m.models))
+	for _, model := range m.models {
+		modelCopy := *model
+		allModels = append(allModels, &modelCopy)
+	}
+	m.mu.RUnlock()
+
+	result := &ModelSearchResult{
+		Models:        []*Model{},
+		Total:         len(allModels),
+		Tags:          make(map[string]int),
+		Architectures: make(map[string]int),
+	}
+
+	for _, model := range allModels {
+		if model.Metadata != nil && model.Metadata.Architecture != "" {
+			result.Architectures[model.Metadata.Architecture]++
+		}
+		for _, tag := range model.Tags {
+			result.Tags[tag]++
+		}
+	}
+
+	filtered := make([]*Model, 0)
+	for _, model := range allModels {
+		if m.matchesFilter(model, filter) {
+			filtered = append(filtered, model)
+		}
+	}
+
+	if sort != nil {
+		m.sortModels(filtered, sort)
+	}
+
+	result.Models = filtered
+	result.Filtered = len(filtered)
+
+	return result
+}
+
+// matchesFilter 检查模型是否匹配过滤条件
+func (m *Manager) matchesFilter(model *Model, filter *ModelFilter) bool {
+	if filter == nil {
+		return true
+	}
+
+	if len(filter.Tags) > 0 {
+		hasTag := false
+		for _, tag := range filter.Tags {
+			for _, modelTag := range model.Tags {
+				if strings.EqualFold(tag, modelTag) {
+					hasTag = true
+					break
+				}
+			}
+			if hasTag {
+				break
+			}
+		}
+		if !hasTag {
+			return false
+		}
+	}
+
+	if filter.Architecture != "" && model.Metadata != nil {
+		if !strings.EqualFold(model.Metadata.Architecture, filter.Architecture) {
+			return false
+		}
+	}
+
+	if filter.MinContext > 0 && model.Metadata != nil {
+		if model.Metadata.ContextLength < filter.MinContext {
+			return false
+		}
+	}
+
+	if filter.MaxSize > 0 && model.Size > filter.MaxSize {
+		return false
+	}
+
+	if filter.LoadedOnly {
+		m.mu.RLock()
+		status, exists := m.statuses[model.ID]
+		m.mu.RUnlock()
+		if !exists || status.State != StateLoaded {
+			return false
+		}
+	}
+
+	if filter.Favourites && !model.Favourite {
+		return false
+	}
+
+	if filter.SearchQuery != "" {
+		query := strings.ToLower(filter.SearchQuery)
+		match := false
+		if strings.Contains(strings.ToLower(model.Name), query) {
+			match = true
+		}
+		if strings.Contains(strings.ToLower(model.Alias), query) {
+			match = true
+		}
+		if strings.Contains(strings.ToLower(model.Description), query) {
+			match = true
+		}
+		if model.Metadata != nil {
+			if strings.Contains(strings.ToLower(model.Metadata.Architecture), query) {
+				match = true
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+
+	if filter.SourceType != "" && model.SourceType != filter.SourceType {
+		return false
+	}
+
+	if filter.License != "" && !strings.EqualFold(model.License, filter.License) {
+		return false
+	}
+
+	return true
+}
+
+// sortModels 根据排序条件排序模型
+func (m *Manager) sortModels(models []*Model, sort *ModelSort) {
+	if sort == nil || sort.Field == "" {
+		return
+	}
+
+	less := func(i, j int) bool {
+		switch sort.Field {
+		case "name":
+			if sort.Direction == "desc" {
+				return models[i].Name > models[j].Name
+			}
+			return models[i].Name < models[j].Name
+		case "size":
+			if sort.Direction == "desc" {
+				return models[i].Size > models[j].Size
+			}
+			return models[i].Size < models[j].Size
+		case "scanned_at":
+			if sort.Direction == "desc" {
+				return models[i].ScannedAt.After(models[j].ScannedAt)
+			}
+			return models[i].ScannedAt.Before(models[j].ScannedAt)
+		case "load_count":
+			if sort.Direction == "desc" {
+				return models[i].LoadCount > models[j].LoadCount
+			}
+			return models[i].LoadCount < models[j].LoadCount
+		default:
+			return models[i].Name < models[j].Name
+		}
+	}
+
+	for i := 0; i < len(models); i++ {
+		for j := i + 1; j < len(models); j++ {
+			if !less(i, j) {
+				models[i], models[j] = models[j], models[i]
+			}
+		}
+	}
 }

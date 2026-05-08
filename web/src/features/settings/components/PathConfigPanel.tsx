@@ -16,11 +16,32 @@ import type {
   BackendPathConfig,
   MultimodalPathConfig,
 } from '@/lib/config';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 
 type PathType = 'llamacpp' | 'models' | 'vllm' | 'vllm_omni' | 'multimodal';
 type AnyPathConfig = LlamaCppPathConfig | ModelPathConfig | BackendPathConfig | MultimodalPathConfig;
+
+/**
+ * Common interface for path API operations
+ */
+interface PathApi {
+  list: () => Promise<{ success?: boolean; data?: { items?: AnyPathConfig[] }; error?: string }>;
+  add: (data: AnyPathConfig) => Promise<{ success?: boolean; error?: string }>;
+  update: (data: AnyPathConfig) => Promise<{ success?: boolean; error?: string }>;
+  remove: (path: string) => Promise<{ success?: boolean; error?: string }>;
+}
+
+/**
+ * Map path types to their corresponding API instances
+ */
+const PATH_API_MAP: Record<PathType, PathApi> = {
+  llamacpp: llamacppPathsApi as unknown as PathApi,
+  models: modelPathsApi as unknown as PathApi,
+  vllm: vllmPathsApi as unknown as PathApi,
+  vllm_omni: vllmOmniPathsApi as unknown as PathApi,
+  multimodal: multimodalPathsApi as unknown as PathApi,
+};
 
 interface PathConfigPanelProps {
   type: PathType;
@@ -50,7 +71,6 @@ const PATH_META: Record<PathType, { title: string; description: string }> = {
 };
 
 export function PathConfigPanel({ type }: PathConfigPanelProps) {
-  const toast = useToast();
   const alertDialog = useAlertDialog();
 
   const [paths, setPaths] = useState<AnyPathConfig[]>([]);
@@ -63,25 +83,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
   const loadPaths = useCallback(async () => {
     setIsLoading(true);
     try {
-      let response;
-      switch (type) {
-        case 'llamacpp':
-          response = await llamacppPathsApi.list();
-          break;
-        case 'models':
-          response = await modelPathsApi.list();
-          break;
-        case 'vllm':
-          response = await vllmPathsApi.list();
-          break;
-        case 'vllm_omni':
-          response = await vllmOmniPathsApi.list();
-          break;
-        case 'multimodal':
-          response = await multimodalPathsApi.list();
-          break;
-      }
-
+      const response = await PATH_API_MAP[type].list();
       if (response?.success) {
         setPaths(response.data?.items || []);
       }
@@ -98,24 +100,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
 
   const handleAdd = async (data: AnyPathConfig) => {
     try {
-      let response;
-      switch (type) {
-        case 'llamacpp':
-          response = await llamacppPathsApi.add(data as LlamaCppPathConfig);
-          break;
-        case 'models':
-          response = await modelPathsApi.add(data as ModelPathConfig);
-          break;
-        case 'vllm':
-          response = await vllmPathsApi.add(data as BackendPathConfig);
-          break;
-        case 'vllm_omni':
-          response = await vllmOmniPathsApi.add(data as BackendPathConfig);
-          break;
-        case 'multimodal':
-          response = await multimodalPathsApi.add(data as MultimodalPathConfig);
-          break;
-      }
+      const response = await PATH_API_MAP[type].add(data);
 
       if (response?.success) {
         await loadPaths();
@@ -130,24 +115,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
 
   const handleUpdate = async (data: AnyPathConfig) => {
     try {
-      let response;
-      switch (type) {
-        case 'llamacpp':
-          response = await llamacppPathsApi.update(data as LlamaCppPathConfig);
-          break;
-        case 'models':
-          response = await modelPathsApi.update(data as ModelPathConfig);
-          break;
-        case 'multimodal':
-          response = await multimodalPathsApi.update(data as MultimodalPathConfig);
-          break;
-        case 'vllm':
-          response = await vllmPathsApi.update(data as BackendPathConfig);
-          break;
-        case 'vllm_omni':
-          response = await vllmOmniPathsApi.update(data as BackendPathConfig);
-          break;
-      }
+      const response = await PATH_API_MAP[type].update(data);
 
       if (response?.success) {
         await loadPaths();
@@ -170,24 +138,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     if (!confirmed) return;
 
     try {
-      let response;
-      switch (type) {
-        case 'llamacpp':
-          response = await llamacppPathsApi.remove(path.path);
-          break;
-        case 'models':
-          response = await modelPathsApi.remove(path.path);
-          break;
-        case 'vllm':
-          response = await vllmPathsApi.remove(path.path);
-          break;
-        case 'vllm_omni':
-          response = await vllmOmniPathsApi.remove(path.path);
-          break;
-        case 'multimodal':
-          response = await multimodalPathsApi.remove(path.path);
-          break;
-      }
+      const response = await PATH_API_MAP[type].remove(path.path);
 
       if (response?.success) {
         await loadPaths();

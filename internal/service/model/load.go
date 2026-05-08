@@ -67,9 +67,13 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 		return nil, 0, nil, err
 	}
 
-	// 从后端配置中附加环境变量
-	if len(bcfg.EnvVars) > 0 {
-		startCfg.EnvVars = bcfg.EnvVars
+	// 合并环境变量：全局后端配置 + 模型级别配置
+	// 模型级别配置优先级高于全局配置
+	envVars := make([]string, 0, len(bcfg.EnvVars)+len(req.EnvVars))
+	envVars = append(envVars, bcfg.EnvVars...)
+	envVars = append(envVars, req.EnvVars...)
+	if len(envVars) > 0 {
+		startCfg.EnvVars = envVars
 	}
 
 	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath, startCfg.SkipLDLibraryPath, startCfg.EnvVars)

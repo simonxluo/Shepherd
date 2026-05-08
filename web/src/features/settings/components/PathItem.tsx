@@ -18,13 +18,6 @@ export function PathItem({
   onTest,
 }: PathItemProps) {
   const displayName = path.name || path.path;
-  const isTesting = false;
-
-  const handleTest = async () => {
-    if (onTest) {
-      await onTest();
-    }
-  };
 
   return (
     <div className="group flex items-start gap-3 p-3 rounded-lg border bg-card hover:border-border/80 transition-all">
@@ -50,8 +43,7 @@ export function PathItem({
           <Button
             variant="icon-button"
             size="icon"
-            onClick={handleTest}
-            disabled={isTesting}
+            onClick={onTest}
             title="测试路径"
             className="h-8 w-8"
           >

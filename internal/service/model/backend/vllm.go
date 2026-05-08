@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -24,72 +22,7 @@ func (b *VLLMBackend) Type() BackendType { return BackendVLLM }
 
 // Discover validates that vLLM is available in the configured conda environment
 func (b *VLLMBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
-	info := &BackendInfo{
-		Type: BackendVLLM,
-		Name: "vLLM",
-	}
-
-	if cfg == nil {
-		info.Available = false
-		return info, nil
-	}
-
-	env := buildEnvWithVars(cfg.EnvVars)
-
-	if cfg.ServeBin != "" {
-		cmd := exec.Command(cfg.ServeBin, "--version")
-		cmd.Env = env
-		if output, err := cmd.CombinedOutput(); err == nil {
-			info.Version = strings.TrimSpace(string(output))
-			info.Available = true
-			info.BinPath = cfg.ServeBin
-			return info, nil
-		}
-	}
-
-	if len(cfg.BinPaths) > 0 {
-		for _, p := range cfg.BinPaths {
-			candidate := filepath.Join(p, "vllm")
-			cmd := exec.Command(candidate, "--version")
-			cmd.Env = env
-			if output, err := cmd.CombinedOutput(); err == nil {
-				info.Version = strings.TrimSpace(string(output))
-				info.Available = true
-				info.BinPath = candidate
-				return info, nil
-			}
-		}
-	}
-
-	if cfg.CondaEnv == "" {
-		info.Available = false
-		return info, nil
-	}
-
-	condaPath := cfg.CondaPath
-	if condaPath == "" {
-		condaPath = "conda"
-	}
-
-	cmd := exec.Command(condaPath, "run", "--no-banner", "-n", cfg.CondaEnv, "vllm", "--version")
-	cmd.Env = env
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		info.Available = false
-		return info, nil
-	}
-
-	version := strings.TrimSpace(string(output))
-	info.Version = version
-	info.Available = true
-	info.CondaEnv = cfg.CondaEnv
-	info.CondaPath = cfg.CondaPath
-
-	if cfg.ServeBin != "" {
-		info.BinPath = cfg.ServeBin
-	}
-
-	return info, nil
+	return discoverVLLMVariant(cfg, BackendVLLM, "vLLM", "vllm")
 }
 
 // BuildStartConfig constructs the vllm serve command
@@ -97,8 +30,8 @@ func (b *VLLMBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) (*St
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	if info.CondaEnv == "" {
-		return nil, fmt.Errorf("vLLM requires a conda environment")
+	if info.CondaEnv == "" && info.BinPath == "" {
+		return nil, fmt.Errorf("vLLM requires a conda environment or binary path")
 	}
 
 	p := req.VLLMParams

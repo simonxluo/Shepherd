@@ -62,6 +62,8 @@ const DEFAULT_CONFIG: AppConfig = {
     prefix: 'shepherd:',
     versioning: true,
   },
+  openai: {},
+  performance: {},
   server: {
     masterAddress: '',
     clientName: '',

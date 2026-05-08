@@ -2,7 +2,7 @@
  * Generic SSE connection management hook.
  *
  * Wraps EventSource creation, auto-reconnect (exponential backoff), and cleanup.
- * Shared by useSSE and useLogs — consumers only handle events.
+ * Consumers only handle events.
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';

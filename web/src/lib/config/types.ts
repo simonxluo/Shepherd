@@ -84,39 +84,26 @@ export interface CacheConfig {
 }
 
 /**
- * OpenAI configuration
- */
-export interface OpenAIConfig {
-  endpoint: string;
-  defaultModel: string;
-  temperature: number;
-  maxTokens: number;
-  topP: number;
-  frequencyPenalty: number;
-  presencePenalty: number;
-  streamTimeout: number;
-}
-
-/**
- * Performance configuration
- */
-export interface PerformanceConfig {
-  monitoring: boolean;
-  sampleRate: number;
-  preloading: boolean;
-  virtualScroll: boolean;
-  codeSplitting: boolean;
-  lazyImageThreshold?: number;
-  preloadResources?: string[];
-}
-
-/**
  * Server mode configuration
  */
 export interface ServerModeConfig {
   // mode field removed; use backend node.role instead
   masterAddress?: string;
   clientName?: string;
+}
+
+/**
+ * OpenAI configuration
+ */
+export interface OpenAIConfig {
+  [key: string]: any;
+}
+
+/**
+ * Performance configuration
+ */
+export interface PerformanceConfig {
+  [key: string]: any;
 }
 
 /**
@@ -129,25 +116,9 @@ export interface AppConfig {
   ui: UiConfig;
   logging: LoggingConfig;
   cache: CacheConfig;
-  openai?: OpenAIConfig;
-  performance?: PerformanceConfig;
+  openai: OpenAIConfig;
+  performance: PerformanceConfig;
   server: ServerModeConfig;
-}
-
-/**
- * Server configuration (backward compatibility)
- */
-export interface ServerConfig {
-  host: string;
-  port: number;
-  https: boolean;
-  cors: {
-    enabled: boolean;
-    origin: string;
-    methods: string;
-    headers: string;
-    credentials: boolean;
-  };
 }
 
 /**

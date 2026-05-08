@@ -3,7 +3,7 @@ import { Star, Copy, Check, Info } from 'lucide-react';
 import { useModel } from '@/features/models';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 import type { Model } from '@/types';
 
 interface ModelDetailDialogProps {
@@ -11,22 +11,6 @@ interface ModelDetailDialogProps {
   onClose: () => void;
   modelId: string;
   modelName: string;
-}
-
-/**
- * Format file size
- */
-function formatSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`;
 }
 
 /**
@@ -115,7 +99,7 @@ export function ModelDetailDialog({ isOpen, onClose, modelId, modelName }: Model
               <DetailSection title="基本信息" icon={<Info className="w-4 h-4 text-blue-500" />}>
                 <DetailRow label="架构" value={modelData.metadata.architecture} />
                 <DetailRow label="量化" value={modelData.metadata.quantization || modelData.metadata.fileTypeDescriptor} />
-                <DetailRow label="大小" value={formatSize(modelData.totalSize ?? modelData.size)} />
+                <DetailRow label="大小" value={formatBytes(modelData.totalSize ?? modelData.size)} />
                 {modelData.shardCount && modelData.shardCount > 1 && (
                   <DetailRow label="分片数" value={`${modelData.shardCount} 个文件`} />
                 )}

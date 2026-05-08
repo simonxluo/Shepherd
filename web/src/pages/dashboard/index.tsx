@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useModels } from '@/features/models';
-import { useDownloads, useDownloadStats } from '@/features/downloads/hooks';
+import { useDownloads, computeDownloadStats } from '@/features/downloads/hooks';
 import { useClients, useFilteredClients } from '@/features/cluster/hooks';
 import { formatBytes } from '@/lib/utils';
 import { Package, Download, Network, Activity } from 'lucide-react';
@@ -13,7 +13,7 @@ import type { Model } from '@/types';
 export function DashboardPage() {
   const { data: models = [], isLoading } = useModels();
   const { data: downloads = [], isLoading: downloadsLoading } = useDownloads();
-  const downloadStats = useDownloadStats(downloads);
+  const downloadStats = computeDownloadStats(downloads);
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const onlineClients = useFilteredClients(clients, { status: 'online' });
 

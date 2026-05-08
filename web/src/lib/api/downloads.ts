@@ -17,7 +17,7 @@ export interface ModelFileInfo {
 /**
  * Model file list response
  */
-export interface ModelFilesResponse {
+interface ModelFilesResponse {
   success: boolean;
   data: ModelFileInfo[];
   error?: string;
@@ -43,7 +43,7 @@ export interface HuggingFaceModel {
 /**
  * HuggingFace search response
  */
-export interface HuggingFaceSearchResponse {
+interface HuggingFaceSearchResponse {
   success: boolean;
   data: {
     models: HuggingFaceModel[];
@@ -56,7 +56,7 @@ export interface HuggingFaceSearchResponse {
 /**
  * Download list API response
  */
-export interface DownloadListApiResponse {
+interface DownloadListApiResponse {
   success: boolean;
   data: {
     downloads: DownloadTask[];
@@ -68,7 +68,7 @@ export interface DownloadListApiResponse {
 /**
  * Single download task API response
  */
-export interface DownloadTaskApiResponse {
+interface DownloadTaskApiResponse {
   success: boolean;
   data: DownloadTask;
   error?: string;

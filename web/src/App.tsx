@@ -11,8 +11,9 @@ import { ClusterPage } from './pages/cluster';
 import { LogsPage } from './pages/logs';
 import { MultimodalPage } from './pages/multimodal';
 import { SettingsPage } from './pages/settings';
-import { useSSE } from './hooks/useSSE';
+import { useSSEConnection } from './hooks/useSSEConnection';
 import type { SSEEvent } from './types';
+import type { UnifiedNode } from './types/node';
 import { AlertDialogProvider } from './providers/AlertDialog';
 import { AlertDialog } from './components/ui/alert-dialog';
 import { Toaster } from './components/ui/sonner';
@@ -22,12 +23,74 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import 'highlight.js/styles/github-dark.css';
 
 function AppContent() {
-  const handleSSEMessage = useCallback((event: SSEEvent) => {
-    console.log('SSE Event:', event);
+  const handleSSEMessage = useCallback((event: MessageEvent) => {
+    try {
+      const data: SSEEvent = JSON.parse(event.data);
+
+      switch (data.type) {
+        case 'modelLoad':
+        case 'modelLoadStart':
+        case 'modelStop':
+          queryClient.invalidateQueries({ queryKey: ['models'] });
+          break;
+        case 'download_progress':
+        case 'download_status':
+          queryClient.invalidateQueries({ queryKey: ['downloads'] });
+          break;
+        case 'clientRegistered':
+        case 'clientDisconnected':
+          queryClient.invalidateQueries({ queryKey: ['clients'] });
+          queryClient.invalidateQueries({ queryKey: ['cluster'] });
+          break;
+        case 'clientResourcesUpdated': {
+          const clientData = data.data as { clientId: string; node: UnifiedNode };
+          const { clientId, node } = clientData;
+
+          queryClient.setQueryData(['cluster', 'clients', clientId], node);
+
+          queryClient.setQueryData(['cluster', 'clients'], (old: unknown) => {
+            if (Array.isArray(old)) {
+              return old.map((client: Record<string, unknown>) =>
+                client.id === clientId
+                  ? { ...node, lastSeen: new Date().toISOString() }
+                  : client
+              );
+            }
+            return old;
+          });
+          break;
+        }
+        case 'taskUpdate':
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          queryClient.invalidateQueries({ queryKey: ['cluster'] });
+          break;
+        case 'systemStatus':
+          queryClient.invalidateQueries({ queryKey: ['system'] });
+          break;
+      }
+
+      console.log('SSE Event:', data);
+    } catch (error) {
+      console.error('Failed to parse SSE event:', error);
+    }
   }, []);
 
-  useSSE({
+  const handleSSEOpen = useCallback((isReconnect: boolean) => {
+    if (isReconnect) {
+      queryClient.invalidateQueries({ queryKey: ['models'] });
+      queryClient.invalidateQueries({ queryKey: ['downloads'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['system'] });
+      queryClient.invalidateQueries({ queryKey: ['nodes'] });
+    }
+  }, []);
+
+  useSSEConnection({
+    url: '/events',
     onMessage: handleSSEMessage,
+    onOpen: handleSSEOpen,
   });
 
   return (
