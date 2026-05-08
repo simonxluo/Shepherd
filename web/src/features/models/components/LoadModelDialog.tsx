@@ -303,8 +303,9 @@ export function LoadModelDialog({
     mmprojOffload: true,
     unloadAfterMinutes: 0,
     concurrencyLimit: 0,
-    draftModelId: '',
-    draftMaxTokens: 16,
+    specDecoding: {
+      specType: 'none',
+    },
     enabled: {
       ctxSize: true,
       batchSize: true,
@@ -359,8 +360,7 @@ export function LoadModelDialog({
       reasoningFormat: true,
       reasoningBudget: true,
       mmprojOffload: true,
-      draftModel: false,
-      draftMaxTokens: false,
+      specDecoding: false,
       unloadAfterMinutes: true,
       concurrencyLimit: true,
       extraArgs: true,
@@ -392,11 +392,20 @@ export function LoadModelDialog({
     const configs = getSavedConfigs();
     const found = configs.find(c => c.name === name);
     if (found) {
+      const config = { ...found.config };
+      // Backward compatibility: migrate old draft fields to new specDecoding
+      if (!config.specDecoding && (config as Record<string, unknown>).draftModelId) {
+        config.specDecoding = {
+          specType: 'draft',
+          specDraftModelId: (config as Record<string, unknown>).draftModelId as string,
+          specDraftNMax: (config as Record<string, unknown>).draftMaxTokens as number || 16,
+        };
+      }
       setParams(prev => ({
         ...prev,
-        ...found.config,
+        ...config,
         modelId: prev.modelId,
-        enabled: found.config.enabled || prev.enabled,
+        enabled: config.enabled || prev.enabled,
       }));
       setSelectedConfigName(name);
       setConfigName(name);
@@ -625,7 +634,6 @@ export function LoadModelDialog({
       'ropeScaling', 'ropeScale', 'ropeFreqBase', 'ropeFreqScale',
       'noWebUI', 'reasoning', 'reasoningFormat', 'reasoningBudget', 'mmprojOffload',
       'unloadAfterMinutes', 'concurrencyLimit',
-      'draftModelId', 'draftMaxTokens',
     ];
 
     for (const key of paramKeys) {
@@ -637,6 +645,11 @@ export function LoadModelDialog({
 
     if (allParams.extraArgs) {
       filtered.extraArgs = allParams.extraArgs;
+    }
+
+    // Speculative decoding
+    if (allParams.specDecoding && allParams.specDecoding.specType && allParams.specDecoding.specType !== 'none') {
+      filtered.specDecoding = allParams.specDecoding;
     }
 
     // 传递后端类型
@@ -1352,8 +1365,9 @@ export function LoadModelDialog({
       mmprojOffload: true,
       unloadAfterMinutes: 0,
       concurrencyLimit: 0,
-      draftModelId: '',
-      draftMaxTokens: 16,
+      specDecoding: {
+        specType: 'none',
+      },
       enabled: {
         ctxSize: true,
         batchSize: true,
@@ -1409,8 +1423,7 @@ export function LoadModelDialog({
         reasoningFormat: true,
         reasoningBudget: true,
         mmprojOffload: true,
-        draftModel: false,
-        draftMaxTokens: false,
+        specDecoding: false,
         unloadAfterMinutes: true,
         concurrencyLimit: true,
       },
@@ -1563,23 +1576,50 @@ export function LoadModelDialog({
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-muted-foreground">推测解码 (Draft 模型)</label>
+                    <label className="text-xs font-medium text-muted-foreground">推测解码</label>
                     <Switch
-                      checked={params.enabled?.draftModel ?? false}
+                      checked={params.enabled?.specDecoding ?? false}
                       onCheckedChange={(checked) =>
                         setParams(prev => ({
                           ...prev,
-                          enabled: { ...prev.enabled, draftModel: checked },
-                          draftModelId: checked ? prev.draftModelId : '',
+                          enabled: { ...prev.enabled, specDecoding: checked },
+                          specDecoding: checked ? { ...prev.specDecoding, specType: prev.specDecoding?.specType || 'draft' } : { specType: 'none' },
                         }))
                       }
                     />
                   </div>
-                  {params.enabled?.draftModel && (
+                  {params.enabled?.specDecoding && (
                     <Select
-                      value={params.draftModelId || '_none'}
+                      value={params.specDecoding?.specType || 'draft'}
                       onValueChange={(val) =>
-                        setParams(prev => ({ ...prev, draftModelId: val === '_none' ? '' : val }))
+                        setParams(prev => ({
+                          ...prev,
+                          specDecoding: { ...prev.specDecoding, specType: val },
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="选择推测解码类型" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft 模型</SelectItem>
+                        <SelectItem value="eagle3">Eagle3 模型</SelectItem>
+                        <SelectItem value="ngram-simple">NGram Simple</SelectItem>
+                        <SelectItem value="ngram-map-k">NGram Map-K</SelectItem>
+                        <SelectItem value="ngram-map-k4v">NGram Map-K4V</SelectItem>
+                        <SelectItem value="ngram-mod">NGram Mod</SelectItem>
+                        <SelectItem value="ngram-cache">NGram Cache</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {params.enabled?.specDecoding && (params.specDecoding?.specType === 'draft' || params.specDecoding?.specType === 'eagle3') && (
+                    <Select
+                      value={params.specDecoding?.specDraftModelId || '_none'}
+                      onValueChange={(val) =>
+                        setParams(prev => ({
+                          ...prev,
+                          specDecoding: { ...prev.specDecoding, specDraftModelId: val === '_none' ? '' : val },
+                        }))
                       }
                     >
                       <SelectTrigger className="h-8 text-xs">
@@ -2288,45 +2328,197 @@ export function LoadModelDialog({
                 </div>
               </div>
 
+                {/* Speculative Decoding Parameters */}
+                {params.enabled?.specDecoding && params.specDecoding?.specType && params.specDecoding.specType !== 'none' && (
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase">
-                    推测解码
+                    推测解码参数
                   </h4>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={params.enabled?.draftMaxTokens ?? false}
-                      onCheckedChange={(checked) =>
-                        setParams(prev => ({
-                          ...prev,
-                          enabled: { ...prev.enabled, draftMaxTokens: checked },
-                        }))
-                      }
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <label className="text-xs font-medium">Draft 最大 token 数</label>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent>每轮推测解码中 draft 模型生成的最大 token 数（默认 16）</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+
+                  {/* draft type parameters */}
+                  {params.specDecoding.specType === 'draft' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-draft-n-max</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>每轮推测中 draft 模型生成的最大 token 数（默认 16）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
+                      <NumberInput value={params.specDecoding?.specDraftNMax ?? 16} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftNMax: val } }))} min={1} max={256} step={1} placeholder="16" className="w-full h-7 text-xs" />
                     </div>
-                    <NumberInput
-                      value={params.draftMaxTokens ?? 16}
-                      onChange={(val) => setParams(prev => ({ ...prev, draftMaxTokens: val }))}
-                      disabled={!params.enabled?.draftMaxTokens}
-                      min={1}
-                      max={256}
-                      step={1}
-                      placeholder="16"
-                      className="w-20 h-7 text-xs"
-                    />
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-draft-n-min</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>每轮推测中 draft 模型生成的最小 token 数（默认 1）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specDraftNMin ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftNMin: val } }))} min={0} max={256} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-draft-p-split</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Draft 模型拆分概率阈值（0.0-1.0）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specDraftPSplit ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftPSplit: val } }))} min={0} max={1} step={0.01} placeholder="0.00" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-draft-p-min</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Draft 模型最小概率阈值（0.0-1.0）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specDraftPMin ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftPMin: val } }))} min={0} max={1} step={0.01} placeholder="0.00" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-draft-ctx-size</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Draft 模型上下文大小</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specDraftCtxSize ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftCtxSize: val } }))} min={0} step={256} placeholder="0" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-draft-ngl</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Draft 模型 GPU 层数（-1 表示全部）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specDraftNgl ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftNgl: val } }))} min={-1} max={999} step={1} placeholder="0" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-draft-device</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Draft 模型运行设备（如 cuda:0）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <Input value={params.specDecoding?.specDraftDevice ?? ''} onChange={(e) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftDevice: e.target.value } }))} placeholder="自动" className="h-7 text-xs" />
+                    </div>
                   </div>
+                  )}
+
+                  {/* ngram-simple parameters */}
+                  {params.specDecoding.specType === 'ngram-simple' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-simple-size-n</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 前缀长度（默认 1）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramSimpleSizeN ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramSimpleSizeN: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-simple-size-m</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 预测长度（默认 2）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramSimpleSizeM ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramSimpleSizeM: val } }))} min={1} step={1} placeholder="2" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-simple-min-hits</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最小命中次数（默认 1）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramSimpleMinHits ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramSimpleMinHits: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                    </div>
+                  </div>
+                  )}
+
+                  {/* ngram-mod parameters */}
+                  {params.specDecoding.specType === 'ngram-mod' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-mod-n-min</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最小 NGram 长度（默认 1）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramModNMin ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramModNMin: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-mod-n-max</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最大 NGram 长度（默认 64）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramModNMax ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramModNMax: val } }))} min={1} step={1} placeholder="64" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-mod-n-match</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>匹配长度（默认 2）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramModNMatch ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramModNMatch: val } }))} min={1} step={1} placeholder="2" className="w-full h-7 text-xs" />
+                    </div>
+                  </div>
+                  )}
+
+                  {/* ngram-map-k parameters */}
+                  {params.specDecoding.specType === 'ngram-map-k' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-map-k-size-n</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 前缀长度（默认 1）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramMapKSizeN ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapKSizeN: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-map-k-size-m</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 预测长度（默认 2）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramMapKSizeM ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapKSizeM: val } }))} min={1} step={1} placeholder="2" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-map-k-min-hits</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最小命中次数（默认 1）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramMapKMinHits ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapKMinHits: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                    </div>
+                  </div>
+                  )}
+
+                  {/* ngram-map-k4v parameters */}
+                  {params.specDecoding.specType === 'ngram-map-k4v' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-map-k4v-size-n</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 前缀长度（默认 1）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramMapK4VSizeN ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapK4VSizeN: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-map-k4v-size-m</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 预测长度（默认 2）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramMapK4VSizeM ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapK4VSizeM: val } }))} min={1} step={1} placeholder="2" className="w-full h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--spec-ngram-map-k4v-min-hits</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最小命中次数（默认 1）</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <NumberInput value={params.specDecoding?.specNgramMapK4VMinHits ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapK4VMinHits: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                    </div>
+                  </div>
+                  )}
+
+                  {/* ngram-cache parameters */}
+                  {params.specDecoding.specType === 'ngram-cache' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--lookup-cache-static</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>静态查找缓存文件路径</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <Input value={params.specDecoding?.lookupCacheStatic ?? ''} onChange={(e) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, lookupCacheStatic: e.target.value } }))} placeholder="路径" className="h-7 text-xs" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
+                        <span>--lookup-cache-dynamic</span>
+                        <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>动态查找缓存文件路径</TooltipContent></Tooltip></TooltipProvider>
+                      </div>
+                      <Input value={params.specDecoding?.lookupCacheDynamic ?? ''} onChange={(e) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, lookupCacheDynamic: e.target.value } }))} placeholder="路径" className="h-7 text-xs" />
+                    </div>
+                  </div>
+                  )}
                 </div>
+                )}
 
                 {/* Other params */}
                 <div className="space-y-3">

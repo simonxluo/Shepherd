@@ -1,35 +1,16 @@
-import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '@/stores/uiStore';
 import { useConfig } from '@/lib/config';
 import { cn } from '@/lib/utils';
 import { UserMenu } from './UserMenu';
-import { systemApi } from '@/lib/api/system';
+import { useServerInfo } from '@/hooks/useServerInfo';
+import { navItems } from '@/lib/navigation';
 import {
-  LayoutDashboard,
-  Package,
-  Download,
-  MessageSquare,
-  Network,
-  ScrollText,
-  Wand2,
-  Settings,
   ChevronLeft,
   ChevronRight,
   X,
 } from 'lucide-react';
-
-const allNavItems = [
-  { path: '/', icon: LayoutDashboard, labelKey: 'sidebar.dashboard', feature: 'dashboard' },
-  { path: '/models', icon: Package, labelKey: 'sidebar.models', feature: 'models' },
-  { path: '/downloads', icon: Download, labelKey: 'sidebar.downloads', feature: 'downloads' },
-  { path: '/cluster', icon: Network, labelKey: 'sidebar.cluster', feature: 'cluster' },
-  { path: '/chat', icon: MessageSquare, labelKey: 'sidebar.chat', feature: 'chat' },
-  { path: '/multimodal', icon: Wand2, labelKey: 'sidebar.multimodal', feature: 'multimodal' },
-  { path: '/logs', icon: ScrollText, labelKey: 'sidebar.logs', feature: 'logs' },
-  { path: '/settings', icon: Settings, labelKey: 'sidebar.settings', feature: 'settings' },
-];
 
 interface SidebarProps {
   overlay?: boolean;
@@ -40,19 +21,11 @@ export function Sidebar({ overlay = false }: SidebarProps) {
   const { sidebarOpen, toggleSidebar, setMobileMenuOpen } = useUIStore();
   const config = useConfig();
   const { t } = useTranslation();
-  const [version, setVersion] = useState<string>('');
+  const { data: serverInfo } = useServerInfo();
 
   const isExpanded = overlay || sidebarOpen;
 
-  useEffect(() => {
-    systemApi.getInfo().then((res) => {
-      if (res.success && res.data?.version) {
-        setVersion(res.data.version);
-      }
-    }).catch(() => {});
-  }, []);
-
-  const navItems = allNavItems.filter(
+  const visibleNavItems = navItems.filter(
     (item) => config.features[item.feature as keyof typeof config.features] !== false
   );
 
@@ -97,7 +70,7 @@ export function Sidebar({ overlay = false }: SidebarProps) {
 
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1 px-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 
@@ -131,7 +104,7 @@ export function Sidebar({ overlay = false }: SidebarProps) {
 
         {isExpanded && (
           <div className="text-xs text-muted-foreground pt-2 border-t">
-            <div>Shepherd {version || ''}</div>
+            <div>Shepherd {serverInfo?.version || ''}</div>
             <div className="mt-1">{t('footer.copyright')}</div>
           </div>
         )}

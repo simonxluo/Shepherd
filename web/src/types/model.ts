@@ -88,6 +88,47 @@ export interface Slot {
 }
 
 /**
+ * Speculative decoding configuration
+ */
+export interface SpecDecodingConfig {
+  specType?: string; // none, draft, eagle3, ngram-simple, ngram-map-k, ngram-map-k4v, ngram-mod, ngram-cache
+
+  // draft type parameters
+  specDraftModelId?: string;
+  specDraftNMax?: number;
+  specDraftNMin?: number;
+  specDraftPSplit?: number;
+  specDraftPMin?: number;
+  specDraftCtxSize?: number;
+  specDraftNgl?: number;
+  specDraftDevice?: string;
+
+  // ngram-mod parameters
+  specNgramModNMin?: number;
+  specNgramModNMax?: number;
+  specNgramModNMatch?: number;
+
+  // ngram-simple parameters
+  specNgramSimpleSizeN?: number;
+  specNgramSimpleSizeM?: number;
+  specNgramSimpleMinHits?: number;
+
+  // ngram-map-k parameters
+  specNgramMapKSizeN?: number;
+  specNgramMapKSizeM?: number;
+  specNgramMapKMinHits?: number;
+
+  // ngram-map-k4v parameters
+  specNgramMapK4VSizeN?: number;
+  specNgramMapK4VSizeM?: number;
+  specNgramMapK4VMinHits?: number;
+
+  // ngram-cache parameters
+  lookupCacheStatic?: string;
+  lookupCacheDynamic?: string;
+}
+
+/**
  * Load model parameters
  */
 export interface LoadModelParams {
@@ -186,8 +227,11 @@ export interface LoadModelParams {
   ropeFreqBase?: number;          // RoPE base frequency
   ropeFreqScale?: number;         // RoPE frequency scaling
 
-  draftModelId?: string;
-  draftMaxTokens?: number;
+  draftModelId?: string;   // Deprecated: use specDecoding
+  draftMaxTokens?: number;  // Deprecated: use specDecoding
+
+  // Speculative decoding (new unified system)
+  specDecoding?: SpecDecodingConfig;
 
   // Embedding & retrieval
   embedding?: boolean;
@@ -311,8 +355,7 @@ export interface LoadModelParams {
     // Multimedia
     mmprojOffload?: boolean;
 
-    draftModel?: boolean;
-    draftMaxTokens?: boolean;
+    specDecoding?: boolean;
 
     // Runtime management
     unloadAfterMinutes?: boolean;

@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { PathConfigPanel } from '@/features/settings/components/PathConfigPanel';
 import { ApiConfigCard, type ApiConfig } from '@/features/settings/components/ApiConfigCard';
 import { compatibilityApi } from '@/lib/api/compatibility';
-import { systemApi } from '@/lib/api/system';
+import { useServerInfo } from '@/hooks/useServerInfo';
 import { useToast } from '@/hooks/useToast';
 
 /**
@@ -348,35 +348,7 @@ function McpPanel() {
  * About panel
  */
 function AboutPanel() {
-  const [serverInfo, setServerInfo] = useState<{
-    version: string;
-    buildTime: string;
-    gitCommit: string;
-    role: string;
-  } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchServerInfo = async () => {
-      try {
-        const response = await systemApi.getInfo();
-        if (response.success && response.data) {
-          setServerInfo({
-            version: response.data.version,
-            buildTime: response.data.buildTime,
-            gitCommit: response.data.gitCommit,
-            role: response.data.role,
-          });
-        }
-      } catch (error) {
-        console.error('获取服务器信息失败:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchServerInfo();
-  }, []);
+  const { data: serverInfo, isLoading } = useServerInfo();
 
   const formatBuildTime = (buildTime: string | undefined) => {
     if (!buildTime || buildTime === 'unknown') return '未知';
