@@ -204,7 +204,7 @@ func (m *Manager) GetChatModels() []ChatModelInfo {
 				info.Name = st.Name
 			}
 		} else {
-			info.State = "unloaded"
+			info.State = "stopped"
 			info.IsLoaded = false
 		}
 		result = append(result, info)

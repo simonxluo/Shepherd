@@ -76,6 +76,45 @@ type HealthResult struct {
 	Body    string
 }
 
+// SpecDecodingParams contains parameters for speculative decoding (--spec-type system)
+type SpecDecodingParams struct {
+	SpecType string `json:"specType"` // none, draft, eagle3, ngram-simple, ngram-map-k, ngram-map-k4v, ngram-mod, ngram-cache
+
+	// draft type parameters
+	SpecDraftModelPath string  `json:"-"`
+	SpecDraftNMax      int     `json:"specDraftNMax"`
+	SpecDraftNMin      int     `json:"specDraftNMin"`
+	SpecDraftPSplit    float64 `json:"specDraftPSplit"`
+	SpecDraftPMin      float64 `json:"specDraftPMin"`
+	SpecDraftCtxSize   int     `json:"specDraftCtxSize"`
+	SpecDraftNGL       int     `json:"specDraftNgl"`
+	SpecDraftDevice    string  `json:"specDraftDevice"`
+
+	// ngram-mod parameters
+	SpecNgramModNMin   int `json:"specNgramModNMin"`
+	SpecNgramModNMax   int `json:"specNgramModNMax"`
+	SpecNgramModNMatch int `json:"specNgramModNMatch"`
+
+	// ngram-simple parameters
+	SpecNgramSimpleSizeN   int `json:"specNgramSimpleSizeN"`
+	SpecNgramSimpleSizeM   int `json:"specNgramSimpleSizeM"`
+	SpecNgramSimpleMinHits int `json:"specNgramSimpleMinHits"`
+
+	// ngram-map-k parameters
+	SpecNgramMapKSizeN   int `json:"specNgramMapKSizeN"`
+	SpecNgramMapKSizeM   int `json:"specNgramMapKSizeM"`
+	SpecNgramMapKMinHits int `json:"specNgramMapKMinHits"`
+
+	// ngram-map-k4v parameters
+	SpecNgramMapK4VSizeN   int `json:"specNgramMapK4VSizeN"`
+	SpecNgramMapK4VSizeM   int `json:"specNgramMapK4VSizeM"`
+	SpecNgramMapK4VMinHits int `json:"specNgramMapK4VMinHits"`
+
+	// ngram-cache parameters
+	LookupCacheStatic  string `json:"lookupCacheStatic"`
+	LookupCacheDynamic string `json:"lookupCacheDynamic"`
+}
+
 // LoadRequest contains parameters for building a start command
 type LoadRequest struct {
 	ModelPath string
@@ -87,8 +126,8 @@ type LoadRequest struct {
 	Threads   int
 	Devices   []string // GPU devices (e.g., ["cuda:0", "cuda:1"])
 
-	DraftModelPath string
-	DraftMaxTokens int
+	// Speculative decoding
+	SpecDecoding *SpecDecodingParams
 
 	// LlamaCpp-specific
 	LlamacppParams *LlamacppLoadParams
@@ -180,8 +219,6 @@ type LlamacppLoadParams struct {
 	RopeScale          float64
 	RopeFreqBase       float64
 	RopeFreqScale      float64
-	DraftModelPath     string
-	DraftMaxTokens     int
 }
 
 // VLLMLoadParams contains vLLM-specific load parameters

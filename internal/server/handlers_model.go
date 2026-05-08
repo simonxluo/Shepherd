@@ -122,14 +122,26 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 
 	req.ModelID = id
 
-	if req.DraftModelID != "" {
-		if req.DraftModelID == id {
+	// Backward compatibility: migrate old draft fields to new SpecDecoding
+	if req.SpecDecoding == nil && req.DraftModelID != "" {
+		req.SpecDecoding = &model.SpecDecodingParams{
+			SpecDecodingParams: backend.SpecDecodingParams{
+				SpecType:         "draft",
+				SpecDraftNMax:    req.DraftMaxTokens,
+			},
+		}
+		req.SpecDecoding.SpecDraftModelID = req.DraftModelID
+	}
+
+	// Validate draft model if SpecDecoding is set with draft type
+	if req.SpecDecoding != nil && (req.SpecDecoding.SpecType == "draft" || req.SpecDecoding.SpecType == "eagle3") && req.SpecDecoding.SpecDraftModelID != "" {
+		if req.SpecDecoding.SpecDraftModelID == id {
 			api.BadRequest(c, "Draft模型不能与主模型相同")
 			return
 		}
-		draftModel, exists := s.modelMgr.GetModel(req.DraftModelID)
+		draftModel, exists := s.modelMgr.GetModel(req.SpecDecoding.SpecDraftModelID)
 		if !exists {
-			api.BadRequest(c, fmt.Sprintf("Draft模型未找到: %s", req.DraftModelID))
+			api.BadRequest(c, fmt.Sprintf("Draft模型未找到: %s", req.SpecDecoding.SpecDraftModelID))
 			return
 		}
 		draftPath := draftModel.Path
@@ -159,8 +171,8 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 			api.BadRequest(c, fmt.Sprintf("Draft模型架构(%s)与主模型架构(%s)不匹配", draftArch, mainArch))
 			return
 		}
-		req.DraftModelPath = draftPath
-		logger.Infof("draft model resolved: modelId=%s, draftModelId=%s, draftPath=%s, arch=%s", id, req.DraftModelID, draftPath, draftArch)
+		req.SpecDecoding.SpecDraftModelPath = draftPath
+		logger.Infof("draft model resolved: modelId=%s, draftModelId=%s, draftPath=%s, arch=%s", id, req.SpecDecoding.SpecDraftModelID, draftPath, draftArch)
 	}
 
 	if req.CtxSize == 0 {
@@ -638,7 +650,7 @@ func (s *Server) getNodeID() string {
 }
 
 func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStatus) ModelDTO {
-	status := "unloaded"
+	status := "stopped"
 	isLoaded := false
 	if st, ok := statuses[m.ID]; ok {
 		status = st.State.String()
