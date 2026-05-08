@@ -4,6 +4,7 @@ export {
   useConversations,
   useConversation,
   useCreateConversation,
+  useUpdateConversation,
   useDeleteConversation,
   useSaveMessage,
   useStreamingChat,

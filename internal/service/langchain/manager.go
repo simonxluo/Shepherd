@@ -179,6 +179,7 @@ type ChatModelInfo struct {
 	Alias    string `json:"alias,omitempty"`
 	State    string `json:"state"`
 	IsLoaded bool   `json:"isLoaded"`
+	IsVision bool   `json:"isVision"`
 	Port     int    `json:"port,omitempty"`
 }
 
@@ -190,8 +191,9 @@ func (m *Manager) GetChatModels() []ChatModelInfo {
 	result := make([]ChatModelInfo, 0, len(models))
 	for _, mdl := range models {
 		info := ChatModelInfo{
-			ID:   mdl.ID,
-			Name: mdl.Name,
+			ID:       mdl.ID,
+			Name:     mdl.Name,
+			IsVision: mdl.MmprojPath != "",
 		}
 		if mdl.Alias != "" {
 			info.Alias = mdl.Alias

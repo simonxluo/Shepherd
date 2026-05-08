@@ -4,6 +4,7 @@ import {
   listConversations,
   getConversation,
   createConversation,
+  updateConversation,
   deleteConversation,
   createMessage,
   streamingChatCompletion,
@@ -69,6 +70,18 @@ export function useDeleteConversation() {
   });
 }
 
+export function useUpdateConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; title?: string; systemPrompt?: string }) =>
+      updateConversation(id, body),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: chatKeys.conversation(variables.id) });
+      qc.invalidateQueries({ queryKey: chatKeys.conversations });
+    },
+  });
+}
+
 export function useSaveMessage() {
   const qc = useQueryClient();
   return useMutation({
@@ -76,11 +89,13 @@ export function useSaveMessage() {
       conversationId,
       role,
       content,
+      metadata,
     }: {
       conversationId: string;
       role: string;
       content: string;
-    }) => createMessage(conversationId, { role, content }),
+      metadata?: Record<string, unknown>;
+    }) => createMessage(conversationId, { role, content, metadata }),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({
         queryKey: chatKeys.conversation(variables.conversationId),

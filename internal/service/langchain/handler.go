@@ -317,6 +317,37 @@ func ErrorWithDetails(c *gin.Context, code types.ErrorCode, message, details str
 
 // ===== Chat-specific endpoints =====
 
+// msgToParts converts a ChatCompletionsMsg.Content (string or []ContentPart) to []llms.ContentPart
+func msgToParts(content interface{}) ([]llms.ContentPart, error) {
+	switch v := content.(type) {
+	case string:
+		return []llms.ContentPart{llms.TextPart(v)}, nil
+	case []interface{}:
+		parts := make([]llms.ContentPart, 0, len(v))
+		for _, item := range v {
+			m, ok := item.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid content part: expected object")
+			}
+			partType, _ := m["type"].(string)
+			switch partType {
+			case "text":
+				text, _ := m["text"].(string)
+				parts = append(parts, llms.TextPart(text))
+			case "image_url":
+				imgMap, _ := m["image_url"].(map[string]interface{})
+				url, _ := imgMap["url"].(string)
+				parts = append(parts, llms.ImageURLPart(url))
+			default:
+				return nil, fmt.Errorf("unknown content part type: %s", partType)
+			}
+		}
+		return parts, nil
+	default:
+		return nil, fmt.Errorf("invalid message content type: expected string or array")
+	}
+}
+
 // ChatCompletionsRequest OpenAI-compatible chat completion request for the chat UI
 type ChatCompletionsRequest struct {
 	Model       string                 `json:"model"`
@@ -330,8 +361,20 @@ type ChatCompletionsRequest struct {
 
 // ChatCompletionsMsg message in a chat completion request
 type ChatCompletionsMsg struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string      `json:"role"`
+	Content interface{} `json:"content"` // string or []ContentPart for multimodal
+}
+
+// ContentPart represents a single content part in a multimodal message
+type ContentPart struct {
+	Type     string    `json:"type"`               // "text" or "image_url"
+	Text     string    `json:"text,omitempty"`      // for type "text"
+	ImageURL *ImageURL `json:"image_url,omitempty"` // for type "image_url"
+}
+
+// ImageURL represents an image URL in a content part
+type ImageURL struct {
+	URL string `json:"url"` // base64 data URL or HTTP URL
 }
 
 // HandleChatModels returns all models with their loaded status for the chat UI
@@ -506,9 +549,14 @@ func (h *Handler) HandleChatCompletionsNonStream(c *gin.Context) {
 		default:
 			role = llms.ChatMessageTypeGeneric
 		}
+		parts, err := msgToParts(msg.Content)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		messages[i] = llms.MessageContent{
 			Role:  role,
-			Parts: []llms.ContentPart{llms.TextPart(msg.Content)},
+			Parts: parts,
 		}
 	}
 

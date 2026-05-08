@@ -224,9 +224,10 @@ type UpdateConversationRequest struct {
 
 // CreateMessageRequest create message request body
 type CreateMessageRequest struct {
-	Role       string `json:"role" binding:"required,oneof=system user assistant"`
-	Content    string `json:"content" binding:"required"`
-	TokenCount int    `json:"tokenCount"`
+	Role       string                 `json:"role" binding:"required,oneof=system user assistant"`
+	Content    string                 `json:"content" binding:"required"`
+	TokenCount int                    `json:"tokenCount"`
+	Metadata   map[string]interface{} `json:"metadata"`
 }
 
 // CreateConversation creates a new conversation
@@ -330,6 +331,7 @@ func (h *Handler) CreateMessage(c *gin.Context) {
 		Role:           req.Role,
 		Content:        req.Content,
 		TokenCount:     req.TokenCount,
+		Metadata:       req.Metadata,
 	}
 
 	store := h.storageMgr.GetStore()

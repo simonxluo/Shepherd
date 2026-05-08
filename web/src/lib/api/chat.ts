@@ -8,6 +8,7 @@ export interface ChatModelInfo {
   alias?: string;
   state: string;
   isLoaded: boolean;
+  isVision: boolean;
   port?: number;
 }
 
@@ -77,16 +78,22 @@ export async function deleteConversation(id: string): Promise<void> {
 
 export async function createMessage(
   conversationId: string,
-  body: { role: string; content: string; tokenCount?: number },
+  body: { role: string; content: string; tokenCount?: number; metadata?: Record<string, unknown> },
 ): Promise<{ message: Message }> {
   return apiClient.post(`/conversations/${conversationId}/messages`, body);
 }
 
 // ===== Streaming Chat =====
 
+export interface ContentPart {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: { url: string };
+}
+
 export interface StreamingChatParams {
   model: string;
-  messages: { role: string; content: string }[];
+  messages: { role: string; content: string | ContentPart[] }[];
   temperature?: number;
   maxTokens?: number;
   topP?: number;

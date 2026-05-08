@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 interface ChatMessageData {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  images?: string[];
   timestamp?: number;
 }
 
@@ -72,7 +73,22 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
             )}
           >
             {isUser ? (
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              <>
+                {message.images && message.images.length > 0 && (
+                  <div className="flex gap-2 mb-2 flex-wrap">
+                    {message.images.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        alt={`图片 ${i + 1}`}
+                        className="max-w-[200px] max-h-[200px] object-contain rounded-lg border cursor-pointer"
+                        onClick={() => window.open(img, '_blank')}
+                      />
+                    ))}
+                  </div>
+                )}
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              </>
             ) : (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
