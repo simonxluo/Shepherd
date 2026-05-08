@@ -399,7 +399,6 @@ func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port 
 			KVCacheTypeK:       req.KVCacheTypeK,
 			KVCacheTypeV:       req.KVCacheTypeV,
 			KVCacheUnified:     req.KVCacheUnified,
-			KVCacheSize:        req.KVCacheSize,
 			LogitsAll:          req.LogitsAll,
 			Reranking:          req.Reranking,
 			MinP:               req.MinP,

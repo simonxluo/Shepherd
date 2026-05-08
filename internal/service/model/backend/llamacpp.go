@@ -184,10 +184,6 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 	if p.KVCacheUnified {
 		args = append(args, "-kvu")
 	}
-	if p.KVCacheSize > 0 {
-		args = append(args, "--kv-cache-size", strconv.Itoa(p.KVCacheSize))
-	}
-
 	// Runtime configuration
 	if p.Timeout > 0 {
 		args = append(args, "--timeout", strconv.Itoa(p.Timeout))

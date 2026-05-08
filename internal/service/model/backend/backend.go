@@ -192,7 +192,6 @@ type LlamacppLoadParams struct {
 	KVCacheTypeK       string
 	KVCacheTypeV       string
 	KVCacheUnified     bool
-	KVCacheSize        int
 	LogitsAll          bool
 	Reranking          bool
 	MinP               float64

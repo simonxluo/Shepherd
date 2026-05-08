@@ -182,7 +182,6 @@ export interface LoadModelParams {
   parallelSlots?: number;         // Parallel slots
 
   // KV cache
-  kvCacheSize?: number;           // KV cache memory limit
   kvCacheUnified?: boolean;       // Unified KV cache
   kvCacheTypeK?: string;          // KV cache type K (f16, f32, q8_0)
   kvCacheTypeV?: string;          // KV cache type V
@@ -301,7 +300,6 @@ export interface LoadModelParams {
     cachePrompt?: boolean;
 
     // KV cache
-    kvCacheSize?: boolean;
     kvCacheUnified?: boolean;
     kvCacheTypeK?: boolean;
     kvCacheTypeV?: boolean;

@@ -159,7 +159,6 @@ const PARAM_HELP = {
   lockMemory: '锁定模型到物理内存，防止被系统回收',
   uBatchSize: '微批大小，用于优化内存使用',
   parallelSlots: '并发处理的槽位数',
-  kvCacheSize: 'KV缓存最大占用空间（MB），限制KV缓存使用的内存大小',
   kvCacheUnified: '启用共享KV缓存，提升多任务效率',
   kvCacheType: 'KV缓存的数据类型，f16精度较高，f32精度最高',
   splitMode: '多GPU分割模式：none=单GPU，layer=按层分割，row=按行分割',
@@ -269,7 +268,6 @@ export function LoadModelDialog({
     frequencyPenalty: 0.0,
     uBatchSize: 512,
     parallelSlots: 4,
-    kvCacheSize: 8192,
     kvCacheUnified: true,
     kvCacheTypeK: 'f16',
     kvCacheTypeV: 'f16',
@@ -328,7 +326,6 @@ export function LoadModelDialog({
       parallelSlots: true,
       contBatching: false,
       cachePrompt: false,
-      kvCacheSize: true,
       kvCacheUnified: true,
       kvCacheTypeK: true,
       kvCacheTypeV: true,
@@ -623,7 +620,7 @@ export function LoadModelDialog({
       'logitsAll', 'reranking', 'minP',
       'presencePenalty', 'frequencyPenalty',
       'uBatchSize', 'parallelSlots',
-      'kvCacheSize', 'kvCacheUnified', 'kvCacheTypeK', 'kvCacheTypeV',
+      'kvCacheUnified', 'kvCacheTypeK', 'kvCacheTypeV',
       'directIo', 'disableJinja', 'chatTemplate', 'contextShift',
       'typicalP', 'ignoreEos',
       'splitMode', 'tensorSplit',
@@ -1331,7 +1328,6 @@ export function LoadModelDialog({
       frequencyPenalty: 0.0,
       uBatchSize: 512,
       parallelSlots: 4,
-      kvCacheSize: 8192,
       kvCacheUnified: true,
       kvCacheTypeK: 'f16',
       kvCacheTypeV: 'f16',
@@ -1390,7 +1386,6 @@ export function LoadModelDialog({
         parallelSlots: true,
         contBatching: false,
         cachePrompt: false,
-        kvCacheSize: true,
         kvCacheUnified: true,
         kvCacheTypeK: true,
         kvCacheTypeV: true,
@@ -2253,21 +2248,6 @@ export function LoadModelDialog({
                     KV缓存
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">
-                      --cache-ram
-                      {renderHelpButton('kvCacheSize')}
-                    </div>
-                    <NumberInput
-                      value={params.kvCacheSize}
-                      onChange={(v) => setParams({ ...params, kvCacheSize: v })}
-                      disabled={getInputDisabled('kvCacheSize')}
-                      min={0}
-                      max={modelMaxCtxSize}
-                      step={1}
-                      placeholder="8192"
-                    />
-                  </div>
 
                   <div>
                     <div className="flex items-center text-xs font-medium text-foreground mb-1 whitespace-nowrap">

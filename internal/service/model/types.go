@@ -224,7 +224,6 @@ type LoadRequest struct {
 	KVCacheTypeK   string `json:"kvCacheTypeK"`   // --kv-cache-type-k
 	KVCacheTypeV   string `json:"kvCacheTypeV"`   // --kv-cache-type-v
 	KVCacheUnified bool   `json:"kvCacheUnified"` // --kv-unified
-	KVCacheSize    int    `json:"kvCacheSize"`    // --kv-cache-size
 
 	// Additional sampling parameters
 	LogitsAll        bool    `json:"logitsAll"`        // --logits-all
