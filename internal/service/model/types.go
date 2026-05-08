@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model/backend"
 )
 
 // Model represents a discovered GGUF model with HuggingFace-style management
@@ -101,7 +102,7 @@ const (
 func (s LoadState) String() string {
 	switch s {
 	case StateUnloaded:
-		return "unloaded"
+		return "stopped"
 	case StateLoading:
 		return "loading"
 	case StateLoaded:
@@ -150,6 +151,22 @@ type ScanResult struct {
 type ScanError struct {
 	Path  string
 	Error string
+}
+
+// SpecDecodingParams extends backend.SpecDecodingParams with API-level fields.
+// The SpecDraftModelID is resolved to SpecDraftModelPath by the handler.
+type SpecDecodingParams struct {
+	backend.SpecDecodingParams
+	SpecDraftModelID string `json:"specDraftModelId"` // Model ID for draft model, resolved to path by handler
+}
+
+// ToBackend converts API-level SpecDecodingParams to backend.SpecDecodingParams
+func (p *SpecDecodingParams) ToBackend() *backend.SpecDecodingParams {
+	if p == nil {
+		return nil
+	}
+	cp := p.SpecDecodingParams
+	return &cp
 }
 
 // LoadRequest contains parameters for loading a model
@@ -256,9 +273,12 @@ type LoadRequest struct {
 	RopeFreqBase  float64 `json:"ropeFreqBase"`  // --rope-freq-base
 	RopeFreqScale float64 `json:"ropeFreqScale"` // --rope-freq-scale
 
-	DraftModelID   string `json:"draftModelId"`
-	DraftMaxTokens int    `json:"draftMaxTokens"`
-	DraftModelPath string `json:"-"`
+	// TODO: remove after migration period (v0.8.0)
+	DraftModelID   string `json:"draftModelId"`   // Deprecated: use SpecDecoding with specType="draft"
+	DraftMaxTokens int    `json:"draftMaxTokens"`  // Deprecated: use SpecDecoding with specDraftNMax
+
+	// Speculative decoding (new unified system)
+	SpecDecoding *SpecDecodingParams `json:"specDecoding,omitempty"`
 
 	// Runtime management
 	UnloadAfterMinutes int `json:"unloadAfterMinutes"` // TTL: idle minutes before auto-unload. 0 = never unload, >0 = custom minutes

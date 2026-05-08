@@ -297,11 +297,83 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		args = append(args, "--rope-freq-scale", fmt.Sprintf("%.2f", p.RopeFreqScale))
 	}
 
-	if p.DraftModelPath != "" {
-		args = append(args, "--draft", p.DraftModelPath)
-	}
-	if p.DraftMaxTokens > 0 {
-		args = append(args, "--draft-max-n", strconv.Itoa(p.DraftMaxTokens))
+	// Speculative decoding
+	if req.SpecDecoding != nil && req.SpecDecoding.SpecType != "" && req.SpecDecoding.SpecType != "none" {
+		args = append(args, "--spec-type", req.SpecDecoding.SpecType)
+		switch req.SpecDecoding.SpecType {
+		case "draft", "eagle3":
+			if req.SpecDecoding.SpecDraftModelPath != "" {
+				args = append(args, "-md", req.SpecDecoding.SpecDraftModelPath)
+			}
+			if req.SpecDecoding.SpecDraftNMax > 0 {
+				args = append(args, "--spec-draft-n-max", strconv.Itoa(req.SpecDecoding.SpecDraftNMax))
+			}
+			if req.SpecDecoding.SpecDraftNMin > 0 {
+				args = append(args, "--spec-draft-n-min", strconv.Itoa(req.SpecDecoding.SpecDraftNMin))
+			}
+			if req.SpecDecoding.SpecDraftPSplit > 0 {
+				args = append(args, "--spec-draft-p-split", fmt.Sprintf("%.2f", req.SpecDecoding.SpecDraftPSplit))
+			}
+			if req.SpecDecoding.SpecDraftPMin > 0 {
+				args = append(args, "--spec-draft-p-min", fmt.Sprintf("%.2f", req.SpecDecoding.SpecDraftPMin))
+			}
+			if req.SpecDecoding.SpecDraftCtxSize > 0 {
+				args = append(args, "--spec-draft-ctx-size", strconv.Itoa(req.SpecDecoding.SpecDraftCtxSize))
+			}
+			if req.SpecDecoding.SpecDraftNGL > 0 {
+				args = append(args, "--spec-draft-ngl", strconv.Itoa(req.SpecDecoding.SpecDraftNGL))
+			}
+			if req.SpecDecoding.SpecDraftDevice != "" {
+				args = append(args, "--spec-draft-device", req.SpecDecoding.SpecDraftDevice)
+			}
+		case "ngram-simple":
+			if req.SpecDecoding.SpecNgramSimpleSizeN > 0 {
+				args = append(args, "--spec-ngram-simple-size-n", strconv.Itoa(req.SpecDecoding.SpecNgramSimpleSizeN))
+			}
+			if req.SpecDecoding.SpecNgramSimpleSizeM > 0 {
+				args = append(args, "--spec-ngram-simple-size-m", strconv.Itoa(req.SpecDecoding.SpecNgramSimpleSizeM))
+			}
+			if req.SpecDecoding.SpecNgramSimpleMinHits > 0 {
+				args = append(args, "--spec-ngram-simple-min-hits", strconv.Itoa(req.SpecDecoding.SpecNgramSimpleMinHits))
+			}
+		case "ngram-mod":
+			if req.SpecDecoding.SpecNgramModNMin > 0 {
+				args = append(args, "--spec-ngram-mod-n-min", strconv.Itoa(req.SpecDecoding.SpecNgramModNMin))
+			}
+			if req.SpecDecoding.SpecNgramModNMax > 0 {
+				args = append(args, "--spec-ngram-mod-n-max", strconv.Itoa(req.SpecDecoding.SpecNgramModNMax))
+			}
+			if req.SpecDecoding.SpecNgramModNMatch > 0 {
+				args = append(args, "--spec-ngram-mod-n-match", strconv.Itoa(req.SpecDecoding.SpecNgramModNMatch))
+			}
+		case "ngram-map-k":
+			if req.SpecDecoding.SpecNgramMapKSizeN > 0 {
+				args = append(args, "--spec-ngram-map-k-size-n", strconv.Itoa(req.SpecDecoding.SpecNgramMapKSizeN))
+			}
+			if req.SpecDecoding.SpecNgramMapKSizeM > 0 {
+				args = append(args, "--spec-ngram-map-k-size-m", strconv.Itoa(req.SpecDecoding.SpecNgramMapKSizeM))
+			}
+			if req.SpecDecoding.SpecNgramMapKMinHits > 0 {
+				args = append(args, "--spec-ngram-map-k-min-hits", strconv.Itoa(req.SpecDecoding.SpecNgramMapKMinHits))
+			}
+		case "ngram-map-k4v":
+			if req.SpecDecoding.SpecNgramMapK4VSizeN > 0 {
+				args = append(args, "--spec-ngram-map-k4v-size-n", strconv.Itoa(req.SpecDecoding.SpecNgramMapK4VSizeN))
+			}
+			if req.SpecDecoding.SpecNgramMapK4VSizeM > 0 {
+				args = append(args, "--spec-ngram-map-k4v-size-m", strconv.Itoa(req.SpecDecoding.SpecNgramMapK4VSizeM))
+			}
+			if req.SpecDecoding.SpecNgramMapK4VMinHits > 0 {
+				args = append(args, "--spec-ngram-map-k4v-min-hits", strconv.Itoa(req.SpecDecoding.SpecNgramMapK4VMinHits))
+			}
+		case "ngram-cache":
+			if req.SpecDecoding.LookupCacheStatic != "" {
+				args = append(args, "--lookup-cache-static", req.SpecDecoding.LookupCacheStatic)
+			}
+			if req.SpecDecoding.LookupCacheDynamic != "" {
+				args = append(args, "--lookup-cache-dynamic", req.SpecDecoding.LookupCacheDynamic)
+			}
+		}
 	}
 
 	// Build command string
