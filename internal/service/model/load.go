@@ -254,7 +254,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 	case <-loadCompleted:
 		close(stopHealthCheck)
 		m.mu.Lock()
-		status.State = StateLoaded
+		status.transitionTo(StateLoaded)
 		status.ProcessID = proc.ID
 		status.Port = port
 		status.LoadedAt = time.Now()
@@ -267,7 +267,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 	case err := <-loadError:
 		close(stopHealthCheck)
 		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = err
 		m.mu.Unlock()
 		status.LoadWait.Done()
@@ -278,7 +278,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 	case <-time.After(timeout):
 		close(stopHealthCheck)
 		m.mu.Lock()
-		status.State = StateError
+		status.transitionTo(StateError)
 		status.Error = fmt.Errorf("模型加载超时 (%v)", timeout)
 		m.mu.Unlock()
 		status.LoadWait.Done()
@@ -300,12 +300,7 @@ func (m *Manager) calculateLoadTimeout(modelSize int64) time.Duration {
 	sizeGB := float64(modelSize) / float64(gigabyte)
 	dynamicTimeout := time.Duration(sizeGB) * minutesPerGB
 
-	if dynamicTimeout < minTimeout {
-		dynamicTimeout = minTimeout
-	}
-	if dynamicTimeout > maxTimeout {
-		dynamicTimeout = maxTimeout
-	}
+	dynamicTimeout = max(minTimeout, min(maxTimeout, dynamicTimeout))
 
 	return dynamicTimeout
 }
@@ -341,7 +336,7 @@ func (m *Manager) Unload(modelID string) error {
 		logger.Infof("已释放端口: modelId=%s, port=%d", modelID, status.Port)
 	}
 
-	status.State = StateUnloaded
+	status.transitionTo(StateUnloaded)
 	status.ProcessID = ""
 	status.Port = 0
 
@@ -366,42 +361,10 @@ func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port 
 	bt, _ := backend.ParseBackendType(req.BackendType)
 	switch bt {
 	case backend.BackendVLLM:
-		br.VLLMParams = &backend.VLLMLoadParams{
-			DataType:             req.DataType,
-			MaxModelLen:          req.MaxModelLen,
-			GPUMemoryUtilization: req.GPUMemoryUtilization,
-			TensorParallelSize:   req.TensorParallelSize,
-			PipelineParallelSize: req.PipelineParallelSize,
-			TrustRemoteCode:      req.TrustRemoteCode,
-			ServedModelName:      req.ServedModelName,
-			Quantization:         req.Quantization,
-			MaxNumSeqs:           req.MaxNumSeqs,
-			MaxNumBatchedTokens:  req.MaxNumBatchedTokens,
-			EnablePrefixCaching:  req.EnablePrefixCaching,
-			EnableChunkedPrefill: req.EnableChunkedPrefill,
-			DisableLogRequests:   req.DisableLogRequests,
-			EnforceEager:         req.EnforceEager,
-			ExtraArgs:            req.ExtraParams,
-		}
+		br.VLLMParams = m.buildVLLMParams(req)
 	case backend.BackendVLLMOmni:
 		br.VLLOmniParams = &backend.VLLOmniLoadParams{
-			VLLMLoadParams: backend.VLLMLoadParams{
-				DataType:             req.DataType,
-				MaxModelLen:          req.MaxModelLen,
-				GPUMemoryUtilization: req.GPUMemoryUtilization,
-				TensorParallelSize:   req.TensorParallelSize,
-				PipelineParallelSize: req.PipelineParallelSize,
-				TrustRemoteCode:      req.TrustRemoteCode,
-				ServedModelName:      req.ServedModelName,
-				Quantization:         req.Quantization,
-				MaxNumSeqs:           req.MaxNumSeqs,
-				MaxNumBatchedTokens:  req.MaxNumBatchedTokens,
-				EnablePrefixCaching:  req.EnablePrefixCaching,
-				EnableChunkedPrefill: req.EnableChunkedPrefill,
-				DisableLogRequests:   req.DisableLogRequests,
-				EnforceEager:         req.EnforceEager,
-				ExtraArgs:            req.ExtraParams,
-			},
+			VLLMLoadParams: *m.buildVLLMParams(req),
 			Omni:             req.Omni,
 			VideoPruningRate: req.VideoPruningRate,
 			MMTensorIPC:      req.MMTensorIPC,
@@ -467,6 +430,27 @@ func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port 
 	}
 
 	return br
+}
+
+// buildVLLMParams constructs VLLMLoadParams from a LoadRequest.
+func (m *Manager) buildVLLMParams(req *LoadRequest) *backend.VLLMLoadParams {
+	return &backend.VLLMLoadParams{
+		DataType:             req.DataType,
+		MaxModelLen:          req.MaxModelLen,
+		GPUMemoryUtilization: req.GPUMemoryUtilization,
+		TensorParallelSize:   req.TensorParallelSize,
+		PipelineParallelSize: req.PipelineParallelSize,
+		TrustRemoteCode:      req.TrustRemoteCode,
+		ServedModelName:      req.ServedModelName,
+		Quantization:         req.Quantization,
+		MaxNumSeqs:           req.MaxNumSeqs,
+		MaxNumBatchedTokens:  req.MaxNumBatchedTokens,
+		EnablePrefixCaching:  req.EnablePrefixCaching,
+		EnableChunkedPrefill: req.EnableChunkedPrefill,
+		DisableLogRequests:   req.DisableLogRequests,
+		EnforceEager:         req.EnforceEager,
+		ExtraArgs:            req.ExtraParams,
+	}
 }
 
 func applyRuntimeConfig(status *ModelStatus, unloadAfterMinutes, concurrencyLimit int) {

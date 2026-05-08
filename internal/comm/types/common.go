@@ -16,8 +16,6 @@ const (
 	StateOnline   NodeState = "online"
 	StateBusy     NodeState = "busy"
 	StateError    NodeState = "error"
-	StateDegraded NodeState = "degraded"
-	StateDisabled NodeState = "disabled"
 )
 
 // String returns the string representation of the state

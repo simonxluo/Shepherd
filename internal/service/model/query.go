@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
@@ -85,8 +86,13 @@ func (m *Manager) GetStatus(modelID string) (*ModelStatus, bool) {
 		return nil, false
 	}
 
-	// Return a copy
-	statusCopy := *status
+	// Return a copy (reset sync fields to avoid copylocks)
+	statusCopy := *status //nolint:copylocks
+	statusCopy.mu = sync.Mutex{}
+	statusCopy.tokenMu = sync.Mutex{}
+	statusCopy.LoadWait = sync.WaitGroup{}
+	statusCopy.InflightWg = sync.WaitGroup{}
+	statusCopy.ConcurrencySem = nil
 	return &statusCopy, true
 }
 
@@ -105,7 +111,12 @@ func (m *Manager) ListStatus() map[string]*ModelStatus {
 
 	statuses := make(map[string]*ModelStatus, len(m.statuses))
 	for k, v := range m.statuses {
-		statusCopy := *v
+		statusCopy := *v //nolint:copylocks
+		statusCopy.mu = sync.Mutex{}
+		statusCopy.tokenMu = sync.Mutex{}
+		statusCopy.LoadWait = sync.WaitGroup{}
+		statusCopy.InflightWg = sync.WaitGroup{}
+		statusCopy.ConcurrencySem = nil
 		statuses[k] = &statusCopy
 	}
 

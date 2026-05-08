@@ -478,7 +478,7 @@ func (m *Manager) loadModelWithValidation(path string) (*Model, error) {
 }
 
 // generateModelID generates a unique model ID using path hash
-func (m *Manager) generateModelID(path string, metadata *gguf.Metadata) string {
+func (m *Manager) generateModelID(path string, _ *gguf.Metadata) string {
 	// Use hash of full path for uniqueness
 	hash := sha256.Sum256([]byte(path))
 	hashStr := hex.EncodeToString(hash[:8])

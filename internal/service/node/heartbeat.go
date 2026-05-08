@@ -313,9 +313,3 @@ func (hm *HeartbeatManager) calculateBackoff(attempt int) time.Duration {
 	return delay
 }
 
-// 检查之前是否已连接（用于回调）
-func (hm *HeartbeatManager) wasConnected() bool {
-	hm.mu.RLock()
-	defer hm.mu.RUnlock()
-	return hm.connected
-}

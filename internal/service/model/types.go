@@ -189,7 +189,6 @@ type LoadRequest struct {
 
 	// Backend selection
 	BackendType string `json:"backendType,omitempty"` // Explicit backend: "llamacpp", "vllm", "vllm_omni"
-	BackendName string `json:"backendName,omitempty"` // Backend display name (informational)
 
 	// Custom command configuration
 	CustomCmd   string `json:"llamaCppPath"` // Custom llama.cpp binary path override (frontend uses llamaCppPath)

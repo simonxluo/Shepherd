@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -87,9 +88,6 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 	return m
 }
 
-func (m *Manager) isGGUFFile(path string) bool {
-	return m.isModelFile(path)
-}
 
 func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	model, exists := m.GetModel(req.ModelID)
@@ -98,7 +96,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 		return nil, fmt.Errorf("model not found: %s", req.ModelID)
 	}
 
-	logger.Infof("开始加载模型: modelId=%s, modelName=%s, ctxSize=%d, gpuLayers=%s", req.ModelID, model.Name, req.CtxSize, req.GPULayers)
+	logger.Infof("开始加载模型: modelId=%s, modelName=%s, ctxSize=%d, gpuLayers=%d", req.ModelID, model.Name, req.CtxSize, req.GPULayers)
 
 	var status *ModelStatus
 	m.mu.Lock()
@@ -139,94 +137,9 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 
 	startTime := time.Now()
 
-	modelPath := model.Path
-	if len(model.ShardFiles) > 0 {
-		modelPath = model.ShardFiles[0]
-		fmt.Printf("[INFO] 使用分卷模型主文件: %s (共 %d 个分卷)\n", modelPath, len(model.ShardFiles))
-	}
-
-	bt, parseErr := backend.ParseBackendType(req.BackendType)
-	if parseErr != nil {
-		status.transitionTo(StateError)
-		status.Error = parseErr
-		logger.Errorf("模型加载失败: 无效的后端类型: modelId=%s, error=%v", req.ModelID, parseErr)
-		return &LoadResult{
-			Success: false,
-			ModelID: req.ModelID,
-			Error:   status.Error,
-		}, status.Error
-	}
-	b, bcfg, resolveErr := m.backendRegistry.Resolve(modelPath, bt)
-	if resolveErr != nil {
-		status.transitionTo(StateError)
-		status.Error = resolveErr
-		logger.Errorf("模型加载失败: 无法解析后端: modelId=%s, error=%v", req.ModelID, resolveErr)
-		return &LoadResult{
-			Success: false,
-			ModelID: req.ModelID,
-			Error:   status.Error,
-		}, status.Error
-	}
-
-	info, discoverErr := b.Discover(bcfg)
-	if discoverErr != nil {
-		status.transitionTo(StateError)
-		status.Error = discoverErr
-		logger.Errorf("模型加载失败: 后端发现失败: modelId=%s, backend=%v, error=%v", req.ModelID, b.Type(), discoverErr)
-		return &LoadResult{
-			Success: false,
-			ModelID: req.ModelID,
-			Error:   status.Error,
-		}, status.Error
-	}
-	if !info.Available {
-		err := fmt.Errorf("backend %s is not available", b.Type())
-		status.transitionTo(StateError)
-		status.Error = err
-		logger.Errorf("模型加载失败: 后端不可用: modelId=%s, backend=%v", req.ModelID, b.Type())
-		return &LoadResult{
-			Success: false,
-			ModelID: req.ModelID,
-			Error:   status.Error,
-		}, status.Error
-	}
-
-	port, err := m.portAllocator.NextPort()
+	proc, port, b, err := m.prepareAndStartProcess(req, model, status)
 	if err != nil {
-		status.transitionTo(StateError)
-		status.Error = fmt.Errorf("no available ports: %w", err)
-		logger.Errorf("模型加载失败: 无可用端口: modelId=%s, error=%v", req.ModelID, err)
-		return &LoadResult{
-			Success: false,
-			ModelID: req.ModelID,
-			Error:   status.Error,
-		}, status.Error
-	}
-
-	backendReq := m.toBackendLoadRequest(req, modelPath, port)
-	startCfg, cmdErr := b.BuildStartConfig(info, backendReq)
-	if cmdErr != nil {
-		m.portAllocator.Release(port)
-		status.transitionTo(StateError)
-		status.Error = cmdErr
-		return &LoadResult{
-			Success: false,
-			ModelID: req.ModelID,
-			Error:   cmdErr,
-		}, cmdErr
-	}
-
-	// 从后端配置中附加环境变量
-	if len(bcfg.EnvVars) > 0 {
-		startCfg.EnvVars = bcfg.EnvVars
-	}
-
-	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath, startCfg.SkipLDLibraryPath, startCfg.EnvVars)
-	if err != nil {
-		m.portAllocator.Release(port)
-		status.transitionTo(StateError)
-		status.Error = err
-		logger.Errorf("模型加载失败: 启动进程失败: modelId=%s, error=%v", req.ModelID, err)
+		logger.Errorf("模型加载失败: modelId=%s, error=%v", req.ModelID, err)
 		return &LoadResult{
 			Success: false,
 			ModelID: req.ModelID,
@@ -249,7 +162,6 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	m.mu.Unlock()
 
 	duration := time.Since(startTime)
-
 	logger.Infof("模型加载成功: modelId=%s, port=%d, duration=%s, pid=%d, backend=%v", req.ModelID, port, duration.String(), proc.GetPID(), b.Type())
 
 	return &LoadResult{
@@ -261,35 +173,7 @@ func (m *Manager) Load(req *LoadRequest) (*LoadResult, error) {
 	}, nil
 }
 
-func (m *Manager) isLoading(modelID string) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
 
-	if status, exists := m.statuses[modelID]; exists {
-		return status.State == StateLoading
-	}
-	return false
-}
-
-func (m *Manager) findAvailablePort() int {
-	basePort := 8081
-
-	statuses := m.ListStatus()
-	usedPorts := make(map[int]bool)
-	for _, status := range statuses {
-		if status.Port > 0 {
-			usedPorts[status.Port] = true
-		}
-	}
-
-	for port := basePort; port < basePort+100; port++ {
-		if !usedPorts[port] {
-			return port
-		}
-	}
-
-	return basePort
-}
 
 
 // SearchModels searches and filters models based on criteria
@@ -461,30 +345,30 @@ func (m *Manager) matchesFilter(model *Model, filter *ModelFilter) bool {
 }
 
 // sortModels sorts models based on sort criteria
-func (m *Manager) sortModels(models []*Model, sort *ModelSort) {
-	if sort == nil || sort.Field == "" {
+func (m *Manager) sortModels(models []*Model, sortCriteria *ModelSort) {
+	if sortCriteria == nil || sortCriteria.Field == "" {
 		return
 	}
 
 	less := func(i, j int) bool {
-		switch sort.Field {
+		switch sortCriteria.Field {
 		case "name":
-			if sort.Direction == "desc" {
+			if sortCriteria.Direction == "desc" {
 				return models[i].Name > models[j].Name
 			}
 			return models[i].Name < models[j].Name
 		case "size":
-			if sort.Direction == "desc" {
+			if sortCriteria.Direction == "desc" {
 				return models[i].Size > models[j].Size
 			}
 			return models[i].Size < models[j].Size
 		case "scanned_at":
-			if sort.Direction == "desc" {
+			if sortCriteria.Direction == "desc" {
 				return models[i].ScannedAt.After(models[j].ScannedAt)
 			}
 			return models[i].ScannedAt.Before(models[j].ScannedAt)
 		case "load_count":
-			if sort.Direction == "desc" {
+			if sortCriteria.Direction == "desc" {
 				return models[i].LoadCount > models[j].LoadCount
 			}
 			return models[i].LoadCount < models[j].LoadCount
@@ -493,14 +377,7 @@ func (m *Manager) sortModels(models []*Model, sort *ModelSort) {
 		}
 	}
 
-	// Simple bubble sort for demonstration
-	for i := 0; i < len(models); i++ {
-		for j := i + 1; j < len(models); j++ {
-			if !less(i, j) {
-				models[i], models[j] = models[j], models[i]
-			}
-		}
-	}
+	sort.Slice(models, less)
 }
 
 // Close closes the manager

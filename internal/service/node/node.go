@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/v3/mem"
+
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/gpu"
 )
 
 // Node represents a distributed node in the Shepherd system
@@ -123,7 +125,7 @@ func NewNode(config *NodeConfig) (*Node, error) {
 		CPUTotal:    int64(cpuCount) * 1000, // Convert to millicores
 		MemoryTotal: memoryTotal,
 		DiskTotal:   10 * 1024 * 1024 * 1024, // 10GB (will be updated by resource monitor)
-		GPUInfo:     make([]GPUInfo, 0),
+		GPUInfo:     make([]gpu.Info, 0),
 		LoadAverage: make([]float64, 3),
 	}
 
@@ -728,12 +730,12 @@ func (n *Node) GetResourceSnapshot() *NodeResources {
 }
 
 // GetGPUInfo 获取GPU信息（便捷方法）
-func (n *Node) GetGPUInfo() []GPUInfo {
+func (n *Node) GetGPUInfo() []gpu.Info {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 
 	if n.resource == nil {
-		return make([]GPUInfo, 0)
+		return make([]gpu.Info, 0)
 	}
 
 	return n.resource.GetGPUInfo()
