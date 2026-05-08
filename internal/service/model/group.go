@@ -12,25 +12,6 @@ type ModelGroup struct {
 	Persistent bool
 }
 
-func (m *Manager) SetGroups(groups []*ModelGroup) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.groups = make(map[string]*ModelGroup)
-	for _, g := range groups {
-		m.groups[g.ID] = g
-	}
-}
-
-func (m *Manager) GetGroups() map[string]*ModelGroup {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	result := make(map[string]*ModelGroup, len(m.groups))
-	for k, v := range m.groups {
-		result[k] = v
-	}
-	return result
-}
-
 func (m *Manager) findGroupForModel(modelID string) *ModelGroup {
 	for _, g := range m.groups {
 		for _, id := range g.Models {

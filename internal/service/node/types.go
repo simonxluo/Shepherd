@@ -23,12 +23,10 @@ type NodeStatus = types.NodeState
 
 // NodeStatus constants - 使用统一的 NodeState 常量
 const (
-	NodeStatusOffline  NodeStatus = types.StateOffline
-	NodeStatusOnline   NodeStatus = types.StateOnline
-	NodeStatusBusy     NodeStatus = types.StateBusy
-	NodeStatusError    NodeStatus = types.StateError
-	NodeStatusDegraded NodeStatus = types.StateDegraded
-	NodeStatusDisabled NodeStatus = types.StateDisabled
+	NodeStatusOffline NodeStatus = types.StateOffline
+	NodeStatusOnline  NodeStatus = types.StateOnline
+	NodeStatusBusy    NodeStatus = types.StateBusy
+	NodeStatusError   NodeStatus = types.StateError
 )
 
 // 向后兼容：旧的代码可以继续使用 NodeStatus，实际上使用的是统一的 NodeState
@@ -47,7 +45,6 @@ type NodeCapabilities struct {
 	PythonVersion     string            `json:"pythonVersion,omitempty"`
 	CondaPath         string            `json:"condaPath,omitempty"`
 	CondaEnvironments map[string]string `json:"condaEnvironments,omitempty"`
-	CondaEnvs         []string          `json:"condaEnvs,omitempty"` // 已废弃，使用 CondaEnvironments
 	DockerEnabled     bool              `json:"dockerEnabled,omitempty"`
 }
 
@@ -84,25 +81,6 @@ type LlamacppInfo struct {
 	Binaries         map[string]string `json:"binaries,omitempty"` // binary name -> path
 }
 
-// ModelInfo contains information about a model
-type ModelInfo struct {
-	Path         string            `json:"path"`
-	Name         string            `json:"name"`
-	Alias        string            `json:"alias,omitempty"`
-	Size         int64             `json:"size"`   // bytes
-	Format       string            `json:"format"` // gguf, etc.
-	Architecture string            `json:"architecture,omitempty"`
-	Parameters   string            `json:"parameters,omitempty"`   // 7B, 13B, etc.
-	Quantization string            `json:"quantization,omitempty"` // q4_0, q5_1, etc.
-	ContextSize  int               `json:"contextSize,omitempty"`
-	Embedding    bool              `json:"embedding"`
-	Tags         []string          `json:"tags,omitempty"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
-	Loaded       bool              `json:"loaded"`
-	LoadedAt     *time.Time        `json:"loadedAt,omitempty"`
-	LoadedBy     string            `json:"loadedBy,omitempty"` // node ID
-}
-
 // CommandType represents the type of command
 type CommandType string
 
@@ -114,10 +92,6 @@ const (
 	CommandTypeUpdateConfig CommandType = "update_config"
 	CommandTypeCollectLogs  CommandType = "collect_logs"
 	CommandTypeScanModels   CommandType = "scan_models"
-	CommandTypeStartTask    CommandType = "start_task"
-	CommandTypeStopTask     CommandType = "stop_task"
-	CommandTypeRestart      CommandType = "restart"
-	CommandTypeShutdown     CommandType = "shutdown"
 	CommandTypeTestLlamacpp CommandType = "test_llamacpp"
 	CommandTypeGetConfig    CommandType = "get_config"
 )

@@ -358,6 +358,7 @@ func (m *Manager) GetModelTokenCounts(modelID string) (prompt, completion int64,
 	return p, c, true
 }
 
+
 func (m *Manager) GetLoadedModelCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -419,4 +420,202 @@ func (m *Manager) updateModelMetadata(modelID string, model *Model, updateFn fun
 		return fmt.Errorf("failed to save model metadata: %w", err)
 	}
 	return nil
+}
+
+// SearchModels 搜索和过滤模型
+// 如果内存中没有模型，会自动触发一次扫描
+func (m *Manager) SearchModels(filter *ModelFilter, sort *ModelSort) *ModelSearchResult {
+	m.mu.RLock()
+	modelCount := len(m.models)
+	m.mu.RUnlock()
+
+	// 如果内存中没有模型，自动触发一次扫描
+	if modelCount == 0 {
+		logger.Info("SearchModels: 内存中没有模型，触发自动扫描")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+
+		done := make(chan bool, 1)
+		go func() {
+			if _, err := m.Scan(ctx); err != nil {
+				logger.Warnf("SearchModels: 自动扫描失败: %v", err)
+			}
+			done <- true
+		}()
+
+		select {
+		case <-done:
+			logger.Info("SearchModels: 自动扫描完成")
+		case <-time.After(10 * time.Second):
+			logger.Warn("SearchModels: 自动扫描超时")
+		}
+	}
+
+	m.mu.RLock()
+	allModels := make([]*Model, 0, len(m.models))
+	for _, model := range m.models {
+		modelCopy := *model
+		allModels = append(allModels, &modelCopy)
+	}
+	m.mu.RUnlock()
+
+	result := &ModelSearchResult{
+		Models:        []*Model{},
+		Total:         len(allModels),
+		Tags:          make(map[string]int),
+		Architectures: make(map[string]int),
+	}
+
+	for _, model := range allModels {
+		if model.Metadata != nil && model.Metadata.Architecture != "" {
+			result.Architectures[model.Metadata.Architecture]++
+		}
+		for _, tag := range model.Tags {
+			result.Tags[tag]++
+		}
+	}
+
+	filtered := make([]*Model, 0)
+	for _, model := range allModels {
+		if m.matchesFilter(model, filter) {
+			filtered = append(filtered, model)
+		}
+	}
+
+	if sort != nil {
+		m.sortModels(filtered, sort)
+	}
+
+	result.Models = filtered
+	result.Filtered = len(filtered)
+
+	return result
+}
+
+// matchesFilter 检查模型是否匹配过滤条件
+func (m *Manager) matchesFilter(model *Model, filter *ModelFilter) bool {
+	if filter == nil {
+		return true
+	}
+
+	if len(filter.Tags) > 0 {
+		hasTag := false
+		for _, tag := range filter.Tags {
+			for _, modelTag := range model.Tags {
+				if strings.EqualFold(tag, modelTag) {
+					hasTag = true
+					break
+				}
+			}
+			if hasTag {
+				break
+			}
+		}
+		if !hasTag {
+			return false
+		}
+	}
+
+	if filter.Architecture != "" && model.Metadata != nil {
+		if !strings.EqualFold(model.Metadata.Architecture, filter.Architecture) {
+			return false
+		}
+	}
+
+	if filter.MinContext > 0 && model.Metadata != nil {
+		if model.Metadata.ContextLength < filter.MinContext {
+			return false
+		}
+	}
+
+	if filter.MaxSize > 0 && model.Size > filter.MaxSize {
+		return false
+	}
+
+	if filter.LoadedOnly {
+		m.mu.RLock()
+		status, exists := m.statuses[model.ID]
+		m.mu.RUnlock()
+		if !exists || status.State != StateLoaded {
+			return false
+		}
+	}
+
+	if filter.Favourites && !model.Favourite {
+		return false
+	}
+
+	if filter.SearchQuery != "" {
+		query := strings.ToLower(filter.SearchQuery)
+		match := false
+		if strings.Contains(strings.ToLower(model.Name), query) {
+			match = true
+		}
+		if strings.Contains(strings.ToLower(model.Alias), query) {
+			match = true
+		}
+		if strings.Contains(strings.ToLower(model.Description), query) {
+			match = true
+		}
+		if model.Metadata != nil {
+			if strings.Contains(strings.ToLower(model.Metadata.Architecture), query) {
+				match = true
+			}
+		}
+		if !match {
+			return false
+		}
+	}
+
+	if filter.SourceType != "" && model.SourceType != filter.SourceType {
+		return false
+	}
+
+	if filter.License != "" && !strings.EqualFold(model.License, filter.License) {
+		return false
+	}
+
+	return true
+}
+
+// sortModels 根据排序条件排序模型
+func (m *Manager) sortModels(models []*Model, sort *ModelSort) {
+	if sort == nil || sort.Field == "" {
+		return
+	}
+
+	less := func(i, j int) bool {
+		switch sort.Field {
+		case "name":
+			if sort.Direction == "desc" {
+				return models[i].Name > models[j].Name
+			}
+			return models[i].Name < models[j].Name
+		case "size":
+			if sort.Direction == "desc" {
+				return models[i].Size > models[j].Size
+			}
+			return models[i].Size < models[j].Size
+		case "scanned_at":
+			if sort.Direction == "desc" {
+				return models[i].ScannedAt.After(models[j].ScannedAt)
+			}
+			return models[i].ScannedAt.Before(models[j].ScannedAt)
+		case "load_count":
+			if sort.Direction == "desc" {
+				return models[i].LoadCount > models[j].LoadCount
+			}
+			return models[i].LoadCount < models[j].LoadCount
+		default:
+			return models[i].Name < models[j].Name
+		}
+	}
+
+	for i := 0; i < len(models); i++ {
+		for j := i + 1; j < len(models); j++ {
+			if !less(i, j) {
+				models[i], models[j] = models[j], models[i]
+			}
+		}
+	}
 }

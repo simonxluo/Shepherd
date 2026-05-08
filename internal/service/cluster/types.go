@@ -13,12 +13,8 @@ type ClientStatus = types.NodeState
 
 // ClientStatus constants - 使用统一的 NodeState 常量
 const (
-	ClientStatusOffline  ClientStatus = types.StateOffline
-	ClientStatusOnline   ClientStatus = types.StateOnline
-	ClientStatusBusy     ClientStatus = types.StateBusy
-	ClientStatusError    ClientStatus = types.StateError
-	ClientStatusDegraded ClientStatus = types.StateDegraded
-	ClientStatusDisabled ClientStatus = types.StateDisabled
+	ClientStatusOnline ClientStatus = types.StateOnline
+	ClientStatusError  ClientStatus = types.StateError
 )
 
 // TaskStatus represents the current status of a task
@@ -38,9 +34,7 @@ type TaskType string
 const (
 	TaskTypeLoadModel   TaskType = "load_model"
 	TaskTypeUnloadModel TaskType = "unload_model"
-	TaskTypeRunPython   TaskType = "run_python"
 	TaskTypeRunLlamacpp TaskType = "run_llamacpp"
-	TaskTypeCustom      TaskType = "custom"
 )
 
 // Client represents a connected client node
@@ -67,7 +61,6 @@ type Capabilities struct {
 	Memory         int64    `json:"memory"` // bytes
 	SupportsLlama  bool     `json:"supportsLlama"`
 	SupportsPython bool     `json:"supportsPython"`
-	CondaEnvs      []string `json:"condaEnvs,omitempty"`
 }
 
 // Task represents a distributed task
@@ -114,6 +107,7 @@ type ResourceUsage struct {
 	Uptime         int64   `json:"uptime"` // seconds
 }
 
+
 // DiscoveredClient represents a client found during network scan
 type DiscoveredClient struct {
 	Address      string        `json:"address"`
@@ -135,24 +129,3 @@ type ScanStatus struct {
 	Errors       []string           `json:"errors,omitempty"`
 }
 
-// ClusterInfo represents cluster-wide information
-type ClusterInfo struct {
-	TotalClients   int               `json:"totalClients"`
-	OnlineClients  int               `json:"onlineClients"`
-	BusyClients    int               `json:"busyClients"`
-	OfflineClients int               `json:"offlineClients"`
-	TotalTasks     int               `json:"totalTasks"`
-	RunningTasks   int               `json:"runningTasks"`
-	PendingTasks   int               `json:"pendingTasks"`
-	Resources      *ClusterResources `json:"resources"`
-}
-
-// ClusterResources represents aggregated cluster resources
-type ClusterResources struct {
-	TotalCPUCores  int   `json:"totalCPUCores"`
-	TotalMemory    int64 `json:"totalMemory"`    // bytes
-	TotalGPUMemory int64 `json:"totalGPUMemory"` // bytes
-	UsedCPUCores   int   `json:"usedCPUCores"`
-	UsedMemory     int64 `json:"usedMemory"`
-	UsedGPUMemory  int64 `json:"usedGPUMemory"`
-}

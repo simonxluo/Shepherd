@@ -65,10 +65,6 @@ func (cb *circularBuffer) GetHistory() []byte {
 	return result
 }
 
-type LogDataEvent struct {
-	Data []byte
-}
-
 type LogMonitor struct {
 	bufferMu    sync.RWMutex
 	buffer      *circularBuffer
@@ -132,12 +128,6 @@ func (m *LogMonitor) GetHistory() []byte {
 		return nil
 	}
 	return m.buffer.GetHistory()
-}
-
-func (m *LogMonitor) Clear() {
-	m.bufferMu.Lock()
-	m.buffer = nil
-	m.bufferMu.Unlock()
 }
 
 func (m *LogMonitor) Subscribe() chan []byte {

@@ -44,12 +44,6 @@ func (l LogLevel) String() string {
 	}
 }
 
-// Field represents a key-value pair for structured logging
-type Field struct {
-	Key   string
-	Value interface{}
-}
-
 // Logger is the main logger structure
 type Logger struct {
 	mu          sync.Mutex
@@ -309,7 +303,7 @@ func GetMonitor() *LogMonitor {
 }
 
 // log is the internal logging method
-func (l *Logger) log(level LogLevel, msg string, fields []Field) {
+func (l *Logger) log(level LogLevel, msg string) {
 	if level < l.level {
 		return
 	}
@@ -317,12 +311,9 @@ func (l *Logger) log(level LogLevel, msg string, fields []Field) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// 获取调用者信息 (文件名和行号)
-	// skip=2 跳过当前函数和调用 log 的函数 (如 Info/Debug 等)
 	_, file, line, ok := runtime.Caller(2)
 	caller := ""
 	if ok {
-		// 只保留文件名，不包含完整路径
 		caller = fmt.Sprintf("%s:%d", filepath.Base(file), line)
 	}
 
@@ -330,35 +321,17 @@ func (l *Logger) log(level LogLevel, msg string, fields []Field) {
 	var logLine string
 
 	if l.formatJSON {
-		// JSON format - 顺序: time, caller, level, msg, fields
-		fieldStr := ""
-		if len(fields) > 0 {
-			fieldPairs := make([]string, 0, len(fields)*2)
-			for _, f := range fields {
-				fieldPairs = append(fieldPairs, fmt.Sprintf(`"%s"`, f.Key), fmt.Sprintf(`"%v"`, f.Value))
-			}
-			fieldStr = "," + strings.Join(fieldPairs, ":")
-		}
 		callerStr := ""
 		if caller != "" {
 			callerStr = fmt.Sprintf(`,"caller":"%s"`, caller)
 		}
-		logLine = fmt.Sprintf(`{"time":"%s"%s,"level":"%s","msg":"%s"%s}`+"\n", timestamp, callerStr, level, msg, fieldStr)
+		logLine = fmt.Sprintf(`{"time":"%s"%s,"level":"%s","msg":"%s"}`+"\n", timestamp, callerStr, level, msg)
 	} else {
-		// Text format - 顺序: [时间] [文件:行号] 级别 消息 字段...
-		fieldStr := ""
-		if len(fields) > 0 {
-			fieldPairs := make([]string, 0, len(fields))
-			for _, f := range fields {
-				fieldPairs = append(fieldPairs, fmt.Sprintf("%s=%v", f.Key, f.Value))
-			}
-			fieldStr = " " + strings.Join(fieldPairs, " ")
-		}
 		callerStr := ""
 		if caller != "" {
 			callerStr = fmt.Sprintf(" [%s]", caller)
 		}
-		logLine = fmt.Sprintf("[%s]%s %s %s%s\n", timestamp, callerStr, level, msg, fieldStr)
+		logLine = fmt.Sprintf("[%s]%s %s %s\n", timestamp, callerStr, level, msg)
 	}
 
 	for _, w := range l.outputs {
@@ -382,46 +355,6 @@ func (l *Logger) log(level LogLevel, msg string, fields []Field) {
 	}
 }
 
-// Debug logs a message at debug level
-func Debug(args ...interface{}) {
-	GetLogger().log(DEBUG, fmt.Sprint(args...), nil)
-}
-
-// Debugf logs a formatted message at debug level
-func Debugf(format string, args ...interface{}) {
-	GetLogger().log(DEBUG, fmt.Sprintf(format, args...), nil)
-}
-
-// Info logs a message at info level
-func Info(args ...interface{}) {
-	GetLogger().log(INFO, fmt.Sprint(args...), nil)
-}
-
-// Infof logs a formatted message at info level
-func Infof(format string, args ...interface{}) {
-	GetLogger().log(INFO, fmt.Sprintf(format, args...), nil)
-}
-
-// Warn logs a message at warning level
-func Warn(args ...interface{}) {
-	GetLogger().log(WARN, fmt.Sprint(args...), nil)
-}
-
-// Warnf logs a formatted message at warning level
-func Warnf(format string, args ...interface{}) {
-	GetLogger().log(WARN, fmt.Sprintf(format, args...), nil)
-}
-
-// Error logs a message at error level
-func Error(args ...interface{}) {
-	GetLogger().log(ERROR, fmt.Sprint(args...), nil)
-}
-
-// Errorf logs a formatted message at error level
-func Errorf(format string, args ...interface{}) {
-	GetLogger().log(ERROR, fmt.Sprintf(format, args...), nil)
-}
-
 // Close closes the logger and releases resources
 func (l *Logger) Close() error {
 	l.mu.Lock()
@@ -435,40 +368,70 @@ func (l *Logger) Close() error {
 
 // Info logs a message at info level
 func (l *Logger) Info(args ...interface{}) {
-	l.log(INFO, fmt.Sprint(args...), nil)
+	l.log(INFO, fmt.Sprint(args...))
 }
 
 // Infof logs a formatted message at info level
 func (l *Logger) Infof(format string, args ...interface{}) {
-	l.log(INFO, fmt.Sprintf(format, args...), nil)
+	l.log(INFO, fmt.Sprintf(format, args...))
 }
 
 // Warn logs a message at warning level
 func (l *Logger) Warn(args ...interface{}) {
-	l.log(WARN, fmt.Sprint(args...), nil)
+	l.log(WARN, fmt.Sprint(args...))
 }
 
 // Warnf logs a formatted message at warning level
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.log(WARN, fmt.Sprintf(format, args...), nil)
+	l.log(WARN, fmt.Sprintf(format, args...))
 }
 
 // Error logs a message at error level
 func (l *Logger) Error(args ...interface{}) {
-	l.log(ERROR, fmt.Sprint(args...), nil)
+	l.log(ERROR, fmt.Sprint(args...))
 }
 
 // Errorf logs a formatted message at error level
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.log(ERROR, fmt.Sprintf(format, args...), nil)
+	l.log(ERROR, fmt.Sprintf(format, args...))
 }
 
 // Debug logs a message at debug level
 func (l *Logger) Debug(args ...interface{}) {
-	l.log(DEBUG, fmt.Sprint(args...), nil)
+	l.log(DEBUG, fmt.Sprint(args...))
 }
 
 // Debugf logs a formatted message at debug level
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.log(DEBUG, fmt.Sprintf(format, args...), nil)
+	l.log(DEBUG, fmt.Sprintf(format, args...))
+}
+
+// Package-level convenience functions
+
+func Debug(args ...interface{}) {
+	GetLogger().log(DEBUG, fmt.Sprint(args...))
+}
+
+func Debugf(format string, args ...interface{}) {
+	GetLogger().log(DEBUG, fmt.Sprintf(format, args...))
+}
+
+func Info(args ...interface{}) {
+	GetLogger().log(INFO, fmt.Sprint(args...))
+}
+
+func Infof(format string, args ...interface{}) {
+	GetLogger().log(INFO, fmt.Sprintf(format, args...))
+}
+
+func Warn(args ...interface{}) {
+	GetLogger().log(WARN, fmt.Sprint(args...))
+}
+
+func Warnf(format string, args ...interface{}) {
+	GetLogger().log(WARN, fmt.Sprintf(format, args...))
+}
+
+func Errorf(format string, args ...interface{}) {
+	GetLogger().log(ERROR, fmt.Sprintf(format, args...))
 }
