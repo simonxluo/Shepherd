@@ -63,6 +63,13 @@ export async function createConversation(body: {
   return apiClient.post('/conversations', body);
 }
 
+export async function updateConversation(
+  id: string,
+  body: { title?: string; systemPrompt?: string },
+): Promise<{ conversation: Conversation }> {
+  return apiClient.put(`/conversations/${id}`, body);
+}
+
 export async function deleteConversation(id: string): Promise<void> {
   await apiClient.delete(`/conversations/${id}`);
 }

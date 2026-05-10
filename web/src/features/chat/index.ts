@@ -7,3 +7,5 @@ export {
   useSaveMessage,
   useStreamingChat,
 } from './hooks';
+
+export type { ChatModelInfo } from '@/lib/api/chat';

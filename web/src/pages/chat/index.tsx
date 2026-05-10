@@ -21,7 +21,7 @@ import {
   type ChatModelInfo,
 } from '@/features/chat';
 import { getConversation } from '@/lib/api/chat';
-import { useToast } from '@/hooks/useToast';
+import { toast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 import { useChatStore } from '@/stores/chatStore';
 
@@ -58,7 +58,6 @@ function groupConversations(conversations: { id: string; title?: string; model: 
 }
 
 export function ChatPage() {
-  const toast = useToast();
   const alertDialog = useAlertDialog();
 
   // Zustand store — persists across route changes
@@ -94,8 +93,8 @@ export function ChatPage() {
   const initialLoadDone = useRef(false);
 
   const streaming = useStreamingChat({
-    onChunk: () => {
-      setCurrentResponse((prev) => prev);
+    onChunk: (text) => {
+      setCurrentResponse((prev) => prev + text);
     },
     onComplete: (fullText) => {
       const assistantMsg: DisplayMessage = {
