@@ -122,17 +122,6 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 
 	req.ModelID = id
 
-	// Backward compatibility: migrate old draft fields to new SpecDecoding
-	if req.SpecDecoding == nil && req.DraftModelID != "" {
-		req.SpecDecoding = &model.SpecDecodingParams{
-			SpecDecodingParams: backend.SpecDecodingParams{
-				SpecType:         "draft",
-				SpecDraftNMax:    req.DraftMaxTokens,
-			},
-		}
-		req.SpecDecoding.SpecDraftModelID = req.DraftModelID
-	}
-
 	// Validate draft model if SpecDecoding is set with draft type
 	if req.SpecDecoding != nil && (req.SpecDecoding.SpecType == "draft" || req.SpecDecoding.SpecType == "eagle3") && req.SpecDecoding.SpecDraftModelID != "" {
 		if req.SpecDecoding.SpecDraftModelID == id {

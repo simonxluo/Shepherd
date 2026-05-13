@@ -28,7 +28,18 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 		status.Error = parseErr
 		return nil, 0, nil, parseErr
 	}
-	b, bcfg, err := m.backendRegistry.Resolve(modelPath, bt)
+
+	// Build capability hint from stored model capabilities for smart backend routing
+	var capHint *backend.CapabilityHint
+	if caps := m.GetModelCapabilities(req.ModelID); caps != nil {
+		capHint = &backend.CapabilityHint{
+			TTS:             caps.TTS,
+			ASR:             caps.ASR,
+			ImageGeneration: caps.ImageGeneration,
+		}
+	}
+
+	b, bcfg, err := m.backendRegistry.Resolve(modelPath, bt, capHint)
 	if err != nil {
 		status.transitionTo(StateError)
 		status.Error = err

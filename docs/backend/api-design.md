@@ -191,12 +191,14 @@
 | GET | `/api/scan/status` | 扫描状态 |
 | GET | `/api/overview` | 集群概览 |
 
-### LangChain（条件注册）
+### 内部聊天 API（前端使用）
 
 | Method | Path | 说明 |
 |---|---|---|
-| POST | `/api/langchain/prompt` | 简单 Prompt |
-| POST | `/api/langchain/chat` | 聊天 Prompt |
+| GET | `/api/langchain/chat/models` | 聊天模型列表（含加载状态） |
+| POST | `/api/langchain/chat/completions` | 流式聊天补全（惰性加载） |
+
+> 注：路径保留 `/api/langchain/` 前缀以兼容前端。后端实现已迁移至轻量 `handler/chat`，不依赖 LangChainGo SDK。
 
 ## 兼容性 API
 

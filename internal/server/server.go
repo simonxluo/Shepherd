@@ -17,6 +17,7 @@ import (
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/anthropic"
 	benchmarkapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/benchmark"
+	chatapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/chat"
 	compatibilityapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/compatibility"
 	filesystemapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/filesystem"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/lmstudio"
@@ -28,7 +29,6 @@ import (
 	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/infra/modelrepo"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/router"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 )
 
@@ -67,7 +67,6 @@ type Server struct {
 	downloadMgr      *download.Manager
 	nodeAdapter      *api.NodeAdapter
 	repoClient       *modelrepoclient.Client
-	langchainHandler *langchain.Handler
 
 	wsHub *WebSocketHub
 
@@ -154,6 +153,7 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.Compatibility = compatibilityapi.NewHandler(config.ConfigMgr, compatServerManager)
 	s.handlers.Filesystem = filesystemapi.NewHandler()
 	s.handlers.Benchmark = benchmarkapi.NewHandler(logger.GetLogger(), storageMgr.GetStore())
+	s.handlers.Chat = chatapi.NewHandler(modelMgr)
 
 	// Setup Gin engine
 	if config.WebUIPath == "" {
@@ -168,9 +168,9 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 }
 
 // SetupRoutes finalizes route registration. Must be called after all adapter
-// registrations (RegisterNodeAdapter, RegisterLangChainHandler) and before Start.
+// registrations (RegisterNodeAdapter) and before Start.
 func (s *Server) SetupRoutes() {
-	router.Setup(s.engine, s.handlers, s, router.Config{WebUIPath: s.config.WebUIPath}, s.nodeAdapter, s.langchainHandler)
+	router.Setup(s.engine, s.handlers, s, router.Config{WebUIPath: s.config.WebUIPath}, s.nodeAdapter)
 }
 
 // RegisterNodeAdapter registers the Node API adapter for later route setup.
@@ -182,11 +182,6 @@ func (s *Server) RegisterNodeAdapter(nodeAdapter *api.NodeAdapter) {
 			s.wsHub.Emit(eventType, data)
 		}
 	})
-}
-
-// RegisterLangChainHandler registers the LangChainGo API handler for later route setup.
-func (s *Server) RegisterLangChainHandler(handler *langchain.Handler) {
-	s.langchainHandler = handler
 }
 
 // Start starts the HTTP server

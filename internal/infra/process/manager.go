@@ -2,7 +2,6 @@ package process
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 )
 
@@ -171,39 +170,3 @@ func (m *Manager) StopAll() []error {
 	return errs
 }
 
-
-func quoteAndJoin(args []string) string {
-	var result string
-	for i, arg := range args {
-		if i > 0 {
-			result += " "
-		}
-
-		if needsQuoting(arg) {
-			result += `"` + escapeQuotes(arg) + `"`
-		} else {
-			result += arg
-		}
-	}
-	return result
-}
-
-func needsQuoting(arg string) bool {
-	for _, c := range arg {
-		if c == ' ' || c == '\t' || c == '"' || c == '\'' || c == '\\' {
-			return true
-		}
-	}
-	return false
-}
-
-func escapeQuotes(s string) string {
-	result := strings.Builder{}
-	for _, c := range s {
-		if c == '"' || c == '\\' {
-			result.WriteRune('\\')
-		}
-		result.WriteRune(c)
-	}
-	return result.String()
-}

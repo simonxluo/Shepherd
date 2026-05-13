@@ -28,11 +28,11 @@ Shepherd 是一个 Go 语言编写的分布式 llama.cpp 模型管理系统，�
 │  middleware: RequestID → Recovery → CORS → Logger │
 ├─────────────────────────────────────────────────┤
 │              服务层 (service/)                     │
-│  ┌──────────┬──────────┬──────────┐              │
-│  │  model   │   node   │ langchain│              │
-│  │ 模型管理  │ 节点管理  │ LLM集成  │              │
-│  │ backend/ │          │          │              │
-│  └──────────┴──────────┴──────────┘              │
+│  ┌──────────┬──────────┐                         │
+│  │  model   │   node   │                         │
+│  │ 模型管理  │ 节点管理  │                         │
+│  │ backend/ │          │                         │
+│  └──────────┴──────────┘                         │
 │  ┌──────────┬──────────┐                         │
 │  │ cluster  │ cluster/ │                         │
 │  │ 集群类型  │scheduler │                         │
@@ -62,10 +62,9 @@ Shepherd 是一个 Go 语言编写的分布式 llama.cpp 模型管理系统，�
 ```
 server → handler → service → comm
                    infra  → comm
-                   infra  → service (单向: langchain → model)
 ```
 
-**禁止**：handler 直接依赖 infra；service 之间互相依赖（除 langchain → model）。
+**禁止**：handler 直接依赖 infra；service 之间互相依赖。
 
 ## 包结构
 
@@ -87,11 +86,11 @@ server → handler → service → comm
 | ↳ 路径配置 | `handler/paths/` | llama.cpp/模型路径 CRUD |
 | ↳ 存储 | `handler/storage/` | 存储配置、会话管理 |
 | ↳ 基准测试 | `handler/benchmark/` | Benchmark 创建/查询/配置 |
+| ↳ 内部聊天 | `handler/chat/` | 前端聊天 UI 代理（`/api/langchain/chat/*`） |
 | **模型服务** | `service/model/` | GGUF 模型管理 + 能力自动检测 |
 | ↳ 后端注册表 | `service/model/backend/` | 可插拔后端（llama.cpp, vLLM, vLLM-Omni） |
 | **节点服务** | `service/node/` | 统一节点（hybrid/master/client） |
 | **集群服务** | `service/cluster/` | 集群类型、扫描器、调度器 |
-| **LangChain** | `service/langchain/` | LangChainGo 集成 |
 | **进程** | `infra/process/` | llama.cpp 进程生命周期 |
 | **存储** | `infra/storage/` | SQLite/Memory 存储实现 |
 | **端口** | `infra/port/` | 端口分配（默认 8081-9000） |
@@ -112,7 +111,7 @@ server → handler → service → comm
 从 `cli/run_server.go` 的 `Initialize()` 方法实际顺序：
 
 ```
-Config → Logger → Process → Port → Storage → Model → LangChain → Node → Server → Shutdown
+Config → Logger → Process → Port → Storage → Model → Node → Server → Shutdown
 ```
 
 详细步骤：
@@ -123,11 +122,10 @@ Config → Logger → Process → Port → Storage → Model → LangChain → N
 4. **进程管理器**：`process.NewManager()`
 5. **端口分配器**：`port.NewPortAllocator(base, max)`，范围从配置读取（默认 8081-9000）
 6. **存储管理器**：如果配置中 `storage.Type` 为空，run_server 会覆盖为 SQLite（`./data/shepherd.db`，WAL 模式）；`DefaultConfig()` 默认类型为 `memory`
-7. **模型管理器**：`model.NewManager()`，触发已保存模型加载 + TTL 检查器启动
-8. **LangChain**：`langchain.NewManager()` + `NewHandler()`
-9. **分布式组件**：根据角色初始化 Node（含子系统：注册、心跳、命令、资源监控）
-10. **HTTP 服务器**：`server.NewServer()` → 注册处理器 → `SetupRoutes()`
-11. **关闭管理器**：`shutdown.NewManager(10s)`，监听 SIGINT/SIGTERM/SIGQUIT
+7. **模型管理器**：`model.NewManager()`，触发已保存模型加载 + TTL 检查器启动 + 配置模型组加载
+8. **分布式组件**：根据角色初始化 Node（含子系统：注册、心跳、命令、资源监控）
+9. **HTTP 服务器**：`server.NewServer()` → 注册处理器 → `SetupRoutes()`
+10. **关闭管理器**：`shutdown.NewManager(10s)`，监听 SIGINT/SIGTERM/SIGQUIT
 
 ## 关闭流程
 
@@ -171,5 +169,4 @@ Config → Logger → Process → Port → Storage → Model → LangChain → N
 | `google/uuid` | 请求 ID |
 | `gpustack/gguf-parser-go` | GGUF 元数据解析 |
 | `ROCm/amdsmi` | AMD GPU 监控 (build tag) |
-| `tmc/langchaingo` | LangChain Go |
 | `swaggo/swag` | Swagger 文档生成 |

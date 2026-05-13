@@ -271,10 +271,6 @@ type LoadRequest struct {
 	RopeFreqBase  float64 `json:"ropeFreqBase"`  // --rope-freq-base
 	RopeFreqScale float64 `json:"ropeFreqScale"` // --rope-freq-scale
 
-	// TODO: remove after migration period (v0.8.0)
-	DraftModelID   string `json:"draftModelId"`   // Deprecated: use SpecDecoding with specType="draft"
-	DraftMaxTokens int    `json:"draftMaxTokens"`  // Deprecated: use SpecDecoding with specDraftNMax
-
 	// Speculative decoding (new unified system)
 	SpecDecoding *SpecDecodingParams `json:"specDecoding,omitempty"`
 

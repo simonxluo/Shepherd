@@ -19,7 +19,6 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/server"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
 )
@@ -56,9 +55,6 @@ type App struct {
 
 	node        *node.Node
 	nodeAdapter *handler.NodeAdapter
-
-	langchainMgr     *langchain.Manager
-	langchainHandler *langchain.Handler
 
 	role string
 }
@@ -159,10 +155,6 @@ func (app *App) Initialize(configPath string) error {
 
 	app.modelMgr = model.NewManager(cfg, app.configMgr, app.procMgr, app.portAllocator, app.storageMgr)
 
-	app.langchainMgr = langchain.NewManager(app.modelMgr, logger.GetLogger())
-	app.langchainHandler = langchain.NewHandler(app.langchainMgr, logger.GetLogger())
-	logger.Info("LangChainGo 组件已初始化")
-
 	if err := app.initDistributedComponents(); err != nil {
 		return fmt.Errorf("初始化分布式组件失败: %w", err)
 	}
@@ -187,11 +179,6 @@ func (app *App) Initialize(configPath string) error {
 	app.srv, err = server.NewServer(serverCfg, app.modelMgr)
 	if err != nil {
 		return fmt.Errorf("无法创建服务器: %w", err)
-	}
-
-	if app.langchainHandler != nil {
-		app.srv.RegisterLangChainHandler(app.langchainHandler)
-		logger.Info("LangChainGo API 已启用")
 	}
 
 	if app.role == "master" || app.role == "hybrid" {

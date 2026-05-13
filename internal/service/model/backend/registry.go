@@ -54,9 +54,24 @@ func (r *Registry) Configure(bt BackendType, cfg *BackendConfig) {
 	r.configs[bt] = cfg
 }
 
+// CapabilityHint provides capability information to influence backend selection.
+// When a model has multimodal capabilities (TTS/ASR/ImageGeneration), the registry
+// can route it to a backend that supports those endpoints (e.g., vLLM-Omni).
+type CapabilityHint struct {
+	TTS             bool
+	ASR             bool
+	ImageGeneration bool
+}
+
+// NeedsMultimodal returns true if the hint indicates multimodal capability.
+func (h *CapabilityHint) NeedsMultimodal() bool {
+	return h != nil && (h.TTS || h.ASR || h.ImageGeneration)
+}
+
 // Resolve determines which backend to use for a given model path.
-// It uses explicit type first, then auto-detects from model format, then defaults to llama.cpp.
-func (r *Registry) Resolve(modelPath string, explicitType BackendType) (Backend, *BackendConfig, error) {
+// It uses explicit type first, then capability-aware routing for multimodal models,
+// then auto-detects from model format, then defaults to llama.cpp.
+func (r *Registry) Resolve(modelPath string, explicitType BackendType, hints ...*CapabilityHint) (Backend, *BackendConfig, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -70,8 +85,21 @@ func (r *Registry) Resolve(modelPath string, explicitType BackendType) (Backend,
 		return b, cfg, nil
 	}
 
+	// Capability-aware routing: multimodal models prefer vLLM-Omni
+	var hint *CapabilityHint
+	if len(hints) > 0 {
+		hint = hints[0]
+	}
+	if hint.NeedsMultimodal() {
+		if b, ok := r.backends[BackendVLLMOmni]; ok && b.SupportsModel(modelPath) {
+			if cfg := r.configs[BackendVLLMOmni]; cfg != nil {
+				return b, cfg, nil
+			}
+		}
+	}
+
 	// Auto-detect from model file extension using deterministic ordering
-	// vLLM takes priority over vLLM-omni (vLLM-omni is a specialization)
+	// vLLM takes priority over vLLM-omni for non-multimodal safetensors models
 	autoDetectOrder := []BackendType{BackendVLLM, BackendVLLMOmni}
 	for _, bt := range autoDetectOrder {
 		b, ok := r.backends[bt]

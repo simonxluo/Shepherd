@@ -51,10 +51,21 @@ type ServerConfig struct {
 
 // ModelConfig contains model scanning and management configuration
 type ModelConfig struct {
-	Paths       []string    `mapstructure:"paths" yaml:"paths" json:"paths"`
-	PathConfigs []ModelPath `mapstructure:"path_configs" yaml:"path_configs" json:"pathConfigs"`
-	AutoScan    bool        `mapstructure:"auto_scan" yaml:"auto_scan" json:"autoScan"`
-	PortRange   string      `mapstructure:"port_range" yaml:"port_range" json:"portRange"`
+	Paths       []string         `mapstructure:"paths" yaml:"paths" json:"paths"`
+	PathConfigs []ModelPath      `mapstructure:"path_configs" yaml:"path_configs" json:"pathConfigs"`
+	AutoScan    bool             `mapstructure:"auto_scan" yaml:"auto_scan" json:"autoScan"`
+	PortRange   string           `mapstructure:"port_range" yaml:"port_range" json:"portRange"`
+	Groups      []ModelGroupDef  `mapstructure:"groups" yaml:"groups" json:"groups,omitempty"`
+}
+
+// ModelGroupDef defines a model group for swap/exclusive loading (llama-swap style).
+// Models within a swap group are mutually exclusive — loading one auto-unloads the others.
+type ModelGroupDef struct {
+	ID         string   `mapstructure:"id" yaml:"id" json:"id"`                           // Unique group ID
+	Models     []string `mapstructure:"models" yaml:"models" json:"models"`                // Model IDs or name patterns
+	Swap       bool     `mapstructure:"swap" yaml:"swap" json:"swap"`                      // If true, loading one unloads others in the group
+	Exclusive  bool     `mapstructure:"exclusive" yaml:"exclusive" json:"exclusive"`        // If true, also unloads models from other non-persistent groups
+	Persistent bool     `mapstructure:"persistent" yaml:"persistent" json:"persistent"`     // If true, not affected by other exclusive groups
 }
 
 // LlamacppConfig contains llama.cpp binary paths configuration

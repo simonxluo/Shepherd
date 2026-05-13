@@ -30,39 +30,48 @@ func (m *Manager) GetModel(id string) (*Model, bool) {
 	return &modelCopy, true
 }
 
-// ListModels returns all models
-func (m *Manager) ListModels() []*Model {
+// ensureScanned triggers a one-time background scan if no models have been loaded yet.
+// It blocks up to 10s for the scan to complete, then returns regardless.
+func (m *Manager) ensureScanned() {
 	m.mu.RLock()
 	modelCount := len(m.models)
 	m.mu.RUnlock()
 
-	if modelCount == 0 {
-		m.mu.Lock()
-		if !m.scannedOnce {
-			m.scannedOnce = true
-			m.mu.Unlock()
-			logger.Info("ListModels: no models in memory, triggering auto-scan")
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-			defer cancel()
-
-			done := make(chan bool, 1)
-			go func() {
-				if _, err := m.Scan(ctx); err != nil {
-					logger.Warnf("ListModels: auto-scan failed: error=%v", err)
-				}
-				done <- true
-			}()
-
-			select {
-			case <-done:
-				logger.Info("ListModels: auto-scan complete")
-			case <-time.After(10 * time.Second):
-				logger.Warn("ListModels: auto-scan timed out, returning current model list")
-			}
-		} else {
-			m.mu.Unlock()
-		}
+	if modelCount > 0 {
+		return
 	}
+
+	m.mu.Lock()
+	if m.scannedOnce {
+		m.mu.Unlock()
+		return
+	}
+	m.scannedOnce = true
+	m.mu.Unlock()
+
+	logger.Info("ensureScanned: no models in memory, triggering auto-scan")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	done := make(chan bool, 1)
+	go func() {
+		if _, err := m.Scan(ctx); err != nil {
+			logger.Warnf("ensureScanned: auto-scan failed: error=%v", err)
+		}
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		logger.Info("ensureScanned: auto-scan complete")
+	case <-time.After(10 * time.Second):
+		logger.Warn("ensureScanned: auto-scan timed out, returning current model list")
+	}
+}
+
+// ListModels returns all models
+func (m *Manager) ListModels() []*Model {
+	m.ensureScanned()
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -436,31 +445,7 @@ func (m *Manager) updateModelMetadata(modelID string, model *Model, updateFn fun
 // SearchModels 搜索和过滤模型
 // 如果内存中没有模型，会自动触发一次扫描
 func (m *Manager) SearchModels(filter *ModelFilter, sort *ModelSort) *ModelSearchResult {
-	m.mu.RLock()
-	modelCount := len(m.models)
-	m.mu.RUnlock()
-
-	// 如果内存中没有模型，自动触发一次扫描
-	if modelCount == 0 {
-		logger.Info("SearchModels: 内存中没有模型，触发自动扫描")
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		defer cancel()
-
-		done := make(chan bool, 1)
-		go func() {
-			if _, err := m.Scan(ctx); err != nil {
-				logger.Warnf("SearchModels: 自动扫描失败: %v", err)
-			}
-			done <- true
-		}()
-
-		select {
-		case <-done:
-			logger.Info("SearchModels: 自动扫描完成")
-		case <-time.After(10 * time.Second):
-			logger.Warn("SearchModels: 自动扫描超时")
-		}
-	}
+	m.ensureScanned()
 
 	m.mu.RLock()
 	allModels := make([]*Model, 0, len(m.models))

@@ -78,6 +78,9 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 		logger.Infof("ModelManager: 初始化完成: paths=%v", paths)
 	}
 
+	// Load model groups from config (llama-swap style swap/exclusive groups)
+	m.loadGroupsFromConfig()
+
 	// Load saved models
 	m.loadModels()
 	logger.Infof("ModelManager: 从配置加载模型完成: modelCount=%d", len(m.models))

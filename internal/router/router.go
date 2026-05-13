@@ -9,6 +9,7 @@ import (
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/anthropic"
 	benchmarkapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/benchmark"
+	chatapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/chat"
 	compatibilityapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/compatibility"
 	filesystemapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/filesystem"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/lmstudio"
@@ -17,7 +18,6 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/paths"
 	storageapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/storage"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/middleware"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/langchain"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/shepherd-project/shepherd/Shepherd/api-docs"
@@ -39,6 +39,7 @@ type Handlers struct {
 	Compatibility *compatibilityapi.Handler
 	Filesystem    *filesystemapi.Handler
 	Benchmark     *benchmarkapi.Handler
+	Chat          *chatapi.Handler
 }
 
 // ServerHandlers defines the interface for server-owned handler methods
@@ -114,10 +115,9 @@ func Setup(
 	sh ServerHandlers,
 	cfg Config,
 	nodeAdapter *api.NodeAdapter,
-	langchainHandler *langchain.Handler,
 ) {
 	setupMiddleware(engine)
-	registerRoutes(engine, h, sh, cfg, nodeAdapter, langchainHandler)
+	registerRoutes(engine, h, sh, cfg, nodeAdapter)
 }
 
 // setupMiddleware configures global middleware on the engine.
@@ -138,7 +138,6 @@ func registerRoutes(
 	sh ServerHandlers,
 	cfg Config,
 	nodeAdapter *api.NodeAdapter,
-	langchainHandler *langchain.Handler,
 ) {
 	engine.GET("/api/events", sh.HandleEvents)
 	engine.GET("/ws", sh.HandleWebSocket)
@@ -171,8 +170,8 @@ func registerRoutes(
 		nodeAdapter.RegisterRoutes(apiGroup)
 	}
 
-	if langchainHandler != nil {
-		langchainHandler.RegisterRoutes(apiGroup)
+	if h.Chat != nil {
+		h.Chat.RegisterRoutes(apiGroup)
 	}
 
 	registerStaticRoutes(engine, cfg)

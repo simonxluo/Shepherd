@@ -99,6 +99,7 @@ Error     → Unloaded, Loading
 | TTS | 文本转语音能力（CosyVoice、ChatTTS 等） |
 | ASR | 语音识别能力（Whisper、SenseVoice 等） |
 | ImageGeneration | 图像生成能力（Stable Diffusion、Flux 等） |
+| Music | 音乐生成能力（MusicGen、AudioCraft、AceStep 等） |
 
 ### LoadRequest
 
@@ -147,6 +148,7 @@ Error     → Unloaded, Loading
 | TTS | "tts", "text-to-speech", "cosyvoice", "chattts", "bark", "speecht5", "vits", "xtts", "melotts" |
 | ASR | "asr", "whisper", "speech-to-text", "wav2vec", "hubert", "sense-voice", "paraformer" |
 | ImageGeneration | "stable-diffusion", "sdxl", "flux", "dall-e", "text-to-image", "kandinsky", "pixart", "cogview", "janus" |
+| Music | "musicgen", "audiogen", "audiocraft", "text-to-music", "acestep" |
 
 ### 互斥规则
 
@@ -235,6 +237,121 @@ SSE 广播通知
 - `ConcurrencySem`：并发槽位控制（`ConcurrencyLimit` 限制）
 - `AddTokens()`：Token 计数统计
 
+## 模型组（llama-swap 式交换管理）
+
+通过 YAML 配置定义模型组，实现同组模型排他加载：
+
+```yaml
+model:
+  groups:
+    - id: "gpu-share"
+      models: ["llama3-70b", "qwen2-72b"]
+      swap: true        # 加载组内一个模型时自动卸载其他
+      exclusive: false
+    - id: "primary-llm"
+      models: ["llama3-8b"]
+      swap: true
+      exclusive: true   # 加载此组时卸载所有非 persistent 组的模型
+      persistent: false
+    - id: "embeddings"
+      models: ["bge-m3"]
+      swap: false
+      exclusive: false
+      persistent: true  # 不受其他 exclusive 组影响
+```
+
+| 字段 | 说明 |
+|------|------|
+| `id` | 组唯一标识 |
+| `models` | 组内模型 ID 列表 |
+| `swap` | 启用交换：加载组内一个模型自动卸载组内其他已加载模型 |
+| `exclusive` | 排他模式：加载此组时卸载所有非 persistent 组的模型 |
+| `persistent` | 持久组：不受其他 exclusive 组的卸载影响 |
+
+组定义在 `service/model/group.go` 中实现，通过 `swapBeforeLoad()` 在每次模型加载前执行检查。
+
+## 推测解码（Speculative Decoding）
+
+通过 `SpecDecoding` 参数支持多种推测解码策略，加速推理：
+
+| 策略类型 | 说明 | 关键参数 |
+|----------|------|----------|
+| `draft` | 使用小型 Draft 模型 | `specDraftModelId`, `specDraftNMax`, `specDraftPSplit` |
+| `eagle3` | EAGLE3 推测 | 同 draft 参数 |
+| `ngram-simple` | 简单 N-gram | `specNgramSimpleSizeN/M`, `specNgramSimpleMinHits` |
+| `ngram-mod` | 改进 N-gram | `specNgramModNMin/NMax/NMatch` |
+| `ngram-map-k` | Map-K N-gram | `specNgramMapKSizeN/M`, `specNgramMapKMinHits` |
+| `ngram-map-k4v` | Map-K4V N-gram | `specNgramMapK4VSizeN/M`, `specNgramMapK4VMinHits` |
+| `ngram-cache` | N-gram 缓存 | `lookupCacheStatic`, `lookupCacheDynamic` |
+
+Draft 模型验证流程：Handler 层将 `specDraftModelId` 解析为文件路径，校验架构一致性后写入 `SpecDraftModelPath`，传递给后端命令构建。
+
+## 后端端点能力声明
+
+每个 Backend 实现 `SupportedEndpoints()` 方法，声明其支持的 API 端点：
+
+| 后端 | 支持的端点 |
+|------|-----------|
+| llama.cpp | `/v1/chat/completions`, `/v1/completions`, `/v1/models`, `/v1/embeddings` |
+| vLLM | 同上 |
+| vLLM-Omni | 上述 + `/v1/audio/speech`, `/v1/audio/voices`, `/v1/audio/transcriptions`, `/v1/audio/translations` |
+
+Handler 层在处理多模态请求（TTS/ASR）前，通过 `GetBackendForModel()` 获取已加载模型的后端实例，检查端点是否受支持，拒绝不兼容的请求。
+
+## 能力感知后端路由
+
+`Registry.Resolve()` 支持通过 `CapabilityHint` 实现智能后端选择：
+
+1. **显式指定** → 使用用户指定的 `backendType`
+2. **能力路由** → TTS/ASR/ImageGeneration 模型自动路由到 vLLM-Omni（如已配置）
+3. **格式检测** → safetensors → vLLM，GGUF → llama.cpp
+4. **默认回退** → llama.cpp
+
+能力信息来源于扫描阶段的自动检测（存储在数据库中），在加载时通过 `GetModelCapabilities()` 获取并传递给 `Resolve()`。
+
+## 模型查找索引（ModelLookupIndex）
+
+兼容性 API Handler 使用四级查找索引快速定位模型：
+
+```
+1. 精确 ID 匹配     → byID[identifier]
+2. 别名匹配         → byAlias[identifier]
+3. 名称匹配（忽略大小写）→ byName[identifier]
+4. 模糊 ID 包含匹配  → 遍历 byID，检查 Contains
+```
+
+索引在 Handler 初始化时通过 `RebuildIndex()` 构建，基于全部已发现模型列表。
+
+## 惰性加载 SSE 流
+
+当客户端发起流式 Chat 请求时，如果模型尚未加载，`StreamWithLazyLoad()` 会：
+
+1. 触发 `EnsureLoaded()` 异步加载
+2. 在加载期间向客户端推送 SSE 格式的加载进度提示（reasoning_content 字段）
+3. 加载完成后，无缝切换为真正的推理响应流
+
+这确保客户端不会超时断开，且能看到加载进度。
+
+## HuggingFace SafeTensors 目录扫描
+
+除 GGUF 单文件模型外，扫描器还支持 HuggingFace 模型目录：
+
+- 通过 `huggingface.IsHuggingFaceModelDir()` 检测目录结构
+- 读取 `config.json`、`tokenizer_config.json` 等元数据文件
+- 生成基于目录路径的 SHA256 模型 ID
+- 自动检测 diffusers 类名用于能力判断（图像生成模型）
+
+## 环境变量注入
+
+后端进程支持环境变量配置，分为两级：
+
+| 级别 | 来源 | 优先级 |
+|------|------|--------|
+| 全局 | `backends.vllm.env` / `backends.vllm_omni.env` 配置 | 低 |
+| 模型 | `LoadRequest.envVars` 字段 | 高（覆盖同名全局变量） |
+
+通过 `buildEnvWithVars()` 合并到进程环境中，支持 `KEY=VALUE` 格式。
+
 ## 设计决策
 
 | 决策 | 理由 |
@@ -246,3 +363,5 @@ SSE 广播通知
 | 路径 SHA256 作为模型 ID | 稳定且唯一，不依赖文件名或用户输入 |
 | LoadRequest 50+ 参数扁平化 | 直接映射 llama-server 标志位，无抽象损耗，便于未来扩展 |
 | 可插拔后端注册表（Backend 接口） | 新增推理引擎零改动现有代码，仅添加 Backend 实现 + 注册即可 |
+| 能力感知后端路由 | TTS/ASR/ImageGen 模型自动匹配 vLLM-Omni，无需用户手动指定后端 |
+| 配置驱动的模型组 | llama-swap 式声明式管理，GPU 显存共享场景下避免 OOM |
