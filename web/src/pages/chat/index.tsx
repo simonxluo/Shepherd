@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageSquare, Plus, Trash2, Loader2, History, X, CircleDot, Pencil, Check, Search } from 'lucide-react';
 import {
   Select,
@@ -20,7 +21,7 @@ import {
   useStreamingChat,
   type ChatModelInfo,
 } from '@/features/chat';
-import { getConversation } from '@/lib/api/chat';
+import { chatApi } from '@/lib/api/chat';
 import { toast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 import { useChatStore } from '@/stores/chatStore';
@@ -32,15 +33,15 @@ interface DisplayMessage {
   timestamp: number;
 }
 
-function groupConversations(conversations: { id: string; title?: string; model: string; updatedAt: string }[]) {
+function groupConversations(conversations: { id: string; title?: string; model: string; updatedAt: string }[], t: (key: string) => string) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const yesterday = today - 86400000;
 
   const groups: { label: string; items: typeof conversations }[] = [
-    { label: '今天', items: [] },
-    { label: '昨天', items: [] },
-    { label: '更早', items: [] },
+    { label: t('chat.timeGroups.today'), items: [] },
+    { label: t('chat.timeGroups.yesterday'), items: [] },
+    { label: t('chat.timeGroups.earlier'), items: [] },
   ];
 
   for (const conv of conversations) {
@@ -58,6 +59,7 @@ function groupConversations(conversations: { id: string; title?: string; model: 
 }
 
 export function ChatPage() {
+  const { t } = useTranslation();
   const alertDialog = useAlertDialog();
 
   // Zustand store — persists across route changes
@@ -120,7 +122,7 @@ export function ChatPage() {
     },
     onError: (error) => {
       console.error('Chat error:', error);
-      toast.error('聊天失败', error.message);
+      toast.error(t('chat.error.chatFailed'), error.message);
       setCurrentResponse('');
       setIsStreaming(false);
       setModelLoading(false);
@@ -145,7 +147,7 @@ export function ChatPage() {
     initialLoadDone.current = true;
 
     if (activeConvId) {
-      getConversation(activeConvId)
+      chatApi.getConversation(activeConvId)
         .then((data) => {
           const msgs: DisplayMessage[] = (data.messages ?? []).map((m) => ({
             role: m.role as DisplayMessage['role'],
@@ -177,11 +179,11 @@ export function ChatPage() {
 
     const modelId = selectedModelInfo?.id ?? selectedModel;
     try {
-      const data = await createConv.mutateAsync({ model: modelId, title: '新对话' });
+      const data = await createConv.mutateAsync({ model: modelId, title: t('chat.newConversation') });
       setActiveConvId(data.conversation.id);
       return data.conversation.id;
     } catch {
-      toast.error('创建对话失败', '无法自动创建对话');
+      toast.error(t('chat.error.createFailed'), t('chat.error.createFailedDesc'));
       return null;
     }
   }, [activeConvId, selectedModelInfo, selectedModel, createConv, setActiveConvId, toast]);
@@ -189,7 +191,7 @@ export function ChatPage() {
   const handleSend = useCallback(
     async (content: string, images?: string[]) => {
       if (!selectedModel) {
-        toast.warning('请先选择模型', '请从下拉列表中选择一个模型');
+        toast.warning(t('chat.error.selectModel'), t('chat.error.selectModelDesc'));
         return;
       }
 
@@ -285,20 +287,20 @@ export function ChatPage() {
   const handleNewChat = async () => {
     if (messages.length > 0) {
       const confirmed = await alertDialog.confirm({
-        title: '新建对话',
-        description: '确定要开始新对话吗？当前对话将被保留。',
+        title: t('chat.newChat'),
+        description: t('chat.newChatConfirm'),
       });
       if (!confirmed) return;
     }
 
     if (!selectedModel) {
-      toast.warning('请先选择模型', '新建对话前请先选择一个模型');
+      toast.warning(t('chat.error.selectModel'), t('chat.error.selectModelForNew'));
       return;
     }
 
     const modelId = selectedModelInfo?.id ?? selectedModel;
     createConv.mutate(
-      { model: modelId, title: '新对话' },
+      { model: modelId, title: t('chat.newConversation') },
       {
         onSuccess: (data) => {
           setActiveConvId(data.conversation.id);
@@ -311,7 +313,7 @@ export function ChatPage() {
 
   const handleLoadConversation = async (convId: string) => {
     try {
-      const data = await getConversation(convId);
+      const data = await chatApi.getConversation(convId);
       const msgs: DisplayMessage[] = (data.messages ?? []).map((m) => ({
         role: m.role as DisplayMessage['role'],
         content: m.content,
@@ -327,14 +329,14 @@ export function ChatPage() {
         if (match) setSelectedModel(match.id);
       }
     } catch {
-      toast.error('加载失败', '无法加载对话历史');
+      toast.error(t('chat.error.loadFailed'), t('chat.error.loadFailedDesc'));
     }
   };
 
   const handleDeleteConversation = async (convId: string) => {
     const confirmed = await alertDialog.confirm({
-      title: '删除对话',
-      description: '确定要删除这个对话吗？此操作不可撤销。',
+      title: t('chat.deleteConversation'),
+      description: t('chat.deleteConversationConfirm'),
       variant: 'destructive',
     });
     if (!confirmed) return;
@@ -346,7 +348,7 @@ export function ChatPage() {
           setMessages([]);
           setCurrentResponse('');
         }
-        toast.success('已删除', '对话已删除');
+        toast.success(t('chat.deleted'), t('chat.deletedDesc'));
       },
     });
   };
@@ -365,7 +367,7 @@ export function ChatPage() {
 
   const getModelLabel = (model: ChatModelInfo) => {
     const name = model.alias || model.name;
-    return model.isLoaded ? name : `${name} (未加载)`;
+    return model.isLoaded ? name : `${name} (${t('chat.modelNotLoaded')})`;
   };
 
   const filteredConversations = sidebarSearch
@@ -376,7 +378,7 @@ export function ChatPage() {
       )
     : conversations;
 
-  const groupedConversations = groupConversations(filteredConversations);
+  const groupedConversations = groupConversations(filteredConversations, t);
 
   return (
     <div className="h-full flex bg-background text-foreground">
@@ -387,9 +389,9 @@ export function ChatPage() {
         }`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h2 className="font-semibold text-sm">对话历史</h2>
+          <h2 className="font-semibold text-sm">{t('chat.history')}</h2>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNewChat} title="新建对话">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNewChat} title={t('chat.newChat')}>
               <Plus className="w-4 h-4" />
             </Button>
             <Button
@@ -409,7 +411,7 @@ export function ChatPage() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
               type="text"
-              placeholder="搜索对话..."
+              placeholder={t('chat.searchConversation')}
               value={sidebarSearch}
               onChange={(e) => setSidebarSearch(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 text-sm bg-background border border-input rounded-md outline-none focus:ring-1 focus:ring-ring"
@@ -419,7 +421,7 @@ export function ChatPage() {
 
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-4 text-center">暂无对话历史</p>
+            <p className="text-sm text-muted-foreground p-4 text-center">{t('chat.noHistory')}</p>
           ) : (
             groupedConversations.map((group) => (
               <div key={group.label}>
@@ -459,7 +461,7 @@ export function ChatPage() {
                           </Button>
                         </div>
                       ) : (
-                        <p className="text-sm truncate">{conv.title || '新对话'}</p>
+                        <p className="text-sm truncate">{conv.title || t('chat.newConversation')}</p>
                       )}
                       <p className="text-xs text-muted-foreground truncate">{conv.model}</p>
                     </div>
@@ -470,7 +472,7 @@ export function ChatPage() {
                         className="shrink-0 h-6 w-6"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRenameConversation(conv.id, conv.title || '新对话');
+                          handleRenameConversation(conv.id, conv.title || t('chat.newConversation'));
                         }}
                       >
                         <Pencil className="w-3 h-3" />
@@ -504,20 +506,20 @@ export function ChatPage() {
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
-              title="对话历史"
+              title={t('chat.history')}
               className="md:hidden"
             >
               <History className="w-5 h-5" />
             </Button>
             <MessageSquare className="w-5 h-5 text-primary" />
-            <h1 className="text-lg font-semibold">AI 聊天</h1>
+            <h1 className="text-lg font-semibold">{t('chat.aiChat')}</h1>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Model selector */}
             <Select value={selectedModel} onValueChange={setSelectedModel}>
               <SelectTrigger className="w-[240px] px-3 py-1.5 border rounded-md bg-background text-sm">
-                <SelectValue placeholder={modelsLoading ? '加载中...' : '选择模型'} />
+                <SelectValue placeholder={modelsLoading ? t('common.loading') : t('chat.selectModel')} />
               </SelectTrigger>
               <SelectContent>
                 {models.map((model) => (
@@ -530,7 +532,7 @@ export function ChatPage() {
                       />
                       {getModelLabel(model)}
                       {model.isVision && (
-                        <span className="text-xs text-blue-500" title="支持图片">📷</span>
+                        <span className="text-xs text-blue-500" title={t('chat.supportsImage')}>📷</span>
                       )}
                     </span>
                   </SelectItem>
@@ -538,7 +540,7 @@ export function ChatPage() {
               </SelectContent>
             </Select>
 
-            <Button variant="ghost" size="icon" onClick={handleNewChat} title="新建对话" className="md:hidden">
+            <Button variant="ghost" size="icon" onClick={handleNewChat} title={t('chat.newChat')} className="md:hidden">
               <Plus className="w-5 h-5" />
             </Button>
 
@@ -548,8 +550,8 @@ export function ChatPage() {
                 size="icon"
                 onClick={async () => {
                   const confirmed = await alertDialog.confirm({
-                    title: '清空对话',
-                    description: '确定要清空当前对话吗？',
+                    title: t('chat.clearChat'),
+                    description: t('chat.clearChatConfirm'),
                     variant: 'destructive',
                   });
                   if (confirmed) {
@@ -557,7 +559,7 @@ export function ChatPage() {
                     setCurrentResponse('');
                   }
                 }}
-                title="清空对话"
+                title={t('chat.clearChat')}
               >
                 <Trash2 className="w-5 h-5" />
               </Button>
@@ -569,7 +571,7 @@ export function ChatPage() {
         {modelLoading && (
           <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-sm text-yellow-600 dark:text-yellow-400">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>正在加载模型 {selectedModelInfo?.name ?? selectedModel}，请稍候...</span>
+            <span>{t('chat.loadingModel', { model: selectedModelInfo?.name ?? selectedModel })}</span>
           </div>
         )}
 
@@ -578,11 +580,11 @@ export function ChatPage() {
           {messages.length === 0 && !currentResponse ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <MessageSquare className="w-16 h-16 mb-4 opacity-50" />
-              <p className="text-lg mb-2">开始对话</p>
-              <p className="text-sm">选择一个模型，然后输入消息开始聊天</p>
+              <p className="text-lg mb-2">{t('chat.startConversation')}</p>
+              <p className="text-sm">{t('chat.startConversationHint')}</p>
               {selectedModelInfo && !selectedModelInfo.isLoaded && (
                 <p className="text-xs mt-2 text-yellow-500">
-                  模型未加载，发送消息时将自动加载
+                  {t('chat.modelAutoLoad')}
                 </p>
               )}
             </div>
@@ -617,10 +619,10 @@ export function ChatPage() {
           supportsVision={selectedModelInfo?.isVision ?? false}
           placeholder={
             !selectedModel
-              ? '请先选择一个模型'
+              ? t('chat.placeholderSelectModel')
               : modelLoading
-                ? '模型加载中...'
-                : '输入消息... (按 Enter 发送)'
+                ? t('chat.placeholderLoading')
+                : t('chat.placeholderInput')
           }
         />
       </div>

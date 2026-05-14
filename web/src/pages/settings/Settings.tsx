@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Settings as SettingsIcon,
   Zap,
@@ -24,35 +25,36 @@ type SettingsTab = 'general' | 'paths' | 'benchmark' | 'mcp' | 'about';
 interface SettingsMenuItem {
   id: SettingsTab;
   icon: typeof SettingsIcon;
-  label: string;
+  labelKey: string;
 }
 
 const settingsMenuItems: SettingsMenuItem[] = [
-  { id: 'general', icon: SettingsIcon, label: '通用设置' },
-  { id: 'paths', icon: FolderOpen, label: '路径配置' },
-  { id: 'benchmark', icon: Zap, label: '性能压测' },
-  { id: 'mcp', icon: Toolbox, label: 'MCP 管理' },
-  { id: 'about', icon: Info, label: '关于' },
+  { id: 'general', icon: SettingsIcon, labelKey: 'settings.menu.general' },
+  { id: 'paths', icon: FolderOpen, labelKey: 'settings.menu.paths' },
+  { id: 'benchmark', icon: Zap, labelKey: 'settings.menu.benchmark' },
+  { id: 'mcp', icon: Toolbox, labelKey: 'settings.menu.mcp' },
+  { id: 'about', icon: Info, labelKey: 'settings.menu.about' },
 ];
 
 /**
  * Settings page
  */
 export function SettingsPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   return (
     <div className="h-full text-foreground">
       {/* Header */}
       <div className="border-b px-5 py-3">
-        <h1 className="text-xl font-semibold">设置</h1>
+        <h1 className="text-xl font-semibold">{t('settings.title')}</h1>
       </div>
 
       {/* Settings content */}
       <div className="flex h-[calc(100%-53px)]">
         {/* Sidebar menu */}
         <div className="w-48 border-r bg-background p-3">
-          <nav className="space-y-1" role="tablist" aria-label="设置菜单">
+          <nav className="space-y-1" role="tablist" aria-label={t('settings.menu.ariaLabel')}>
             {settingsMenuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -72,7 +74,7 @@ export function SettingsPage() {
                   )}
                 >
                   <Icon size={16} />
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey)}</span>
                 </button>
               );
             })}
@@ -96,6 +98,7 @@ export function SettingsPage() {
  * General settings panel
  */
 function GeneralSettingsPanel() {
+  const { t } = useTranslation();
   const [ollamaEnabled, setOllamaEnabled] = useState(false);
   const [ollamaPort, setOllamaPort] = useState(11434);
   const [lmstudioEnabled, setLmstudioEnabled] = useState(false);
@@ -122,7 +125,7 @@ function GeneralSettingsPanel() {
         }
       } catch (error) {
         console.error('加载兼容性配置失败:', error);
-        toast.error('加载失败', '无法加载兼容性配置');
+        toast.error(t('settings.loadFailed'), t('settings.loadFailedDesc'));
       } finally {
         setIsLoading(false);
       }
@@ -157,10 +160,10 @@ function GeneralSettingsPanel() {
           setHasChanges(false);
         } else {
           setSaveStatus('error');
-          const errorMsg = response.error || '未知错误';
+          const errorMsg = response.error || t('common.unknownError');
           const serviceName = response.service === 'ollama' ? 'Ollama API' : 'LM Studio API';
 
-          toast.error(`${serviceName} 启动失败`, errorMsg);
+          toast.error(t('settings.serviceFailed', { service: serviceName }), errorMsg);
 
           if (response.autoDisabled && response.data) {
             if (response.service === 'ollama') {
@@ -177,7 +180,7 @@ function GeneralSettingsPanel() {
       } catch (error) {
         console.error('保存兼容性配置失败:', error);
         setSaveStatus('error');
-        toast.error('保存失败', '无法保存兼容性配置，请检查网络连接');
+        toast.error(t('settings.saveFailed'), t('settings.saveFailedDesc'));
 
         successTimeoutRef.current = setTimeout(() => {
           setSaveStatus('idle');
@@ -215,8 +218,8 @@ function GeneralSettingsPanel() {
   const handleConnectionFailed = useCallback(async (type: 'ollama' | 'lmstudio', port: number) => {
     const serviceName = type === 'ollama' ? 'Ollama API' : 'LM Studio API';
     toast.error(
-      `${serviceName} 连接失败`,
-      `端口 ${port} 无响应，服务将自动禁用`
+      t('settings.connectionFailed', { service: serviceName }),
+      t('settings.connectionFailedDesc', { port })
     );
 
     // Prevent auto-save from triggering during disable
@@ -243,13 +246,13 @@ function GeneralSettingsPanel() {
           setLmstudioEnabled(false);
         }
         setHasChanges(false);
-        toast.success(`${serviceName} 已禁用`, '配置已自动还原');
+        toast.success(t('settings.serviceDisabled', { service: serviceName }), t('settings.serviceDisabledDesc'));
       } else {
-        toast.error(`${serviceName} 禁用失败`, response.error || '未知错误');
+        toast.error(t('settings.disableFailed', { service: serviceName }), response.error || t('common.unknownError'));
       }
     } catch (error) {
       console.error('自动禁用服务失败:', error);
-      toast.error('自动禁用失败', '请手动禁用服务');
+      toast.error(t('settings.autoDisableFailed'), t('settings.autoDisableFailedDesc'));
     } finally {
       // Delay clearing flag to ensure state updates complete
       setTimeout(() => {
@@ -263,7 +266,7 @@ function GeneralSettingsPanel() {
       <div className="flex items-center justify-center py-12 text-foreground">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-          <p className="text-sm text-muted-foreground mt-3">加载配置中...</p>
+          <p className="text-sm text-muted-foreground mt-3">{t('settings.loadingConfig')}</p>
         </div>
       </div>
     );
@@ -272,9 +275,9 @@ function GeneralSettingsPanel() {
   return (
     <div className="max-w-2xl space-y-4 text-foreground">
       <div>
-        <h2 className="text-lg font-semibold ">API 兼容性设置</h2>
+        <h2 className="text-lg font-semibold ">{t('settings.apiCompatibility')}</h2>
         <p className="text-xs text-muted-foreground">
-          配置 Ollama 和 LM Studio API 兼容层端口
+          {t('settings.apiCompatibilityDesc')}
         </p>
       </div>
 
@@ -301,7 +304,7 @@ function GeneralSettingsPanel() {
       {/* Auto-save notice */}
       <div className="flex items-center justify-center py-2">
         <p className="text-xs text-muted-foreground">
-          配置将自动保存
+          {t('settings.autoSaveNotice')}
         </p>
       </div>
     </div>
@@ -312,13 +315,14 @@ function GeneralSettingsPanel() {
  * Benchmark panel
  */
 function BenchmarkPanel() {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full items-center justify-center text-foreground">
       <div className="text-center">
         <Zap size={48} className="mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-lg font-semibold">性能压测</h3>
+        <h3 className="text-lg font-semibold">{t('settings.benchmark.title')}</h3>
         <p className="text-sm text-muted-foreground mt-2">
-          性能压测功能开发中...
+          {t('settings.benchmark.inDevelopment')}
         </p>
       </div>
     </div>
@@ -329,13 +333,14 @@ function BenchmarkPanel() {
  * MCP management panel
  */
 function McpPanel() {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full items-center justify-center text-foreground">
       <div className="text-center">
         <Toolbox size={48} className="mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-lg font-semibold">MCP 管理</h3>
+        <h3 className="text-lg font-semibold">{t('settings.mcp.title')}</h3>
         <p className="text-sm text-muted-foreground mt-2">
-          MCP (Model Context Protocol) 管理功能开发中...
+          {t('settings.mcp.inDevelopment')}
         </p>
       </div>
     </div>
@@ -346,10 +351,11 @@ function McpPanel() {
  * About panel
  */
 function AboutPanel() {
+  const { t } = useTranslation();
   const { data: serverInfo, isLoading } = useServerInfo();
 
   const formatBuildTime = (buildTime: string | undefined) => {
-    if (!buildTime || buildTime === 'unknown') return '未知';
+    if (!buildTime || buildTime === 'unknown') return t('settings.about.unknown');
     try {
       const date = new Date(buildTime);
       return date.toISOString().split('T')[0];
@@ -359,16 +365,16 @@ function AboutPanel() {
   };
 
   const formatGitCommit = (commit: string | undefined) => {
-    if (!commit || commit === 'unknown') return '未知';
+    if (!commit || commit === 'unknown') return t('settings.about.unknown');
     return commit.length > 8 ? commit.substring(0, 8) : commit;
   };
 
   const formatRole = (role: string | undefined) => {
-    if (!role) return '未知';
+    if (!role) return t('settings.about.unknown');
     const roleMap: Record<string, string> = {
-      master: '主节点',
-      client: '工作节点',
-      hybrid: '混合节点',
+      master: t('settings.about.roleMaster'),
+      client: t('settings.about.roleClient'),
+      hybrid: t('settings.about.roleHybrid'),
     };
     return roleMap[role] || role;
   };
@@ -380,7 +386,7 @@ function AboutPanel() {
           🐏
         </div>
         <h2 className="text-xl font-bold">Shepherd</h2>
-        <p className="text-sm text-muted-foreground">高性能轻量级 llama.cpp 模型管理系统</p>
+        <p className="text-sm text-muted-foreground">{t('settings.about.description')}</p>
       </div>
 
       <div className="rounded-lg border bg-card p-4 space-y-2">
@@ -391,39 +397,39 @@ function AboutPanel() {
         ) : (
           <>
             <div className="flex items-center justify-between py-1.5 border-b">
-              <span className="text-sm text-muted-foreground">版本</span>
+              <span className="text-sm text-muted-foreground">{t('settings.about.version')}</span>
               <span className="font-mono text-sm font-medium">
-                {serverInfo?.version || '未知'}
+                {serverInfo?.version || t('settings.about.unknown')}
               </span>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">
-              <span className="text-sm text-muted-foreground">构建时间</span>
+              <span className="text-sm text-muted-foreground">{t('settings.about.buildTime')}</span>
               <span className="font-mono text-xs">
                 {formatBuildTime(serverInfo?.buildTime)}
               </span>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">
-              <span className="text-sm text-muted-foreground">Git Commit</span>
+              <span className="text-sm text-muted-foreground">{t('settings.about.gitCommit')}</span>
               <span className="font-mono text-xs">
                 {formatGitCommit(serverInfo?.gitCommit)}
               </span>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">
-              <span className="text-sm text-muted-foreground">运行模式</span>
+              <span className="text-sm text-muted-foreground">{t('settings.about.runMode')}</span>
               <span className="font-mono text-xs">
                 {formatRole(serverInfo?.role)}
               </span>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">
-              <span className="text-sm text-muted-foreground">Go 版本</span>
+              <span className="text-sm text-muted-foreground">{t('settings.about.goVersion')}</span>
               <span className="font-mono text-xs">1.25+</span>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">
-              <span className="text-sm text-muted-foreground">React 版本</span>
+              <span className="text-sm text-muted-foreground">{t('settings.about.reactVersion')}</span>
               <span className="font-mono text-xs">19.x</span>
             </div>
             <div className="flex items-center justify-between py-1.5">
-              <span className="text-sm text-muted-foreground">许可证</span>
+              <span className="text-sm text-muted-foreground">{t('settings.about.license')}</span>
               <span className="text-xs">Apache 2.0</span>
             </div>
           </>

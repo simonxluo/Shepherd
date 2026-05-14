@@ -26,7 +26,13 @@ func NewHandler(configManager *config.Manager, storageMgr *storage.Manager) *Han
 	}
 }
 
-// GetStorageConfig returns current storage configuration
+// GetStorageConfig returns current storage configuration.
+// @Summary      Get storage config
+// @Description  Returns the current storage configuration and statistics
+// @Tags         Storage
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/config/storage [get]
 func (h *Handler) GetStorageConfig(c *gin.Context) {
 	cfg := h.configManager.Get()
 	handler.Success(c, gin.H{
@@ -35,7 +41,17 @@ func (h *Handler) GetStorageConfig(c *gin.Context) {
 	})
 }
 
-// UpdateStorageConfig updates storage configuration
+// UpdateStorageConfig updates storage configuration.
+// @Summary      Update storage config
+// @Description  Updates the storage configuration (requires server restart to take effect)
+// @Tags         Storage
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Storage configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/storage [put]
 func (h *Handler) UpdateStorageConfig(c *gin.Context) {
 	var req storage.StorageConfig
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -72,7 +88,13 @@ func (h *Handler) UpdateStorageConfig(c *gin.Context) {
 	})
 }
 
-// GetStats returns storage statistics
+// GetStats returns storage statistics.
+// @Summary      Get storage stats
+// @Description  Returns storage statistics including type-specific metrics
+// @Tags         Storage
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/config/storage/stats [get]
 func (h *Handler) GetStats(c *gin.Context) {
 	handler.Success(c, h.getStats())
 }
@@ -108,7 +130,16 @@ func (h *Handler) getStats() map[string]interface{} {
 	}
 }
 
-// GetConversations returns all conversations (with pagination)
+// GetConversations returns all conversations with pagination.
+// @Summary      List conversations
+// @Description  Returns all conversations with pagination support
+// @Tags         Conversations
+// @Produce      json
+// @Param        limit query int false "Maximum number of results (default 100)"
+// @Param        offset query int false "Offset for pagination (default 0)"
+// @Success      200 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/conversations [get]
 func (h *Handler) GetConversations(c *gin.Context) {
 	if h.storageMgr == nil {
 		handler.Error(c, types.ErrInternalError, "Storage not initialized")
@@ -146,7 +177,16 @@ func (h *Handler) GetConversations(c *gin.Context) {
 	})
 }
 
-// GetConversation retrieves a specific conversation
+// GetConversation retrieves a specific conversation with its messages.
+// @Summary      Get conversation
+// @Description  Returns a specific conversation with all its messages
+// @Tags         Conversations
+// @Produce      json
+// @Param        id path string true "Conversation ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/conversations/{id} [get]
 func (h *Handler) GetConversation(c *gin.Context) {
 	if h.storageMgr == nil {
 		handler.Error(c, types.ErrInternalError, "Storage not initialized")
@@ -183,7 +223,16 @@ func (h *Handler) GetConversation(c *gin.Context) {
 	})
 }
 
-// DeleteConversation deletes a conversation and its messages
+// DeleteConversation deletes a conversation and its messages.
+// @Summary      Delete conversation
+// @Description  Deletes a conversation and all associated messages
+// @Tags         Conversations
+// @Produce      json
+// @Param        id path string true "Conversation ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/conversations/{id} [delete]
 func (h *Handler) DeleteConversation(c *gin.Context) {
 	if h.storageMgr == nil {
 		handler.Error(c, types.ErrInternalError, "Storage not initialized")
@@ -230,8 +279,17 @@ type CreateMessageRequest struct {
 	Metadata   map[string]interface{} `json:"metadata"`
 }
 
-// CreateConversation creates a new conversation
-// POST /api/conversations
+// CreateConversation creates a new conversation.
+// @Summary      Create conversation
+// @Description  Creates a new conversation with a model, title, and optional system prompt
+// @Tags         Conversations
+// @Accept       json
+// @Produce      json
+// @Param        request body CreateConversationRequest true "Conversation creation request"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/conversations [post]
 func (h *Handler) CreateConversation(c *gin.Context) {
 	if h.storageMgr == nil {
 		handler.Error(c, types.ErrInternalError, "Storage not initialized")
@@ -259,8 +317,19 @@ func (h *Handler) CreateConversation(c *gin.Context) {
 	handler.Success(c, gin.H{"conversation": conv})
 }
 
-// UpdateConversation updates an existing conversation
-// PUT /api/conversations/:id
+// UpdateConversation updates an existing conversation.
+// @Summary      Update conversation
+// @Description  Updates the title or system prompt of an existing conversation
+// @Tags         Conversations
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Conversation ID"
+// @Param        request body UpdateConversationRequest true "Conversation update request"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/conversations/{id} [put]
 func (h *Handler) UpdateConversation(c *gin.Context) {
 	if h.storageMgr == nil {
 		handler.Error(c, types.ErrInternalError, "Storage not initialized")
@@ -306,8 +375,18 @@ func (h *Handler) UpdateConversation(c *gin.Context) {
 	handler.Success(c, gin.H{"conversation": conv})
 }
 
-// CreateMessage adds a message to a conversation
-// POST /api/conversations/:id/messages
+// CreateMessage adds a message to a conversation.
+// @Summary      Create message
+// @Description  Adds a new message to a conversation
+// @Tags         Conversations
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Conversation ID"
+// @Param        request body CreateMessageRequest true "Message creation request"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/conversations/{id}/messages [post]
 func (h *Handler) CreateMessage(c *gin.Context) {
 	if h.storageMgr == nil {
 		handler.Error(c, types.ErrInternalError, "Storage not initialized")

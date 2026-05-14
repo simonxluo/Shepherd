@@ -86,6 +86,7 @@ features:
   chat: true
   settings: true
   dashboard: true
+  multimodal: true
 ```
 
 注意：`backend.urls` 是字符串数组，不是对象数组。

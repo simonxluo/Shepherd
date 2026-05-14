@@ -17,7 +17,8 @@
     "unsavedChanges": "Unsaved changes",
     "allChangesSaved": "All changes saved",
     "editProfile": "Edit Profile",
-    "more": "More"
+    "more": "More",
+    "unknownError": "Unknown error"
   },
   "sidebar": {
     "dashboard": "Dashboard",
@@ -50,7 +51,22 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome to Shepherd",
-    "overview": "System Overview"
+    "overview": "System Overview",
+    "subtitle": "Shepherd model management system overview",
+    "stats": {
+      "totalModels": "Total Models",
+      "totalModelsDesc": "Scanned models",
+      "loaded": "Loaded",
+      "loadedDesc": "Running models",
+      "downloads": "Downloads",
+      "downloadsDesc": "Active download tasks",
+      "clusterNodes": "Cluster Nodes",
+      "clusterNodesDesc": "Online clients"
+    },
+    "recentModels": "Recent Models",
+    "recentModelsDesc": "Recently scanned models",
+    "shards": "shards",
+    "noModels": "No model data available"
   },
   "models": {
     "title": "Model Management",
@@ -64,21 +80,133 @@
     "categoryChat": "Chat",
     "categoryAudio": "Audio",
     "categoryImage": "Image",
-    "categoryEmbedding": "Embedding"
+    "categoryEmbedding": "Embedding",
+    "summary": "{{total}} models, {{loaded}} loaded",
+    "searchPlaceholder": "Search model name, architecture...",
+    "noResults": "No models found",
+    "noResultsHint": "Try adjusting search criteria or scan model directories",
+    "status": {
+      "all": "All",
+      "running": "Running",
+      "stopped": "Stopped",
+      "loading": "Loading",
+      "error": "Error"
+    },
+    "category": {
+      "all": "All",
+      "chat": "Chat",
+      "tts": "TTS",
+      "asr": "ASR",
+      "image": "Image",
+      "music": "Music",
+      "embedding": "Embedding",
+      "rerank": "Rerank"
+    },
+    "actions": {
+      "scan": "Scan Models",
+      "load": "Load",
+      "unload": "Unload Model",
+      "favouritesOnly": "Favourites Only",
+      "benchmark": "Benchmark",
+      "viewBenchmarkResults": "View Benchmark Results"
+    },
+    "toast": {
+      "loadingModel": "Model is loading",
+      "loadingModelDesc": "{{model}} load request submitted, please check status shortly",
+      "loadFailed": "Model load failed",
+      "unloadSuccess": "Model unloaded",
+      "unloadSuccessDesc": "{{model}} has been stopped",
+      "unloadFailed": "Model unload failed",
+      "favouriteAdded": "Added to favourites",
+      "favouriteRemoved": "Removed from favourites",
+      "operationFailed": "Operation failed",
+      "scanSuccess": "Model scan successful",
+      "scanCompleteDesc": "Scan complete, found {{count}} models",
+      "scanFailed": "Model scan failed",
+      "aliasUpdateSuccess": "Alias updated",
+      "aliasUpdateSuccessDesc": "Model alias set to {{alias}}",
+      "aliasEmpty": "(empty)",
+      "aliasUpdateFailed": "Alias update failed",
+      "modelNotFound": "Model not found",
+      "modelNotFoundDesc": "Unable to get model info",
+      "benchmarkCreated": "Benchmark task created",
+      "benchmarkRunning": "Running...",
+      "benchmarkFailed": "Failed to create benchmark task",
+      "estimateFailed": "Estimation failed"
+    }
   },
   "downloads": {
     "title": "Download Management",
     "active": "Active",
     "completed": "Completed",
     "failed": "Failed",
-    "createDownload": "Create Download"
+    "createDownload": "Create Download",
+    "subtitle": "Manage local downloads or search models from HuggingFace",
+    "clearCompleted": "Clear Completed",
+    "clearCompletedConfirm": "Are you sure you want to clear all completed downloads?",
+    "newDownload": "New Download",
+    "empty": "No download tasks",
+    "emptyHint": "Create a new task to start downloading models",
+    "searchPlaceholder": "Search repo ID or filename...",
+    "tabs": {
+      "local": "Local Downloads",
+      "online": "Online Search"
+    },
+    "stats": {
+      "total": "Total Tasks",
+      "active": "Active",
+      "completed": "Completed",
+      "progress": "Total Progress"
+    },
+    "status": {
+      "downloading": "Downloading",
+      "paused": "Paused",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "filter": {
+      "allStates": "All States",
+      "allSources": "All Sources"
+    }
   },
   "cluster": {
     "title": "Cluster Management",
     "nodes": "Nodes",
     "status": "Status",
     "online": "Online",
-    "offline": "Offline"
+    "offline": "Offline",
+    "unavailable": "Cluster management unavailable",
+    "unavailableDesc": "Cluster management is only available in Master or Hybrid mode.",
+    "unavailableHint": "Please set node.role to master or hybrid in the configuration file.",
+    "scanNetwork": "Scan Network",
+    "scanNetworkConfirm": "Are you sure you want to scan for clients on the network?",
+    "summary": "{{total}} clients, {{online}} online",
+    "searchPlaceholder": "Search client name or address...",
+    "noClients": "No clients found",
+    "noClientsHint": "Click \"Scan Network\" to discover clients on the LAN",
+    "noTasks": "No tasks",
+    "assignedTo": "Assigned to",
+    "tabs": {
+      "clients": "Clients",
+      "tasks": "Tasks"
+    },
+    "stats": {
+      "totalClients": "Total Clients",
+      "online": "Online",
+      "busy": "Busy",
+      "runningTasks": "Running Tasks"
+    },
+    "status": {
+      "online": "Online",
+      "offline": "Offline",
+      "busy": "Busy",
+      "error": "Error",
+      "degraded": "Degraded",
+      "disabled": "Disabled"
+    },
+    "filter": {
+      "allStatuses": "All Statuses"
+    }
   },
   "logs": {
     "title": "Logs",
@@ -99,7 +227,45 @@
     "title": "Chat",
     "placeholder": "Type a message...",
     "send": "Send",
-    "clearHistory": "Clear History"
+    "clearHistory": "Clear History",
+    "aiChat": "AI Chat",
+    "history": "Chat History",
+    "newChat": "New Chat",
+    "newConversation": "New Conversation",
+    "newChatConfirm": "Start a new conversation? The current one will be preserved.",
+    "deleteConversation": "Delete Conversation",
+    "deleteConversationConfirm": "Are you sure you want to delete this conversation? This action cannot be undone.",
+    "deleted": "Deleted",
+    "deletedDesc": "Conversation deleted",
+    "clearChat": "Clear Chat",
+    "clearChatConfirm": "Are you sure you want to clear the current conversation?",
+    "searchConversation": "Search conversations...",
+    "noHistory": "No conversation history",
+    "selectModel": "Select Model",
+    "modelNotLoaded": "not loaded",
+    "supportsImage": "Supports images",
+    "loadingModel": "Loading model {{model}}, please wait...",
+    "startConversation": "Start a Conversation",
+    "startConversationHint": "Select a model and type a message to start chatting",
+    "modelAutoLoad": "Model not loaded, will auto-load when you send a message",
+    "placeholderSelectModel": "Please select a model first",
+    "placeholderLoading": "Model loading...",
+    "placeholderInput": "Type a message... (Press Enter to send)",
+    "timeGroups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "earlier": "Earlier"
+    },
+    "error": {
+      "chatFailed": "Chat failed",
+      "createFailed": "Failed to create conversation",
+      "createFailedDesc": "Unable to auto-create conversation",
+      "selectModel": "Please select a model",
+      "selectModelDesc": "Please select a model from the dropdown",
+      "selectModelForNew": "Please select a model before creating a new chat",
+      "loadFailed": "Load failed",
+      "loadFailedDesc": "Unable to load conversation history"
+    }
   },
   "multimodal": {
     "title": "Multimodal Tools",
@@ -155,6 +321,67 @@
     "emailNotificationsDesc": "Receive important notifications via email (coming soon)",
     "autoSave": "Auto Save",
     "autoSaveDescription": "Automatically save conversations and settings",
-    "data": "Data Management"
+    "data": "Data Management",
+    "menu": {
+      "general": "General",
+      "paths": "Paths",
+      "benchmark": "Benchmark",
+      "mcp": "MCP Management",
+      "about": "About",
+      "ariaLabel": "Settings menu"
+    },
+    "loadFailed": "Load Failed",
+    "loadFailedDesc": "Unable to load compatibility config",
+    "saveFailed": "Save Failed",
+    "saveFailedDesc": "Unable to save compatibility config, please check network connection",
+    "serviceFailed": "{{service}} failed to start",
+    "connectionFailed": "{{service}} connection failed",
+    "connectionFailedDesc": "Port {{port}} not responding, service will be auto-disabled",
+    "serviceDisabled": "{{service}} disabled",
+    "serviceDisabledDesc": "Config has been auto-reverted",
+    "disableFailed": "{{service}} disable failed",
+    "autoDisableFailed": "Auto-disable failed",
+    "autoDisableFailedDesc": "Please manually disable the service",
+    "loadingConfig": "Loading config...",
+    "apiCompatibility": "API Compatibility Settings",
+    "apiCompatibilityDesc": "Configure Ollama and LM Studio API compatibility layer ports",
+    "autoSaveNotice": "Config will auto-save",
+    "benchmark": {
+      "title": "Benchmark",
+      "inDevelopment": "Benchmark feature is under development..."
+    },
+    "mcp": {
+      "title": "MCP Management",
+      "inDevelopment": "MCP (Model Context Protocol) management feature is under development..."
+    },
+    "about": {
+      "description": "High-performance lightweight llama.cpp model management system",
+      "unknown": "Unknown",
+      "version": "Version",
+      "buildTime": "Build Time",
+      "gitCommit": "Git Commit",
+      "runMode": "Run Mode",
+      "goVersion": "Go Version",
+      "reactVersion": "React Version",
+      "license": "License",
+      "roleMaster": "Master Node",
+      "roleClient": "Worker Node",
+      "roleHybrid": "Hybrid Node"
+    }
+  },
+  "error": {
+    "pageError": "An error occurred",
+    "unknownError": "Unknown error, please try refreshing the page.",
+    "retry": "Retry",
+    "operationFailed": "Operation failed",
+    "invalidRequest": "Invalid request parameters",
+    "permissionDenied": "Permission denied",
+    "notAuthenticated": "Not authenticated",
+    "notFound": "Resource not found",
+    "conflict": "Operation conflict",
+    "resourceExhausted": "Resource exhausted",
+    "timeout": "Request timeout",
+    "serverError": "Server error",
+    "serverErrorDesc": "Service temporarily unavailable, please try again later"
   }
 }

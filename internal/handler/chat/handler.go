@@ -35,7 +35,12 @@ type ChatModelInfo struct {
 }
 
 // HandleChatModels returns all models with their loaded status for the chat UI.
-// GET /api/chat/models
+// @Summary      List chat models
+// @Description  Returns all models with their loaded status and capabilities for the chat interface
+// @Tags         Chat
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/langchain/chat/models [get]
 func (h *Handler) HandleChatModels(c *gin.Context) {
 	models := h.ModelMgr.ListModels()
 	statuses := h.ModelMgr.ListStatus()
@@ -71,10 +76,16 @@ func (h *Handler) HandleChatModels(c *gin.Context) {
 	})
 }
 
-// HandleChatCompletions proxies an OpenAI-compatible streaming chat request to the backend.
-// This uses the BaseHandler's StreamWithLazyLoad which includes inflight tracking,
-// concurrency control, and handles the "model still loading" SSE flow.
-// POST /api/chat/completions
+// HandleChatCompletions proxies a chat completion request to the loaded model backend.
+// @Summary      Chat completions
+// @Description  Proxies an OpenAI-compatible streaming chat request to the loaded model backend with lazy-load support
+// @Tags         Chat
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Chat completion request with model and messages"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Router       /api/langchain/chat/completions [post]
 func (h *Handler) HandleChatCompletions(c *gin.Context) {
 	var req struct {
 		Model       string      `json:"model"`

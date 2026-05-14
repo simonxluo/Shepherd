@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, Radar, Server, CheckCircle2, XCircle, Clock, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import { useAlertDialog } from '@/providers/AlertDialog';
  */
 export function ClusterPage() {
   // All hooks must be called before conditional returns
+  const { t } = useTranslation();
   const alertDialog = useAlertDialog();
   const { data: serverConfig } = useServerConfig();
   const { data: clients, isLoading: clientsLoading } = useClients();
@@ -44,12 +46,12 @@ export function ClusterPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-8rem)]">
         <AlertCircle className="w-16 h-16 text-yellow-500 mb-4" />
-        <h2 className="text-2xl font-bold text-foreground mb-2">集群管理功能不可用</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">{t('cluster.unavailable')}</h2>
         <p className="text-muted-foreground text-center max-w-md">
-          集群管理功能仅在 <span className="font-mono bg-muted px-2 py-0.5 rounded">Master</span> 或 <span className="font-mono bg-muted px-2 py-0.5 rounded">Hybrid</span> 模式下可用。
+          {t('cluster.unavailableDesc')}
         </p>
         <p className="text-sm text-muted-foreground mt-4">
-          请在配置文件中将 node.role 设置为 <code className="font-mono bg-muted px-2 py-0.5 rounded">master</code> 或 <code className="font-mono bg-muted px-2 py-0.5 rounded">hybrid</code>。
+          {t('cluster.unavailableHint')}
         </p>
       </div>
     );
@@ -57,8 +59,8 @@ export function ClusterPage() {
 
   const handleScan = async () => {
     const confirmed = await alertDialog.confirm({
-      title: '扫描网络',
-      description: '确定要扫描网络中的客户端吗？',
+      title: t('cluster.scanNetwork'),
+      description: t('cluster.scanNetworkConfirm'),
     });
     if (confirmed) {
       networkScan.mutate({});
@@ -70,9 +72,9 @@ export function ClusterPage() {
       {/* Title and actions */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">集群管理</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('cluster.title')}</h1>
           <p className="text-muted-foreground">
-            {overview?.totalClients || 0} 个客户端，{overview?.onlineClients || 0} 个在线
+            {t('cluster.summary', { total: overview?.totalClients || 0, online: overview?.onlineClients || 0 })}
           </p>
         </div>
 
@@ -83,7 +85,7 @@ export function ClusterPage() {
           size="sm"
         >
           <Radar className={cn('w-4 h-4', networkScan.isPending && 'animate-spin')} />
-          扫描网络
+          {t('cluster.scanNetwork')}
         </Button>
       </div>
 
@@ -98,7 +100,7 @@ export function ClusterPage() {
               <div className="text-2xl font-bold text-foreground">
                 {overview?.totalClients || 0}
               </div>
-              <div className="text-sm text-muted-foreground">总客户端</div>
+              <div className="text-sm text-muted-foreground">{t('cluster.stats.totalClients')}</div>
             </div>
           </div>
         </div>
@@ -112,7 +114,7 @@ export function ClusterPage() {
               <div className="text-2xl font-bold text-foreground">
                 {overview?.onlineClients || 0}
               </div>
-              <div className="text-sm text-muted-foreground">在线</div>
+              <div className="text-sm text-muted-foreground">{t('cluster.stats.online')}</div>
             </div>
           </div>
         </div>
@@ -126,7 +128,7 @@ export function ClusterPage() {
               <div className="text-2xl font-bold text-foreground">
                 {overview?.busyClients || 0}
               </div>
-              <div className="text-sm text-muted-foreground">忙碌</div>
+              <div className="text-sm text-muted-foreground">{t('cluster.stats.busy')}</div>
             </div>
           </div>
         </div>
@@ -140,7 +142,7 @@ export function ClusterPage() {
               <div className="text-2xl font-bold text-foreground">
                 {overview?.runningTasks || 0}
               </div>
-              <div className="text-sm text-muted-foreground">运行中任务</div>
+              <div className="text-sm text-muted-foreground">{t('cluster.stats.runningTasks')}</div>
             </div>
           </div>
         </div>
@@ -160,7 +162,7 @@ export function ClusterPage() {
                 : 'border-transparent hover:border-transparent'
             )}
           >
-            客户端 ({clients?.length || 0})
+            {t('cluster.tabs.clients')} ({clients?.length || 0})
           </Button>
           <Button
             onClick={() => setActiveTab('tasks')}
@@ -173,7 +175,7 @@ export function ClusterPage() {
                 : 'border-transparent hover:border-transparent'
             )}
           >
-            任务 ({tasks?.length || 0})
+            {t('cluster.tabs.tasks')} ({tasks?.length || 0})
           </Button>
         </nav>
       </div>
@@ -187,7 +189,7 @@ export function ClusterPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索客户端名称或地址..."
+              placeholder={t('cluster.searchPlaceholder')}
               className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-input text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -197,13 +199,13 @@ export function ClusterPage() {
             onValueChange={(v) => setStatusFilter(v as ClientStatus | '')}
           >
             <SelectTrigger className="px-3 py-2 border border-border rounded-lg bg-input text-foreground w-[140px]">
-              <SelectValue placeholder="所有状态" />
+              <SelectValue placeholder={t('cluster.filter.allStatuses')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="online">在线</SelectItem>
-              <SelectItem value="busy">忙碌</SelectItem>
-              <SelectItem value="offline">离线</SelectItem>
-              <SelectItem value="error">错误</SelectItem>
+              <SelectItem value="online">{t('cluster.status.online')}</SelectItem>
+              <SelectItem value="busy">{t('cluster.status.busy')}</SelectItem>
+              <SelectItem value="offline">{t('cluster.status.offline')}</SelectItem>
+              <SelectItem value="error">{t('cluster.status.error')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -219,8 +221,8 @@ export function ClusterPage() {
           ) : filteredClients.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Server className="w-12 h-12 mb-4" />
-              <p className="text-lg mb-2">暂无客户端</p>
-              <p className="text-sm">点击"扫描网络"来发现局域网中的客户端</p>
+              <p className="text-lg mb-2">{t('cluster.noClients')}</p>
+              <p className="text-sm">{t('cluster.noClientsHint')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -242,7 +244,7 @@ export function ClusterPage() {
           ) : !tasks || tasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <Clock className="w-12 h-12 mb-4" />
-              <p className="text-lg">暂无任务</p>
+              <p className="text-lg">{t('cluster.noTasks')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -274,7 +276,7 @@ export function ClusterPage() {
 
                   {task.assignedTo && (
                     <div className="text-sm text-muted-foreground">
-                      分配给: {task.assignedTo}
+                      {t('cluster.assignedTo')}: {task.assignedTo}
                     </div>
                   )}
 

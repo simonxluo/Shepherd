@@ -34,7 +34,7 @@ web/src/
 │   └── settings/          # 系统设置（仅 components/，无 hooks.ts 或 index.ts）
 ├── hooks/                 # 共享 Hooks
 │   ├── useSSEConnection   # SSE 基础连接（指数退避重连）
-│   ├── useSSE             # SSE → React Query 失效
+│   ├── useSSE             # SSE handling logic lives in App.tsx's handleSSEMessage callback
 │   └── useToast           # Toast 通知
 ├── lib/
 │   ├── api/               # API 客户端（单例 ApiClient）
@@ -100,7 +100,6 @@ web/src/
 |---|---|---|
 | `useUIStore` | localStorage | 主题、侧边栏开关、视图模式 |
 | `useUserStore` | localStorage | 用户信息、语言偏好 |
-| `useToastStore` | 内存 | Toast 通知队列 |
 
 ## API 客户端
 
@@ -130,12 +129,14 @@ useSSEConnection (基础) → useSSE (Query 失效)
 ```
 
 - `useSSEConnection`：管理 EventSource 连接，指数退避重连（最大 10 次）
-- `useSSE`：监听 SSE 事件（`/events`），自动失效对应 React Query 缓存
+- `useSSE`：SSE handling logic lives in App.tsx's handleSSEMessage callback
 - 重连时全量刷新所有 Query（`models`、`downloads`、`clients`、`cluster`、`tasks`、`system`、`nodes`）
 
 `useLogStream` 是 feature-specific hook（位于 `features/logs/hooks.ts`），使用 `fetch + ReadableStream` 消费 chunked 文本流（`/logs/stream/text`），不经过 SSE。支持传入节点 URL 查看远程节点日志。
 
-### WebSocket（辅助）
+### WebSocket（已废弃）
+
+> **注意：WebSocket 系统已被移除/废弃。实时通信现在完全通过 SSE 实现。**
 
 - `WebSocketProvider`：管理 WebSocket 生命周期
 - 事件订阅系统：`subscribe(eventType, handler)` → 返回取消函数
@@ -165,6 +166,7 @@ QueryClientProvider
 | `/chat` | 聊天 |
 | `/cluster` | 集群管理 |
 | `/logs` | 日志 |
+| `/multimodal` | 多模态 |
 | `/settings` | 系统设置 |
 
 ## 主题系统

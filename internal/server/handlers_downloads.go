@@ -14,6 +14,13 @@ import (
 	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/infra/modelrepo"
 )
 
+// HandleListDownloads returns all download tasks.
+// @Summary      List downloads
+// @Description  Returns a list of all download tasks with their status and progress
+// @Tags         Downloads
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/downloads [get]
 func (s *Server) HandleListDownloads(c *gin.Context) {
 	tasks := s.downloadMgr.ListTasks()
 
@@ -70,6 +77,17 @@ func mapDownloadTask(t *download.Task) gin.H {
 	return result
 }
 
+// HandleCreateDownload creates a new download task.
+// @Summary      Create download
+// @Description  Creates a new download task from a model repository or direct URL
+// @Tags         Downloads
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Download request with source/repoId or url"
+// @Success      201 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/downloads [post]
 func (s *Server) HandleCreateDownload(c *gin.Context) {
 	// 支持两种请求格式:
 	// 1. 新格式: { source, repoId, fileName, path } - 用于从模型仓库下载
@@ -154,6 +172,16 @@ func (s *Server) HandleCreateDownload(c *gin.Context) {
 	c.JSON(http.StatusCreated, types.NewSuccessResponse(mapDownloadTask(task), requestID))
 }
 
+// HandleGetDownload returns details of a specific download task.
+// @Summary      Get download details
+// @Description  Returns detailed information about a specific download task
+// @Tags         Downloads
+// @Produce      json
+// @Param        id path string true "Download task ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/downloads/{id} [get]
 func (s *Server) HandleGetDownload(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -170,6 +198,16 @@ func (s *Server) HandleGetDownload(c *gin.Context) {
 	api.Success(c, mapDownloadTask(task))
 }
 
+// HandlePauseDownload pauses an active download task.
+// @Summary      Pause download
+// @Description  Pauses an active download task
+// @Tags         Downloads
+// @Produce      json
+// @Param        id path string true "Download task ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/downloads/{id}/pause [post]
 func (s *Server) HandlePauseDownload(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -185,6 +223,16 @@ func (s *Server) HandlePauseDownload(c *gin.Context) {
 	api.SuccessWithMessage(c, "下载已暂停")
 }
 
+// HandleResumeDownload resumes a paused download task.
+// @Summary      Resume download
+// @Description  Resumes a paused download task
+// @Tags         Downloads
+// @Produce      json
+// @Param        id path string true "Download task ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/downloads/{id}/resume [post]
 func (s *Server) HandleResumeDownload(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -200,6 +248,16 @@ func (s *Server) HandleResumeDownload(c *gin.Context) {
 	api.SuccessWithMessage(c, "下载已恢复")
 }
 
+// HandleDeleteDownload deletes a download task.
+// @Summary      Delete download
+// @Description  Deletes a download task and optionally its downloaded file
+// @Tags         Downloads
+// @Produce      json
+// @Param        id path string true "Download task ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/downloads/{id} [delete]
 func (s *Server) HandleDeleteDownload(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -215,7 +273,17 @@ func (s *Server) HandleDeleteDownload(c *gin.Context) {
 	api.SuccessWithMessage(c, "下载任务已删除")
 }
 
-// handleListModelFiles handles requests to list model files from a repository
+// HandleListModelFiles lists model files from a repository.
+// @Summary      List model files from repository
+// @Description  Lists GGUF model files available in a repository
+// @Tags         Repository
+// @Produce      json
+// @Param        source query string true "Repository source (e.g. huggingface)"
+// @Param        repoId query string true "Repository ID (e.g. user/model-name)"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/repo/files [get]
 func (s *Server) HandleListModelFiles(c *gin.Context) {
 	// 使用查询参数而不是路径参数，以支持 repoId 中包含斜杠
 	source := c.Query("source")
@@ -241,7 +309,18 @@ func (s *Server) HandleListModelFiles(c *gin.Context) {
 	api.Success(c, files)
 }
 
-// handleSearchModels handles requests to search for models on HuggingFace
+// HandleSearchModels searches for models on HuggingFace.
+// @Summary      Search models in repository
+// @Description  Searches for models on HuggingFace with optional format filtering
+// @Tags         Repository
+// @Produce      json
+// @Param        q query string true "Search query"
+// @Param        limit query int false "Maximum number of results (default 20, max 100)"
+// @Param        format query string false "Filter by format (e.g. gguf, safetensors, onnx)"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/repo/search [get]
 func (s *Server) HandleSearchModels(c *gin.Context) {
 	query := c.Query("q")
 	if query == "" {
@@ -269,7 +348,13 @@ func (s *Server) HandleSearchModels(c *gin.Context) {
 	api.Success(c, result)
 }
 
-// handleGetModelRepoConfig returns the current model repository configuration
+// HandleGetModelRepoConfig returns the current model repository configuration.
+// @Summary      Get model repository config
+// @Description  Returns the current model repository endpoint, masked token, and timeout settings
+// @Tags         Repository
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/repo/config [get]
 func (s *Server) HandleGetModelRepoConfig(c *gin.Context) {
 	cfg := s.config.ConfigMgr.Get()
 	api.Success(c, gin.H{
@@ -290,7 +375,17 @@ func maskToken(token string) string {
 	return token[:4] + "****" + token[len(token)-4:]
 }
 
-// handleUpdateModelRepoConfig updates the model repository configuration
+// HandleUpdateModelRepoConfig updates the model repository configuration.
+// @Summary      Update model repository config
+// @Description  Updates the model repository endpoint, token, and timeout settings
+// @Tags         Repository
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Repository configuration update"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/repo/config [put]
 func (s *Server) HandleUpdateModelRepoConfig(c *gin.Context) {
 	var req struct {
 		Endpoint string `json:"endpoint"`
@@ -340,7 +435,13 @@ func (s *Server) HandleUpdateModelRepoConfig(c *gin.Context) {
 	})
 }
 
-// handleGetAvailableEndpoints returns available HuggingFace endpoints
+// HandleGetAvailableEndpoints returns available HuggingFace endpoints.
+// @Summary      Get available repository endpoints
+// @Description  Returns available HuggingFace mirror endpoints for model downloading
+// @Tags         Repository
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/repo/endpoints [get]
 func (s *Server) HandleGetAvailableEndpoints(c *gin.Context) {
 	endpoints := modelrepoclient.GetAvailableEndpoints()
 	api.Success(c, endpoints)

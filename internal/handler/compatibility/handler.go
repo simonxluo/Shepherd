@@ -32,7 +32,13 @@ func NewHandler(configMgr *config.Manager, serverManager *ServerManager) *Handle
 	}
 }
 
-// GetCompatibility returns the current compatibility configuration
+// GetCompatibility returns the current compatibility configuration.
+// @Summary      Get compatibility config
+// @Description  Returns the current Ollama and LM Studio compatibility server configuration
+// @Tags         Compatibility
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/config/compatibility [get]
 func (h *Handler) GetCompatibility(c *gin.Context) {
 	cfg := h.configMgr.Get()
 
@@ -99,7 +105,17 @@ func checkPortAvailability(port int) PortCheckResult {
 	return PortCheckResult{Available: true}
 }
 
-// UpdateCompatibility updates the compatibility configuration
+// UpdateCompatibility updates the compatibility configuration.
+// @Summary      Update compatibility config
+// @Description  Updates the Ollama and LM Studio compatibility server configuration, starting/stopping servers as needed
+// @Tags         Compatibility
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Compatibility configuration update"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/compatibility [put]
 func (h *Handler) UpdateCompatibility(c *gin.Context) {
 	var req struct {
 		Ollama struct {
@@ -297,7 +313,17 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 	})
 }
 
-// TestConnection tests if a port is accessible
+// TestConnection tests if a compatibility port is accessible.
+// @Summary      Test compatibility connection
+// @Description  Tests if a compatibility server port (Ollama or LM Studio) is accessible
+// @Tags         Compatibility
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Connection test request with port and type"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/compatibility/test [post]
 func (h *Handler) TestConnection(c *gin.Context) {
 	var req struct {
 		Port int    `json:"port" binding:"required"`

@@ -31,58 +31,6 @@ export interface Message {
   createdAt: string;
 }
 
-// ===== Models =====
-
-export async function getChatModels(): Promise<ChatModelInfo[]> {
-  const res = await apiClient.get<{ success: boolean; models: ChatModelInfo[] }>(
-    '/langchain/chat/models',
-  );
-  return res.models ?? [];
-}
-
-// ===== Conversations =====
-
-export async function listConversations(
-  limit = 50,
-  offset = 0,
-): Promise<{ items: Conversation[]; count: number }> {
-  return apiClient.get('/conversations', { limit, offset });
-}
-
-export async function getConversation(
-  id: string,
-): Promise<{ conversation: Conversation; messages: Message[] }> {
-  return apiClient.get(`/conversations/${id}`);
-}
-
-export async function createConversation(body: {
-  model: string;
-  title?: string;
-  systemPrompt?: string;
-}): Promise<{ conversation: Conversation }> {
-  return apiClient.post('/conversations', body);
-}
-
-export async function updateConversation(
-  id: string,
-  body: { title?: string; systemPrompt?: string },
-): Promise<{ conversation: Conversation }> {
-  return apiClient.put(`/conversations/${id}`, body);
-}
-
-export async function deleteConversation(id: string): Promise<void> {
-  await apiClient.delete(`/conversations/${id}`);
-}
-
-// ===== Messages =====
-
-export async function createMessage(
-  conversationId: string,
-  body: { role: string; content: string; tokenCount?: number; metadata?: Record<string, unknown> },
-): Promise<{ message: Message }> {
-  return apiClient.post(`/conversations/${conversationId}/messages`, body);
-}
-
 // ===== Streaming Chat =====
 
 export interface ContentPart {
@@ -104,84 +52,138 @@ export interface StreamingChatParams {
   onError: (error: Error) => void;
 }
 
-export function streamingChatCompletion(params: StreamingChatParams): void {
-  const {
-    model,
-    messages,
-    temperature = 0.7,
-    maxTokens,
-    topP,
-    stop,
-    signal,
-    onChunk,
-    onComplete,
-    onError,
-  } = params;
+/**
+ * Chat API — unified object matching the pattern used by downloadsApi, systemApi, etc.
+ */
+export const chatApi = {
+  // ===== Models =====
 
-  (async () => {
-    try {
-      const response = await fetch('/api/langchain/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          messages,
-          stream: true,
-          temperature,
-          max_tokens: maxTokens,
-          top_p: topP,
-          stop,
-        }),
-        signal,
-      });
+  getChatModels: async (): Promise<ChatModelInfo[]> => {
+    const res = await apiClient.get<{ success: boolean; models: ChatModelInfo[] }>(
+      '/langchain/chat/models',
+    );
+    return res.models ?? [];
+  },
 
-      if (!response.ok) {
-        const errBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errBody}`);
-      }
+  // ===== Conversations =====
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
+  listConversations: (
+    limit = 50,
+    offset = 0,
+  ): Promise<{ items: Conversation[]; count: number }> =>
+    apiClient.get('/conversations', { limit, offset }),
 
-      const decoder = new TextDecoder();
-      let fullText = '';
-      let buffer = '';
+  getConversation: (
+    id: string,
+  ): Promise<{ conversation: Conversation; messages: Message[] }> =>
+    apiClient.get(`/conversations/${id}`),
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+  createConversation: (body: {
+    model: string;
+    title?: string;
+    systemPrompt?: string;
+  }): Promise<{ conversation: Conversation }> =>
+    apiClient.post('/conversations', body),
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
+  updateConversation: (
+    id: string,
+    body: { title?: string; systemPrompt?: string },
+  ): Promise<{ conversation: Conversation }> =>
+    apiClient.put(`/conversations/${id}`, body),
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+  deleteConversation: async (id: string): Promise<void> => {
+    await apiClient.delete(`/conversations/${id}`);
+  },
 
-          const data = trimmed.slice(6);
-          if (data === '[DONE]') {
-            onComplete(fullText);
-            return;
-          }
+  // ===== Messages =====
 
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              fullText += content;
-              onChunk(content);
+  createMessage: (
+    conversationId: string,
+    body: { role: string; content: string; tokenCount?: number; metadata?: Record<string, unknown> },
+  ): Promise<{ message: Message }> =>
+    apiClient.post(`/conversations/${conversationId}/messages`, body),
+
+  // ===== Streaming Chat =====
+
+  streamingChatCompletion: (params: StreamingChatParams): void => {
+    const {
+      model,
+      messages,
+      temperature = 0.7,
+      maxTokens,
+      topP,
+      stop,
+      signal,
+      onChunk,
+      onComplete,
+      onError,
+    } = params;
+
+    (async () => {
+      try {
+        const response = await fetch('/api/langchain/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            messages,
+            stream: true,
+            temperature,
+            max_tokens: maxTokens,
+            top_p: topP,
+            stop,
+          }),
+          signal,
+        });
+
+        if (!response.ok) {
+          const errBody = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errBody}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No reader available');
+
+        const decoder = new TextDecoder();
+        let fullText = '';
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+            const data = trimmed.slice(6);
+            if (data === '[DONE]') {
+              onComplete(fullText);
+              return;
             }
-          } catch {
-            // skip malformed JSON
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                fullText += content;
+                onChunk(content);
+              }
+            } catch {
+              // skip malformed JSON
+            }
           }
         }
-      }
 
-      onComplete(fullText);
-    } catch (err: unknown) {
-      if (signal?.aborted) return;
-      onError(err instanceof Error ? err : new Error('Unknown error'));
-    }
-  })();
-}
+        onComplete(fullText);
+      } catch (err: unknown) {
+        if (signal?.aborted) return;
+        onError(err instanceof Error ? err : new Error('Unknown error'));
+      }
+    })();
+  },
+};

@@ -1,20 +1,21 @@
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
+import i18n from '@/lib/i18n';
 import type { ModelCapabilities } from '@/types';
 
 // ========== Model category ==========
 
 export type ModelCategory = 'all' | 'chat' | 'tts' | 'asr' | 'image' | 'music' | 'embedding' | 'rerank';
 
-export const MODEL_CATEGORIES: { key: ModelCategory; label: string }[] = [
-  { key: 'all', label: '全部' },
-  { key: 'chat', label: 'Chat' },
-  { key: 'tts', label: 'TTS' },
-  { key: 'asr', label: 'ASR' },
-  { key: 'image', label: '图像' },
-  { key: 'music', label: '音乐' },
-  { key: 'embedding', label: '嵌入' },
-  { key: 'rerank', label: '重排序' },
+export const MODEL_CATEGORIES: { key: ModelCategory; labelKey: string }[] = [
+  { key: 'all', labelKey: 'models.category.all' },
+  { key: 'chat', labelKey: 'models.category.chat' },
+  { key: 'tts', labelKey: 'models.category.tts' },
+  { key: 'asr', labelKey: 'models.category.asr' },
+  { key: 'image', labelKey: 'models.category.image' },
+  { key: 'music', labelKey: 'models.category.music' },
+  { key: 'embedding', labelKey: 'models.category.embedding' },
+  { key: 'rerank', labelKey: 'models.category.rerank' },
 ];
 
 export function getModelCategory(capabilities?: ModelCapabilities | null): ModelCategory {
@@ -222,7 +223,7 @@ export function useEstimateVRAM() {
       }>('/models/vram/estimate', params);
 
       if (!response.success) {
-        return { error: response.error?.message || '估算失败' };
+        return { error: response.error?.message || i18n.t('models.toast.estimateFailed') };
       }
 
       return { vramGB: response.data?.estimatedVRAMGB };

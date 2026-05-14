@@ -24,7 +24,13 @@ func NewHandler(configManager *config.Manager) *Handler {
 	}
 }
 
-// GetLlamaCppPaths returns all configured llama.cpp paths
+// GetLlamaCppPaths returns all configured llama.cpp paths.
+// @Summary      Get llama.cpp paths
+// @Description  Returns all configured llama.cpp binary paths
+// @Tags         Config
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/config/llamacpp/paths [get]
 func (h *Handler) GetLlamaCppPaths(c *gin.Context) {
 	cfg := h.configManager.Get()
 	paths := cfg.Llamacpp.Paths
@@ -35,7 +41,18 @@ func (h *Handler) GetLlamaCppPaths(c *gin.Context) {
 	})
 }
 
-// AddLlamaCppPath adds a new llama.cpp path
+// AddLlamaCppPath adds a new llama.cpp path.
+// @Summary      Add llama.cpp path
+// @Description  Adds a new llama.cpp binary path to the configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Llama.cpp path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      409 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/llamacpp/paths [post]
 func (h *Handler) AddLlamaCppPath(c *gin.Context) {
 	var req config.LlamacppPath
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -84,7 +101,17 @@ func (h *Handler) AddLlamaCppPath(c *gin.Context) {
 	})
 }
 
-// RemoveLlamaCppPath removes a llama.cpp path
+// RemoveLlamaCppPath removes a llama.cpp path.
+// @Summary      Remove llama.cpp path
+// @Description  Removes a llama.cpp binary path from the configuration
+// @Tags         Config
+// @Produce      json
+// @Param        path query string true "Path to remove"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/llamacpp/paths [delete]
 func (h *Handler) RemoveLlamaCppPath(c *gin.Context) {
 	path := c.Query("path")
 	if path == "" {
@@ -126,7 +153,18 @@ func (h *Handler) RemoveLlamaCppPath(c *gin.Context) {
 	})
 }
 
-// UpdateLlamaCppPath updates an existing llama.cpp path
+// UpdateLlamaCppPath updates an existing llama.cpp path.
+// @Summary      Update llama.cpp path
+// @Description  Updates an existing llama.cpp binary path configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Updated path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/llamacpp/paths [put]
 func (h *Handler) UpdateLlamaCppPath(c *gin.Context) {
 	var req struct {
 		OriginalPath string `json:"originalPath"` // 原始路径，用于匹配（可选）
@@ -222,7 +260,16 @@ func (h *Handler) UpdateLlamaCppPath(c *gin.Context) {
 	})
 }
 
-// TestLlamaCppPath tests if a llama.cpp path is valid
+// TestLlamaCppPath tests if a llama.cpp path is valid.
+// @Summary      Test llama.cpp path
+// @Description  Validates whether a given path is a valid llama.cpp directory
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Path to test"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Router       /api/config/llamacpp/paths/test [post]
 func (h *Handler) TestLlamaCppPath(c *gin.Context) {
 	var req struct {
 		Path string `json:"path" binding:"required"`
@@ -248,7 +295,13 @@ func (h *Handler) TestLlamaCppPath(c *gin.Context) {
 	})
 }
 
-// GetModelPaths returns all configured model paths
+// GetModelPaths returns all configured model paths.
+// @Summary      Get model paths
+// @Description  Returns all configured model scan paths
+// @Tags         Config
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/config/models/paths [get]
 func (h *Handler) GetModelPaths(c *gin.Context) {
 	cfg := h.configManager.Get()
 	paths := cfg.Model.PathConfigs
@@ -259,7 +312,18 @@ func (h *Handler) GetModelPaths(c *gin.Context) {
 	})
 }
 
-// AddModelPath adds a new model path
+// AddModelPath adds a new model path.
+// @Summary      Add model path
+// @Description  Adds a new model scan path to the configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Model path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      409 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/models/paths [post]
 func (h *Handler) AddModelPath(c *gin.Context) {
 	var req config.ModelPath
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -308,7 +372,18 @@ func (h *Handler) AddModelPath(c *gin.Context) {
 	})
 }
 
-// UpdateModelPath updates an existing model path
+// UpdateModelPath updates an existing model path.
+// @Summary      Update model path
+// @Description  Updates an existing model scan path configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Updated model path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/models/paths [put]
 func (h *Handler) UpdateModelPath(c *gin.Context) {
 	var req struct {
 		OriginalPath string `json:"originalPath"` // 原始路径，用于匹配（可选）
@@ -391,7 +466,17 @@ func (h *Handler) UpdateModelPath(c *gin.Context) {
 	})
 }
 
-// RemoveModelPath removes a model path
+// RemoveModelPath removes a model path.
+// @Summary      Remove model path
+// @Description  Removes a model scan path from the configuration
+// @Tags         Config
+// @Produce      json
+// @Param        path query string true "Path to remove"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/models/paths [delete]
 func (h *Handler) RemoveModelPath(c *gin.Context) {
 	path := c.Query("path")
 	if path == "" {
@@ -475,7 +560,13 @@ func (h *Handler) validateAndNormalizePath(path string) (string, error) {
 	return filepath.Clean(absPath), nil
 }
 
-// GetMultimodalPaths returns all configured multimodal model paths
+// GetMultimodalPaths returns all configured multimodal model paths.
+// @Summary      Get multimodal paths
+// @Description  Returns all configured multimodal model paths
+// @Tags         Config
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/config/multimodal/paths [get]
 func (h *Handler) GetMultimodalPaths(c *gin.Context) {
 	cfg := h.configManager.Get()
 	paths := cfg.Backends.MultimodalPaths
@@ -488,7 +579,18 @@ func (h *Handler) GetMultimodalPaths(c *gin.Context) {
 	})
 }
 
-// AddMultimodalPath adds a new multimodal model path
+// AddMultimodalPath adds a new multimodal model path.
+// @Summary      Add multimodal path
+// @Description  Adds a new multimodal model path to the configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Multimodal path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      409 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/multimodal/paths [post]
 func (h *Handler) AddMultimodalPath(c *gin.Context) {
 	var req config.MultimodalPath
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -531,7 +633,18 @@ func (h *Handler) AddMultimodalPath(c *gin.Context) {
 	})
 }
 
-// UpdateMultimodalPath updates an existing multimodal model path
+// UpdateMultimodalPath updates an existing multimodal model path.
+// @Summary      Update multimodal path
+// @Description  Updates an existing multimodal model path configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Updated multimodal path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/multimodal/paths [put]
 func (h *Handler) UpdateMultimodalPath(c *gin.Context) {
 	var req struct {
 		OriginalPath string `json:"originalPath"`
@@ -596,7 +709,17 @@ func (h *Handler) UpdateMultimodalPath(c *gin.Context) {
 	})
 }
 
-// RemoveMultimodalPath removes a multimodal model path
+// RemoveMultimodalPath removes a multimodal model path.
+// @Summary      Remove multimodal path
+// @Description  Removes a multimodal model path from the configuration
+// @Tags         Config
+// @Produce      json
+// @Param        path query string true "Path to remove"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/multimodal/paths [delete]
 func (h *Handler) RemoveMultimodalPath(c *gin.Context) {
 	path := c.Query("path")
 	if path == "" {
@@ -635,7 +758,13 @@ func (h *Handler) RemoveMultimodalPath(c *gin.Context) {
 	})
 }
 
-// GetVLLMPaths returns all configured vLLM paths
+// GetVLLMPaths returns all configured vLLM paths.
+// @Summary      Get vLLM paths
+// @Description  Returns all configured vLLM model paths
+// @Tags         Config
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/config/vllm/paths [get]
 func (h *Handler) GetVLLMPaths(c *gin.Context) {
 	cfg := h.configManager.Get()
 	if cfg.Backends.VLLM == nil {
@@ -649,7 +778,18 @@ func (h *Handler) GetVLLMPaths(c *gin.Context) {
 	handler.Success(c, gin.H{"items": paths, "count": len(paths)})
 }
 
-// AddVLLMPath adds a new vLLM path
+// AddVLLMPath adds a new vLLM path.
+// @Summary      Add vLLM path
+// @Description  Adds a new vLLM model path to the configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "vLLM path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      409 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/vllm/paths [post]
 func (h *Handler) AddVLLMPath(c *gin.Context) {
 	var req config.BackendPath
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -695,7 +835,18 @@ func (h *Handler) AddVLLMPath(c *gin.Context) {
 	})
 }
 
-// UpdateVLLMPath updates an existing vLLM path
+// UpdateVLLMPath updates an existing vLLM path.
+// @Summary      Update vLLM path
+// @Description  Updates an existing vLLM model path configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Updated vLLM path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/vllm/paths [put]
 func (h *Handler) UpdateVLLMPath(c *gin.Context) {
 	var req struct {
 		OriginalPath string `json:"originalPath"`
@@ -760,7 +911,17 @@ func (h *Handler) UpdateVLLMPath(c *gin.Context) {
 	})
 }
 
-// RemoveVLLMPath removes a vLLM path
+// RemoveVLLMPath removes a vLLM path.
+// @Summary      Remove vLLM path
+// @Description  Removes a vLLM model path from the configuration
+// @Tags         Config
+// @Produce      json
+// @Param        path query string true "Path to remove"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/vllm/paths [delete]
 func (h *Handler) RemoveVLLMPath(c *gin.Context) {
 	path := c.Query("path")
 	if path == "" {
@@ -803,7 +964,13 @@ func (h *Handler) RemoveVLLMPath(c *gin.Context) {
 	})
 }
 
-// GetVLLMOmniPaths returns all configured vLLM-Omni paths
+// GetVLLMOmniPaths returns all configured vLLM-Omni paths.
+// @Summary      Get vLLM-Omni paths
+// @Description  Returns all configured vLLM-Omni model paths
+// @Tags         Config
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/config/vllm_omni/paths [get]
 func (h *Handler) GetVLLMOmniPaths(c *gin.Context) {
 	cfg := h.configManager.Get()
 	if cfg.Backends.VLLMOmni == nil {
@@ -817,7 +984,18 @@ func (h *Handler) GetVLLMOmniPaths(c *gin.Context) {
 	handler.Success(c, gin.H{"items": paths, "count": len(paths)})
 }
 
-// AddVLLMOmniPath adds a new vLLM-Omni path
+// AddVLLMOmniPath adds a new vLLM-Omni path.
+// @Summary      Add vLLM-Omni path
+// @Description  Adds a new vLLM-Omni model path to the configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "vLLM-Omni path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      409 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/vllm_omni/paths [post]
 func (h *Handler) AddVLLMOmniPath(c *gin.Context) {
 	var req config.BackendPath
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -863,7 +1041,18 @@ func (h *Handler) AddVLLMOmniPath(c *gin.Context) {
 	})
 }
 
-// UpdateVLLMOmniPath updates an existing vLLM-Omni path
+// UpdateVLLMOmniPath updates an existing vLLM-Omni path.
+// @Summary      Update vLLM-Omni path
+// @Description  Updates an existing vLLM-Omni model path configuration
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Updated vLLM-Omni path configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/vllm_omni/paths [put]
 func (h *Handler) UpdateVLLMOmniPath(c *gin.Context) {
 	var req struct {
 		OriginalPath string `json:"originalPath"`
@@ -928,7 +1117,17 @@ func (h *Handler) UpdateVLLMOmniPath(c *gin.Context) {
 	})
 }
 
-// RemoveVLLMOmniPath removes a vLLM-Omni path
+// RemoveVLLMOmniPath removes a vLLM-Omni path.
+// @Summary      Remove vLLM-Omni path
+// @Description  Removes a vLLM-Omni model path from the configuration
+// @Tags         Config
+// @Produce      json
+// @Param        path query string true "Path to remove"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config/vllm_omni/paths [delete]
 func (h *Handler) RemoveVLLMOmniPath(c *gin.Context) {
 	path := c.Query("path")
 	if path == "" {

@@ -34,6 +34,13 @@ type loadedModelInfo struct {
 	Capabilities *storage.Capabilities `json:"capabilities,omitempty"`
 }
 
+// HandleListModels returns all available models.
+// @Summary      List all models
+// @Description  Returns a list of all scanned models with their metadata and status
+// @Tags         Models
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/models [get]
 func (s *Server) HandleListModels(c *gin.Context) {
 	models := s.modelMgr.ListModels()
 
@@ -51,6 +58,13 @@ func (s *Server) HandleListModels(c *gin.Context) {
 	})
 }
 
+// HandleListLoadedModels returns all currently loaded models.
+// @Summary      List loaded models
+// @Description  Returns a list of models that are currently loaded or loading
+// @Tags         Models
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/models/loaded [get]
 func (s *Server) HandleListLoadedModels(c *gin.Context) {
 	statuses := s.modelMgr.ListStatus()
 
@@ -88,6 +102,16 @@ func (s *Server) HandleListLoadedModels(c *gin.Context) {
 	})
 }
 
+// HandleGetModel returns details of a specific model.
+// @Summary      Get model details
+// @Description  Returns detailed information about a specific model by ID
+// @Tags         Models
+// @Produce      json
+// @Param        id path string true "Model ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/models/{id} [get]
 func (s *Server) HandleGetModel(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -107,6 +131,18 @@ func (s *Server) HandleGetModel(c *gin.Context) {
 	api.Success(c, dto)
 }
 
+// HandleLoadModel initiates loading a model into memory.
+// @Summary      Load a model
+// @Description  Initiates asynchronous loading of a model with specified parameters
+// @Tags         Models
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Model ID"
+// @Param        request body object true "Load configuration parameters"
+// @Success      202 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/{id}/load [post]
 func (s *Server) HandleLoadModel(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -229,6 +265,16 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	c.JSON(http.StatusAccepted, types.NewSuccessResponse(respData, requestID))
 }
 
+// HandleUnloadModel unloads a model from memory.
+// @Summary      Unload a model
+// @Description  Unloads a currently loaded model and stops its process
+// @Tags         Models
+// @Produce      json
+// @Param        id path string true "Model ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/{id}/unload [post]
 func (s *Server) HandleUnloadModel(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -248,6 +294,18 @@ func (s *Server) HandleUnloadModel(c *gin.Context) {
 	api.SuccessWithMessage(c, "模型已卸载")
 }
 
+// HandleSetAlias sets an alias for a model.
+// @Summary      Set model alias
+// @Description  Sets or updates the alias name for a model
+// @Tags         Models
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Model ID"
+// @Param        request body object true "Alias request with alias field"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/{id}/alias [put]
 func (s *Server) HandleSetAlias(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -274,6 +332,18 @@ func (s *Server) HandleSetAlias(c *gin.Context) {
 	})
 }
 
+// HandleSetFavourite sets the favourite status for a model.
+// @Summary      Set model favourite status
+// @Description  Sets or removes a model from the favourites list
+// @Tags         Models
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Model ID"
+// @Param        request body object true "Favourite request with favourite field"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/{id}/favourite [put]
 func (s *Server) HandleSetFavourite(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -300,6 +370,15 @@ func (s *Server) HandleSetFavourite(c *gin.Context) {
 	})
 }
 
+// HandleGetModelCapabilities returns the capabilities of a model.
+// @Summary      Get model capabilities
+// @Description  Returns the capabilities (thinking, tools, rerank, embedding, etc.) of a model
+// @Tags         Models
+// @Produce      json
+// @Param        modelId query string true "Model ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Router       /api/models/capabilities/get [get]
 func (s *Server) HandleGetModelCapabilities(c *gin.Context) {
 	modelID := c.Query("modelId")
 	if modelID == "" {
@@ -331,6 +410,17 @@ func (s *Server) HandleGetModelCapabilities(c *gin.Context) {
 	})
 }
 
+// HandleSetModelCapabilities sets the capabilities of a model.
+// @Summary      Set model capabilities
+// @Description  Sets the capabilities for a model (thinking, tools, rerank, embedding, TTS, ASR, etc.)
+// @Tags         Models
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Capabilities request"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/capabilities/set [post]
 func (s *Server) HandleSetModelCapabilities(c *gin.Context) {
 	var req struct {
 		ModelID         string `json:"modelId"`
@@ -385,6 +475,16 @@ func (s *Server) HandleSetModelCapabilities(c *gin.Context) {
 	})
 }
 
+// HandleAutoDetectCapabilities auto-detects model capabilities.
+// @Summary      Auto-detect model capabilities
+// @Description  Automatically detects model capabilities based on model metadata and architecture
+// @Tags         Models
+// @Produce      json
+// @Param        modelId query string true "Model ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/capabilities/auto-detect [get]
 func (s *Server) HandleAutoDetectCapabilities(c *gin.Context) {
 	modelID := c.Query("modelId")
 	if modelID == "" {
@@ -404,6 +504,17 @@ func (s *Server) HandleAutoDetectCapabilities(c *gin.Context) {
 	})
 }
 
+// HandleEstimateVRAM estimates VRAM usage for loading a model.
+// @Summary      Estimate VRAM usage
+// @Description  Estimates the VRAM required to load a model with specified context size
+// @Tags         Models
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "VRAM estimation request with modelId and ctxSize"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/models/vram/estimate [post]
 func (s *Server) HandleEstimateVRAM(c *gin.Context) {
 	var req struct {
 		ModelID string `json:"modelId"`
@@ -475,6 +586,14 @@ func (s *Server) HandleEstimateVRAM(c *gin.Context) {
 	})
 }
 
+// HandleGetModelLoadConfig returns the saved load configuration for a model.
+// @Summary      Get model load config
+// @Description  Returns the saved load configuration for a specific model on this node
+// @Tags         Models
+// @Produce      json
+// @Param        id path string true "Model ID"
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/models/{id}/load-config [get]
 func (s *Server) HandleGetModelLoadConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -503,6 +622,18 @@ func (s *Server) HandleGetModelLoadConfig(c *gin.Context) {
 	})
 }
 
+// HandleSaveModelLoadConfig saves the load configuration for a model.
+// @Summary      Save model load config
+// @Description  Saves load configuration for a specific model on this node
+// @Tags         Models
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Model ID"
+// @Param        request body object true "Load config to save"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/{id}/load-config [put]
 func (s *Server) HandleSaveModelLoadConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -548,6 +679,16 @@ func (s *Server) HandleSaveModelLoadConfig(c *gin.Context) {
 	})
 }
 
+// HandleDeleteModelLoadConfig deletes the saved load configuration for a model.
+// @Summary      Delete model load config
+// @Description  Deletes the saved load configuration for a specific model on this node
+// @Tags         Models
+// @Produce      json
+// @Param        id path string true "Model ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/{id}/load-config [delete]
 func (s *Server) HandleDeleteModelLoadConfig(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -568,6 +709,14 @@ func (s *Server) HandleDeleteModelLoadConfig(c *gin.Context) {
 	api.SuccessWithMessage(c, "模型加载配置已删除")
 }
 
+// HandleScanModels triggers a model scan across configured paths.
+// @Summary      Scan for models
+// @Description  Triggers a scan of all configured model paths to discover GGUF models
+// @Tags         Scan
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/model/scan [post]
 func (s *Server) HandleScanModels(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
@@ -604,6 +753,13 @@ func (s *Server) HandleScanModels(c *gin.Context) {
 	})
 }
 
+// HandleGetScanStatus returns the current model scan status.
+// @Summary      Get scan status
+// @Description  Returns the current status of model scanning including progress and errors
+// @Tags         Scan
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/model/scan/status [get]
 func (s *Server) HandleGetScanStatus(c *gin.Context) {
 	status := s.modelMgr.GetScanStatus()
 

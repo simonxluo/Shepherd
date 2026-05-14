@@ -198,7 +198,13 @@ func (h *Handler) validatePathForDevices(path string) error {
 	return fmt.Errorf("invalid path type")
 }
 
-// GetParams 获取压测参数列表
+// GetParams returns the list of available benchmark parameters.
+// @Summary      Get benchmark parameters
+// @Description  Returns the list of available llama.cpp benchmark parameters with their defaults
+// @Tags         Benchmark
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/models/param/benchmark/list [get]
 func (h *Handler) GetParams(c *gin.Context) {
 	// 返回常见的 llama.cpp 压测参数
 	params := []BenchmarkParam{
@@ -228,7 +234,16 @@ func (h *Handler) GetParams(c *gin.Context) {
 	})
 }
 
-// GetDevices 获取可用计算设备
+// GetDevices returns available compute devices for benchmarking.
+// @Summary      Get compute devices
+// @Description  Returns available compute devices (GPUs) detected by llama.cpp
+// @Tags         Benchmark
+// @Produce      json
+// @Param        llamaBinPath query string true "Path to llama.cpp binaries"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/model/device/list [get]
 func (h *Handler) GetDevices(c *gin.Context) {
 	llamaBinPath := c.Query("llamaBinPath")
 	if llamaBinPath == "" {
@@ -289,7 +304,18 @@ func (h *Handler) GetRunningTasksCount() int {
 	return len(h.runningTasks)
 }
 
-// Create 创建压测任务
+// Create creates a new benchmark task.
+// @Summary      Create benchmark task
+// @Description  Creates and starts a new benchmark task using llama-bench
+// @Tags         Benchmark
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Benchmark creation request"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Failure      503 {object} map[string]interface{}
+// @Router       /api/models/benchmark [post]
 func (h *Handler) Create(c *gin.Context) {
 	var req struct {
 		ModelID      string            `json:"modelId" binding:"required"`
@@ -533,7 +559,14 @@ func (h *Handler) parseBenchmarkOutput(output string) map[string]interface{} {
 	return metrics
 }
 
-// List 列出所有压测任务
+// List returns all benchmark tasks.
+// @Summary      List benchmark tasks
+// @Description  Returns all benchmark tasks with their results
+// @Tags         Benchmark
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/benchmark/tasks [get]
 func (h *Handler) List(c *gin.Context) {
 	// 获取查询参数
 	modelID := c.Query("modelId")
@@ -559,7 +592,15 @@ func (h *Handler) List(c *gin.Context) {
 	})
 }
 
-// Get 获取单个压测任务
+// Get returns a specific benchmark task.
+// @Summary      Get benchmark task
+// @Description  Returns details and results of a specific benchmark task
+// @Tags         Benchmark
+// @Produce      json
+// @Param        benchmarkId path string true "Benchmark task ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/models/benchmark/tasks/{benchmarkId} [get]
 func (h *Handler) Get(c *gin.Context) {
 	taskID := c.Param("benchmarkId")
 
@@ -579,7 +620,17 @@ func (h *Handler) Get(c *gin.Context) {
 	})
 }
 
-// Cancel 取消压测任务
+// Cancel cancels a running benchmark task.
+// @Summary      Cancel benchmark task
+// @Description  Cancels a currently running benchmark task
+// @Tags         Benchmark
+// @Produce      json
+// @Param        benchmarkId path string true "Benchmark task ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/benchmark/tasks/{benchmarkId}/cancel [post]
 func (h *Handler) Cancel(c *gin.Context) {
 	taskID := c.Param("benchmarkId")
 
@@ -641,7 +692,17 @@ func (h *Handler) Cancel(c *gin.Context) {
 	})
 }
 
-// SaveConfig 保存压测配置
+// SaveConfig saves a benchmark configuration.
+// @Summary      Save benchmark config
+// @Description  Saves a named benchmark configuration for reuse
+// @Tags         Benchmark
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Config name and benchmark configuration"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/benchmark/configs [post]
 func (h *Handler) SaveConfig(c *gin.Context) {
 	var req struct {
 		ConfigName string          `json:"configName" binding:"required"`
@@ -692,7 +753,14 @@ func (h *Handler) SaveConfig(c *gin.Context) {
 	})
 }
 
-// ListConfigs 列出压测配置
+// ListConfigs returns all saved benchmark configurations.
+// @Summary      List benchmark configs
+// @Description  Returns all saved benchmark configurations
+// @Tags         Benchmark
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/benchmark/configs [get]
 func (h *Handler) ListConfigs(c *gin.Context) {
 	limit := 100
 	offset := 0
@@ -715,7 +783,15 @@ func (h *Handler) ListConfigs(c *gin.Context) {
 	})
 }
 
-// GetConfig 获取单个压测配置
+// GetConfig returns a specific benchmark configuration by name.
+// @Summary      Get benchmark config
+// @Description  Returns a specific saved benchmark configuration
+// @Tags         Benchmark
+// @Produce      json
+// @Param        name path string true "Config name"
+// @Success      200 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/models/benchmark/configs/{name} [get]
 func (h *Handler) GetConfig(c *gin.Context) {
 	configName := c.Param("name")
 
@@ -735,7 +811,15 @@ func (h *Handler) GetConfig(c *gin.Context) {
 	})
 }
 
-// DeleteConfig 删除压测配置
+// DeleteConfig deletes a benchmark configuration by name.
+// @Summary      Delete benchmark config
+// @Description  Deletes a saved benchmark configuration
+// @Tags         Benchmark
+// @Produce      json
+// @Param        name path string true "Config name"
+// @Success      200 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/models/benchmark/configs/{name} [delete]
 func (h *Handler) DeleteConfig(c *gin.Context) {
 	configName := c.Param("name")
 

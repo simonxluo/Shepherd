@@ -1,6 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import i18n from '@/lib/i18n';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -46,10 +47,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </div>
             <div className="space-y-2">
               <h1 className="text-xl font-semibold text-foreground">
-                页面发生错误
+                {i18n.t('error.pageError')}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {this.state.error?.message || '未知错误，请尝试刷新页面。'}
+                {this.state.error?.message || i18n.t('error.unknownError')}
               </p>
               {import.meta.env.DEV && this.state.error && (
                 <pre className="mt-4 p-4 bg-muted rounded-lg text-xs text-left text-muted-foreground overflow-auto max-h-40 whitespace-pre-wrap">
@@ -59,7 +60,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </div>
             <Button onClick={this.handleReload} className="gap-2">
               <RefreshCw className="w-4 h-4" />
-              重试
+              {i18n.t('error.retry')}
             </Button>
           </div>
         </div>

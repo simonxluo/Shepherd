@@ -1,43 +1,44 @@
 import { QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { APIError } from '@/lib/api/client';
+import i18n from '@/lib/i18n';
 
 function handleGlobalMutationError(error: Error) {
   if (error instanceof APIError && error.handled) {
     return;
   }
 
-  let title = '操作失败';
-  let description = error.message || '未知错误';
+  let title = i18n.t('error.operationFailed');
+  let description = error.message || i18n.t('common.unknownError');
 
   if (error instanceof APIError) {
     switch (error.code) {
       case 'INVALID_REQUEST':
-        title = '请求参数错误';
+        title = i18n.t('error.invalidRequest');
         break;
       case 'PERMISSION_DENIED':
-        title = '权限不足';
+        title = i18n.t('error.permissionDenied');
         break;
       case 'NOT_AUTHENTICATED':
-        title = '未认证';
+        title = i18n.t('error.notAuthenticated');
         break;
       case 'NOT_FOUND':
       case 'NODE_NOT_FOUND':
-        title = '资源未找到';
+        title = i18n.t('error.notFound');
         break;
       case 'CONFLICT':
-        title = '操作冲突';
+        title = i18n.t('error.conflict');
         break;
       case 'RESOURCE_EXHAUSTED':
-        title = '资源不足';
+        title = i18n.t('error.resourceExhausted');
         break;
       case 'TIMEOUT':
-        title = '请求超时';
+        title = i18n.t('error.timeout');
         break;
       default:
         if (error.status === 0 || error.status >= 500) {
-          title = '服务器错误';
-          description = '服务暂时不可用，请稍后重试';
+          title = i18n.t('error.serverError');
+          description = i18n.t('error.serverErrorDesc');
         }
     }
   }

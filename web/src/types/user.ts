@@ -15,20 +15,9 @@ export interface UserSettings {
   defaultModel?: string;
 }
 
-export interface UserProfile {
-  user: User;
-  settings: UserSettings;
-}
-
 export interface UpdateProfileRequest {
   displayName?: string;
   email?: string;
   avatar?: string;
-}
-
-export interface UpdateSettingsRequest {
-  language?: string;
-  notifications?: boolean;
-  defaultModel?: string;
 }
 

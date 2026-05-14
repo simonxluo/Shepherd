@@ -17,7 +17,6 @@ import type { UnifiedNode } from './types/node';
 import { AlertDialogProvider } from './providers/AlertDialog';
 import { AlertDialog } from './components/ui/alert-dialog';
 import { Toaster } from './components/ui/sonner';
-import { WebSocketProvider } from './providers/WebSocketProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 import 'highlight.js/styles/github-dark.css';
@@ -68,8 +67,6 @@ function AppContent() {
           queryClient.invalidateQueries({ queryKey: ['system'] });
           break;
       }
-
-      console.log('SSE Event:', data);
     } catch (error) {
       console.error('Failed to parse SSE event:', error);
     }
@@ -114,23 +111,13 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WebSocketProvider
-        autoConnect={false}
-        options={{
-          maxReconnectAttempts: 5,
-          initialReconnectDelay: 1000,
-          heartbeatInterval: 30000,
-        }}
-        onError={(error) => console.error('WebSocket error:', error)}
-      >
-        <ErrorBoundary>
-          <AlertDialogProvider>
-            <AppContent />
-            <AlertDialog />
-            <Toaster />
-          </AlertDialogProvider>
-        </ErrorBoundary>
-      </WebSocketProvider>
+      <ErrorBoundary>
+        <AlertDialogProvider>
+          <AppContent />
+          <AlertDialog />
+          <Toaster />
+        </AlertDialogProvider>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }

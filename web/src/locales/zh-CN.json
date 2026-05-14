@@ -17,7 +17,8 @@
     "unsavedChanges": "未保存的更改",
     "allChangesSaved": "所有更改已保存",
     "editProfile": "编辑资料",
-    "more": "更多"
+    "more": "更多",
+    "unknownError": "未知错误"
   },
   "sidebar": {
     "dashboard": "仪表盘",
@@ -50,7 +51,22 @@
   "dashboard": {
     "title": "仪表盘",
     "welcome": "欢迎使用 Shepherd",
-    "overview": "系统概览"
+    "overview": "系统概览",
+    "subtitle": "Shepherd 模型管理系统概览",
+    "stats": {
+      "totalModels": "总模型数",
+      "totalModelsDesc": "已扫描的模型",
+      "loaded": "已加载",
+      "loadedDesc": "正在运行的模型",
+      "downloads": "下载任务",
+      "downloadsDesc": "活跃的下载任务",
+      "clusterNodes": "集群节点",
+      "clusterNodesDesc": "在线的客户端"
+    },
+    "recentModels": "最近模型",
+    "recentModelsDesc": "最近扫描的模型列表",
+    "shards": "分卷",
+    "noModels": "暂无模型数据"
   },
   "models": {
     "title": "模型管理",
@@ -64,21 +80,133 @@
     "categoryChat": "Chat",
     "categoryAudio": "音频",
     "categoryImage": "图像",
-    "categoryEmbedding": "嵌入"
+    "categoryEmbedding": "嵌入",
+    "summary": "共 {{total}} 个模型，已加载 {{loaded}} 个",
+    "searchPlaceholder": "搜索模型名称、架构...",
+    "noResults": "没有找到模型",
+    "noResultsHint": "尝试调整搜索条件或扫描模型目录",
+    "status": {
+      "all": "全部",
+      "running": "运行中",
+      "stopped": "已停止",
+      "loading": "加载中",
+      "error": "错误"
+    },
+    "category": {
+      "all": "全部",
+      "chat": "Chat",
+      "tts": "TTS",
+      "asr": "ASR",
+      "image": "图像",
+      "music": "音乐",
+      "embedding": "嵌入",
+      "rerank": "重排序"
+    },
+    "actions": {
+      "scan": "扫描模型",
+      "load": "加载",
+      "unload": "卸载模型",
+      "favouritesOnly": "只看收藏",
+      "benchmark": "性能测试",
+      "viewBenchmarkResults": "查看测试结果"
+    },
+    "toast": {
+      "loadingModel": "模型正在加载",
+      "loadingModelDesc": "{{model}} 已提交加载请求，请稍候查看状态",
+      "loadFailed": "模型加载失败",
+      "unloadSuccess": "模型卸载成功",
+      "unloadSuccessDesc": "{{model}} 已成功停止",
+      "unloadFailed": "模型卸载失败",
+      "favouriteAdded": "已添加到收藏",
+      "favouriteRemoved": "已取消收藏",
+      "operationFailed": "操作失败",
+      "scanSuccess": "模型扫描成功",
+      "scanCompleteDesc": "扫描完成，找到 {{count}} 个模型",
+      "scanFailed": "模型扫描失败",
+      "aliasUpdateSuccess": "别名更新成功",
+      "aliasUpdateSuccessDesc": "模型别名已设置为 {{alias}}",
+      "aliasEmpty": "（空）",
+      "aliasUpdateFailed": "别名更新失败",
+      "modelNotFound": "模型未找到",
+      "modelNotFoundDesc": "无法获取模型信息",
+      "benchmarkCreated": "压测任务已创建",
+      "benchmarkRunning": "正在运行...",
+      "benchmarkFailed": "创建压测任务失败",
+      "estimateFailed": "估算失败"
+    }
   },
   "downloads": {
     "title": "下载管理",
     "active": "进行中",
     "completed": "已完成",
     "failed": "已失败",
-    "createDownload": "创建下载任务"
+    "createDownload": "创建下载任务",
+    "subtitle": "管理本地下载任务或从 HuggingFace 搜索模型",
+    "clearCompleted": "清理已完成",
+    "clearCompletedConfirm": "确定要清理所有已完成的下载任务吗？",
+    "newDownload": "新建下载",
+    "empty": "暂无下载任务",
+    "emptyHint": "创建新任务开始下载模型",
+    "searchPlaceholder": "搜索仓库 ID 或文件名...",
+    "tabs": {
+      "local": "本地下载",
+      "online": "在线搜索"
+    },
+    "stats": {
+      "total": "总任务",
+      "active": "进行中",
+      "completed": "已完成",
+      "progress": "总进度"
+    },
+    "status": {
+      "downloading": "下载中",
+      "paused": "已暂停",
+      "completed": "已完成",
+      "failed": "失败"
+    },
+    "filter": {
+      "allStates": "所有状态",
+      "allSources": "所有来源"
+    }
   },
   "cluster": {
     "title": "集群管理",
     "nodes": "节点列表",
     "status": "状态",
     "online": "在线",
-    "offline": "离线"
+    "offline": "离线",
+    "unavailable": "集群管理功能不可用",
+    "unavailableDesc": "集群管理功能仅在 Master 或 Hybrid 模式下可用。",
+    "unavailableHint": "请在配置文件中将 node.role 设置为 master 或 hybrid。",
+    "scanNetwork": "扫描网络",
+    "scanNetworkConfirm": "确定要扫描网络中的客户端吗？",
+    "summary": "{{total}} 个客户端，{{online}} 个在线",
+    "searchPlaceholder": "搜索客户端名称或地址...",
+    "noClients": "暂无客户端",
+    "noClientsHint": "点击"扫描网络"来发现局域网中的客户端",
+    "noTasks": "暂无任务",
+    "assignedTo": "分配给",
+    "tabs": {
+      "clients": "客户端",
+      "tasks": "任务"
+    },
+    "stats": {
+      "totalClients": "总客户端",
+      "online": "在线",
+      "busy": "忙碌",
+      "runningTasks": "运行中任务"
+    },
+    "status": {
+      "online": "在线",
+      "offline": "离线",
+      "busy": "忙碌",
+      "error": "错误",
+      "degraded": "降级",
+      "disabled": "已禁用"
+    },
+    "filter": {
+      "allStatuses": "所有状态"
+    }
   },
   "logs": {
     "title": "日志",
@@ -99,7 +227,45 @@
     "title": "聊天",
     "placeholder": "输入消息...",
     "send": "发送",
-    "clearHistory": "清空历史"
+    "clearHistory": "清空历史",
+    "aiChat": "AI 聊天",
+    "history": "对话历史",
+    "newChat": "新建对话",
+    "newConversation": "新对话",
+    "newChatConfirm": "确定要开始新对话吗？当前对话将被保留。",
+    "deleteConversation": "删除对话",
+    "deleteConversationConfirm": "确定要删除这个对话吗？此操作不可撤销。",
+    "deleted": "已删除",
+    "deletedDesc": "对话已删除",
+    "clearChat": "清空对话",
+    "clearChatConfirm": "确定要清空当前对话吗？",
+    "searchConversation": "搜索对话...",
+    "noHistory": "暂无对话历史",
+    "selectModel": "选择模型",
+    "modelNotLoaded": "未加载",
+    "supportsImage": "支持图片",
+    "loadingModel": "正在加载模型 {{model}}，请稍候...",
+    "startConversation": "开始对话",
+    "startConversationHint": "选择一个模型，然后输入消息开始聊天",
+    "modelAutoLoad": "模型未加载，发送消息时将自动加载",
+    "placeholderSelectModel": "请先选择一个模型",
+    "placeholderLoading": "模型加载中...",
+    "placeholderInput": "输入消息... (按 Enter 发送)",
+    "timeGroups": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "earlier": "更早"
+    },
+    "error": {
+      "chatFailed": "聊天失败",
+      "createFailed": "创建对话失败",
+      "createFailedDesc": "无法自动创建对话",
+      "selectModel": "请先选择模型",
+      "selectModelDesc": "请从下拉列表中选择一个模型",
+      "selectModelForNew": "新建对话前请先选择一个模型",
+      "loadFailed": "加载失败",
+      "loadFailedDesc": "无法加载对话历史"
+    }
   },
   "multimodal": {
     "title": "多模态工具",
@@ -155,6 +321,67 @@
     "emailNotificationsDesc": "通过邮件接收重要通知（即将推出）",
     "autoSave": "自动保存",
     "autoSaveDescription": "自动保存对话和设置更改",
-    "data": "数据管理"
+    "data": "数据管理",
+    "menu": {
+      "general": "通用设置",
+      "paths": "路径配置",
+      "benchmark": "性能压测",
+      "mcp": "MCP 管理",
+      "about": "关于",
+      "ariaLabel": "设置菜单"
+    },
+    "loadFailed": "加载失败",
+    "loadFailedDesc": "无法加载兼容性配置",
+    "saveFailed": "保存失败",
+    "saveFailedDesc": "无法保存兼容性配置，请检查网络连接",
+    "serviceFailed": "{{service}} 启动失败",
+    "connectionFailed": "{{service}} 连接失败",
+    "connectionFailedDesc": "端口 {{port}} 无响应，服务将自动禁用",
+    "serviceDisabled": "{{service}} 已禁用",
+    "serviceDisabledDesc": "配置已自动还原",
+    "disableFailed": "{{service}} 禁用失败",
+    "autoDisableFailed": "自动禁用失败",
+    "autoDisableFailedDesc": "请手动禁用服务",
+    "loadingConfig": "加载配置中...",
+    "apiCompatibility": "API 兼容性设置",
+    "apiCompatibilityDesc": "配置 Ollama 和 LM Studio API 兼容层端口",
+    "autoSaveNotice": "配置将自动保存",
+    "benchmark": {
+      "title": "性能压测",
+      "inDevelopment": "性能压测功能开发中..."
+    },
+    "mcp": {
+      "title": "MCP 管理",
+      "inDevelopment": "MCP (Model Context Protocol) 管理功能开发中..."
+    },
+    "about": {
+      "description": "高性能轻量级 llama.cpp 模型管理系统",
+      "unknown": "未知",
+      "version": "版本",
+      "buildTime": "构建时间",
+      "gitCommit": "Git Commit",
+      "runMode": "运行模式",
+      "goVersion": "Go 版本",
+      "reactVersion": "React 版本",
+      "license": "许可证",
+      "roleMaster": "主节点",
+      "roleClient": "工作节点",
+      "roleHybrid": "混合节点"
+    }
+  },
+  "error": {
+    "pageError": "页面发生错误",
+    "unknownError": "未知错误，请尝试刷新页面。",
+    "retry": "重试",
+    "operationFailed": "操作失败",
+    "invalidRequest": "请求参数错误",
+    "permissionDenied": "权限不足",
+    "notAuthenticated": "未认证",
+    "notFound": "资源未找到",
+    "conflict": "操作冲突",
+    "resourceExhausted": "资源不足",
+    "timeout": "请求超时",
+    "serverError": "服务器错误",
+    "serverErrorDesc": "服务暂时不可用，请稍后重试"
   }
 }

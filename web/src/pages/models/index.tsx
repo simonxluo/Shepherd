@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, RefreshCw, Grid3X3, List, Gauge, FileText, Star, Layers, MessageSquare, Volume2, Ear, Image, Music, Database, ArrowUpDown } from 'lucide-react';
 import { useModels, useLoadModel, useUnloadModel, useSetModelFavourite, useUpdateModelAlias, useScanModels, useFilteredModels, useCreateBenchmark, useAllModelCapabilities, MODEL_CATEGORIES, getModelCategory } from '@/features/models';
 import type { ModelCategory } from '@/features/models';
@@ -28,15 +29,16 @@ const CATEGORY_ICONS: Record<ModelCategory, React.ElementType> = {
   rerank: ArrowUpDown,
 };
 
-const STATUS_CHIPS: { value: ModelStatus | ''; label: string; dot?: string }[] = [
-  { value: '', label: '全部' },
-  { value: 'running', label: '运行中', dot: 'bg-green-500' },
-  { value: 'stopped', label: '已停止', dot: 'bg-gray-400' },
-  { value: 'loading', label: '加载中', dot: 'bg-amber-500' },
-  { value: 'error', label: '错误', dot: 'bg-red-500' },
+const STATUS_CHIPS: { value: ModelStatus | ''; labelKey: string; dot?: string }[] = [
+  { value: '', labelKey: 'models.status.all' },
+  { value: 'running', labelKey: 'models.status.running', dot: 'bg-green-500' },
+  { value: 'stopped', labelKey: 'models.status.stopped', dot: 'bg-gray-400' },
+  { value: 'loading', labelKey: 'models.status.loading', dot: 'bg-amber-500' },
+  { value: 'error', labelKey: 'models.status.error', dot: 'bg-red-500' },
 ];
 
 export function ModelsPage() {
+  const { t } = useTranslation();
   const alertDialog = useAlertDialog();
   const { data: models = [], isLoading } = useModels();
   const loadModel = useLoadModel();
@@ -95,29 +97,29 @@ export function ModelsPage() {
     loadModel.mutate(params, {
       onSuccess: () => {
         // 异步加载：API 返回 202 表示已接受，模型正在后台加载
-        toast.info('模型正在加载', `${params.modelId} 已提交加载请求，请稍候查看状态`);
+        toast.info(t('models.toast.loadingModel'), t('models.toast.loadingModelDesc', { model: params.modelId }));
         setDialogModel(null);
       },
       onError: (error) => {
         (error as APIError).handled = true;
-        toast.error('模型加载失败', error.message || '未知错误');
+        toast.error(t('models.toast.loadFailed'), error.message || t('common.unknownError'));
       },
     });
   };
 
   const handleUnloadClick = async (modelId: string) => {
     const confirmed = await alertDialog.confirm({
-      title: '卸载模型',
-      description: '确定要卸载此模型吗？',
+      title: t('models.actions.unload'),
+      description: t('models.unloadConfirm'),
     });
     if (confirmed) {
       unloadModel.mutate(modelId, {
         onSuccess: () => {
-          toast.success('模型卸载成功', `${modelId} 已成功停止`);
+          toast.success(t('models.toast.unloadSuccess'), t('models.toast.unloadSuccessDesc', { model: modelId }));
         },
         onError: (error) => {
           (error as APIError).handled = true;
-          toast.error('模型卸载失败', error.message || '未知错误');
+          toast.error(t('models.toast.unloadFailed'), error.message || t('common.unknownError'));
         },
       });
     }
@@ -128,11 +130,11 @@ export function ModelsPage() {
       { modelId, favourite: !favourite },
       {
         onSuccess: () => {
-          toast.success(!favourite ? '已添加到收藏' : '已取消收藏', modelId);
+          toast.success(!favourite ? t('models.toast.favouriteAdded') : t('models.toast.favouriteRemoved'), modelId);
         },
         onError: (error) => {
           (error as APIError).handled = true;
-          toast.error('操作失败', error.message || '未知错误');
+          toast.error(t('models.toast.operationFailed'), error.message || t('common.unknownError'));
         },
       }
     );
@@ -141,12 +143,12 @@ export function ModelsPage() {
   const handleScan = () => {
     scanModels.mutate(undefined, {
       onSuccess: (data) => {
-        const message = data?.message || `扫描完成，找到 ${data?.models_found || 0} 个模型`;
-        toast.success('模型扫描成功', message);
+        const message = data?.message || t('models.toast.scanCompleteDesc', { count: data?.models_found || 0 });
+        toast.success(t('models.toast.scanSuccess'), message);
       },
       onError: (error) => {
         (error as APIError).handled = true;
-        toast.error('模型扫描失败', error.message || '未知错误');
+        toast.error(t('models.toast.scanFailed'), error.message || t('common.unknownError'));
       },
     });
   };
@@ -159,12 +161,12 @@ export function ModelsPage() {
         { modelId: editAliasModel.id, alias },
         {
           onSuccess: () => {
-            toast.success('别名更新成功', `模型别名已设置为 ${alias || '（空）'}`);
+            toast.success(t('models.toast.aliasUpdateSuccess'), t('models.toast.aliasUpdateSuccessDesc', { alias: alias || t('models.toast.aliasEmpty') }));
             setEditAliasModel(null);
           },
           onError: (error) => {
             (error as APIError).handled = true;
-            toast.error('别名更新失败', error.message || '未知错误');
+            toast.error(t('models.toast.aliasUpdateFailed'), error.message || t('common.unknownError'));
           },
         }
       );
@@ -176,7 +178,7 @@ export function ModelsPage() {
   const handleBenchmarkConfirm = async (config: BenchmarkConfig) => {
     const model = models.find(m => m.id === config.modelId);
     if (!model) {
-      toast.error('模型未找到', '无法获取模型信息');
+      toast.error(t('models.toast.modelNotFound'), t('models.toast.modelNotFoundDesc'));
       return;
     }
 
@@ -205,7 +207,7 @@ export function ModelsPage() {
       {
         onSuccess: (data) => {
           if (data) {
-            toast.success('压测任务已创建', '正在运行...');
+            toast.success(t('models.toast.benchmarkCreated'), t('models.toast.benchmarkRunning'));
             setBenchmarkModel(null);
             const currentModel = models.find(m => m.id === config.modelId);
             if (currentModel) {
@@ -215,7 +217,7 @@ export function ModelsPage() {
         },
         onError: (error) => {
           (error as APIError).handled = true;
-          toast.error('创建压测任务失败', error.message);
+          toast.error(t('models.toast.benchmarkFailed'), error.message);
         },
       }
     );
@@ -228,9 +230,9 @@ export function ModelsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">模型管理</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('models.title')}</h1>
           <p className="text-muted-foreground">
-            共 {models?.length || 0} 个模型，已加载 {models?.filter((m) => m.isLoaded).length || 0} 个
+            {t('models.summary', { total: models?.length || 0, loaded: models?.filter((m) => m.isLoaded).length || 0 })}
           </p>
         </div>
 
@@ -242,7 +244,7 @@ export function ModelsPage() {
             size="sm"
           >
             <RefreshCw className={cn('w-4 h-4', scanModels.isPending && 'animate-spin')} />
-            扫描模型
+            {t('models.actions.scan')}
           </Button>
         </div>
       </div>
@@ -262,7 +264,7 @@ export function ModelsPage() {
               )}
             >
               <Icon className="w-3.5 h-3.5" />
-              {cat.label}
+              {t(cat.labelKey)}
               <span className={cn(
                 "text-xs tabular-nums",
                 category === cat.key ? "text-primary-foreground/70" : "text-muted-foreground/70"
@@ -284,7 +286,7 @@ export function ModelsPage() {
           )}
         >
           <Star className={cn('w-4 h-4', favouriteFilter && 'fill-current')} />
-          只看收藏
+          {t('models.actions.favouritesOnly')}
         </Button>
 
         <div className="flex items-center rounded-lg overflow-hidden border border-border/50">
@@ -314,7 +316,7 @@ export function ModelsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索模型名称、架构..."
+            placeholder={t('models.searchPlaceholder')}
             className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-input text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -337,7 +339,7 @@ export function ModelsPage() {
                   statusFilter === s.value ? 'bg-primary-foreground' : s.dot
                 )} />
               )}
-              {s.label}
+              {t(s.labelKey)}
             </button>
           ))}
         </div>
@@ -347,13 +349,13 @@ export function ModelsPage() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
-            <p className="text-muted-foreground">加载中...</p>
+            <p className="text-muted-foreground">{t('common.loading')}</p>
           </div>
         </div>
       ) : filteredModels.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <p className="text-lg mb-2">没有找到模型</p>
-          <p className="text-sm">尝试调整搜索条件或扫描模型目录</p>
+          <p className="text-lg mb-2">{t('models.noResults')}</p>
+          <p className="text-sm">{t('models.noResultsHint')}</p>
         </div>
       ) : (
         <div
@@ -380,7 +382,7 @@ export function ModelsPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleBenchmarkModel(model)}
-                    title="性能测试"
+                    title={t('models.actions.benchmark')}
                     className="h-8 w-8 sm:h-9 sm:w-9"
                   >
                     <Gauge className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -389,7 +391,7 @@ export function ModelsPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleViewBenchmarkResults(model)}
-                    title="查看测试结果"
+                    title={t('models.actions.viewBenchmarkResults')}
                     className="h-8 w-8 sm:h-9 sm:w-9"
                   >
                     <FileText className="w-3 h-3 sm:w-4 sm:h-4" />

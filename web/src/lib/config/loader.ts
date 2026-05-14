@@ -71,10 +71,17 @@ const DEFAULT_CONFIG: AppConfig = {
 };
 
 export class ConfigLoader {
+  private cachedConfig: AppConfig | null = null;
+
   /**
-   * Load configuration file
+   * Load configuration file. Caches the result so subsequent calls
+   * return the same config without re-fetching.
    */
   async load(): Promise<AppConfig> {
+    if (this.cachedConfig) {
+      return this.cachedConfig;
+    }
+
     try {
       const response = await fetch('/config.yaml')
       if (!response.ok) {
@@ -84,11 +91,13 @@ export class ConfigLoader {
       const parsed = yaml.load(yamlText) as Record<string, unknown>
 
       // Merge default config with parsed config
-      return this.mergeConfig(DEFAULT_CONFIG, parsed)
+      this.cachedConfig = this.mergeConfig(DEFAULT_CONFIG, parsed)
     } catch (error) {
       console.warn('Failed to load config.yaml, using default config:', error)
-      return DEFAULT_CONFIG
+      this.cachedConfig = DEFAULT_CONFIG
     }
+
+    return this.cachedConfig;
   }
 
   /**

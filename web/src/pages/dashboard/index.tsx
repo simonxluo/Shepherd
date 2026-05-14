@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useModels } from '@/features/models';
 import { useDownloads, computeDownloadStats } from '@/features/downloads/hooks';
@@ -11,6 +12,7 @@ import type { Model } from '@/types';
  * Dashboard page
  */
 export function DashboardPage() {
+  const { t } = useTranslation();
   const { data: models = [], isLoading } = useModels();
   const { data: downloads = [], isLoading: downloadsLoading } = useDownloads();
   const downloadStats = computeDownloadStats(downloads);
@@ -31,41 +33,41 @@ export function DashboardPage() {
 
   const stats = [
     {
-      title: '总模型数',
+      title: t('dashboard.stats.totalModels'),
       value: models?.length || 0,
       icon: Package,
-      description: '已扫描的模型',
+      description: t('dashboard.stats.totalModelsDesc'),
     },
     {
-      title: '已加载',
+      title: t('dashboard.stats.loaded'),
       value: models?.filter((m) => m.isLoaded).length || 0,
       icon: Activity,
-      description: '正在运行的模型',
+      description: t('dashboard.stats.loadedDesc'),
     },
     {
-      title: '下载任务',
+      title: t('dashboard.stats.downloads'),
       value: downloadStats.active,
       icon: Download,
-      description: '活跃的下载任务',
+      description: t('dashboard.stats.downloadsDesc'),
     },
     {
-      title: '集群节点',
+      title: t('dashboard.stats.clusterNodes'),
       value: onlineClients.length,
       icon: Network,
-      description: '在线的客户端',
+      description: t('dashboard.stats.clusterNodesDesc'),
     },
   ];
 
   if (isLoading || downloadsLoading || clientsLoading) {
-    return <div className="flex items-center justify-center h-full">加载中...</div>;
+    return <div className="flex items-center justify-center h-full">{t('common.loading')}</div>;
   }
 
   return (
     <div className="space-y-6">
       {/* Page title */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">仪表盘</h1>
-        <p className="text-muted-foreground font-medium">Shepherd 模型管理系统概览</p>
+        <h1 className="text-3xl font-bold text-foreground">{t('dashboard.title')}</h1>
+        <p className="text-muted-foreground font-medium">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Statistics cards */}
@@ -90,8 +92,8 @@ export function DashboardPage() {
       {/* Recent models */}
       <Card>
         <CardHeader>
-          <CardTitle>最近模型</CardTitle>
-          <CardDescription>最近扫描的模型列表</CardDescription>
+          <CardTitle>{t('dashboard.recentModels')}</CardTitle>
+          <CardDescription>{t('dashboard.recentModelsDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           {recentModels.length > 0 ? (
@@ -104,7 +106,7 @@ export function DashboardPage() {
                       {model.metadata.architecture} • {formatBytes(model.totalSize ?? model.size)}
                       {model.shardCount && model.shardCount > 1 && (
                         <span className="ml-1 text-xs text-muted-foreground">
-                          ({model.shardCount} 分卷)
+                          ({model.shardCount} {t('dashboard.shards')})
                         </span>
                       )}
                     </div>
@@ -117,7 +119,7 @@ export function DashboardPage() {
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-8">
-              暂无模型数据
+              {t('dashboard.noModels')}
             </div>
           )}
         </CardContent>

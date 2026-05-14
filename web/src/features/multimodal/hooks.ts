@@ -1,6 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api/client';
+import { apiClient, ApiClient } from '@/lib/api/client';
 import type { ModelCapabilities } from '@/types/model';
+
+/**
+ * API client for OpenAI-compatible /v1 endpoints (audio, images, etc.)
+ */
+const v1Client = new ApiClient('/v1');
 
 export interface LoadedModel {
   id: string;
@@ -13,14 +18,6 @@ export interface LoadedModel {
 interface LoadedModelsResponse {
   success: boolean;
   models: LoadedModel[];
-}
-
-/**
- * Handle API error responses with consistent error message extraction
- */
-async function handleApiError(response: Response, context: string): Promise<never> {
-  const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
-  throw new Error(err.error?.message || `${context}请求失败 (${response.status})`);
 }
 
 export const BACKEND_LABELS: Record<string, string> = {
@@ -53,14 +50,16 @@ export interface TTSRequest {
 export function useTTS() {
   return useMutation({
     mutationFn: async (params: TTSRequest) => {
-      const response = await fetch('/v1/audio/speech', {
+      // TTS returns binary audio data, so we use fetch via the v1Client base URL
+      const response = await fetch(`${v1Client.getBaseUrl()}/audio/speech`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
       });
 
       if (!response.ok) {
-        await handleApiError(response, 'TTS ');
+        const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+        throw new Error(err.error?.message || `TTS 请求失败 (${response.status})`);
       }
 
       const blob = await response.blob();
@@ -78,14 +77,7 @@ export function useVoices(model?: string) {
     queryKey: ['voices', model],
     queryFn: async () => {
       if (!model) return [];
-      const params = new URLSearchParams({ model });
-      const response = await fetch(`/v1/audio/voices?${params}`);
-
-      if (!response.ok) {
-        await handleApiError(response, '获取语音列表');
-      }
-
-      const res = await response.json() as VoicesResponse;
+      const res = await v1Client.get<VoicesResponse>('/audio/voices', { model });
       return res.voices ?? [];
     },
     enabled: !!model,
@@ -118,13 +110,15 @@ export function useASR() {
       if (params.response_format) formData.append('response_format', params.response_format);
       if (params.temperature !== undefined) formData.append('temperature', String(params.temperature));
 
-      const response = await fetch('/v1/audio/transcriptions', {
+      // ASR uses FormData (no JSON content-type), so we use fetch with the v1Client base URL
+      const response = await fetch(`${v1Client.getBaseUrl()}/audio/transcriptions`, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        await handleApiError(response, 'ASR ');
+        const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+        throw new Error(err.error?.message || `ASR 请求失败 (${response.status})`);
       }
 
       return response.json() as Promise<ASRResponse>;
@@ -153,17 +147,7 @@ export interface ImageGenerationResponse {
 export function useImageGeneration() {
   return useMutation({
     mutationFn: async (params: ImageGenerationRequest) => {
-      const response = await fetch('/v1/images/generations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) {
-        await handleApiError(response, '图像生成');
-      }
-
-      return response.json() as Promise<ImageGenerationResponse>;
+      return v1Client.post<ImageGenerationResponse>('/images/generations', params);
     },
   });
 }

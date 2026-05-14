@@ -137,8 +137,17 @@ func convertNodeCapabilitiesToCluster(cap *node.NodeCapabilities) *cluster.Capab
 
 // ==================== 节点管理 API ====================
 
-// RegisterNode 适配节点注册 API
-// POST /api/master/nodes/register
+// RegisterNode registers a new node in the cluster.
+// @Summary      Register a node
+// @Description  Registers a new node with its address, port, and capabilities
+// @Tags         Nodes
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Node registration info"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/nodes/register [post]
 func (a *NodeAdapter) RegisterNode(c *gin.Context) {
 	var nodeInfo node.NodeInfo
 	if err := c.ShouldBindJSON(&nodeInfo); err != nil {
@@ -177,8 +186,13 @@ func (a *NodeAdapter) RegisterNode(c *gin.Context) {
 	})
 }
 
-// ListNodes 返回所有已注册的节点列表
-// GET /api/master/nodes
+// ListNodes returns all registered nodes.
+// @Summary      List all nodes
+// @Description  Returns all registered nodes with their status and statistics
+// @Tags         Nodes
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/nodes [get]
 func (a *NodeAdapter) ListNodes(c *gin.Context) {
 	clients := a.node.ListClients()
 	total, online, offline, busy := a.node.GetClientCount()
@@ -200,8 +214,16 @@ func (a *NodeAdapter) ListNodes(c *gin.Context) {
 	})
 }
 
-// GetNode 获取指定节点的详细信息
-// GET /api/master/nodes/:id
+// GetNode returns detailed information about a specific node.
+// @Summary      Get node details
+// @Description  Returns detailed information about a specific node by ID
+// @Tags         Nodes
+// @Produce      json
+// @Param        id path string true "Node ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/nodes/{id} [get]
 func (a *NodeAdapter) GetNode(c *gin.Context) {
 	nodeID := c.Param("id")
 	if nodeID == "" {
@@ -312,8 +334,16 @@ func (a *NodeAdapter) convertNodeToFrontendFormat(client *node.NodeInfo) gin.H {
 	return result
 }
 
-// UnregisterNode 注销节点
-// DELETE /api/master/nodes/:id
+// UnregisterNode removes a node from the cluster.
+// @Summary      Unregister a node
+// @Description  Removes a node from the cluster by its ID
+// @Tags         Nodes
+// @Produce      json
+// @Param        id path string true "Node ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/nodes/{id} [delete]
 func (a *NodeAdapter) UnregisterNode(c *gin.Context) {
 	nodeID := c.Param("id")
 	if nodeID == "" {
@@ -336,8 +366,17 @@ func (a *NodeAdapter) UnregisterNode(c *gin.Context) {
 
 // ==================== 心跳管理 API ====================
 
-// HandleHeartbeat 适配心跳 API
-// POST /api/master/heartbeat
+// HandleHeartbeat processes a heartbeat from a node.
+// @Summary      Process node heartbeat
+// @Description  Processes a heartbeat message from a node, updating its status and resources
+// @Tags         Nodes
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Heartbeat message with node ID and resources"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/nodes/{id}/heartbeat [post]
 func (a *NodeAdapter) HandleHeartbeat(c *gin.Context) {
 	var heartbeat node.HeartbeatMessage
 	if err := c.ShouldBindJSON(&heartbeat); err != nil {
@@ -381,8 +420,18 @@ func (a *NodeAdapter) HandleHeartbeat(c *gin.Context) {
 
 // ==================== 命令管理 API ====================
 
-// SendCommand 向指定节点发送命令
-// POST /api/master/nodes/:id/command
+// SendCommand sends a command to a specific node.
+// @Summary      Send command to node
+// @Description  Sends a command to a specific node for execution
+// @Tags         Nodes
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Node ID"
+// @Param        request body object true "Command to send"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/nodes/{id}/command [post]
 func (a *NodeAdapter) SendCommand(c *gin.Context) {
 	nodeID := c.Param("id")
 	if nodeID == "" {
@@ -424,8 +473,15 @@ func (a *NodeAdapter) SendCommand(c *gin.Context) {
 	})
 }
 
-// GetCommands 获取指定节点的待执行命令
-// GET /api/master/nodes/:id/commands
+// GetCommands returns pending commands for a specific node.
+// @Summary      Get pending commands
+// @Description  Returns the list of pending commands for a specific node
+// @Tags         Nodes
+// @Produce      json
+// @Param        id path string true "Node ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Router       /api/nodes/{id}/commands [get]
 func (a *NodeAdapter) GetCommands(c *gin.Context) {
 	nodeID := c.Param("id")
 	if nodeID == "" {
@@ -627,8 +683,15 @@ func (a *NodeAdapter) deprecationWarningMiddleware() gin.HandlerFunc {
 
 // ==================== 辅助方法 ====================
 
-// HandleScanClients 处理客户端扫描请求
-// POST /api/master/scan
+// HandleScanClients initiates a network scan for client nodes.
+// @Summary      Scan for clients
+// @Description  Initiates a network scan to discover client nodes in the cluster
+// @Tags         Cluster
+// @Accept       json
+// @Produce      json
+// @Param        request body object false "Scan parameters (CIDR, port range, timeout)"
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/scan [post]
 func (a *NodeAdapter) HandleScanClients(c *gin.Context) {
 	var req struct {
 		CIDR      string `json:"cidr,omitempty"`
@@ -649,8 +712,13 @@ func (a *NodeAdapter) HandleScanClients(c *gin.Context) {
 	SuccessWithMessage(c, "网络扫描已启动")
 }
 
-// GetClientScanStatus 获取客户端扫描状态
-// GET /api/master/scan/status
+// GetClientScanStatus returns the current scan status.
+// @Summary      Get scan status
+// @Description  Returns the current status of the network scan for client nodes
+// @Tags         Cluster
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/scan/status [get]
 func (a *NodeAdapter) GetClientScanStatus(c *gin.Context) {
 	status := a.scanner.GetStatus()
 	Success(c, status)
@@ -658,8 +726,13 @@ func (a *NodeAdapter) GetClientScanStatus(c *gin.Context) {
 
 // ==================== 任务管理 API ====================
 
-// ListTasks 返回所有任务列表
-// GET /api/master/tasks
+// ListTasks returns all scheduled tasks.
+// @Summary      List tasks
+// @Description  Returns all scheduled tasks with their status
+// @Tags         Tasks
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/tasks [get]
 func (a *NodeAdapter) ListTasks(c *gin.Context) {
 	tasks := a.scheduler.ListTasks()
 
@@ -669,8 +742,17 @@ func (a *NodeAdapter) ListTasks(c *gin.Context) {
 	})
 }
 
-// CreateTask 创建新任务
-// POST /api/master/tasks
+// CreateTask creates a new distributed task.
+// @Summary      Create a task
+// @Description  Creates a new distributed task for execution on cluster nodes
+// @Tags         Tasks
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Task creation request with type and payload"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/tasks [post]
 func (a *NodeAdapter) CreateTask(c *gin.Context) {
 	var req struct {
 		Type    string                 `json:"type"`
@@ -702,8 +784,16 @@ func (a *NodeAdapter) CreateTask(c *gin.Context) {
 	})
 }
 
-// DeleteTask 删除任务
-// DELETE /api/master/tasks/:id
+// DeleteTask deletes a task by its ID.
+// @Summary      Delete a task
+// @Description  Deletes/cancels a task by its ID
+// @Tags         Tasks
+// @Produce      json
+// @Param        id path string true "Task ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/tasks/{id} [delete]
 func (a *NodeAdapter) DeleteTask(c *gin.Context) {
 	taskID := c.Param("id")
 	if taskID == "" {
@@ -725,8 +815,16 @@ func (a *NodeAdapter) DeleteTask(c *gin.Context) {
 	})
 }
 
-// RetryTask 重试任务
-// POST /api/master/tasks/:id/retry
+// RetryTask retries a failed task.
+// @Summary      Retry a task
+// @Description  Resets a failed task back to pending status for re-execution
+// @Tags         Tasks
+// @Produce      json
+// @Param        id path string true "Task ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/tasks/{id}/retry [post]
 func (a *NodeAdapter) RetryTask(c *gin.Context) {
 	taskID := c.Param("id")
 	if taskID == "" {
@@ -757,8 +855,13 @@ func (a *NodeAdapter) RetryTask(c *gin.Context) {
 
 // ==================== 兼容性 API 方法 ====================
 
-// ListClients 返回客户端列表（前端期望的格式）
-// GET /api/master/clients
+// ListClients returns the client list in frontend-expected format.
+// @Summary      List clients
+// @Description  Returns client nodes in the format expected by the frontend
+// @Tags         Nodes
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/nodes [get]
 func (a *NodeAdapter) ListClients(c *gin.Context) {
 	clients := a.node.ListClients()
 	total, online, offline, busy := a.node.GetClientCount()
@@ -780,8 +883,13 @@ func (a *NodeAdapter) ListClients(c *gin.Context) {
 	})
 }
 
-// GetClusterOverview 返回集群概览
-// GET /api/master/overview
+// GetClusterOverview returns the cluster overview statistics.
+// @Summary      Get cluster overview
+// @Description  Returns cluster-wide statistics including node counts and task statistics
+// @Tags         Cluster
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/overview [get]
 func (a *NodeAdapter) GetClusterOverview(c *gin.Context) {
 	total, online, offline, busy := a.node.GetClientCount()
 
@@ -827,8 +935,16 @@ func (a *NodeAdapter) GetClusterOverview(c *gin.Context) {
 	})
 }
 
-// GetNodeConfig 获取节点配置信息
-// GET /api/nodes/:id/config
+// GetNodeConfig sends a get-config command to a node.
+// @Summary      Get node configuration
+// @Description  Sends a command to retrieve the configuration of a specific node
+// @Tags         Nodes
+// @Produce      json
+// @Param        id path string true "Node ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/nodes/{id}/config [get]
 func (a *NodeAdapter) GetNodeConfig(c *gin.Context) {
 	nodeID := c.Param("id")
 	if nodeID == "" {
@@ -858,8 +974,17 @@ func (a *NodeAdapter) GetNodeConfig(c *gin.Context) {
 	})
 }
 
-// TestNodeLlamacpp 测试节点 llama.cpp 可用性
-// POST /api/nodes/:id/test
+// TestNodeLlamacpp tests llama.cpp availability on a node.
+// @Summary      Test node llama.cpp
+// @Description  Sends a test command to verify llama.cpp availability on a specific node
+// @Tags         Nodes
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Node ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/nodes/{id}/test [post]
 func (a *NodeAdapter) TestNodeLlamacpp(c *gin.Context) {
 	nodeID := c.Param("id")
 	if nodeID == "" {

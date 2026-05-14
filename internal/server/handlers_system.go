@@ -18,6 +18,13 @@ import (
 	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
 )
 
+// HandleServerInfo returns server information including version, ports, and status.
+// @Summary      Get server info
+// @Description  Returns server version, build info, status, role and configured ports
+// @Tags         System
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/info [get]
 func (s *Server) HandleServerInfo(c *gin.Context) {
 	api.Success(c, gin.H{
 		"version":   s.config.Version,
@@ -35,9 +42,14 @@ func (s *Server) HandleServerInfo(c *gin.Context) {
 	})
 }
 
-// handleGetGPUs 返回系统可用的 GPU 列表
-// 返回格式兼容 LlamacppServer 的设备列表格式
-// 支持通过查询参数 llamacppPath 指定 llama.cpp 路径
+// HandleGetGPUs returns the list of available GPUs in the system.
+// @Summary      Get available GPUs
+// @Description  Returns system GPU list compatible with LlamacppServer device list format. Supports specifying llama.cpp path via query parameter.
+// @Tags         System
+// @Produce      json
+// @Param        llamacppPath query string false "Path to llama.cpp installation"
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/system/gpus [get]
 func (s *Server) HandleGetGPUs(c *gin.Context) {
 	// 获取查询参数中的 llama.cpp 路径
 	requestedPath := c.Query("llamacppPath")
@@ -243,7 +255,13 @@ func (s *Server) HandleGetGPUs(c *gin.Context) {
 	})
 }
 
-// handleGetLlamacppBackends 返回可用的推理后端列表（llama.cpp 和其他推理后端分开返回）
+// HandleGetLlamacppBackends returns the list of available inference backends.
+// @Summary      Get available llama.cpp backends
+// @Description  Returns available inference backends including llama.cpp paths and other backends (vLLM, vLLM-Omni)
+// @Tags         System
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/system/llamacpp-backends [get]
 func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 	backends := []gin.H{}
 	inferenceBackends := []gin.H{}
@@ -298,7 +316,14 @@ func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 	})
 }
 
-// handleGetConfig 返回当前配置（不包含敏感信息）
+// HandleGetConfig returns the current server configuration (excluding sensitive information).
+// @Summary      Get server configuration
+// @Description  Returns the current server configuration excluding sensitive information
+// @Tags         Config
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/config [get]
 func (s *Server) HandleGetConfig(c *gin.Context) {
 	if s.config == nil || s.config.ServerCfg == nil {
 		api.Error(c, types.ErrInternalError, "配置未初始化")
@@ -335,7 +360,16 @@ func (s *Server) HandleGetConfig(c *gin.Context) {
 	})
 }
 
-// handleUpdateConfig 更新配置
+// HandleUpdateConfig updates the server configuration.
+// @Summary      Update server configuration
+// @Description  Updates server configuration including ports, scan paths, and auto-scan settings
+// @Tags         Config
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Configuration update request"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Router       /api/config [put]
 func (s *Server) HandleUpdateConfig(c *gin.Context) {
 	var req struct {
 		Mode      string   `json:"mode"`
@@ -377,6 +411,14 @@ func (s *Server) HandleUpdateConfig(c *gin.Context) {
 	})
 }
 
+// HandleListProcesses returns all running and loading model processes.
+// @Summary      List processes
+// @Description  Returns all running and loading model server processes with their stats
+// @Tags         Processes
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/processes [get]
 func (s *Server) HandleListProcesses(c *gin.Context) {
 	processMgr := s.modelMgr.GetProcessManager()
 	if processMgr == nil {
@@ -431,6 +473,16 @@ func (s *Server) HandleListProcesses(c *gin.Context) {
 	})
 }
 
+// HandleGetProcess returns details of a specific process.
+// @Summary      Get process details
+// @Description  Returns detailed information about a specific model server process
+// @Tags         Processes
+// @Produce      json
+// @Param        id path string true "Process ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/processes/{id} [get]
 func (s *Server) HandleGetProcess(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -464,6 +516,16 @@ func (s *Server) HandleGetProcess(c *gin.Context) {
 	})
 }
 
+// HandleStopProcess stops a running process by its ID.
+// @Summary      Stop a process
+// @Description  Stops a running model server process by its ID
+// @Tags         Processes
+// @Produce      json
+// @Param        id path string true "Process ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/processes/{id}/stop [post]
 func (s *Server) HandleStopProcess(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -488,6 +550,15 @@ func (s *Server) HandleStopProcess(c *gin.Context) {
 	})
 }
 
+// HandleLogStreamText streams server logs as plain text in real-time.
+// @Summary      Stream server logs
+// @Description  Streams server logs in real-time as plain text using chunked transfer encoding
+// @Tags         Logs
+// @Produce      plain
+// @Param        no-history query string false "Skip sending log history"
+// @Success      200 {string} string "Log stream"
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/logs/stream/text [get]
 func (s *Server) HandleLogStreamText(c *gin.Context) {
 	c.Header("Content-Type", "text/plain")
 	c.Header("Transfer-Encoding", "chunked")

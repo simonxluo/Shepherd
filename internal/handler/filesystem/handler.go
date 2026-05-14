@@ -38,7 +38,15 @@ type DirectoryListResponse struct {
 	Roots       []DirectoryItem `json:"roots,omitempty"`
 }
 
-// ListDirectory handles directory listing requests
+// ListDirectory handles directory listing requests.
+// @Summary      List directory contents
+// @Description  Lists files and folders in a given directory path, or returns system roots if no path specified
+// @Tags         System
+// @Produce      json
+// @Param        path query string false "Directory path to list"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Router       /api/system/filesystem [get]
 func (h *Handler) ListDirectory(c *gin.Context) {
 	path := c.Query("path")
 
@@ -205,7 +213,16 @@ func (h *Handler) getSystemRoots() []DirectoryItem {
 	return roots
 }
 
-// ValidatePath 验证路径的有效性
+// ValidatePath validates a directory path.
+// @Summary      Validate path
+// @Description  Validates whether a given path exists, is a directory, and is readable
+// @Tags         System
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "Path validation request"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Router       /api/system/filesystem/validate [post]
 func (h *Handler) ValidatePath(c *gin.Context) {
 	type Request struct {
 		Path string `json:"path" binding:"required"`

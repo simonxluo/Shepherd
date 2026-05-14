@@ -1,15 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getChatModels,
-  listConversations,
-  createConversation,
-  updateConversation,
-  deleteConversation,
-  createMessage,
-  streamingChatCompletion,
-  type ChatModelInfo,
-  type Conversation,
-  type Message,
+  chatApi,
   type StreamingChatParams,
 } from '@/lib/api/chat';
 
@@ -25,7 +16,7 @@ const chatKeys = {
 export function useChatModels() {
   return useQuery({
     queryKey: chatKeys.models,
-    queryFn: getChatModels,
+    queryFn: chatApi.getChatModels,
     refetchInterval: 10_000,
     staleTime: 5_000,
   });
@@ -36,7 +27,7 @@ export function useChatModels() {
 export function useConversations() {
   return useQuery({
     queryKey: chatKeys.conversations,
-    queryFn: () => listConversations(50, 0).then((r) => r.items ?? []),
+    queryFn: () => chatApi.listConversations(50, 0).then((r) => r.items ?? []),
   });
 }
 
@@ -44,7 +35,7 @@ export function useCreateConversation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: { model: string; title?: string }) =>
-      createConversation(body),
+      chatApi.createConversation(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: chatKeys.conversations });
     },
@@ -54,7 +45,7 @@ export function useCreateConversation() {
 export function useDeleteConversation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: deleteConversation,
+    mutationFn: chatApi.deleteConversation,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: chatKeys.conversations });
     },
@@ -65,7 +56,7 @@ export function useUpdateConversation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string; title?: string; systemPrompt?: string }) =>
-      updateConversation(id, body),
+      chatApi.updateConversation(id, body),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: chatKeys.conversation(variables.id) });
       qc.invalidateQueries({ queryKey: chatKeys.conversations });
@@ -86,7 +77,7 @@ export function useSaveMessage() {
       role: string;
       content: string;
       metadata?: Record<string, unknown>;
-    }) => createMessage(conversationId, { role, content, metadata }),
+    }) => chatApi.createMessage(conversationId, { role, content, metadata }),
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({
         queryKey: chatKeys.conversation(variables.conversationId),
@@ -111,7 +102,7 @@ export function useStreamingChat(opts?: UseStreamingChatOptions) {
     abortController?.abort();
     abortController = new AbortController();
 
-    streamingChatCompletion({
+    chatApi.streamingChatCompletion({
       ...params,
       signal: abortController.signal,
       onChunk: opts?.onChunk ?? (() => {}),

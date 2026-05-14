@@ -5,7 +5,6 @@
 export * from './model';
 export * from './download';
 export * from './events';
-export * from './websocket';
 
 // Unified node type exports (recommended)
 export type * from './node';

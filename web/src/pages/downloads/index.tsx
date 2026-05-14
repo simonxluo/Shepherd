@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, CloudDownload, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ import { useAlertDialog } from '@/providers/AlertDialog';
 import { cn } from '@/lib/utils';
 
 export function DownloadsPage() {
+  const { t } = useTranslation();
   const alertDialog = useAlertDialog();
   const { data: downloads, isLoading } = useDownloads();
   const createDownload = useCreateDownload();
@@ -64,8 +66,8 @@ export function DownloadsPage() {
 
   const handleClearCompleted = async () => {
     const confirmed = await alertDialog.confirm({
-      title: '清理已完成',
-      description: '确定要清理所有已完成的下载任务吗？',
+      title: t('downloads.clearCompleted'),
+      description: t('downloads.clearCompletedConfirm'),
     });
     if (confirmed) {
       clearCompleted.mutate();
@@ -77,9 +79,9 @@ export function DownloadsPage() {
       {/* Title */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">下载管理</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t('downloads.title')}</h1>
           <p className="text-muted-foreground">
-            管理本地下载任务或从 HuggingFace 搜索模型
+            {t('downloads.subtitle')}
           </p>
         </div>
 
@@ -90,7 +92,7 @@ export function DownloadsPage() {
             size="sm"
           >
             <Trash2 className="w-4 h-4" />
-            清理已完成
+            {t('downloads.clearCompleted')}
           </Button>
         )}
       </div>
@@ -110,7 +112,7 @@ export function DownloadsPage() {
             )}
           >
             <Download className="w-4 h-4 mr-2" />
-            本地下载 ({stats.total})
+            {t('downloads.tabs.local')} ({stats.total})
           </Button>
           <Button
             onClick={() => setActiveTab('online')}
@@ -124,7 +126,7 @@ export function DownloadsPage() {
             )}
           >
             <Search className="w-4 h-4 mr-2" />
-            在线搜索
+            {t('downloads.tabs.online')}
           </Button>
         </nav>
       </div>
@@ -136,21 +138,21 @@ export function DownloadsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 bg-card rounded-lg border border-border">
               <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-              <div className="text-sm text-muted-foreground">总任务</div>
+              <div className="text-sm text-muted-foreground">{t('downloads.stats.total')}</div>
             </div>
             <div className="p-4 bg-card rounded-lg border border-border">
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</div>
-              <div className="text-sm text-muted-foreground">进行中</div>
+              <div className="text-sm text-muted-foreground">{t('downloads.stats.active')}</div>
             </div>
             <div className="p-4 bg-card rounded-lg border border-border">
               <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.completed}</div>
-              <div className="text-sm text-muted-foreground">已完成</div>
+              <div className="text-sm text-muted-foreground">{t('downloads.stats.completed')}</div>
             </div>
             <div className="p-4 bg-card rounded-lg border border-border">
               <div className="text-2xl font-bold text-foreground">
                 {((stats.downloadedBytes / (stats.totalBytes || 1)) * 100).toFixed(1)}%
               </div>
-              <div className="text-sm text-muted-foreground">总进度</div>
+              <div className="text-sm text-muted-foreground">{t('downloads.stats.progress')}</div>
             </div>
           </div>
 
@@ -162,7 +164,7 @@ export function DownloadsPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="搜索仓库 ID 或文件名..."
+                placeholder={t('downloads.searchPlaceholder')}
                 className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-input text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -172,13 +174,13 @@ export function DownloadsPage() {
               onValueChange={(v) => setStateFilter(v as DownloadState | '')}
             >
               <SelectTrigger className="px-3 py-2 border border-border rounded-lg bg-input text-foreground w-[130px]">
-                <SelectValue placeholder="所有状态" />
+                <SelectValue placeholder={t('downloads.filter.allStates')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="downloading">下载中</SelectItem>
-                <SelectItem value="paused">已暂停</SelectItem>
-                <SelectItem value="completed">已完成</SelectItem>
-                <SelectItem value="failed">失败</SelectItem>
+                <SelectItem value="downloading">{t('downloads.status.downloading')}</SelectItem>
+                <SelectItem value="paused">{t('downloads.status.paused')}</SelectItem>
+                <SelectItem value="completed">{t('downloads.status.completed')}</SelectItem>
+                <SelectItem value="failed">{t('downloads.status.failed')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -187,7 +189,7 @@ export function DownloadsPage() {
               onValueChange={(v) => setSourceFilter(v as DownloadSource | '')}
             >
               <SelectTrigger className="px-3 py-2 border border-border rounded-lg bg-input text-foreground w-[140px]">
-                <SelectValue placeholder="所有来源" />
+                <SelectValue placeholder={t('downloads.filter.allSources')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="huggingface">HuggingFace</SelectItem>
@@ -201,14 +203,14 @@ export function DownloadsPage() {
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <p className="text-muted-foreground">加载中...</p>
+                <p className="text-muted-foreground">{t('common.loading')}</p>
               </div>
             </div>
           ) : filteredDownloads.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <CloudDownload className="w-12 h-12 mb-4" />
-              <p className="text-lg mb-2">暂无下载任务</p>
-              <p className="text-sm mb-4">创建新任务开始下载模型</p>
+              <p className="text-lg mb-2">{t('downloads.empty')}</p>
+              <p className="text-sm mb-4">{t('downloads.emptyHint')}</p>
               <Button
                 onClick={() => {
                   setPreFillParams(null);
@@ -218,7 +220,7 @@ export function DownloadsPage() {
                 size="sm"
               >
                 <Plus className="w-4 h-4" />
-                新建下载
+                {t('downloads.newDownload')}
               </Button>
             </div>
           ) : (

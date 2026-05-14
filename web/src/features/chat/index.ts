@@ -9,3 +9,4 @@ export {
 } from './hooks';
 
 export type { ChatModelInfo } from '@/lib/api/chat';
+export { chatApi } from '@/lib/api/chat';
