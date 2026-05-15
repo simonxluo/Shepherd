@@ -49,6 +49,9 @@ func (s *Server) HandleCreateTranslation(c *gin.Context) {
 func (s *Server) HandleCreateImage(c *gin.Context) {
 	s.handlers.Image.HandleCreateImage(c)
 }
+func (s *Server) HandleCreateMusic(c *gin.Context) {
+	s.handlers.Music.HandleCreateMusic(c)
+}
 func (s *Server) HandleListVoices(c *gin.Context) {
 	s.handlers.Audio.HandleListVoices(c)
 }

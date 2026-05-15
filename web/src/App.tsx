@@ -9,7 +9,10 @@ import { DownloadsPage } from './pages/downloads';
 import { ChatPage } from './pages/chat';
 import { ClusterPage } from './pages/cluster';
 import { LogsPage } from './pages/logs';
-import { MultimodalPage } from './pages/multimodal';
+import { TTSPage } from './pages/tts';
+import { ASRPage } from './pages/asr';
+import { ImageGenPage } from './pages/image-gen';
+import { MusicGenPage } from './pages/music-gen';
 import { SettingsPage } from './pages/settings';
 import { useSSEConnection } from './hooks/useSSEConnection';
 import type { SSEEvent } from './types';
@@ -101,7 +104,10 @@ function AppContent() {
           <Route path="chat" element={<ChatPage />} />
           <Route path="cluster" element={<ClusterPage />} />
           <Route path="logs" element={<LogsPage />} />
-          <Route path="multimodal" element={<MultimodalPage />} />
+          <Route path="tts" element={<TTSPage />} />
+          <Route path="asr" element={<ASRPage />} />
+          <Route path="image-gen" element={<ImageGenPage />} />
+          <Route path="music-gen" element={<MusicGenPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>

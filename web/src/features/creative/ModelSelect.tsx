@@ -1,5 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BACKEND_LABELS, type LoadedModel } from '../hooks';
+import { BACKEND_LABELS, type LoadedModel } from './hooks';
 
 interface ModelSelectProps {
   models: LoadedModel[];
@@ -11,7 +11,7 @@ interface ModelSelectProps {
 }
 
 /**
- * Shared model selection dropdown for multimodal panels
+ * Shared model selection dropdown for creative pages (TTS, ASR, ImageGen, MusicGen)
  */
 export function ModelSelect({
   models,

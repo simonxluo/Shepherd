@@ -148,6 +148,7 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.LMStudio = lmstudio.NewHandler(modelMgr)
 	s.handlers.Audio = openai.NewAudioHandler(modelMgr)
 	s.handlers.Image = openai.NewImageHandler(modelMgr)
+	s.handlers.Music = openai.NewMusicHandler(modelMgr)
 	s.handlers.Paths = paths.NewHandler(config.ConfigMgr)
 	s.handlers.Storage = storageapi.NewHandler(config.ConfigMgr, storageMgr)
 	s.handlers.Compatibility = compatibilityapi.NewHandler(config.ConfigMgr, compatServerManager)

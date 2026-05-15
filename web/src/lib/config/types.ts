@@ -37,7 +37,10 @@ export interface FeaturesConfig {
   cluster: boolean;
   logs: boolean;
   chat: boolean;
-  multimodal: boolean;
+  tts: boolean;
+  asr: boolean;
+  imageGen: boolean;
+  musicGen: boolean;
   settings: boolean;
   dashboard: boolean;
 }

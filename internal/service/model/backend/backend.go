@@ -283,6 +283,7 @@ func endpointsWithoutAudio() map[string]bool {
 	ep["/v1/audio/voices"] = false
 	ep["/v1/audio/transcriptions"] = false
 	ep["/v1/audio/translations"] = false
+	ep["/v1/audio/music"] = false
 	return ep
 }
 
@@ -293,6 +294,7 @@ func endpointsWithAudio() map[string]bool {
 	ep["/v1/audio/voices"] = true
 	ep["/v1/audio/transcriptions"] = true
 	ep["/v1/audio/translations"] = true
+	ep["/v1/audio/music"] = true
 	return ep
 }
 

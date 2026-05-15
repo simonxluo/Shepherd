@@ -34,6 +34,7 @@ type Handlers struct {
 	LMStudio      *lmstudio.Handler
 	Audio         *openai.AudioHandler
 	Image         *openai.ImageHandler
+	Music         *openai.MusicHandler
 	Paths         *paths.Handler
 	Storage       *storageapi.Handler
 	Compatibility *compatibilityapi.Handler
@@ -98,6 +99,7 @@ type ServerHandlers interface {
 	HandleCreateTranscription(c *gin.Context)
 	HandleCreateTranslation(c *gin.Context)
 	HandleCreateImage(c *gin.Context)
+	HandleCreateMusic(c *gin.Context)
 	HandleListVoices(c *gin.Context)
 }
 
@@ -352,6 +354,7 @@ func registerCompatibilityRoutes(engine *gin.Engine, sh ServerHandlers) {
 		openai.POST("/audio/transcriptions", sh.HandleCreateTranscription)
 		openai.POST("/audio/translations", sh.HandleCreateTranslation)
 		openai.POST("/images/generations", sh.HandleCreateImage)
+		openai.POST("/audio/music", sh.HandleCreateMusic)
 	}
 
 	anthropic := engine.Group("/v1")
