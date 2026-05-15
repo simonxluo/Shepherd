@@ -24,7 +24,7 @@
   - 基础参数: 上下文大小、批次大小、线程数、GPU 层数
   - 采样参数: 温度、Top-P、Top-K、重复惩罚、Min-P、Presence/Frequency 惩罚
   - 性能优化: Flash Attention、内存锁定、UBatch、并行槽位
-  - KV 缓存: 类型配置 (K/V)、统一缓存、缓存大小
+  - KV 缓存: 类型配置 (K/V)、统一缓存
   - 模板系统: Jinja 禁用、自定义模板、上下文切换
   - GPU 配置: 多设备支持、主 GPU 选择、设备列表
 
@@ -44,7 +44,7 @@
 
 ### 🎨 Web 前端
 - React 19 + TypeScript + Vite 7 + Tailwind CSS 4
-- 前端独立配置，支持多后端和运行时切换
+- 国际化支持（中文/英文）
 - SSE 实时事件推送
 
 ---
@@ -55,13 +55,13 @@
 
 **从源码编译：**
 ```bash
-git clone https://github.com/shepherd-project/shepherd.git
-cd shepherd
+git clone https://github.com/simonxluo/Shepherd.git
+cd Shepherd
 make build
 ```
 
 **下载预编译版本：**
-前往 [Releases](https://github.com/shepherd-project/shepherd/releases) 下载对应平台的二进制文件。
+前往 [Releases](https://github.com/simonxluo/Shepherd/releases) 下载对应平台的二进制文件。
 
 ### 配置
 
@@ -75,8 +75,6 @@ make build
 | `master` | 主节点模式 |
 | `client` | 工作节点模式 |
 
-**前端独立配置：** `web/config.yaml` - 支持多后端配置和运行时切换
-
 ### 运行
 
 ```bash
@@ -84,10 +82,16 @@ make build
 ./build/shepherd
 
 # 使用自定义配置文件
-./build/shepherd --config config/node/server.config.yaml
+./build/shepherd serve --config config/node/server.config.yaml
+
+# 同时启动前端开发服务器
+./build/shepherd serve --web
+
+# 编译前端后启动
+./build/shepherd serve --build --web
 
 # 查看版本
-./build/shepherd --version
+./build/shepherd version
 ```
 
 访问 Web UI: http://localhost:9190
@@ -117,13 +121,13 @@ make build
 ```bash
 ./build/shepherd
 # 或指定配置
-./build/shepherd --config config/node/server.config.yaml
+./build/shepherd serve --config config/node/server.config.yaml
 ```
 
 **2. 启动 Client 节点：**
 ```bash
 # 在配置文件中设置 node.role: client 和 node.client_role.master_address
-./build/shepherd --config config/node/client.config.yaml
+./build/shepherd serve --config config/node/client.config.yaml
 ```
 
 **3. 查看集群状态：**
@@ -153,21 +157,6 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-### 分布式任务调度
-
-```bash
-# 创建任务
-curl -X POST http://master:9190/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "run_python",
-    "payload": {
-      "script": "/path/to/script.py",
-      "conda_env": "rocm7.2"
-    }
-  }'
-```
-
 ---
 
 ## 🛠️ 开发
@@ -175,10 +164,12 @@ curl -X POST http://master:9190/api/tasks \
 ### 后端
 
 ```bash
-make test        # 运行测试
+make build       # 编译
 make lint        # 代码检查
 make fmt         # 代码格式化
+make tidy        # 整理依赖
 make build-all   # 跨平台编译
+make swag        # 生成 Swagger API 文档
 ```
 
 ### 前端
@@ -188,35 +179,15 @@ cd web
 npm install      # 安装依赖
 npm run dev      # 开发服务器（端口 3000）
 npm run build    # 构建生产版本
+npm run lint     # ESLint 检查
+npm run test     # 运行单元测试
 ```
-
----
-
-## 🗺️ 路线图
-
-- [x] v0.1.0 - 核心功能
-- [x] v0.1.1 - Master-Client 分布式管理
-- [x] v0.1.2 - Web UI 前端独立架构
-- [x] v0.1.3 - 配置/下载/进程管理
-- [x] v0.1.4 - 模型压测 UI 优化
-- [x] **v0.2.0** - **类型系统统一重构**
-- [ ] v0.3.0 - 系统托盘和桌面应用
-- [ ] v0.4.0 - 移除废弃 API
-- [ ] v1.0.0 - 生产就绪
-
-**v0.2.0 更新：** API 路由统一为 `/api/nodes/*`，类型迁移到 `UnifiedNode`。详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
 ## 📚 文档
 
-| 文档 | 描述 |
-|------|------|
-| [CHANGELOG.md](CHANGELOG.md) | 变更日志 |
-| [贡献指南](doc/contributing.md) | 贡献指南 |
-| [脚本总览](doc/scripts.md) | 脚本文档 |
-| [Web 前端部署](doc/web/deployment.md) | 前端部署指南 |
-| [Web 前端开发](doc/web/development.md) | 前端开发文档 |
+- [CHANGELOG.md](CHANGELOG.md) - 变更日志
 
 ---
 
@@ -229,14 +200,13 @@ Apache License 2.0 - 详见 [LICENSE](LICENSE) 文件
 ## 🙏 致谢
 
 - [llama.cpp](https://github.com/ggerganov/llama.cpp) - 核心推理引擎
-- [LlamacppServer](https://github.com/markpublish/LlamacppServer) - 项目参考
 
 ---
 
 ## 📞 联系方式
 
-- **问题反馈**: [GitHub Issues](https://github.com/shepherd-project/shepherd/issues)
-- **功能建议**: [GitHub Discussions](https://github.com/shepherd-project/shepherd/discussions)
+- **问题反馈**: [GitHub Issues](https://github.com/simonxluo/Shepherd/issues)
+- **功能建议**: [GitHub Discussions](https://github.com/simonxluo/Shepherd/discussions)
 
 ---
 
