@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wand2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useLoadedModels } from '@/features/multimodal/hooks';
 import { TTSPanel } from '@/features/multimodal/components/TTSPanel';
@@ -28,15 +27,12 @@ export function MultimodalPage() {
 
   return (
     <div className="h-full flex flex-col bg-background text-foreground">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-        <div className="flex items-center gap-3">
-          <Wand2 className="w-5 h-5 text-primary" />
-          <h1 className="text-lg font-semibold">{t('multimodal.title', '多模态工具')}</h1>
-        </div>
-      </div>
-
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-3xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-foreground">{t('multimodal.title', '多模态工具')}</h1>
+          </div>
+
           <Tabs defaultValue="tts">
             <TabsList className="w-full grid grid-cols-3">
               <TabsTrigger value="tts">
@@ -63,8 +59,8 @@ export function MultimodalPage() {
               <div className="mt-4">
                 {ttsModels.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    <p>没有已加载的 TTS 模型</p>
-                    <p className="text-sm mt-1">请先加载一个支持语音合成的模型</p>
+                    <p>{t('multimodal.noTTSModels')}</p>
+                    <p className="text-sm mt-1">{t('multimodal.noTTSModelsHint')}</p>
                   </div>
                 ) : (
                   <TTSPanel models={ttsModels} />
@@ -76,8 +72,8 @@ export function MultimodalPage() {
               <div className="mt-4">
                 {asrModels.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    <p>没有已加载的 ASR 模型</p>
-                    <p className="text-sm mt-1">请先加载一个支持语音识别的模型</p>
+                    <p>{t('multimodal.noASRModels')}</p>
+                    <p className="text-sm mt-1">{t('multimodal.noASRModelsHint')}</p>
                   </div>
                 ) : (
                   <ASRPanel models={asrModels} />
@@ -89,8 +85,8 @@ export function MultimodalPage() {
               <div className="mt-4">
                 {imageModels.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    <p>没有已加载的图像生成模型</p>
-                    <p className="text-sm mt-1">请先加载一个支持图像生成的模型</p>
+                    <p>{t('multimodal.noImageModels')}</p>
+                    <p className="text-sm mt-1">{t('multimodal.noImageModelsHint')}</p>
                   </div>
                 ) : (
                   <ImageGenPanel models={imageModels} />

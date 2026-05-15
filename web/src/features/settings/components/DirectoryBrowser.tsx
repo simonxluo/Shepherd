@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronRight, Folder, File, HardDrive, Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -23,6 +24,7 @@ export function DirectoryBrowser({
   onSelect,
   onClose,
 }: DirectoryBrowserProps) {
+  const { t } = useTranslation();
   const [currentPath, setCurrentPath] = useState(initialPath || '');
   const [parentPath, setParentPath] = useState('');
   const [folders, setFolders] = useState<DirectoryItem[]>([]);
@@ -92,8 +94,8 @@ export function DirectoryBrowser({
   };
 
   const formatPath = (path: string) => {
-    if (!path) return '根目录';
-    if (path === '/') return '根目录';
+    if (!path) return t('settings.directoryBrowser.rootDirectory');
+    if (path === '/') return t('settings.directoryBrowser.rootDirectory');
     if (path.length > 50) {
       const parts = path.split('/');
       return '.../' + parts.slice(-2).join('/');
@@ -107,7 +109,7 @@ export function DirectoryBrowser({
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="text-base flex items-center gap-2">
             <Folder className="w-5 h-5" />
-            选择目录
+            {t('settings.directoryBrowser.selectDirectory')}
           </DialogTitle>
         </DialogHeader>
 
@@ -121,7 +123,7 @@ export function DirectoryBrowser({
               className="h-7 px-2 text-xs"
             >
               <HardDrive className="w-3 h-3 mr-1" />
-              根目录
+              {t('settings.directoryBrowser.rootDirectory')}
             </Button>
             <Button
               variant="outline"
@@ -130,7 +132,7 @@ export function DirectoryBrowser({
               disabled={!parentPath || parentPath === currentPath}
               className="h-7 px-2 text-xs"
             >
-              向上
+              {t('settings.directoryBrowser.goUp')}
             </Button>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-mono text-muted-foreground truncate px-2 py-1 bg-background rounded">
@@ -143,7 +145,7 @@ export function DirectoryBrowser({
           {isLoading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">加载中...</span>
+              <span className="ml-2 text-sm text-muted-foreground">{t('settings.directoryBrowser.loading')}</span>
             </div>
           )}
 
@@ -154,11 +156,11 @@ export function DirectoryBrowser({
               <div className="flex-1 border-r overflow-auto p-4">
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b text-sm font-medium text-muted-foreground">
                   <Folder className="w-4 h-4" />
-                  文件夹 ({folders.length})
+                  {t('settings.directoryBrowser.folders')} ({folders.length})
                 </div>
                 {folders.length === 0 ? (
                   <div className="text-center py-8 text-xs text-muted-foreground">
-                    空目录
+                    {t('settings.directoryBrowser.emptyDirectory')}
                   </div>
                 ) : (
                   <div className="space-y-1">
@@ -186,11 +188,11 @@ export function DirectoryBrowser({
               <div className="flex-1 overflow-auto p-4">
                 <div className="flex items-center gap-2 mb-3 pb-2 border-b text-sm font-medium text-muted-foreground">
                   <File className="w-4 h-4" />
-                  文件 ({files.length})
+                  {t('settings.directoryBrowser.files')} ({files.length})
                 </div>
                 {files.length === 0 ? (
                   <div className="text-center py-8 text-xs text-muted-foreground">
-                    无文件
+                    {t('settings.directoryBrowser.noFiles')}
                   </div>
                 ) : (
                   <div className="space-y-1">
@@ -216,7 +218,7 @@ export function DirectoryBrowser({
                     ))}
                     {files.length > 50 && (
                       <div className="text-center py-2 text-xs text-muted-foreground">
-                        还有 {files.length - 50} 个文件...
+                        {t('settings.directoryBrowser.moreFiles', { count: files.length - 50 })}
                       </div>
                     )}
                   </div>
@@ -255,7 +257,7 @@ export function DirectoryBrowser({
             onClick={onClose}
             className="h-8 px-3 text-xs"
           >
-            取消
+            {t('settings.directoryBrowser.cancel')}
           </Button>
           <Button
             size="sm"
@@ -263,7 +265,7 @@ export function DirectoryBrowser({
             disabled={!selectedPath && !currentPath}
             className="h-8 px-3 text-xs"
           >
-            选择
+            {t('settings.directoryBrowser.select')}
           </Button>
         </div>
       </DialogContent>

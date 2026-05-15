@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef, useCallback } from 'react';
 import {
   chatApi,
   type StreamingChatParams,
@@ -96,25 +97,25 @@ export interface UseStreamingChatOptions {
 }
 
 export function useStreamingChat(opts?: UseStreamingChatOptions) {
-  let abortController: AbortController | null = null;
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const send = (params: Omit<StreamingChatParams, 'onChunk' | 'onComplete' | 'onError' | 'signal'>) => {
-    abortController?.abort();
-    abortController = new AbortController();
+  const send = useCallback((params: Omit<StreamingChatParams, 'onChunk' | 'onComplete' | 'onError' | 'signal'>) => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
 
     chatApi.streamingChatCompletion({
       ...params,
-      signal: abortController.signal,
+      signal: abortControllerRef.current.signal,
       onChunk: opts?.onChunk ?? (() => {}),
       onComplete: opts?.onComplete ?? (() => {}),
       onError: opts?.onError ?? (() => {}),
     });
-  };
+  }, [opts?.onChunk, opts?.onComplete, opts?.onError]);
 
-  const abort = () => {
-    abortController?.abort();
-    abortController = null;
-  };
+  const abort = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+  }, []);
 
   return { send, abort };
 }

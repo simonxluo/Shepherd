@@ -115,18 +115,6 @@ export const downloadsApi = {
     apiClient.delete<{ success: boolean; message?: string; error?: string }>(`/downloads/${id}`),
 
   /**
-   * Retry download
-   */
-  retry: (id: string): Promise<{ success: boolean; message?: string; error?: string }> =>
-    apiClient.post(`/downloads/${id}/retry`),
-
-  /**
-   * Clear completed downloads
-   */
-  clearCompleted: (): Promise<{ success: boolean; message?: string; error?: string }> =>
-    apiClient.delete<{ success: boolean; message?: string; error?: string }>('/downloads/completed'),
-
-  /**
    * List model files.
    * Uses query params to support repoId with slashes (e.g. Qwen/Qwen2-7B-Instruct).
    * Supports AbortSignal for request cancellation.

@@ -4,6 +4,7 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
 import { User, Bot, Copy, Check } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 interface ChatMessageData {
   role: 'user' | 'assistant' | 'system';
@@ -18,6 +19,7 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const isUser = message.role === 'user';
@@ -56,11 +58,11 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
           <span className="font-medium">
-            {isUser ? '你' : 'AI 助手'}
+            {isUser ? t('chat.message.you') : t('chat.message.aiAssistant')}
           </span>
           {message.timestamp && (
             <span className="text-xs text-muted-foreground">
-              {new Date(message.timestamp).toLocaleTimeString('zh-CN')}
+              {new Date(message.timestamp).toLocaleTimeString()}
             </span>
           )}
         </div>
@@ -80,7 +82,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
                       <img
                         key={i}
                         src={img}
-                        alt={`图片 ${i + 1}`}
+                        alt={t('chat.message.imageAlt', { index: i + 1 })}
                         className="max-w-[200px] max-h-[200px] object-contain rounded-lg border cursor-pointer"
                         onClick={() => window.open(img, '_blank')}
                       />
@@ -126,7 +128,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
             <button
               onClick={handleCopy}
               className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity rounded bg-muted hover:bg-accent"
-              title="复制"
+              title={t('chat.message.copy')}
             >
               {copied ? (
                 <Check className="w-4 h-4 text-green-600" />

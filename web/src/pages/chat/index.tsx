@@ -500,7 +500,7 @@ export function ChatPage() {
       {/* Main chat area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+        <div className="flex items-center justify-between px-4 py-3 border-b">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"

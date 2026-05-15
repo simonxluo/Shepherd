@@ -85,6 +85,32 @@
     "searchPlaceholder": "Search model name, architecture...",
     "noResults": "No models found",
     "noResultsHint": "Try adjusting search criteria or scan model directories",
+    "statusLabels": {
+      "stopped": "Stopped",
+      "loading": "Loading",
+      "running": "Running",
+      "unloading": "Unloading",
+      "error": "Error"
+    },
+    "capabilities": {
+      "thinking": "Thinking",
+      "tools": "Tools",
+      "embedding": "Embedding",
+      "rerank": "Rerank",
+      "tts": "TTS",
+      "asr": "ASR",
+      "imageGeneration": "Image Gen",
+      "music": "Music"
+    },
+    "card": {
+      "unknown": "Unknown",
+      "editAlias": "Edit alias",
+      "modelDetail": "Model details",
+      "loadingBtn": "Loading",
+      "startBtn": "Start",
+      "unloadingBtn": "Unloading",
+      "stopBtn": "Stop"
+    },
     "status": {
       "all": "All",
       "running": "Running",
@@ -148,6 +174,22 @@
     "empty": "No download tasks",
     "emptyHint": "Create a new task to start downloading models",
     "searchPlaceholder": "Search repo ID or filename...",
+    "stateLabels": {
+      "idle": "Idle",
+      "preparing": "Preparing",
+      "downloading": "Downloading",
+      "merging": "Merging",
+      "verifying": "Verifying",
+      "completed": "Completed",
+      "failed": "Failed",
+      "paused": "Paused"
+    },
+    "speed": "Speed",
+    "eta": "ETA",
+    "parts": "Parts",
+    "pause": "Pause",
+    "resume": "Resume",
+    "cancel": "Cancel",
     "tabs": {
       "local": "Local Downloads",
       "online": "Online Search"
@@ -251,6 +293,16 @@
     "placeholderSelectModel": "Please select a model first",
     "placeholderLoading": "Model loading...",
     "placeholderInput": "Type a message... (Press Enter to send)",
+    "message": {
+      "you": "You",
+      "aiAssistant": "AI Assistant",
+      "imageAlt": "Image {{index}}",
+      "uploadedImageAlt": "Uploaded image {{index}}",
+      "copy": "Copy",
+      "uploadImage": "Upload image",
+      "stopGeneration": "Stop generation",
+      "sendMessage": "Send (Enter)"
+    },
     "timeGroups": {
       "today": "Today",
       "yesterday": "Yesterday",
@@ -271,7 +323,13 @@
     "title": "Multimodal Tools",
     "tts": "Text-to-Speech (TTS)",
     "asr": "Speech Recognition (ASR)",
-    "imageGen": "Image Generation"
+    "imageGen": "Image Generation",
+    "noTTSModels": "No loaded TTS models",
+    "noTTSModelsHint": "Please load a model that supports text-to-speech first",
+    "noASRModels": "No loaded ASR models",
+    "noASRModelsHint": "Please load a model that supports speech recognition first",
+    "noImageModels": "No loaded image generation models",
+    "noImageModelsHint": "Please load a model that supports image generation first"
   },
   "footer": {
     "version": "Version",
@@ -322,6 +380,79 @@
     "autoSave": "Auto Save",
     "autoSaveDescription": "Automatically save conversations and settings",
     "data": "Data Management",
+    "pathConfig": {
+      "llamacpp": {
+        "title": "llama.cpp Paths",
+        "description": "Configure directories containing llama.cpp executables"
+      },
+      "models": {
+        "title": "Model Directories",
+        "description": "Configure directories for scanning and managing GGUF model files"
+      },
+      "vllm": {
+        "title": "vLLM Paths",
+        "description": "Configure directories containing vLLM executables"
+      },
+      "vllm_omni": {
+        "title": "vLLM-Omni Paths",
+        "description": "Configure directories containing vLLM-Omni (multimodal vLLM) executables"
+      },
+      "multimodal": {
+        "title": "Multimodal Model Directories",
+        "description": "Configure directories for scanning safetensors/multimodal models (TTS/ASR/Image Gen)"
+      },
+      "addPath": "Add Path",
+      "loading": "Loading...",
+      "noPathsConfigured": "No paths configured",
+      "clickToAdd": "Click the button above to add {{title}}",
+      "addFailed": "Add failed",
+      "updateFailed": "Update failed",
+      "deletePath": "Delete Path",
+      "deletePathConfirm": "Are you sure you want to delete path \"{{name}}\"?",
+      "deleteSuccess": "Deleted",
+      "deleteSuccessDesc": "Path deleted successfully",
+      "deleteFailed": "Delete failed",
+      "testSuccess": "Test passed",
+      "testSuccessDesc": "llama.cpp path test passed",
+      "testFailed": "Test failed",
+      "testError": "Test error",
+      "testErrorDesc": "An error occurred while testing the path"
+    },
+    "pathItem": {
+      "testPath": "Test path",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "apiConfig": {
+      "enabled": "Enabled",
+      "disable": "Disable",
+      "pendingEnable": "Pending",
+      "enable": "Enable",
+      "testing": "Testing",
+      "running": "Running",
+      "notResponding": "Not responding",
+      "initializing": "Initializing",
+      "serviceRunning": "Service running on port {{port}}",
+      "clickToEnable": "Click to enable service",
+      "servicePort": "Service Port",
+      "portNotResponding": "Port {{port}} not responding",
+      "saving": "Saving...",
+      "saved": "Saved",
+      "saveFailed": "Save failed"
+    },
+    "directoryBrowser": {
+      "selectDirectory": "Select Directory",
+      "rootDirectory": "Root",
+      "goUp": "Up",
+      "folders": "Folders",
+      "files": "Files",
+      "emptyDirectory": "Empty directory",
+      "noFiles": "No files",
+      "moreFiles": "{{count}} more files...",
+      "cancel": "Cancel",
+      "select": "Select",
+      "loading": "Loading..."
+    },
     "menu": {
       "general": "General",
       "paths": "Paths",

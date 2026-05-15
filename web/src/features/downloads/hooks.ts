@@ -100,38 +100,6 @@ export function useCancelDownload() {
 }
 
 /**
- * Retry download hook
- */
-export function useRetryDownload() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (taskId: string) => {
-      return await downloadsApi.retry(taskId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['downloads'] });
-    },
-  });
-}
-
-/**
- * Clear completed downloads hook
- */
-export function useClearCompletedDownloads() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      return await downloadsApi.clearCompleted();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['downloads'] });
-    },
-  });
-}
-
-/**
  * Filter download tasks
  */
 export function filterDownloads(

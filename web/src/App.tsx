@@ -30,6 +30,7 @@ function AppContent() {
         case 'modelLoad':
         case 'modelLoadStart':
         case 'modelStop':
+        case 'modelSlots':
           queryClient.invalidateQueries({ queryKey: ['models'] });
           break;
         case 'download_progress':

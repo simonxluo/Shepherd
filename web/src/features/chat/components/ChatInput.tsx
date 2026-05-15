@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Send, Square, ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -49,9 +50,10 @@ export function ChatInput({
   onStop,
   disabled = false,
   isStreaming = false,
-  placeholder = '输入消息...',
+  placeholder,
   supportsVision = false,
 }: ChatInputProps) {
+  const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -128,7 +130,7 @@ export function ChatInput({
             <div key={i} className="relative group">
               <img
                 src={img}
-                alt={`上传图片 ${i + 1}`}
+                alt={t('chat.message.uploadedImageAlt', { index: i + 1 })}
                 className="w-16 h-16 object-cover rounded-lg border"
               />
               <button
@@ -160,7 +162,7 @@ export function ChatInput({
               variant="ghost"
               size="icon"
               className="rounded-full shrink-0"
-              title="上传图片"
+              title={t('chat.message.uploadImage')}
               onClick={() => fileInputRef.current?.click()}
             >
               <ImageIcon className="w-5 h-5" />
@@ -174,7 +176,7 @@ export function ChatInput({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
+            placeholder={placeholder || t('chat.placeholderInput')}
             disabled={disabled}
             className={cn(
               'w-full px-4 py-3 pr-14 bg-background border border-input rounded-2xl resize-none',
@@ -201,7 +203,7 @@ export function ChatInput({
             onClick={onStop}
             variant="destructive"
             size="icon"
-            title="停止生成"
+            title={t('chat.message.stopGeneration')}
             className="rounded-full shrink-0"
           >
             <Square className="w-4 h-4" />
@@ -212,7 +214,7 @@ export function ChatInput({
             disabled={!canSend}
             variant="default"
             size="icon"
-            title="发送 (Enter)"
+            title={t('chat.message.sendMessage')}
             className="rounded-full shrink-0"
           >
             <Send className="w-4 h-4" />

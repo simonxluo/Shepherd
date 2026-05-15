@@ -82,7 +82,7 @@ export function useClusterOverview() {
     },
     staleTime: 10 * 1000,
     refetchInterval: 5000,
-    enabled: mode === 'master',
+    enabled: mode === 'master' || mode === 'hybrid',
   });
 }
 
@@ -100,7 +100,7 @@ export function useClients() {
     },
     staleTime: 10 * 1000,
     refetchInterval: 5000,
-    enabled: mode === 'master',
+    enabled: mode === 'master' || mode === 'hybrid',
   });
 }
 
@@ -133,7 +133,7 @@ export function useClusterTasks() {
     },
     staleTime: 5 * 1000,
     refetchInterval: 2000,
-    enabled: mode === 'master',
+    enabled: mode === 'master' || mode === 'hybrid',
   });
 }
 
@@ -210,7 +210,7 @@ export function useOnlineNodes() {
     },
     staleTime: 10 * 1000,
     refetchInterval: 5000,
-    enabled: mode === 'master',
+    enabled: mode === 'master' || mode === 'hybrid',
   });
 }
 

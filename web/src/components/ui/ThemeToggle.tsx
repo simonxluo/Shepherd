@@ -1,4 +1,5 @@
 import { Sun, Moon, Monitor, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useUIStore, type Theme } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 import {
@@ -10,21 +11,23 @@ import {
 
 interface ThemeOption {
   value: Theme;
-  label: string;
+  labelKey: string;
   icon: typeof Sun;
 }
 
 const themeOptions: ThemeOption[] = [
-  { value: 'light', label: '浅色模式', icon: Sun },
-  { value: 'dark', label: '深色模式', icon: Moon },
-  { value: 'system', label: '跟随系统', icon: Monitor },
+  { value: 'light', labelKey: 'theme.light', icon: Sun },
+  { value: 'dark', labelKey: 'theme.dark', icon: Moon },
+  { value: 'system', labelKey: 'theme.system', icon: Monitor },
 ];
 
 export function ThemeToggle() {
+  const { t } = useTranslation();
   const { theme, setTheme } = useUIStore();
 
   const currentTheme = themeOptions.find((option) => option.value === theme);
   const CurrentIcon = currentTheme?.icon || Monitor;
+  const currentLabel = currentTheme ? t(currentTheme.labelKey) : '';
 
   return (
     <DropdownMenu>
@@ -38,8 +41,8 @@ export function ThemeToggle() {
             'bg-muted/30 hover:bg-muted/50',
             'focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary/50'
           )}
-          aria-label={`选择主题（当前：${currentTheme?.label}）`}
-          title={currentTheme?.label}
+          aria-label={currentLabel}
+          title={currentLabel}
         >
           <CurrentIcon size={16} />
           <ChevronDown
@@ -68,7 +71,7 @@ export function ThemeToggle() {
                 isSelected ? 'text-primary' : 'text-foreground'
               )} />
               <span className="truncate">
-                {option.label}
+                {t(option.labelKey)}
               </span>
             </DropdownMenuItem>
           );

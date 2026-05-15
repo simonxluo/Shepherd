@@ -85,6 +85,32 @@
     "searchPlaceholder": "搜索模型名称、架构...",
     "noResults": "没有找到模型",
     "noResultsHint": "尝试调整搜索条件或扫描模型目录",
+    "statusLabels": {
+      "stopped": "已停止",
+      "loading": "加载中",
+      "running": "运行中",
+      "unloading": "卸载中",
+      "error": "错误"
+    },
+    "capabilities": {
+      "thinking": "思考",
+      "tools": "工具",
+      "embedding": "嵌入",
+      "rerank": "重排序",
+      "tts": "TTS",
+      "asr": "ASR",
+      "imageGeneration": "图像生成",
+      "music": "音乐"
+    },
+    "card": {
+      "unknown": "未知",
+      "editAlias": "编辑别名",
+      "modelDetail": "模型详情",
+      "loadingBtn": "加载中",
+      "startBtn": "启动",
+      "unloadingBtn": "卸载中",
+      "stopBtn": "停止"
+    },
     "status": {
       "all": "全部",
       "running": "运行中",
@@ -148,6 +174,22 @@
     "empty": "暂无下载任务",
     "emptyHint": "创建新任务开始下载模型",
     "searchPlaceholder": "搜索仓库 ID 或文件名...",
+    "stateLabels": {
+      "idle": "等待中",
+      "preparing": "准备中",
+      "downloading": "下载中",
+      "merging": "合并中",
+      "verifying": "验证中",
+      "completed": "已完成",
+      "failed": "失败",
+      "paused": "已暂停"
+    },
+    "speed": "速度",
+    "eta": "预计",
+    "parts": "分块",
+    "pause": "暂停",
+    "resume": "继续",
+    "cancel": "取消",
     "tabs": {
       "local": "本地下载",
       "online": "在线搜索"
@@ -183,7 +225,7 @@
     "summary": "{{total}} 个客户端，{{online}} 个在线",
     "searchPlaceholder": "搜索客户端名称或地址...",
     "noClients": "暂无客户端",
-    "noClientsHint": "点击"扫描网络"来发现局域网中的客户端",
+    "noClientsHint": "点击「扫描网络」来发现局域网中的客户端",
     "noTasks": "暂无任务",
     "assignedTo": "分配给",
     "tabs": {
@@ -251,6 +293,16 @@
     "placeholderSelectModel": "请先选择一个模型",
     "placeholderLoading": "模型加载中...",
     "placeholderInput": "输入消息... (按 Enter 发送)",
+    "message": {
+      "you": "你",
+      "aiAssistant": "AI 助手",
+      "imageAlt": "图片 {{index}}",
+      "uploadedImageAlt": "上传图片 {{index}}",
+      "copy": "复制",
+      "uploadImage": "上传图片",
+      "stopGeneration": "停止生成",
+      "sendMessage": "发送 (Enter)"
+    },
     "timeGroups": {
       "today": "今天",
       "yesterday": "昨天",
@@ -271,7 +323,13 @@
     "title": "多模态工具",
     "tts": "语音合成 (TTS)",
     "asr": "语音识别 (ASR)",
-    "imageGen": "图像生成"
+    "imageGen": "图像生成",
+    "noTTSModels": "没有已加载的 TTS 模型",
+    "noTTSModelsHint": "请先加载一个支持语音合成的模型",
+    "noASRModels": "没有已加载的 ASR 模型",
+    "noASRModelsHint": "请先加载一个支持语音识别的模型",
+    "noImageModels": "没有已加载的图像生成模型",
+    "noImageModelsHint": "请先加载一个支持图像生成的模型"
   },
   "footer": {
     "version": "版本",
@@ -322,6 +380,79 @@
     "autoSave": "自动保存",
     "autoSaveDescription": "自动保存对话和设置更改",
     "data": "数据管理",
+    "pathConfig": {
+      "llamacpp": {
+        "title": "llama.cpp 路径",
+        "description": "配置 llama.cpp 可执行文件所在的目录"
+      },
+      "models": {
+        "title": "模型目录",
+        "description": "配置用于扫描和管理 GGUF 模型文件的目录"
+      },
+      "vllm": {
+        "title": "vLLM 路径",
+        "description": "配置 vLLM 可执行文件所在的目录"
+      },
+      "vllm_omni": {
+        "title": "vLLM-Omni 路径",
+        "description": "配置 vLLM-Omni (多模态 vLLM) 可执行文件所在的目录"
+      },
+      "multimodal": {
+        "title": "多模态模型目录",
+        "description": "配置用于扫描 safetensors/多模态模型 (TTS/ASR/图像生成) 的目录"
+      },
+      "addPath": "添加路径",
+      "loading": "加载中...",
+      "noPathsConfigured": "暂无配置的路径",
+      "clickToAdd": "点击上方按钮添加{{title}}",
+      "addFailed": "添加失败",
+      "updateFailed": "更新失败",
+      "deletePath": "删除路径",
+      "deletePathConfirm": "确定要删除路径 \"{{name}}\" 吗？",
+      "deleteSuccess": "删除成功",
+      "deleteSuccessDesc": "路径已成功删除",
+      "deleteFailed": "删除失败",
+      "testSuccess": "测试成功",
+      "testSuccessDesc": "llama.cpp 路径测试通过",
+      "testFailed": "测试失败",
+      "testError": "测试错误",
+      "testErrorDesc": "测试路径时发生错误"
+    },
+    "pathItem": {
+      "testPath": "测试路径",
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "apiConfig": {
+      "enabled": "已启用",
+      "disable": "关闭",
+      "pendingEnable": "待启用",
+      "enable": "启用",
+      "testing": "检测中",
+      "running": "运行中",
+      "notResponding": "未响应",
+      "initializing": "初始化",
+      "serviceRunning": "服务运行在端口 {{port}}",
+      "clickToEnable": "点击启用以开始服务",
+      "servicePort": "服务端口",
+      "portNotResponding": "端口 {{port}} 无响应",
+      "saving": "保存中...",
+      "saved": "已保存",
+      "saveFailed": "保存失败"
+    },
+    "directoryBrowser": {
+      "selectDirectory": "选择目录",
+      "rootDirectory": "根目录",
+      "goUp": "向上",
+      "folders": "文件夹",
+      "files": "文件",
+      "emptyDirectory": "空目录",
+      "noFiles": "无文件",
+      "moreFiles": "还有 {{count}} 个文件...",
+      "cancel": "取消",
+      "select": "选择",
+      "loading": "加载中..."
+    },
     "menu": {
       "general": "通用设置",
       "paths": "路径配置",

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PathItem } from './PathItem';
@@ -47,30 +48,31 @@ interface PathConfigPanelProps {
   type: PathType;
 }
 
-const PATH_META: Record<PathType, { title: string; description: string }> = {
+const PATH_META_KEYS: Record<PathType, { titleKey: string; descriptionKey: string }> = {
   llamacpp: {
-    title: 'llama.cpp 路径',
-    description: '配置 llama.cpp 可执行文件所在的目录',
+    titleKey: 'settings.pathConfig.llamacpp.title',
+    descriptionKey: 'settings.pathConfig.llamacpp.description',
   },
   models: {
-    title: '模型目录',
-    description: '配置用于扫描和管理 GGUF 模型文件的目录',
+    titleKey: 'settings.pathConfig.models.title',
+    descriptionKey: 'settings.pathConfig.models.description',
   },
   vllm: {
-    title: 'vLLM 路径',
-    description: '配置 vLLM 可执行文件所在的目录',
+    titleKey: 'settings.pathConfig.vllm.title',
+    descriptionKey: 'settings.pathConfig.vllm.description',
   },
   vllm_omni: {
-    title: 'vLLM-Omni 路径',
-    description: '配置 vLLM-Omni (多模态 vLLM) 可执行文件所在的目录',
+    titleKey: 'settings.pathConfig.vllm_omni.title',
+    descriptionKey: 'settings.pathConfig.vllm_omni.description',
   },
   multimodal: {
-    title: '多模态模型目录',
-    description: '配置用于扫描 safetensors/多模态模型 (TTS/ASR/图像生成) 的目录',
+    titleKey: 'settings.pathConfig.multimodal.title',
+    descriptionKey: 'settings.pathConfig.multimodal.description',
   },
 };
 
 export function PathConfigPanel({ type }: PathConfigPanelProps) {
+  const { t } = useTranslation();
   const alertDialog = useAlertDialog();
 
   const [paths, setPaths] = useState<AnyPathConfig[]>([]);
@@ -105,7 +107,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
       if (response?.success) {
         await loadPaths();
       } else {
-        throw new Error(response?.error || '添加失败');
+        throw new Error(response?.error || t('settings.pathConfig.addFailed'));
       }
     } catch (error) {
       console.error('Failed to add path:', error);
@@ -120,7 +122,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
       if (response?.success) {
         await loadPaths();
       } else {
-        throw new Error(response?.error || '更新失败');
+        throw new Error(response?.error || t('settings.pathConfig.updateFailed'));
       }
     } catch (error) {
       console.error('Failed to update path:', error);
@@ -130,8 +132,8 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
 
   const handleRemove = async (path: AnyPathConfig) => {
     const confirmed = await alertDialog.confirm({
-      title: '删除路径',
-      description: `确定要删除路径 "${path.name || path.path}" 吗？`,
+      title: t('settings.pathConfig.deletePath'),
+      description: t('settings.pathConfig.deletePathConfirm', { name: path.name || path.path }),
       variant: 'destructive',
     });
 
@@ -142,14 +144,14 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
 
       if (response?.success) {
         await loadPaths();
-        toast.success('删除成功', '路径已成功删除');
+        toast.success(t('settings.pathConfig.deleteSuccess'), t('settings.pathConfig.deleteSuccessDesc'));
       } else {
-        throw new Error(response?.error || '删除失败');
+        throw new Error(response?.error || t('settings.pathConfig.deleteFailed'));
       }
     } catch (error) {
       console.error('Failed to delete path:', error);
-      const message = error instanceof Error ? error.message : '删除失败';
-      toast.error('删除失败', message);
+      const message = error instanceof Error ? error.message : t('settings.pathConfig.deleteFailed');
+      toast.error(t('settings.pathConfig.deleteFailed'), message);
     }
   };
 
@@ -160,13 +162,13 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
       const response = await llamacppPathsApi.test(path.path);
 
       if (response.success && response.data?.valid) {
-        toast.success('测试成功', response.data.message || 'llama.cpp 路径测试通过');
+        toast.success(t('settings.pathConfig.testSuccess'), response.data.message || t('settings.pathConfig.testSuccessDesc'));
       } else {
-        toast.error('测试失败', response.data?.error || '未知错误');
+        toast.error(t('settings.pathConfig.testFailed'), response.data?.error || t('common.unknownError'));
       }
     } catch (error) {
       console.error('Failed to test path:', error);
-      toast.error('测试错误', '测试路径时发生错误');
+      toast.error(t('settings.pathConfig.testError'), t('settings.pathConfig.testErrorDesc'));
     }
   };
 
@@ -180,7 +182,9 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
     setIsDialogOpen(true);
   };
 
-  const { title, description } = PATH_META[type];
+  const { titleKey, descriptionKey } = PATH_META_KEYS[type];
+  const title = t(titleKey);
+  const description = t(descriptionKey);
 
   return (
     <div className="space-y-3">
@@ -191,20 +195,20 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
         </div>
         <Button size="sm" onClick={handleOpenAddDialog} className="h-7 px-2.5 text-xs">
           <Plus size={14} className="mr-1" />
-          添加路径
+          {t('settings.pathConfig.addPath')}
         </Button>
       </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
-          加载中...
+          {t('settings.pathConfig.loading')}
         </div>
       ) : paths?.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center border border-dashed rounded-lg">
           <FolderOpen size={36} className="text-muted-foreground mb-2" />
-          <p className="text-xs text-muted-foreground">暂无配置的路径</p>
+          <p className="text-xs text-muted-foreground">{t('settings.pathConfig.noPathsConfigured')}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            点击上方按钮添加{title}
+            {t('settings.pathConfig.clickToAdd', { title })}
           </p>
         </div>
       ) : (

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plug, CheckCircle2, XCircle, AlertTriangle, Loader2, Power } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -24,6 +25,7 @@ export function ApiConfigCard({
   onTestConnection,
   onConnectionFailed,
 }: ApiConfigCardProps) {
+  const { t } = useTranslation();
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'testing' | 'reachable' | 'unreachable'>('unknown');
   const [localPort, setLocalPort] = useState(config.port.toString());
   const [isHovered, setIsHovered] = useState(false);
@@ -135,7 +137,7 @@ export function ApiConfigCard({
           className={`${baseClasses} bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-red-900/30 dark:hover:text-red-400`}
         >
           <Power className="w-4 h-4" />
-          <span>{isHovered ? '关闭' : '已启用'}</span>
+          <span>{isHovered ? t('settings.apiConfig.disable') : t('settings.apiConfig.enabled')}</span>
           <CheckCircle2 className="w-4 h-4" />
         </button>
       );
@@ -149,7 +151,7 @@ export function ApiConfigCard({
         className={`${baseClasses} bg-muted text-muted-foreground hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400`}
       >
         <Power className="w-4 h-4" />
-        <span>{isHovered ? '启用' : '待启用'}</span>
+        <span>{isHovered ? t('settings.apiConfig.enable') : t('settings.apiConfig.pendingEnable')}</span>
       </button>
     );
   };
@@ -162,28 +164,28 @@ export function ApiConfigCard({
         return (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
             <Loader2 className="w-3 h-3 animate-spin" />
-            检测中
+            {t('settings.apiConfig.testing')}
           </span>
         );
       case 'reachable':
         return (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
             <CheckCircle2 className="w-3 h-3" />
-            运行中
+            {t('settings.apiConfig.running')}
           </span>
         );
       case 'unreachable':
         return (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
             <AlertTriangle className="w-3 h-3" />
-            未响应
+            {t('settings.apiConfig.notResponding')}
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400">
             <Loader2 className="w-3 h-3 animate-spin" />
-            初始化
+            {t('settings.apiConfig.initializing')}
           </span>
         );
     }
@@ -193,9 +195,9 @@ export function ApiConfigCard({
     if (saveStatus === 'idle') return null;
 
     const indicators = {
-      saving: { icon: Loader2, text: '保存中...', className: 'animate-spin text-blue-500' },
-      success: { icon: CheckCircle2, text: '已保存', className: 'text-green-500' },
-      error: { icon: XCircle, text: '保存失败', className: 'text-red-500' },
+      saving: { icon: Loader2, text: t('settings.apiConfig.saving'), className: 'animate-spin text-blue-500' },
+      success: { icon: CheckCircle2, text: t('settings.apiConfig.saved'), className: 'text-green-500' },
+      error: { icon: XCircle, text: t('settings.apiConfig.saveFailed'), className: 'text-red-500' },
     };
 
     const { icon: Icon, text, className } = indicators[saveStatus];
@@ -220,7 +222,7 @@ export function ApiConfigCard({
               {getConnectionBadge()}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {config.enabled ? `服务运行在端口 ${config.port}` : '点击启用以开始服务'}
+              {config.enabled ? t('settings.apiConfig.serviceRunning', { port: config.port }) : t('settings.apiConfig.clickToEnable')}
             </p>
           </div>
         </div>
@@ -232,7 +234,7 @@ export function ApiConfigCard({
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <label className="block text-xs font-medium mb-1.5 text-muted-foreground">
-              服务端口
+              {t('settings.apiConfig.servicePort')}
             </label>
             <Input
               type="number"
@@ -256,7 +258,7 @@ export function ApiConfigCard({
           {config.enabled && connectionStatus === 'unreachable' && (
             <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
               <AlertTriangle className="w-4 h-4" />
-              <span>端口 {config.port} 无响应</span>
+              <span>{t('settings.apiConfig.portNotResponding', { port: config.port })}</span>
             </div>
           )}
         </div>

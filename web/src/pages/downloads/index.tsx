@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, CloudDownload, Search, Download } from 'lucide-react';
+import { Plus, CloudDownload, Search, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,8 +10,6 @@ import {
   usePauseDownload,
   useResumeDownload,
   useCancelDownload,
-  useRetryDownload,
-  useClearCompletedDownloads,
   filterDownloads,
   computeDownloadStats,
 } from '@/features/downloads/hooks';
@@ -20,19 +18,15 @@ import { CreateDownloadDialog } from '@/features/downloads/components/CreateDown
 import { HuggingFaceSearchPanel } from '@/features/downloads/components/HuggingFaceSearchPanel';
 import type { DownloadState, DownloadSource } from '@/types';
 import type { HuggingFaceModel } from '@/lib/api/downloads';
-import { useAlertDialog } from '@/providers/AlertDialog';
 import { cn } from '@/lib/utils';
 
 export function DownloadsPage() {
   const { t } = useTranslation();
-  const alertDialog = useAlertDialog();
   const { data: downloads, isLoading } = useDownloads();
   const createDownload = useCreateDownload();
   const pauseDownload = usePauseDownload();
   const resumeDownload = useResumeDownload();
   const cancelDownload = useCancelDownload();
-  const retryDownload = useRetryDownload();
-  const clearCompleted = useClearCompletedDownloads();
 
   // UI state
   const [activeTab, setActiveTab] = useState<'local' | 'online'>('local');
@@ -64,16 +58,6 @@ export function DownloadsPage() {
     setDialogOpen(true);
   };
 
-  const handleClearCompleted = async () => {
-    const confirmed = await alertDialog.confirm({
-      title: t('downloads.clearCompleted'),
-      description: t('downloads.clearCompletedConfirm'),
-    });
-    if (confirmed) {
-      clearCompleted.mutate();
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Title */}
@@ -84,17 +68,6 @@ export function DownloadsPage() {
             {t('downloads.subtitle')}
           </p>
         </div>
-
-        {activeTab === 'local' && stats.completed > 0 && (
-          <Button
-            onClick={handleClearCompleted}
-            variant="ghost"
-            size="sm"
-          >
-            <Trash2 className="w-4 h-4" />
-            {t('downloads.clearCompleted')}
-          </Button>
-        )}
       </div>
 
       {/* Tabs */}
@@ -232,7 +205,6 @@ export function DownloadsPage() {
                   onPause={() => pauseDownload.mutate(task.id)}
                   onResume={() => resumeDownload.mutate(task.id)}
                   onCancel={() => cancelDownload.mutate(task.id)}
-                  onRetry={() => retryDownload.mutate(task.id)}
                 />
               ))}
             </div>

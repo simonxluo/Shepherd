@@ -1,4 +1,5 @@
 import { Bug, FolderOpen, Edit, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { LlamaCppPathConfig, ModelPathConfig, BackendPathConfig, MultimodalPathConfig } from '@/lib/config';
 
@@ -17,6 +18,7 @@ export function PathItem({
   onRemove,
   onTest,
 }: PathItemProps) {
+  const { t } = useTranslation();
   const displayName = path.name || path.path;
 
   return (
@@ -44,7 +46,7 @@ export function PathItem({
             variant="icon-button"
             size="icon"
             onClick={onTest}
-            title="测试路径"
+            title={t('settings.pathItem.testPath')}
             className="h-8 w-8"
           >
             <Bug size={16} />
@@ -54,7 +56,7 @@ export function PathItem({
           variant="icon-button"
           size="icon"
           onClick={onEdit}
-          title="编辑"
+          title={t('settings.pathItem.edit')}
           className="h-8 w-8"
         >
           <Edit size={16} />
@@ -64,7 +66,7 @@ export function PathItem({
           size="icon"
           onClick={onRemove}
           className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
-          title="删除"
+          title={t('settings.pathItem.delete')}
         >
           <Trash2 size={16} />
         </Button>

@@ -1,4 +1,5 @@
-import { Pause, Play, X, RotateCcw, CloudDownload, CheckCircle2, XCircle, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Pause, Play, X, CloudDownload, CheckCircle2, XCircle, AlertCircle, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -11,7 +12,6 @@ interface DownloadCardProps {
   onPause?: () => void;
   onResume?: () => void;
   onCancel?: () => void;
-  onRetry?: () => void;
 }
 
 /**
@@ -29,17 +29,17 @@ const STATE_COLORS: Record<DownloadState, string> = {
 };
 
 /**
- * Download state labels
+ * Download state labels (i18n keys)
  */
-const STATE_LABELS: Record<DownloadState, string> = {
-  idle: '等待中',
-  preparing: '准备中',
-  downloading: '下载中',
-  merging: '合并中',
-  verifying: '验证中',
-  completed: '已完成',
-  failed: '失败',
-  paused: '已暂停',
+const STATE_LABEL_KEYS: Record<DownloadState, string> = {
+  idle: 'downloads.stateLabels.idle',
+  preparing: 'downloads.stateLabels.preparing',
+  downloading: 'downloads.stateLabels.downloading',
+  merging: 'downloads.stateLabels.merging',
+  verifying: 'downloads.stateLabels.verifying',
+  completed: 'downloads.stateLabels.completed',
+  failed: 'downloads.stateLabels.failed',
+  paused: 'downloads.stateLabels.paused',
 };
 
 /**
@@ -53,9 +53,9 @@ function formatSpeed(bytesPerSecond: number): string {
  * Format time
  */
 function formatTime(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}秒`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}分${Math.round(seconds % 60)}秒`;
-  return `${Math.floor(seconds / 3600)}小时${Math.floor((seconds % 3600) / 60)}分`;
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
 }
 
 /**
@@ -86,13 +86,13 @@ function getSourceLabel(source: 'huggingface' | 'modelscope'): string {
   return source === 'huggingface' ? 'HuggingFace' : 'ModelScope';
 }
 
-export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: DownloadCardProps) {
+export function DownloadCard({ task, onPause, onResume, onCancel }: DownloadCardProps) {
+  const { t } = useTranslation();
   const progressPercent = Math.round(task.progress * 100);
   const isActive = ACTIVE_DOWNLOAD_STATES.includes(task.state);
   const canPause = task.state === 'downloading';
   const canResume = task.state === 'paused';
   const canCancel = !task.completedAt && task.state !== 'completed';
-  const canRetry = task.state === 'failed';
 
   return (
     <div className="bg-card rounded-lg border border-border p-4 hover:shadow-md transition-shadow">
@@ -110,7 +110,7 @@ export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: Dow
         </div>
 
         <span className={cn('px-2 py-1 rounded-md text-xs font-medium shrink-0', STATE_COLORS[task.state])}>
-          {STATE_LABELS[task.state]}
+          {t(STATE_LABEL_KEYS[task.state])}
         </span>
       </div>
 
@@ -141,15 +141,15 @@ export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: Dow
 
         {task.partsTotal > 1 && (
           <div className="text-xs text-muted-foreground mt-1">
-            分块: {task.partsCompleted} / {task.partsTotal}
+            {t('downloads.parts')}: {task.partsCompleted} / {task.partsTotal}
           </div>
         )}
       </div>
 
       {isActive && task.speed > 0 && (
         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-          <span>速度: {formatSpeed(task.speed)}</span>
-          {task.eta > 0 && <span>预计: {formatTime(task.eta)}</span>}
+          <span>{t('downloads.speed')}: {formatSpeed(task.speed)}</span>
+          {task.eta > 0 && <span>{t('downloads.eta')}: {formatTime(task.eta)}</span>}
         </div>
       )}
 
@@ -169,7 +169,7 @@ export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: Dow
             className="border-yellow-500/50 text-yellow-700 hover:bg-yellow-200 hover:border-yellow-500 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50"
           >
             <Pause className="w-4 h-4" />
-            暂停
+            {t('downloads.pause')}
           </Button>
         )}
 
@@ -181,7 +181,7 @@ export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: Dow
             className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
           >
             <Play className="w-4 h-4" />
-            继续
+            {t('downloads.resume')}
           </Button>
         )}
 
@@ -192,23 +192,12 @@ export function DownloadCard({ task, onPause, onResume, onCancel, onRetry }: Dow
             size="sm"
           >
             <X className="w-4 h-4" />
-            取消
-          </Button>
-        )}
-
-        {canRetry && (
-          <Button
-            onClick={onRetry}
-            variant="outline"
-            size="sm"
-          >
-            <RotateCcw className="w-4 h-4" />
-            重试
+            {t('downloads.cancel')}
           </Button>
         )}
 
         <div className="ml-auto text-xs text-muted-foreground">
-          {new Date(task.createdAt).toLocaleString('zh-CN')}
+          {new Date(task.createdAt).toLocaleString()}
         </div>
       </div>
     </div>
