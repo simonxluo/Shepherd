@@ -233,3 +233,110 @@ curl -X POST http://localhost:9190/api/models/abc123/load \
 |---|---|---|---|
 | unloadAfterMinutes | int | - | 空闲自动卸载时间（分钟，0=永不卸载） |
 | concurrencyLimit | int | - | 最大并发请求数（0=无限制） |
+
+## 加载配置管理
+
+模型加载参数可以持久化到服务端，下次打开加载对话框时自动恢复。
+
+### 获取加载配置
+
+```
+GET /api/models/{id}/load-config
+```
+
+**响应**（配置存在时）：
+
+```json
+{
+  "success": true,
+  "data": {
+    "exists": true,
+    "config": {
+      "id": "cfg-abc123",
+      "nodeId": "node-001",
+      "modelId": "model-xyz",
+      "modelName": "qwen3-8b",
+      "config": {
+        "ctxSize": 4096,
+        "gpuLayers": 99,
+        "temperature": 0.7,
+        "flashAttention": true
+      },
+      "createdAt": "2026-01-15T10:00:00Z",
+      "updatedAt": "2026-01-16T14:30:00Z"
+    }
+  }
+}
+```
+
+**响应**（配置不存在时）：
+
+```json
+{
+  "success": true,
+  "data": {
+    "exists": false,
+    "config": null
+  }
+}
+```
+
+### 保存加载配置
+
+```
+PUT /api/models/{id}/load-config
+```
+
+UPSERT 语义：如果该 `(node_id, model_id)` 组合已存在配置则更新，否则新建。
+
+**请求体**：
+
+```json
+{
+  "config": {
+    "ctxSize": 8192,
+    "gpuLayers": 99,
+    "temperature": 0.5,
+    "flashAttention": true,
+    "parallelSlots": 4
+  }
+}
+```
+
+**响应**：
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "cfg-abc123",
+    "nodeId": "node-001",
+    "modelId": "model-xyz",
+    "modelName": "qwen3-8b",
+    "config": {
+      "ctxSize": 8192,
+      "gpuLayers": 99,
+      "temperature": 0.5,
+      "flashAttention": true,
+      "parallelSlots": 4
+    },
+    "createdAt": "2026-01-15T10:00:00Z",
+    "updatedAt": "2026-01-17T09:15:00Z"
+  }
+}
+```
+
+### 删除加载配置
+
+```
+DELETE /api/models/{id}/load-config
+```
+
+**响应**：
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```

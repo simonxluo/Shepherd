@@ -30,6 +30,15 @@ func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
 		Speed          float64 `json:"speed,omitempty"`
 		Language       string  `json:"language,omitempty"`
 		Stream         bool    `json:"stream,omitempty"`
+		// VoxCPM2 / 声音克隆扩展字段
+		Instructions   string  `json:"instructions,omitempty"`
+		RefAudio       string  `json:"ref_audio,omitempty"`
+		RefText        string  `json:"ref_text,omitempty"`
+		PromptAudio    string  `json:"prompt_audio,omitempty"`
+		PromptText     string  `json:"prompt_text,omitempty"`
+		MaxNewTokens   int     `json:"max_new_tokens,omitempty"`
+		Seed           int64   `json:"seed,omitempty"`
+		ExtraParams    any     `json:"extra_params,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.sendError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")

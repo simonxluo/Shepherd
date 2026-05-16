@@ -53,6 +53,8 @@ const (
 	kwSpeechT5                   = "speecht5"
 	kwVITS                       = "vits"
 	kwXTTS                       = "xtts"
+	kwVoxCPM                     = "voxcpm"
+	kwOmniVoice                  = "omnivoice"
 	kwASR                        = "asr"
 	kwWhisper                    = "whisper"
 	kwSpeechToText               = "speech-to-text"
@@ -95,7 +97,7 @@ var (
 	ttsArchKeywords = []string{
 		"tts", "talker", "cosyvoice", "speecht5",
 		"vits", "bark", "xtts", "melotts", "chattts",
-		"voice",
+		"voice", "voxcpm", "omnivoice",
 	}
 
 	asrArchKeywords = []string{
@@ -127,7 +129,7 @@ var (
 
 	ttsNameKeywords = []string{
 		kwTTS, kwTextToSpeech, kwCosyVoice, kwChatTTS,
-		kwMelotts, kwBark, kwSpeechT5, kwVITS, kwXTTS,
+		kwMelotts, kwBark, kwSpeechT5, kwVITS, kwXTTS, kwVoxCPM, kwOmniVoice,
 	}
 
 	asrNameKeywords = []string{
@@ -302,7 +304,7 @@ func DetectCapabilitiesFromHF(hfInfo *huggingface.HFModelInfo) *storage.Capabili
 	switch {
 	case !caps.ASR && containsAny(modelTypeLower, []string{"whisper", "wav2vec", "hubert", "speech_to_text", "sense_voice", "paraformer"}):
 		caps.ASR = true
-	case !caps.TTS && containsAny(modelTypeLower, []string{"speecht5", "vits", "bark", "xtts", "tts"}):
+	case !caps.TTS && containsAny(modelTypeLower, []string{"speecht5", "vits", "bark", "xtts", "tts", "voxcpm", "omnivoice"}):
 		caps.TTS = true
 	}
 

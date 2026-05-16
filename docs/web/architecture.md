@@ -218,6 +218,34 @@ features/models/
 └── index.ts          # 统一导出
 ```
 
+## 模型配置管理
+
+前端使用双层配置系统管理模型加载参数：
+
+### 服务端持久化
+
+- 每模型单配置，UPSERT 语义（按 `(node_id, model_id)` 一对一存储）
+- 通过 `features/models/config.ts` 中的 React Query hooks 访问：
+  - `useModelLoadConfig(modelId)` — 查询已保存配置
+  - `useSaveModelLoadConfig()` — 保存配置 mutation
+  - `useDeleteModelLoadConfig()` — 删除配置 mutation
+- Query key：`['models', modelId, 'load-config']`，10 分钟缓存
+
+### 客户端命名预设
+
+- 存储于 `localStorage`，key 格式：`shepherd:model-configs:${modelId}`
+- 支持每个模型保存多个命名预设
+- LoadModelDialog 中提供预设选择下拉框、保存/删除按钮
+- 当前仅 llama.cpp 对话框实现了完整的命名预设功能
+
+### 各页面状态
+
+| 页面 | 服务端配置 | 客户端命名预设 |
+|---|---|---|
+| llama.cpp LoadModelDialog | 自动保存/恢复 | 完整支持 |
+| vLLM/vLLM-Omni LoadModelDialog | 自动保存/恢复 | 完整支持 |
+| Multimodal TTSPanel | 自动保存/恢复 | 完整支持 |
+
 ## 构建优化
 
 - **代码分割**：react-vendor、query-vendor、ui-vendor 手动分块

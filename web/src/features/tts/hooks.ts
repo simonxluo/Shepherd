@@ -1,5 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { v1Client } from '@/features/creative/hooks';
+import {
+  useModelLoadConfig,
+  useSaveModelLoadConfig,
+  useDeleteModelLoadConfig,
+} from '@/features/models/config';
+import type { LoadedModel } from '@/features/creative/hooks';
 
 export interface TTSRequest {
   model: string;
@@ -9,6 +15,53 @@ export interface TTSRequest {
   speed?: number;
   language?: string;
   stream?: boolean;
+  // VoxCPM2 / 声音克隆扩展字段
+  instructions?: string;
+  ref_audio?: string;
+  ref_text?: string;
+  prompt_audio?: string;
+  prompt_text?: string;
+  max_new_tokens?: number;
+  seed?: number;
+  extra_params?: Record<string, unknown>;
+}
+
+export interface TTSModelFeatures {
+  supportsVoiceSelection: boolean;
+  supportsInstructions: boolean;
+  supportsRefAudio: boolean;
+  supportsUltimateCloning: boolean;
+  supportsStreamPcm: boolean;
+  defaultSampleRate: number;
+  defaultFormat: string;
+}
+
+export function getTTSModelFeatures(model: LoadedModel): TTSModelFeatures {
+  const nameLower = model.name.toLowerCase();
+  const isVoxCPM = nameLower.includes('voxcpm');
+  const isOmniBackend = model.backendType === 'vllm_omni';
+
+  if (isVoxCPM || isOmniBackend) {
+    return {
+      supportsVoiceSelection: false,
+      supportsInstructions: true,
+      supportsRefAudio: true,
+      supportsUltimateCloning: isVoxCPM,
+      supportsStreamPcm: true,
+      defaultSampleRate: 24000,
+      defaultFormat: 'pcm',
+    };
+  }
+
+  return {
+    supportsVoiceSelection: true,
+    supportsInstructions: false,
+    supportsRefAudio: false,
+    supportsUltimateCloning: false,
+    supportsStreamPcm: false,
+    defaultSampleRate: 24000,
+    defaultFormat: 'mp3',
+  };
 }
 
 export function useTTS() {
@@ -45,4 +98,47 @@ export function useVoices(model?: string) {
     },
     enabled: !!model,
   });
+}
+
+export interface TTSConfig {
+  voice?: string;
+  speed?: number;
+  responseFormat?: string;
+  stream?: boolean;
+  instructions?: string;
+  refAudio?: string;
+  refText?: string;
+  promptAudio?: string;
+  promptText?: string;
+  ultimateCloning?: boolean;
+  seed?: string;
+  maxNewTokens?: string;
+}
+
+function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
+  if (!raw) return null;
+  return {
+    voice: (raw.voice as string) || undefined,
+    speed: raw.speed as number | undefined,
+    responseFormat: (raw.responseFormat as string) || undefined,
+    stream: raw.stream as boolean | undefined,
+    instructions: (raw.instructions as string) || undefined,
+    refAudio: (raw.refAudio as string) || undefined,
+    refText: (raw.refText as string) || undefined,
+    promptAudio: (raw.promptAudio as string) || undefined,
+    promptText: (raw.promptText as string) || undefined,
+    ultimateCloning: raw.ultimateCloning as boolean | undefined,
+    seed: (raw.seed as string) || undefined,
+    maxNewTokens: (raw.maxNewTokens as string) || undefined,
+  };
+}
+
+export function useTTSConfig(modelId: string) {
+  const { data, isLoading } = useModelLoadConfig(modelId);
+  const saveConfig = useSaveModelLoadConfig();
+  const deleteConfig = useDeleteModelLoadConfig();
+
+  const ttsConfig = (data?.exists && data.config) ? extractTTSConfig(data.config.config as Record<string, unknown>) : null;
+
+  return { ttsConfig, isLoading, saveConfig, deleteConfig };
 }
