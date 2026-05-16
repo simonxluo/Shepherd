@@ -9,10 +9,11 @@ import (
 )
 
 type HFModelConfig struct {
-	ModelType        string   `json:"model_type"`
-	Architectures    []string `json:"architectures"`
-	NameOrPath       string   `json:"_name_or_path"`
-	IsEncoderDecoder bool     `json:"is_encoder_decoder"`
+	ModelType              string   `json:"model_type"`
+	Architectures          []string `json:"architectures"`
+	NameOrPath             string   `json:"_name_or_path"`
+	IsEncoderDecoder       bool     `json:"is_encoder_decoder"`
+	MaxPositionEmbeddings  int      `json:"max_position_embeddings"`
 }
 
 type HFModelIndex struct {
@@ -30,6 +31,7 @@ type HFModelInfo struct {
 	DiffuserClass string
 	DirPath       string
 	TotalSize     int64
+	ContextLength int
 }
 
 func ReadModelInfo(dirPath string) (*HFModelInfo, error) {
@@ -55,6 +57,9 @@ func ReadModelInfo(dirPath string) (*HFModelInfo, error) {
 		if err := json.Unmarshal(data, &cfg); err == nil {
 			hfInfo.ModelType = cfg.ModelType
 			hfInfo.Architectures = cfg.Architectures
+			if cfg.MaxPositionEmbeddings > 0 {
+				hfInfo.ContextLength = cfg.MaxPositionEmbeddings
+			}
 			if cfg.NameOrPath != "" {
 				hfInfo.Name = cfg.NameOrPath
 			}

@@ -26,6 +26,7 @@ backend:
 
 # 前端服务器配置
 server:
+  host: "0.0.0.0"
   # 开发服务器端口
   port: 3030
   # 是否启用 HTTPS
@@ -39,7 +40,7 @@ cors:
   # 允许的后端源
   allowedOrigins:
     - "http://localhost:9190"
-    - "http://192.168.1.100:9190"
+    - "http://192.168.10.1:9190"
   # 是否发送凭据
   credentials: false
 

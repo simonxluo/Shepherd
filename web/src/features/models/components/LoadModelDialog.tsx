@@ -360,7 +360,7 @@ export function LoadModelDialog({
   const { data: modelsData } = useModels();
   const allModels = modelsData ?? [];
   const currentModel = allModels.find(m => m.id === modelId);
-  const modelMaxCtxSize = currentModel?.metadata?.contextLength;
+  const modelMaxCtxSize = currentModel?.metadata?.contextLength || undefined;
 
   const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
   const saveModelLoadConfig = useSaveModelLoadConfig();
