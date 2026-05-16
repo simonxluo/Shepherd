@@ -42,7 +42,39 @@ func (b *BaseHandler) RebuildIndex() {
 }
 
 func (b *BaseHandler) FindModel(modelName string) (string, error) {
+	// 每次查找前刷新索引，确保扫描/加载/别名变更后模型能被正确解析
+	b.RebuildIndex()
 	return FindModelForAPI(b.ModelMgr, b.ModelIndex, modelName)
+}
+
+// GetServedModelName 返回后端服务识别的模型名称。
+// vLLM 后端使用模型路径作为标识，llama.cpp 使用模型名。
+func (b *BaseHandler) GetServedModelName(modelID string) string {
+	if m, ok := b.ModelMgr.GetModel(modelID); ok && m != nil {
+		status, exists := b.ModelMgr.GetStatus(modelID)
+		if exists && (status.BackendType == "vllm" || status.BackendType == "vllm_omni") {
+			return m.Path
+		}
+		return m.Name
+	}
+	return modelID
+}
+
+// replaceModelField 替换请求体中的 model 字段为后端识别的模型名
+func replaceModelField(reqBody []byte, servedModelName string) []byte {
+	var payload map[string]interface{}
+	if err := json.Unmarshal(reqBody, &payload); err != nil {
+		return reqBody
+	}
+	if _, hasModel := payload["model"]; hasModel {
+		payload["model"] = servedModelName
+		newBody, err := json.Marshal(payload)
+		if err != nil {
+			return reqBody
+		}
+		return newBody
+	}
+	return reqBody
 }
 
 func (b *BaseHandler) GetModelPort(modelID string) (int, error) {
@@ -67,6 +99,8 @@ func (b *BaseHandler) ForwardRequest(c *gin.Context, port int, path string, mode
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	body = replaceModelField(body, b.GetServedModelName(modelID))
 
 	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", url, bytes.NewReader(body))
 	if err != nil {
@@ -143,6 +177,7 @@ func (b *BaseHandler) ForwardStreamRequest(c *gin.Context, port int, path string
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		body = replaceModelField(body, b.GetServedModelName(modelID))
 		c.Request.Body = io.NopCloser(bytes.NewReader(body))
 		c.Request.ContentLength = int64(len(body))
 		c.Request.Header.Set("Content-Type", "application/json")
@@ -199,11 +234,15 @@ func (b *BaseHandler) StreamWithLazyLoad(c *gin.Context, modelName string, path 
 			b.ForwardStreamRequest(c, port, path, actualModelID, req)
 			return
 		}
-	} else if m, ok := b.ModelIndex.Find(modelName); ok {
-		actualModelID = m.ID
 	} else {
-		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("model not found: %s", modelName)})
-		return
+		// 刷新索引后再查找，确保扫描/加载/别名变更后的模型能被解析
+		b.RebuildIndex()
+		if m, ok := b.ModelIndex.Find(modelName); ok {
+			actualModelID = m.ID
+		} else {
+			c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("model not found: %s", modelName)})
+			return
+		}
 	}
 
 	status, exists := b.ModelMgr.GetStatusRef(actualModelID)
@@ -283,6 +322,7 @@ func (b *BaseHandler) ForwardBinaryRequest(c *gin.Context, port int, path string
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		body = replaceModelField(body, b.GetServedModelName(modelID))
 		bodyReader = bytes.NewReader(body)
 	}
 

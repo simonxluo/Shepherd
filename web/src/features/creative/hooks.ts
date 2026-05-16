@@ -17,7 +17,14 @@ export interface LoadedModel {
 
 interface LoadedModelsResponse {
   success: boolean;
-  models: LoadedModel[];
+  data: {
+    models: LoadedModel[];
+    total: number;
+  };
+  metadata?: {
+    timestamp: string;
+    requestId: string;
+  };
 }
 
 export const BACKEND_LABELS: Record<string, string> = {
@@ -31,7 +38,7 @@ export function useLoadedModels() {
     queryKey: ['models', 'loaded'],
     queryFn: async () => {
       const res = await apiClient.get<LoadedModelsResponse>('/models/loaded');
-      return res.models ?? [];
+      return res.data?.models ?? [];
     },
     refetchInterval: 5000,
   });
