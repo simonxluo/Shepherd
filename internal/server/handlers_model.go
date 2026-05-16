@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -258,11 +257,7 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 		respData["port"] = result.Port
 	}
 
-	requestID := c.GetString("requestId")
-	if requestID == "" {
-		requestID = "unknown"
-	}
-	c.JSON(http.StatusAccepted, types.NewSuccessResponse(respData, requestID))
+	api.Accepted(c, respData)
 }
 
 // HandleUnloadModel unloads a model from memory.

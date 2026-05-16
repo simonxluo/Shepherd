@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
 )
 
 // ClientStatus is an alias for the unified NodeState type
@@ -13,8 +14,10 @@ type ClientStatus = types.NodeState
 
 // ClientStatus constants - 使用统一的 NodeState 常量
 const (
-	ClientStatusOnline ClientStatus = types.StateOnline
-	ClientStatusError  ClientStatus = types.StateError
+	ClientStatusOffline ClientStatus = types.StateOffline
+	ClientStatusOnline  ClientStatus = types.StateOnline
+	ClientStatusBusy    ClientStatus = types.StateBusy
+	ClientStatusError   ClientStatus = types.StateError
 )
 
 // TaskStatus represents the current status of a task
@@ -39,28 +42,16 @@ const (
 
 // Client represents a connected client node
 type Client struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Address      string            `json:"address"`
-	Port         int               `json:"port"`
-	Tags         []string          `json:"tags"`
-	Capabilities *Capabilities     `json:"capabilities"`
-	Status       ClientStatus      `json:"status"`
-	LastSeen     time.Time         `json:"lastSeen"`
-	Metadata     map[string]string `json:"metadata"`
-	Connected    bool              `json:"connected"`
-}
-
-// Capabilities describes what a client can do
-type Capabilities struct {
-	GPU            bool     `json:"gpu"`
-	GPUCount       int      `json:"gpuCount,omitempty"`
-	GPUName        string   `json:"gpuName,omitempty"`
-	GPUMemory      int64    `json:"gpuMemory,omitempty"` // bytes
-	CPUCount       int      `json:"cpuCount"`
-	Memory         int64    `json:"memory"` // bytes
-	SupportsLlama  bool     `json:"supportsLlama"`
-	SupportsPython bool     `json:"supportsPython"`
+	ID           string               `json:"id"`
+	Name         string               `json:"name"`
+	Address      string               `json:"address"`
+	Port         int                  `json:"port"`
+	Tags         []string             `json:"tags"`
+	Capabilities *node.NodeCapabilities `json:"capabilities"`
+	Status       ClientStatus         `json:"status"`
+	LastSeen     time.Time            `json:"lastSeen"`
+	Metadata     map[string]string    `json:"metadata"`
+	Connected    bool                 `json:"connected"`
 }
 
 // Task represents a distributed task
@@ -79,22 +70,6 @@ type Task struct {
 	MaxRetries  int                    `json:"maxRetries"`
 }
 
-// Command represents a command sent from master to client
-type Command struct {
-	ID      string                 `json:"id"`
-	Type    string                 `json:"type"`
-	Payload map[string]interface{} `json:"payload"`
-}
-
-// Heartbeat represents a heartbeat message from client to master
-type Heartbeat struct {
-	ClientID  string                 `json:"clientId"`
-	Timestamp time.Time              `json:"timestamp"`
-	Status    ClientStatus           `json:"status"`
-	Resources *ResourceUsage         `json:"resources,omitempty"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-}
-
 // ResourceUsage represents current resource usage
 type ResourceUsage struct {
 	CPUPercent     float64 `json:"cpuPercent"`
@@ -107,16 +82,15 @@ type ResourceUsage struct {
 	Uptime         int64   `json:"uptime"` // seconds
 }
 
-
 // DiscoveredClient represents a client found during network scan
 type DiscoveredClient struct {
-	Address      string        `json:"address"`
-	Port         int           `json:"port"`
-	ID           string        `json:"id"`
-	Name         string        `json:"name"`
-	Version      string        `json:"version"`
-	Capabilities *Capabilities `json:"capabilities"`
-	Tags         []string      `json:"tags"`
+	Address      string                 `json:"address"`
+	Port         int                    `json:"port"`
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
+	Version      string                 `json:"version"`
+	Capabilities *node.NodeCapabilities `json:"capabilities"`
+	Tags         []string               `json:"tags"`
 }
 
 // ScanStatus represents the status of a network scan
@@ -128,4 +102,3 @@ type ScanStatus struct {
 	TotalScanned int                `json:"totalScanned"`
 	Errors       []string           `json:"errors,omitempty"`
 }
-

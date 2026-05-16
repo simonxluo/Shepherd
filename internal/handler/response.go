@@ -54,3 +54,8 @@ func NotFound(c *gin.Context, resource string) {
 func BadRequest(c *gin.Context, message string) {
 	Error(c, types.ErrInvalidRequest, message)
 }
+
+// Accepted sends a 202 Accepted response
+func Accepted[T any](c *gin.Context, data T) {
+	c.JSON(http.StatusAccepted, types.NewSuccessResponse(data, getRequestID(c)))
+}

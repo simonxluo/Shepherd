@@ -11,6 +11,7 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/gpu"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 )
 
 // Node represents a distributed node in the Shepherd system
@@ -132,6 +133,30 @@ func NewNode(config *NodeConfig) (*Node, error) {
 	return node, nil
 }
 
+// transitionTo transitions the node to a new status with validation
+func (n *Node) transitionTo(newStatus NodeStatus) error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if !isValidNodeTransition(n.status, newStatus) {
+		return fmt.Errorf("invalid node state transition: %s -> %s", n.status, newStatus)
+	}
+	n.status = newStatus
+	n.updatedAt = time.Now()
+	return nil
+}
+
+// setStatusLocked transitions node status without acquiring the lock.
+// Caller must hold n.mu write lock.
+func (n *Node) setStatusLocked(newStatus NodeStatus) error {
+	if !isValidNodeTransition(n.status, newStatus) {
+		return fmt.Errorf("invalid node state transition: %s -> %s", n.status, newStatus)
+	}
+	n.status = newStatus
+	n.updatedAt = time.Now()
+	return nil
+}
+
 // Start 启动节点
 func (n *Node) Start() error {
 	n.mu.Lock()
@@ -145,19 +170,18 @@ func (n *Node) Start() error {
 	n.running = true
 	now := time.Now()
 	n.startedAt = &now
-	n.updatedAt = now
 	n.lastSeen = now
 
 	// Initialize subsystems
 	if err := n.initSubsystems(); err != nil {
-		n.status = NodeStatusError
+		n.setStatusLocked(NodeStatusError)
 		n.running = false
 		return fmt.Errorf("初始化子系统失败: %w", err)
 	}
 
 	// Start subsystems
 	if err := n.startSubsystems(); err != nil {
-		n.status = NodeStatusError
+		n.setStatusLocked(NodeStatusError)
 		n.running = false
 		return fmt.Errorf("启动子系统失败: %w", err)
 	}
@@ -178,7 +202,6 @@ func (n *Node) Stop() error {
 	n.running = false
 	now := time.Now()
 	n.stoppedAt = &now
-	n.updatedAt = now
 
 	// Stop subsystems
 	n.stopSubsystems()
@@ -189,7 +212,7 @@ func (n *Node) Stop() error {
 	return nil
 }
 
-// ID 获取节点ID（实现 INode 接口）
+// ID returns the node identifier
 func (n *Node) ID() string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -201,42 +224,42 @@ func (n *Node) GetID() string {
 	return n.ID()
 }
 
-// Name 获取节点名称（实现 INode 接口）
+// Name returns the node name
 func (n *Node) Name() string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.name
 }
 
-// Role 获取节点角色（实现 INode 接口）
+// Role returns the node role
 func (n *Node) Role() NodeRole {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.role
 }
 
-// Status 获取节点状态（实现 INode 接口）
+// Status returns the node status
 func (n *Node) Status() NodeStatus {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.status
 }
 
-// Address 获取节点地址（实现 INode 接口）
+// Address returns the node address
 func (n *Node) Address() string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.address
 }
 
-// Port 获取节点端口（实现 INode 接口）
+// Port returns the node port
 func (n *Node) Port() int {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.port
 }
 
-// Health 获取健康状态（实现 INode 接口）
+// Health returns the health status
 func (n *Node) Health() *HealthStatus {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -283,7 +306,7 @@ func (n *Node) Health() *HealthStatus {
 	return status
 }
 
-// UpdateConfig 更新节点配置（实现 INode 接口）
+// UpdateConfig updates the node configuration
 func (n *Node) UpdateConfig(config *NodeConfig) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -313,14 +336,6 @@ func (n *Node) GetName() string {
 	return n.name
 }
 
-// SetName 设置节点名称
-func (n *Node) SetName(name string) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	n.name = name
-	n.updatedAt = time.Now()
-}
-
 // GetRole 获取节点角色
 func (n *Node) GetRole() NodeRole {
 	n.mu.RLock()
@@ -328,33 +343,11 @@ func (n *Node) GetRole() NodeRole {
 	return n.role
 }
 
-// SetRole 设置节点角色
-func (n *Node) SetRole(role NodeRole) error {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	if n.running {
-		return fmt.Errorf("节点运行时不能更改角色")
-	}
-
-	n.role = role
-	n.updatedAt = time.Now()
-	return nil
-}
-
 // GetStatus 获取节点状态
 func (n *Node) GetStatus() NodeStatus {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.status
-}
-
-// SetStatus 设置节点状态
-func (n *Node) SetStatus(status NodeStatus) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	n.status = status
-	n.updatedAt = time.Now()
 }
 
 // GetAddress 获取节点地址
@@ -385,44 +378,6 @@ func (n *Node) GetTags() []string {
 	return append([]string{}, n.tags...)
 }
 
-// SetTags 设置节点标签
-func (n *Node) SetTags(tags []string) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-	n.tags = append([]string{}, tags...)
-	n.updatedAt = time.Now()
-}
-
-// AddTag 添加节点标签
-func (n *Node) AddTag(tag string) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	for _, existing := range n.tags {
-		if existing == tag {
-			return // 已存在
-		}
-	}
-
-	n.tags = append(n.tags, tag)
-	n.updatedAt = time.Now()
-}
-
-// RemoveTag 移除节点标签
-func (n *Node) RemoveTag(tag string) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	for i, existing := range n.tags {
-		if existing == tag {
-			n.tags = append(n.tags[:i], n.tags[i+1:]...)
-			break
-		}
-	}
-
-	n.updatedAt = time.Now()
-}
-
 // GetMetadata 获取节点元数据
 func (n *Node) GetMetadata() map[string]string {
 	n.mu.RLock()
@@ -433,18 +388,6 @@ func (n *Node) GetMetadata() map[string]string {
 		metadata[k] = v
 	}
 	return metadata
-}
-
-// SetMetadata 设置节点元数据
-func (n *Node) SetMetadata(metadata map[string]string) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	n.metadata = make(map[string]string)
-	for k, v := range metadata {
-		n.metadata[k] = v
-	}
-	n.updatedAt = time.Now()
 }
 
 // GetCapabilities 获取节点能力
@@ -459,21 +402,6 @@ func (n *Node) GetCapabilities() *NodeCapabilities {
 	// Return a copy
 	cap := *n.capabilities
 	return &cap
-}
-
-// SetCapabilities 设置节点能力
-func (n *Node) SetCapabilities(capabilities *NodeCapabilities) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
-
-	if capabilities == nil {
-		n.capabilities = nil
-	} else {
-		// Create a copy
-		n.capabilities = &NodeCapabilities{}
-		*n.capabilities = *capabilities
-	}
-	n.updatedAt = time.Now()
 }
 
 // GetResources 获取节点资源信息
@@ -570,36 +498,6 @@ func (n *Node) GetUptime() time.Duration {
 	return time.Since(*n.startedAt)
 }
 
-// ToInfo 转换为NodeInfo
-func (n *Node) ToInfo() *NodeInfo {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
-
-	info := &NodeInfo{
-		ID:           n.id,
-		Name:         n.name,
-		Address:      n.address,
-		Port:         n.port,
-		Role:         n.role,
-		Status:       n.status,
-		Version:      n.version,
-		Tags:         append([]string{}, n.tags...),
-		Capabilities: n.GetCapabilities(),
-		Resources:    n.GetResources(),
-		CreatedAt:    n.createdAt,
-		UpdatedAt:    n.updatedAt,
-		LastSeen:     n.lastSeen,
-	}
-
-	// Create metadata copy
-	info.Metadata = make(map[string]string)
-	for k, v := range n.metadata {
-		info.Metadata[k] = v
-	}
-
-	return info
-}
-
 // String 返回节点的字符串表示
 func (n *Node) String() string {
 	return fmt.Sprintf("Node{id:%s, name:%s, role:%s, status:%s, address:%s:%d}",
@@ -691,16 +589,14 @@ func (n *Node) stopSubsystems() {
 	// 停止子系统管理器
 	if n.subsystemManager != nil {
 		if err := n.subsystemManager.Stop(); err != nil {
-			// 记录错误但继续清理
-			// 日志通过 Logger 记录，这里避免循环依赖
+			logger.Warnf("停止子系统管理器失败: %v", err)
 		}
 	}
 
 	// 停止资源监控器
 	if n.resource != nil {
-		//errcheck:ignore
 		if err := n.resource.Stop(); err != nil {
-			// 停止失败只记录日志，不影响其他清理
+			logger.Warnf("停止资源监控失败: %v", err)
 		}
 	}
 }
@@ -880,7 +776,12 @@ func (n *Node) HandleHeartbeat(nodeID string, heartbeat *HeartbeatMessage) error
 		client.Resources = heartbeat.Resources
 	}
 	if heartbeat.Status != "" {
-		client.Status = NodeStatus(heartbeat.Status)
+		newStatus := NodeStatus(heartbeat.Status)
+		if !isValidNodeTransition(client.Status, newStatus) {
+			logger.Warnf("invalid status from heartbeat: %s -> %s for client %s", client.Status, newStatus, nodeID)
+		} else {
+			client.Status = newStatus
+		}
 	}
 
 	n.clientRegistry.clients[nodeID] = client
@@ -957,15 +858,15 @@ func (n *Node) QueueCommand(nodeID string, cmd *Command) error {
 
 // GetPendingCommands 获取指定节点的待执行命令
 func (n *Node) GetPendingCommands(nodeID string) []*Command {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
+	n.mu.Lock()
+	defer n.mu.Unlock()
 
 	if n.commandQueue == nil {
 		return make([]*Command, 0)
 	}
 
-	n.commandQueue.mu.RLock()
-	defer n.commandQueue.mu.RUnlock()
+	n.commandQueue.mu.Lock()
+	defer n.commandQueue.mu.Unlock()
 
 	commands := n.commandQueue.commands[nodeID]
 	if commands == nil {
@@ -1002,54 +903,6 @@ func (n *Node) StoreCommandResult(result *CommandResult) error {
 	n.updatedAt = time.Now()
 
 	return nil
-}
-
-// GetCommandResult 获取命令执行结果
-func (n *Node) GetCommandResult(commandID string) (*CommandResult, error) {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
-
-	if n.commandResults == nil {
-		return nil, fmt.Errorf("命令结果不存在: %s", commandID)
-	}
-
-	n.commandResults.mu.RLock()
-	defer n.commandResults.mu.RUnlock()
-
-	result, exists := n.commandResults.results[commandID]
-	if !exists {
-		return nil, fmt.Errorf("命令结果不存在: %s", commandID)
-	}
-
-	// 返回副本
-	resultCopy := *result
-	return &resultCopy, nil
-}
-
-// GetCommandResultsByNode 获取指定节点的所有命令结果
-func (n *Node) GetCommandResultsByNode(nodeID string, limit int) []*CommandResult {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
-
-	if n.commandResults == nil {
-		return make([]*CommandResult, 0)
-	}
-
-	n.commandResults.mu.RLock()
-	defer n.commandResults.mu.RUnlock()
-
-	results := make([]*CommandResult, 0)
-	for _, result := range n.commandResults.results {
-		if result.FromNodeID == nodeID || result.ToNodeID == nodeID {
-			resultCopy := *result
-			results = append(results, &resultCopy)
-			if limit > 0 && len(results) >= limit {
-				break
-			}
-		}
-	}
-
-	return results
 }
 
 // CleanOldCommandResults 清理旧的命令结果（保留最近 N 条）
