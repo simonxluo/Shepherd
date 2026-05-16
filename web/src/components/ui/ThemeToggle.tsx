@@ -1,6 +1,6 @@
 import { Sun, Moon, Monitor, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useUIStore, type Theme } from '@/stores/uiStore';
+import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -9,17 +9,11 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 
-interface ThemeOption {
-  value: Theme;
-  labelKey: string;
-  icon: typeof Sun;
-}
-
-const themeOptions: ThemeOption[] = [
+const themeOptions = [
   { value: 'light', labelKey: 'theme.light', icon: Sun },
   { value: 'dark', labelKey: 'theme.dark', icon: Moon },
   { value: 'system', labelKey: 'theme.system', icon: Monitor },
-];
+] as const;
 
 export function ThemeToggle() {
   const { t } = useTranslation();

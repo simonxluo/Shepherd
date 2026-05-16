@@ -50,14 +50,14 @@ export const STATUS_COLORS: Record<NodeStatus, string> = {
 /**
  * Status label keys for i18n
  */
-const STATUS_LABEL_KEYS: Record<NodeStatus, string> = {
+const STATUS_LABEL_KEYS = {
   online: 'cluster.status.online',
   offline: 'cluster.status.offline',
   busy: 'cluster.status.busy',
   error: 'cluster.status.error',
   degraded: 'cluster.status.degraded',
   disabled: 'cluster.status.disabled',
-};
+} as const satisfies Record<NodeStatus, string>;
 
 /**
  * Status labels (resolved at access time via i18n)

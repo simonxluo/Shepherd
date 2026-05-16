@@ -19,22 +19,13 @@ import { toast } from '@/hooks/useToast';
  */
 type SettingsTab = 'general' | 'paths' | 'benchmark' | 'mcp' | 'about';
 
-/**
- * Settings menu item
- */
-interface SettingsMenuItem {
-  id: SettingsTab;
-  icon: typeof SettingsIcon;
-  labelKey: string;
-}
-
-const settingsMenuItems: SettingsMenuItem[] = [
+const settingsMenuItems = [
   { id: 'general', icon: SettingsIcon, labelKey: 'settings.menu.general' },
   { id: 'paths', icon: FolderOpen, labelKey: 'settings.menu.paths' },
   { id: 'benchmark', icon: Zap, labelKey: 'settings.menu.benchmark' },
   { id: 'mcp', icon: Toolbox, labelKey: 'settings.menu.mcp' },
   { id: 'about', icon: Info, labelKey: 'settings.menu.about' },
-];
+] as const;
 
 /**
  * Settings page

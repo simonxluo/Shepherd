@@ -48,7 +48,7 @@ interface PathConfigPanelProps {
   type: PathType;
 }
 
-const PATH_META_KEYS: Record<PathType, { titleKey: string; descriptionKey: string }> = {
+const PATH_META_KEYS = {
   llamacpp: {
     titleKey: 'settings.pathConfig.llamacpp.title',
     descriptionKey: 'settings.pathConfig.llamacpp.description',
@@ -69,7 +69,7 @@ const PATH_META_KEYS: Record<PathType, { titleKey: string; descriptionKey: strin
     titleKey: 'settings.pathConfig.multimodal.title',
     descriptionKey: 'settings.pathConfig.multimodal.description',
   },
-};
+} as const satisfies Record<PathType, { titleKey: string; descriptionKey: string }>;
 
 export function PathConfigPanel({ type }: PathConfigPanelProps) {
   const { t } = useTranslation();

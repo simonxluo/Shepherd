@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { MessageSquare, Plus, Trash2, Loader2, History, X, CircleDot, Pencil, Check, Search } from 'lucide-react';
 import {
   Select,
@@ -33,7 +34,7 @@ interface DisplayMessage {
   timestamp: number;
 }
 
-function groupConversations(conversations: { id: string; title?: string; model: string; updatedAt: string }[], t: (key: string) => string) {
+function groupConversations(conversations: { id: string; title?: string; model: string; updatedAt: string }[], t: TFunction) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const yesterday = today - 86400000;

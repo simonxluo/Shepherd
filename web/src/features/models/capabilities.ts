@@ -7,16 +7,16 @@ import type { ModelCapabilities } from '@/types';
 
 export type ModelCategory = 'all' | 'chat' | 'tts' | 'asr' | 'image' | 'music' | 'embedding' | 'rerank';
 
-export const MODEL_CATEGORIES: { key: ModelCategory; labelKey: string }[] = [
-  { key: 'all', labelKey: 'models.category.all' },
-  { key: 'chat', labelKey: 'models.category.chat' },
-  { key: 'tts', labelKey: 'models.category.tts' },
-  { key: 'asr', labelKey: 'models.category.asr' },
-  { key: 'image', labelKey: 'models.category.image' },
-  { key: 'music', labelKey: 'models.category.music' },
-  { key: 'embedding', labelKey: 'models.category.embedding' },
-  { key: 'rerank', labelKey: 'models.category.rerank' },
-];
+export const MODEL_CATEGORIES = [
+  { key: 'all' as const, labelKey: 'models.category.all' },
+  { key: 'chat' as const, labelKey: 'models.category.chat' },
+  { key: 'tts' as const, labelKey: 'models.category.tts' },
+  { key: 'asr' as const, labelKey: 'models.category.asr' },
+  { key: 'image' as const, labelKey: 'models.category.image' },
+  { key: 'music' as const, labelKey: 'models.category.music' },
+  { key: 'embedding' as const, labelKey: 'models.category.embedding' },
+  { key: 'rerank' as const, labelKey: 'models.category.rerank' },
+] as const;
 
 export function getModelCategory(capabilities?: ModelCapabilities | null): ModelCategory {
   if (!capabilities) return 'chat';

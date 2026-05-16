@@ -31,7 +31,7 @@ const STATE_COLORS: Record<DownloadState, string> = {
 /**
  * Download state labels (i18n keys)
  */
-const STATE_LABEL_KEYS: Record<DownloadState, string> = {
+const STATE_LABEL_KEYS = {
   idle: 'downloads.stateLabels.idle',
   preparing: 'downloads.stateLabels.preparing',
   downloading: 'downloads.stateLabels.downloading',
@@ -40,7 +40,7 @@ const STATE_LABEL_KEYS: Record<DownloadState, string> = {
   completed: 'downloads.stateLabels.completed',
   failed: 'downloads.stateLabels.failed',
   paused: 'downloads.stateLabels.paused',
-};
+} as const satisfies Record<DownloadState, string>;
 
 /**
  * Format speed

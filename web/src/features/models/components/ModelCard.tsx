@@ -17,15 +17,15 @@ interface ModelCardProps {
   actions?: ReactNode;
 }
 
-const STATUS_LABEL_KEYS: Record<ModelStatus, string> = {
+const STATUS_LABEL_KEYS = {
   stopped: 'models.statusLabels.stopped',
   loading: 'models.statusLabels.loading',
   running: 'models.statusLabels.running',
   unloading: 'models.statusLabels.unloading',
   error: 'models.statusLabels.error',
-};
+} as const satisfies Record<ModelStatus, string>;
 
-const CAPABILITY_BADGE_KEYS: Record<string, { labelKey: string; className: string }> = {
+const CAPABILITY_BADGE_KEYS = {
   thinking: { labelKey: 'models.capabilities.thinking', className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' },
   tools: { labelKey: 'models.capabilities.tools', className: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20' },
   embedding: { labelKey: 'models.capabilities.embedding', className: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' },
@@ -34,7 +34,7 @@ const CAPABILITY_BADGE_KEYS: Record<string, { labelKey: string; className: strin
   asr: { labelKey: 'models.capabilities.asr', className: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20' },
   imageGeneration: { labelKey: 'models.capabilities.imageGeneration', className: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20' },
   music: { labelKey: 'models.capabilities.music', className: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20' },
-};
+} as const;
 
 function hasAnyCapability(capabilities?: ModelCapabilities): boolean {
   if (!capabilities) return false;

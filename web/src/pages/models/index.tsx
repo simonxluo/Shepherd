@@ -29,13 +29,13 @@ const CATEGORY_ICONS: Record<ModelCategory, React.ElementType> = {
   rerank: ArrowUpDown,
 };
 
-const STATUS_CHIPS: { value: ModelStatus | ''; labelKey: string; dot?: string }[] = [
-  { value: '', labelKey: 'models.status.all' },
-  { value: 'running', labelKey: 'models.status.running', dot: 'bg-green-500' },
-  { value: 'stopped', labelKey: 'models.status.stopped', dot: 'bg-gray-400' },
-  { value: 'loading', labelKey: 'models.status.loading', dot: 'bg-amber-500' },
-  { value: 'error', labelKey: 'models.status.error', dot: 'bg-red-500' },
-];
+const STATUS_CHIPS = [
+  { value: '' as const, labelKey: 'models.status.all', dot: undefined },
+  { value: 'running' as const, labelKey: 'models.status.running', dot: 'bg-green-500' },
+  { value: 'stopped' as const, labelKey: 'models.status.stopped', dot: 'bg-gray-400' },
+  { value: 'loading' as const, labelKey: 'models.status.loading', dot: 'bg-amber-500' },
+  { value: 'error' as const, labelKey: 'models.status.error', dot: 'bg-red-500' },
+] as const;
 
 export function ModelsPage() {
   const { t } = useTranslation();
