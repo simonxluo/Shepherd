@@ -324,7 +324,9 @@
   },
   "tts": {
     "title": "Text-to-Speech (TTS)",
+    "description": "Convert text to natural speech with streaming playback and voice cloning",
     "noModels": "No loaded TTS models",
+    "goToModels": "Go to Model Management",
     "noModelsHint": "Please load a model that supports text-to-speech first",
     "selectModelWarning": "Please select a model",
     "inputRequired": "Please enter text",
@@ -381,7 +383,9 @@
   },
   "asr": {
     "title": "Speech Recognition (ASR)",
+    "description": "Upload audio files for speech recognition and transcription",
     "noModels": "No loaded ASR models",
+    "goToModels": "Go to Model Management",
     "noModelsHint": "Please load a model that supports speech recognition first",
     "selectModelWarning": "Please select a model",
     "fileRequired": "Please upload audio",
@@ -403,7 +407,9 @@
   },
   "imageGen": {
     "title": "Image Generation",
+    "description": "Generate images from text descriptions",
     "noModels": "No loaded image generation models",
+    "goToModels": "Go to Model Management",
     "noModelsHint": "Please load a model that supports image generation first",
     "selectModelWarning": "Please select a model",
     "promptRequired": "Please enter a description",
@@ -427,7 +433,9 @@
   },
   "musicGen": {
     "title": "Music Generation",
+    "description": "Generate music from text descriptions",
     "noModels": "No loaded music generation models",
+    "goToModels": "Go to Model Management",
     "noModelsHint": "Please load a model that supports music generation first",
     "selectModelWarning": "Please select a model",
     "promptRequired": "Please enter a music description",

@@ -324,7 +324,9 @@
   },
   "tts": {
     "title": "语音合成 (TTS)",
+    "description": "将文本转换为自然语音，支持流式播放和声音克隆",
     "noModels": "没有已加载的 TTS 模型",
+    "goToModels": "前往模型管理",
     "noModelsHint": "请先加载一个支持语音合成的模型",
     "selectModelWarning": "请选择模型",
     "inputRequired": "请输入文本",
@@ -381,7 +383,9 @@
   },
   "asr": {
     "title": "语音识别 (ASR)",
+    "description": "上传音频文件进行语音识别转录",
     "noModels": "没有已加载的 ASR 模型",
+    "goToModels": "前往模型管理",
     "noModelsHint": "请先加载一个支持语音识别的模型",
     "selectModelWarning": "请选择模型",
     "fileRequired": "请上传音频",
@@ -403,7 +407,9 @@
   },
   "imageGen": {
     "title": "图像生成",
+    "description": "通过文本描述生成图像",
     "noModels": "没有已加载的图像生成模型",
+    "goToModels": "前往模型管理",
     "noModelsHint": "请先加载一个支持图像生成的模型",
     "selectModelWarning": "请选择模型",
     "promptRequired": "请输入描述",
@@ -427,7 +433,9 @@
   },
   "musicGen": {
     "title": "音乐生成",
+    "description": "通过文本描述生成音乐",
     "noModels": "没有已加载的音乐生成模型",
+    "goToModels": "前往模型管理",
     "noModelsHint": "请先加载一个支持音乐生成的模型",
     "selectModelWarning": "请选择模型",
     "promptRequired": "请输入音乐描述",
