@@ -42,6 +42,8 @@ func (b *BaseHandler) RebuildIndex() {
 }
 
 func (b *BaseHandler) FindModel(modelName string) (string, error) {
+	// 每次查找前刷新索引，确保扫描/加载/别名变更后模型能被正确解析
+	b.RebuildIndex()
 	return FindModelForAPI(b.ModelMgr, b.ModelIndex, modelName)
 }
 
@@ -199,11 +201,15 @@ func (b *BaseHandler) StreamWithLazyLoad(c *gin.Context, modelName string, path 
 			b.ForwardStreamRequest(c, port, path, actualModelID, req)
 			return
 		}
-	} else if m, ok := b.ModelIndex.Find(modelName); ok {
-		actualModelID = m.ID
 	} else {
-		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("model not found: %s", modelName)})
-		return
+		// 刷新索引后再查找，确保扫描/加载/别名变更后的模型能被解析
+		b.RebuildIndex()
+		if m, ok := b.ModelIndex.Find(modelName); ok {
+			actualModelID = m.ID
+		} else {
+			c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("model not found: %s", modelName)})
+			return
+		}
 	}
 
 	status, exists := b.ModelMgr.GetStatusRef(actualModelID)

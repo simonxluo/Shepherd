@@ -82,9 +82,10 @@ func (b *VLLMOmniBackend) CheckHealth(port int) (*HealthResult, error) {
 	return b.vllm.CheckHealth(port)
 }
 
-// SupportsModel returns true for safetensors/HuggingFace directories (multimodal models)
+// SupportsModel returns true for safetensors/HuggingFace directories and GGUF files
+// vLLM-Omni 支持所有 vLLM 支持的格式，同时额外支持 GGUF（多模态模型可能为 GGUF 格式）
 func (b *VLLMOmniBackend) SupportsModel(modelPath string) bool {
-	return b.vllm.SupportsModel(modelPath)
+	return b.vllm.SupportsModel(modelPath) || IsGGUFModel(modelPath)
 }
 
 // SupportedEndpoints returns the endpoints supported by vLLM-omni (includes audio)

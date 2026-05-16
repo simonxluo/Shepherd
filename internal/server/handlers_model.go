@@ -225,16 +225,9 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	// 根据模型能力自动设置后端类型（如果前端未指定）
 	if req.BackendType == "" {
 		caps := s.modelMgr.GetModelCapabilities(id)
-		mdl, _ := s.modelMgr.GetModel(id)
-		if caps != nil && mdl != nil {
-			mPath := mdl.Path
-			if len(mdl.ShardFiles) > 0 {
-				mPath = mdl.ShardFiles[0]
-			}
-			if !backend.IsGGUFModel(mPath) && (caps.TTS || caps.ASR) {
-				req.BackendType = "vllm_omni"
-				logger.Infof("根据模型能力自动设置后端类型: modelId=%s, backendType=vllm_omni", id)
-			}
+		if caps != nil && (caps.TTS || caps.ASR) {
+			req.BackendType = "vllm_omni"
+			logger.Infof("根据模型能力自动设置后端类型: modelId=%s, backendType=vllm_omni", id)
 		}
 	}
 
@@ -835,16 +828,14 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 	if len(m.ShardFiles) > 0 {
 		modelPath = m.ShardFiles[0]
 	}
-	if backend.IsGGUFModel(modelPath) {
-		dto.BackendType = "llamacpp"
+	// 根据能力 + 格式决定推荐后端：多模态模型优先 vllm_omni，无论 GGUF 还是 safetensors
+	caps := s.modelMgr.GetModelCapabilities(m.ID)
+	if caps != nil && (caps.TTS || caps.ASR) {
+		dto.BackendType = "vllm_omni"
 	} else if backend.IsSafeTensorsModel(modelPath) || filepath.Ext(modelPath) == "" {
-		// safetensors 或目录格式模型，根据能力决定后端类型
-		caps := s.modelMgr.GetModelCapabilities(m.ID)
-		if caps != nil && (caps.TTS || caps.ASR) {
-			dto.BackendType = "vllm_omni"
-		} else {
-			dto.BackendType = "vllm"
-		}
+		dto.BackendType = "vllm"
+	} else {
+		dto.BackendType = "llamacpp"
 	}
 
 	if m.Metadata != nil {
