@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Loader2, Info, Save, Trash2, Wand2, ToggleRight, ToggleLeft } from 'lucide-react';
+import { useState, useEffect, useRef, Fragment } from 'react';
+import { X, Loader2, Info, Save, Wand2, ToggleRight, ToggleLeft, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +8,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { LoadModelParams } from '@/types';
-import { useModels, useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
+import { useModels, useGPUs, useModelCapabilities, useSetModelCapabilities, useLlamacppBackends, useEstimateVRAM, useModelLoadConfig, useSaveModelLoadConfig, useDeleteModelLoadConfig, useAutoDetectCapabilities, useModelLoadConfigs, useSaveNamedModelLoadConfig, useDeleteNamedModelLoadConfig, type SystemGPUInfo, type LlamacppBackend } from '@/features/models';
 import { useOnlineNodes } from '@/features/cluster/hooks';
 import type { UnifiedNode } from '@/types';
 import { toast } from '@/hooks/useToast';
+import { SaveConfigDialog } from './SaveConfigDialog';
 
 // NumberInput component
 interface NumberInputProps {
@@ -360,7 +361,7 @@ export function LoadModelDialog({
   const { data: modelsData } = useModels();
   const allModels = modelsData ?? [];
   const currentModel = allModels.find(m => m.id === modelId);
-  const modelMaxCtxSize = currentModel?.metadata?.contextLength;
+  const modelMaxCtxSize = currentModel?.metadata?.contextLength || undefined;
 
   const { data: loadConfigData, isLoading: isLoadingConfig } = useModelLoadConfig(isOpen ? modelId : '');
   const saveModelLoadConfig = useSaveModelLoadConfig();
@@ -372,64 +373,51 @@ export function LoadModelDialog({
 
   const [estimateResult, setEstimateResult] = useState<string | null>(null);
 
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveConfigDialogOpen, setSaveConfigDialogOpen] = useState(false);
+  const [selectedConfigToLoad, setSelectedConfigToLoad] = useState('');
 
-  const [configName, setConfigName] = useState('');
-  const [selectedConfigName, setSelectedConfigName] = useState('');
+  // Named config hooks
+  const { data: namedConfigsData } = useModelLoadConfigs(modelId);
+  const namedConfigs = namedConfigsData?.configs || [];
+  const saveNamedConfig = useSaveNamedModelLoadConfig();
+  const deleteNamedConfig = useDeleteNamedModelLoadConfig();
 
-  const CONFIGS_STORAGE_KEY = `shepherd:model-configs:${modelId}`;
+  const hasLoadedDefaultConfig = useRef(false);
 
-  const getSavedConfigs = (): {name: string, config: LoadModelParams}[] => {
-    try {
-      const data = localStorage.getItem(CONFIGS_STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const [savedConfigs, setSavedConfigs] = useState(getSavedConfigs);
-
-  const handleLoadNamedConfig = (name: string) => {
-    const configs = getSavedConfigs();
-    const found = configs.find(c => c.name === name);
+  const handleLoadConfigByName = (name: string) => {
+    const found = namedConfigs.find(c => c.name === name);
     if (found) {
-      const config = { ...found.config };
-      // Backward compatibility: migrate old draft fields to new specDecoding
-      if (!config.specDecoding && (config as Record<string, unknown>).draftModelId) {
-        config.specDecoding = {
-          specType: 'draft',
-          specDraftModelId: (config as Record<string, unknown>).draftModelId as string,
-          specDraftNMax: (config as Record<string, unknown>).draftMaxTokens as number || 16,
-        };
-      }
+      const config = { ...found.config } as Partial<LoadModelParams>;
       setParams(prev => ({
         ...prev,
         ...config,
         modelId: prev.modelId,
         enabled: config.enabled || prev.enabled,
       }));
-      setSelectedConfigName(name);
-      setConfigName(name);
+      setSelectedConfigToLoad(name);
+      toast.success(`已加载配置「${name}」`);
     }
   };
 
-  const handleDeleteNamedConfig = (name: string) => {
-    const configs = getSavedConfigs().filter(c => c.name !== name);
-    localStorage.setItem(CONFIGS_STORAGE_KEY, JSON.stringify(configs));
-    setSavedConfigs([...configs]);
-    if (selectedConfigName === name) {
-      setSelectedConfigName('');
-    }
+  const handleSaveConfigByName = (name: string) => {
+    saveNamedConfig.mutateAsync({ modelId, name, config: params as unknown as Record<string, unknown> }).then(() => {
+      toast.success(`配置「${name}」已保存`);
+    }).catch(() => {
+      toast.error('保存配置失败');
+    });
+  };
+
+  const handleDeleteConfigByName = (name: string) => {
+    deleteNamedConfig.mutateAsync({ modelId, name }).catch(() => {
+      toast.error('删除配置失败');
+    });
   };
 
   useEffect(() => {
     if (isOpen) {
-      setSaveStatus('idle');
       setEstimateResult(null);
-      setConfigName('');
-      setSelectedConfigName('');
-      setSavedConfigs(getSavedConfigs());
+      setSelectedConfigToLoad('');
+      hasLoadedDefaultConfig.current = false;
       autoDetectCapabilities.mutate(modelId);
     }
   }, [isOpen]);
@@ -463,7 +451,7 @@ export function LoadModelDialog({
   }, [isOpen, savedCapabilities]);
 
   useEffect(() => {
-    if (isOpen && loadConfigData && !isLoadingConfig) {
+    if (isOpen && loadConfigData && !isLoadingConfig && !hasLoadedDefaultConfig.current) {
       if (loadConfigData.exists && loadConfigData.config) {
         const savedConfig = loadConfigData.config.config;
         setParams(prev => {
@@ -474,6 +462,7 @@ export function LoadModelDialog({
             enabled: savedEnabled || prev.enabled,
           };
         });
+        hasLoadedDefaultConfig.current = true;
       }
     }
   }, [isOpen, loadConfigData, isLoadingConfig]);
@@ -538,32 +527,6 @@ export function LoadModelDialog({
         },
       });
     }, 0);
-  };
-
-  const handleSaveConfig = () => {
-    const name = configName.trim();
-    if (!name) {
-      toast.error('请输入配置名称');
-      return;
-    }
-    try {
-      const configs = getSavedConfigs();
-      const idx = configs.findIndex(c => c.name === name);
-      if (idx >= 0) {
-        configs[idx] = { name, config: params };
-      } else {
-        configs.push({ name, config: params });
-      }
-      localStorage.setItem(CONFIGS_STORAGE_KEY, JSON.stringify(configs));
-      setSavedConfigs([...configs]);
-      setSelectedConfigName(name);
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch (error) {
-      console.error('Failed to save config:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    }
   };
 
   if (!isOpen) return null;
@@ -742,6 +705,7 @@ export function LoadModelDialog({
 
   if (!isLlamaCpp) {
     return (
+    <Fragment>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose(); }}>
         <DialogContent className="sm:max-w-[700px] max-h-[85vh] p-0 overflow-hidden flex flex-col">
           <DialogHeader className="p-4 border-b border-border flex-shrink-0">
@@ -753,7 +717,37 @@ export function LoadModelDialog({
             <div className="flex flex-col gap-4 p-4 overflow-y-auto flex-1">
               {/* 模型信息 */}
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">模型</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-foreground">模型</label>
+                  {namedConfigs.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <select
+                        value={selectedConfigToLoad}
+                        onChange={(e) => setSelectedConfigToLoad(e.target.value)}
+                        className="h-7 px-2 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">加载配置...</option>
+                        {namedConfigs.map(c => (
+                          <option key={c.name} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        disabled={!selectedConfigToLoad}
+                        onClick={() => {
+                          if (selectedConfigToLoad) {
+                            handleLoadConfigByName(selectedConfigToLoad);
+                          }
+                        }}
+                      >
+                        <Download className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 <div className="px-3 py-2 bg-muted rounded-md text-foreground text-sm">
                   {modelName}
                 </div>
@@ -1330,91 +1324,54 @@ export function LoadModelDialog({
               </div>
             </div>
 
-            {/* Footer：配置管理 + 操作按钮 */}
+            {/* Footer：操作按钮 */}
             <div className="flex justify-between items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
-              {/* 左侧：命名配置选择 + 删除 */}
+              {/* 左侧：VRAM 估算 */}
               <div className="flex items-center gap-2">
-                <select
-                  value={selectedConfigName}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) {
-                      handleLoadNamedConfig(val);
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    setEstimateResult('计算中...');
+                    try {
+                      const result = await estimateVRAM.mutateAsync({
+                        modelId,
+                        ctxSize: params.ctxSize,
+                      });
+                      if (result.vramGB) {
+                        setEstimateResult(`约需 ${result.vramGB} GB 显存`);
+                      } else if (result.error) {
+                        setEstimateResult(`估算失败: ${result.error}`);
+                      } else {
+                        setEstimateResult('估算失败');
+                      }
+                    } catch (error) {
+                      setEstimateResult(`估算出错: ${error instanceof Error ? error.message : '未知错误'}`);
                     }
                   }}
-                  className={cn(
-                    "h-9 px-3 text-sm border-2 border-border rounded-md",
-                    "bg-input text-foreground",
-                    "focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  )}
+                  disabled={isLoading || estimateVRAM.isPending}
                 >
-                  <option value="">选择配置...</option>
-                  {savedConfigs.map(c => (
-                    <option key={c.name} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
-                {selectedConfigName && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteNamedConfig(selectedConfigName)}
-                    className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                    title="删除此配置"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {estimateVRAM.isPending ? '计算中...' : '估算显存'}
+                </Button>
+                {estimateResult && (
+                  <span className="text-sm text-muted-foreground px-2 py-1 bg-muted rounded">{estimateResult}</span>
                 )}
               </div>
 
-              {/* 右侧：取消 + 配置保存 + 加载 */}
+              {/* 右侧：取消 + 保存配置 + 加载 */}
               <div className="flex items-center gap-3">
                 <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
                   取消
                 </Button>
-
-                {/* 保存命名配置 */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={configName}
-                    onChange={(e) => setConfigName(e.target.value)}
-                    placeholder="配置名称"
-                    className={cn(
-                      "h-9 px-3 text-sm w-32 border-2 border-border rounded-md",
-                      "bg-input text-foreground",
-                      "focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    )}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSaveConfig();
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleSaveConfig}
-                    disabled={isLoading}
-                    className={cn(
-                      saveStatus === 'saved' && 'bg-green-600 text-white hover:bg-green-700',
-                      saveStatus === 'error' && 'bg-red-600 text-white hover:bg-red-700'
-                    )}
-                  >
-                    {saveStatus === 'saved' ? (
-                      <>✓ 已保存</>
-                    ) : saveStatus === 'error' ? (
-                      <>✗ 保存失败</>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        保存配置
-                      </>
-                    )}
-                  </Button>
-                </div>
-
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setSaveConfigDialogOpen(true)}
+                  disabled={isLoading}
+                >
+                  <Save className="w-4 h-4" />
+                  保存配置
+                </Button>
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? (
                     <>
@@ -1430,6 +1387,16 @@ export function LoadModelDialog({
           </form>
         </DialogContent>
       </Dialog>
+      <SaveConfigDialog
+        isOpen={saveConfigDialogOpen}
+        onClose={() => setSaveConfigDialogOpen(false)}
+        onConfirm={handleSaveConfigByName}
+        existingConfigs={namedConfigs.filter(c => c.name !== '')}
+        onDeleteConfig={handleDeleteConfigByName}
+        modelName={modelName || modelId}
+        isSaving={saveNamedConfig.isPending}
+      />
+    </Fragment>
     );
   }
 
@@ -1524,6 +1491,7 @@ export function LoadModelDialog({
   };
 
   return (
+    <Fragment>
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isLoading) onClose(); }}>
       <DialogContent className="sm:max-w-[95vw] max-h-[90vh] p-0 overflow-hidden flex flex-col" onInteractOutside={(e) => { if (isLoading) e.preventDefault(); }}>
         {/* Header */}
@@ -1540,9 +1508,37 @@ export function LoadModelDialog({
             {/* Left column: basic config */}
 
             <div className="flex-1 space-y-4 overflow-y-scroll pr-2 min-h-0 dialog-scrollable" aria-label="基础配置区域">
-              <h3 className="text-sm font-semibold text-foreground pb-2 border-b border-border">
-                基础配置
-              </h3>
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <h3 className="text-sm font-semibold text-foreground">基础配置</h3>
+                {namedConfigs.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={selectedConfigToLoad}
+                      onChange={(e) => setSelectedConfigToLoad(e.target.value)}
+                      className="h-7 px-2 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">加载配置...</option>
+                      {namedConfigs.map(c => (
+                        <option key={c.name} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      disabled={!selectedConfigToLoad}
+                      onClick={() => {
+                        if (selectedConfigToLoad) {
+                          handleLoadConfigByName(selectedConfigToLoad);
+                        }
+                      }}
+                    >
+                      <Download className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
 
               {/* Model info */}
               <div className="space-y-3">
@@ -2705,40 +2701,8 @@ export function LoadModelDialog({
 
           {/* Footer */}
           <div className="flex justify-between items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
-            {/* Left: Config selection + VRAM estimate */}
+            {/* Left: VRAM estimate */}
             <div className="flex items-center gap-2">
-              <select
-                value={selectedConfigName}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val) {
-                    handleLoadNamedConfig(val);
-                  }
-                }}
-                className={cn(
-                  "h-9 px-3 text-sm border-2 border-border rounded-md",
-                  "bg-input text-foreground",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500"
-                )}
-              >
-                <option value="">选择配置...</option>
-                {savedConfigs.map(c => (
-                  <option key={c.name} value={c.name}>{c.name}</option>
-                ))}
-              </select>
-              {selectedConfigName && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteNamedConfig(selectedConfigName)}
-                  className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                  title="删除此配置"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-              <div className="w-px h-6 bg-border" />
               <Button
                 type="button"
                 variant="outline"
@@ -2774,50 +2738,15 @@ export function LoadModelDialog({
               <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
                 取消
               </Button>
-
-              {/* Save named config */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={configName}
-                  onChange={(e) => setConfigName(e.target.value)}
-                  placeholder="配置名称"
-                  className={cn(
-                    "h-9 px-3 text-sm w-32 border-2 border-border rounded-md",
-                    "bg-input text-foreground",
-                    "focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  )}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSaveConfig();
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleSaveConfig}
-                  disabled={isLoading}
-                  className={cn(
-                    saveStatus === 'saved' && 'bg-green-600 text-white hover:bg-green-700',
-                    saveStatus === 'error' && 'bg-red-600 text-white hover:bg-red-700'
-                  )}
-                >
-                  {saveStatus === 'saved' ? (
-                    <>✓ 已保存</>
-                  ) : saveStatus === 'error' ? (
-                    <>✗ 保存失败</>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      保存配置
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Load - primary action */}
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setSaveConfigDialogOpen(true)}
+                disabled={isLoading}
+              >
+                <Save className="w-4 h-4" />
+                保存配置
+              </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
                   <>
@@ -2833,5 +2762,15 @@ export function LoadModelDialog({
       </form>
       </DialogContent>
     </Dialog>
+    <SaveConfigDialog
+      isOpen={saveConfigDialogOpen}
+      onClose={() => setSaveConfigDialogOpen(false)}
+      onConfirm={handleSaveConfigByName}
+      existingConfigs={namedConfigs.filter(c => c.name !== '')}
+      onDeleteConfig={handleDeleteConfigByName}
+      modelName={modelName || modelId}
+      isSaving={saveNamedConfig.isPending}
+    />
+    </Fragment>
   );
 }

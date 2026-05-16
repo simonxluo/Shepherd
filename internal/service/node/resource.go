@@ -250,48 +250,46 @@ func (rm *ResourceMonitor) updateResources() {
 	default:
 	}
 
-	rm.mu.Lock()
-	defer rm.mu.Unlock()
-
-	rm.lastUpdate = time.Now()
-
-	// 更新CPU使用率
-	rm.updateCPUUsage()
-
-	// 更新内存使用情况
-	rm.updateMemoryUsage()
-
-	// 更新磁盘使用情况
-	rm.updateDiskUsage()
-
-	// 更新GPU信息
-	rm.updateGPUInfo()
-
-	// 更新系统负载
-	rm.updateLoadAverage()
-
-	// 更新运行时间
-	rm.resources.Uptime = int64(time.Since(rm.startTime).Seconds())
-
-	// 调用回调函数（在锁外执行以避免死锁）
 	var resourcesCopy *NodeResources
-	if rm.callback != nil {
+
+	func() {
+		rm.mu.Lock()
+		defer rm.mu.Unlock()
+
+		rm.lastUpdate = time.Now()
+
+		// 更新CPU使用率
+		rm.updateCPUUsage()
+
+		// 更新内存使用情况
+		rm.updateMemoryUsage()
+
+		// 更新磁盘使用情况
+		rm.updateDiskUsage()
+
+		// 更新GPU信息
+		rm.updateGPUInfo()
+
+		// 更新系统负载
+		rm.updateLoadAverage()
+
+		// 更新运行时间
+		rm.resources.Uptime = int64(time.Since(rm.startTime).Seconds())
+
 		// 创建副本避免并发访问问题
-		resourcesCopy = &NodeResources{}
-		*resourcesCopy = *rm.resources
-		if len(rm.gpuInfo) > 0 {
-			resourcesCopy.GPUInfo = make([]gpu.Info, len(rm.gpuInfo))
-			copy(resourcesCopy.GPUInfo, rm.gpuInfo)
+		if rm.callback != nil {
+			resourcesCopy = &NodeResources{}
+			*resourcesCopy = *rm.resources
+			if len(rm.gpuInfo) > 0 {
+				resourcesCopy.GPUInfo = make([]gpu.Info, len(rm.gpuInfo))
+				copy(resourcesCopy.GPUInfo, rm.gpuInfo)
+			}
 		}
-	}
-	rm.mu.Unlock()
+	}()
 
 	if rm.callback != nil && resourcesCopy != nil {
 		rm.callback(resourcesCopy)
 	}
-
-	// 重新获取锁以保持函数语义
-	rm.mu.Lock()
 }
 
 // updateCPUUsage 更新CPU使用率

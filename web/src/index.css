@@ -227,6 +227,16 @@
   }
 }
 
+.dark [data-sonner-toaster] [data-sonner-toast] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: 1px solid hsl(0 0% 75%);
+}
+
+.dark [data-sonner-toaster] [data-sonner-toast] [data-description] {
+  color: hsl(var(--primary-foreground) / 0.7);
+}
+
 .dialog-scrollable {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 40%) transparent;

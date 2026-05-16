@@ -314,31 +314,3 @@ type LoadResult struct {
 	Loading       bool // 正在加载中（仅当 Async=true 时有效）
 	AlreadyLoaded bool // 模型已加载（仅当 Async=true 时有效）
 }
-
-// ModelFilter represents filter criteria for model search
-type ModelFilter struct {
-	Tags         []string
-	Architecture string
-	MinContext   int
-	MaxSize      int64
-	LoadedOnly   bool
-	Favourites   bool
-	SearchQuery  string
-	SourceType   string
-	License      string
-}
-
-// ModelSort represents sort options for model listing
-type ModelSort struct {
-	Field     string // "name", "size", "scanned_at", "load_count"
-	Direction string // "asc", "desc"
-}
-
-// ModelSearchResult represents the result of a model search
-type ModelSearchResult struct {
-	Models        []*Model
-	Total         int
-	Filtered      int
-	Tags          map[string]int // Tag frequency
-	Architectures map[string]int // Architecture frequency
-}

@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -222,14 +221,10 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 		req.RepeatPenalty = 1.1
 	}
 
-	// 根据模型能力自动设置后端类型（如果前端未指定）
-	if req.BackendType == "" {
-		caps := s.modelMgr.GetModelCapabilities(id)
-		if caps != nil && (caps.TTS || caps.ASR) {
-			req.BackendType = "vllm_omni"
-			logger.Infof("根据模型能力自动设置后端类型: modelId=%s, backendType=vllm_omni", id)
-		}
-	}
+	// 不再强制设置 vllm_omni 后端，交给 Resolve 的能力感知路由处理：
+	// - 有 vllm_omni 配置时，能力感知路由会优先选择它
+	// - 无 vllm_omni 配置时，GGUF 模型会 fallback 到 llama.cpp
+	// 前端显式指定 BackendType 时仍然会被尊重
 
 	result, err := s.modelMgr.LoadAsync(&req)
 	if err != nil {
@@ -251,11 +246,7 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 		respData["port"] = result.Port
 	}
 
-	requestID := c.GetString("requestId")
-	if requestID == "" {
-		requestID = "unknown"
-	}
-	c.JSON(http.StatusAccepted, types.NewSuccessResponse(respData, requestID))
+	api.Accepted(c, respData)
 }
 
 // HandleUnloadModel unloads a model from memory.
@@ -702,6 +693,107 @@ func (s *Server) HandleDeleteModelLoadConfig(c *gin.Context) {
 	api.SuccessWithMessage(c, "模型加载配置已删除")
 }
 
+// HandleListModelLoadConfigs returns all load configs (default + named) for a model.
+func (s *Server) HandleListModelLoadConfigs(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		api.BadRequest(c, "模型ID不能为空")
+		return
+	}
+
+	nodeID := s.getNodeID()
+	ctx := context.Background()
+
+	configs, err := s.storageMgr.GetStore().ListModelLoadConfigs(ctx, nodeID, id)
+	if err != nil {
+		api.ErrorWithDetails(c, types.ErrInternalError, "获取模型加载配置列表失败", err.Error())
+		return
+	}
+
+	api.Success(c, gin.H{
+		"modelId": id,
+		"configs": configs,
+	})
+}
+
+// HandleSaveNamedModelLoadConfig saves a named load config preset.
+func (s *Server) HandleSaveNamedModelLoadConfig(c *gin.Context) {
+	id := c.Param("id")
+	name := c.Param("name")
+	if id == "" {
+		api.BadRequest(c, "模型ID不能为空")
+		return
+	}
+	if name == "" {
+		api.BadRequest(c, "配置名称不能为空")
+		return
+	}
+
+	var req struct {
+		Config map[string]interface{} `json:"config"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		api.ErrorWithDetails(c, types.ErrInvalidRequest, "无效的请求格式", err.Error())
+		return
+	}
+
+	m, exists := s.modelMgr.GetModel(id)
+	modelName := ""
+	if exists {
+		modelName = m.Name
+	}
+
+	nodeID := s.getNodeID()
+	ctx := context.Background()
+
+	loadConfig := &storage.ModelLoadConfig{
+		NodeID:    nodeID,
+		ModelID:   id,
+		ModelName: modelName,
+		Name:      name,
+		Config:    req.Config,
+	}
+
+	if err := s.storageMgr.GetStore().SaveNamedModelLoadConfig(ctx, loadConfig); err != nil {
+		api.ErrorWithDetails(c, types.ErrInternalError, "保存命名配置失败", err.Error())
+		return
+	}
+
+	logger.Infof("命名配置已保存: modelId=%s, name=%s, nodeId=%s", id, name, nodeID)
+
+	api.Success(c, gin.H{
+		"modelId": id,
+		"name":    name,
+		"config":  req.Config,
+	})
+}
+
+// HandleDeleteNamedModelLoadConfig deletes a named load config preset.
+func (s *Server) HandleDeleteNamedModelLoadConfig(c *gin.Context) {
+	id := c.Param("id")
+	name := c.Param("name")
+	if id == "" {
+		api.BadRequest(c, "模型ID不能为空")
+		return
+	}
+	if name == "" {
+		api.BadRequest(c, "配置名称不能为空")
+		return
+	}
+
+	nodeID := s.getNodeID()
+	ctx := context.Background()
+
+	if err := s.storageMgr.GetStore().DeleteNamedModelLoadConfig(ctx, nodeID, id, name); err != nil {
+		api.ErrorWithDetails(c, types.ErrInternalError, "删除命名配置失败", err.Error())
+		return
+	}
+
+	logger.Infof("命名配置已删除: modelId=%s, name=%s, nodeId=%s", id, name, nodeID)
+
+	api.SuccessWithMessage(c, "命名配置已删除")
+}
+
 // HandleScanModels triggers a model scan across configured paths.
 // @Summary      Scan for models
 // @Description  Triggers a scan of all configured model paths to discover GGUF models
@@ -828,10 +920,16 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 	if len(m.ShardFiles) > 0 {
 		modelPath = m.ShardFiles[0]
 	}
-	// 根据能力 + 格式决定推荐后端：多模态模型优先 vllm_omni，无论 GGUF 还是 safetensors
+	// 根据能力 + 格式 + 后端可用性决定推荐后端
 	caps := s.modelMgr.GetModelCapabilities(m.ID)
-	if caps != nil && (caps.TTS || caps.ASR) {
+	vllmOmniConfigured := s.config != nil && s.config.ServerCfg != nil &&
+		s.config.ServerCfg.Backends.VLLMOmni != nil &&
+		s.config.ServerCfg.Backends.VLLMOmni.Enabled
+	if caps != nil && (caps.TTS || caps.ASR) && vllmOmniConfigured {
 		dto.BackendType = "vllm_omni"
+	} else if caps != nil && (caps.TTS || caps.ASR) && !vllmOmniConfigured {
+		// vllm_omni 未配置，GGUF TTS/ASR 模型 fallback 到 llama.cpp
+		dto.BackendType = "llamacpp"
 	} else if backend.IsSafeTensorsModel(modelPath) || filepath.Ext(modelPath) == "" {
 		dto.BackendType = "vllm"
 	} else {

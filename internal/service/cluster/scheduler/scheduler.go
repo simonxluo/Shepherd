@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
 )
 
 // Scheduler manages task distribution across clients
@@ -28,7 +29,7 @@ type Scheduler struct {
 type ClientManager interface {
 	GetOnlineClients() []*cluster.Client
 	GetClient(clientID string) (*cluster.Client, bool)
-	SendCommand(clientID string, command *cluster.Command) (map[string]interface{}, error)
+	SendCommand(clientID string, command *node.Command) (map[string]interface{}, error)
 }
 
 // SchedulingStrategy defines the scheduling strategy
@@ -234,10 +235,16 @@ func (s *Scheduler) dispatchTask(task *cluster.Task) {
 	}
 
 	// Send task to client
-	command := &cluster.Command{
-		ID:      uuid.New().String(),
-		Type:    string(task.Type),
-		Payload: task.Payload,
+	command := &node.Command{
+		ID:         uuid.New().String(),
+		Type:       node.CommandType(task.Type),
+		Payload:    task.Payload,
+		FromNodeID: "",
+		ToNodeID:   selectedClient.ID,
+		CreatedAt:  time.Now(),
+		Priority:   5,
+		RetryCount: 0,
+		MaxRetries: 3,
 	}
 
 	s.updateTaskStatus(task, cluster.TaskStatusRunning, selectedClient.ID, "")

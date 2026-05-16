@@ -141,26 +141,3 @@ func NewErrorResponseWithDetails(code ErrorCode, message, details string, reques
 	}
 }
 
-// PaginatedResponse represents a paginated API response
-// 分页响应格式
-type PaginatedResponse[T any] struct {
-	Success  bool          `json:"success"`
-	Data     []T           `json:"data,omitempty"`
-	Total    int64         `json:"total"`
-	Page     int           `json:"page"`
-	PageSize int           `json:"pageSize"`
-	Error    *ErrorInfo    `json:"error,omitempty"`
-	Metadata *ResponseMeta `json:"metadata,omitempty"`
-}
-
-// NewPaginatedResponse creates a paginated response
-func NewPaginatedResponse[T any](data []T, total int64, page, pageSize int, requestID string) *PaginatedResponse[T] {
-	return &PaginatedResponse[T]{
-		Success:  true,
-		Data:     data,
-		Total:    total,
-		Page:     page,
-		PageSize: pageSize,
-		Metadata: NewResponseMeta(requestID),
-	}
-}

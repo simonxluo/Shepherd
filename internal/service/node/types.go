@@ -31,6 +31,28 @@ const (
 
 // 向后兼容：旧的代码可以继续使用 NodeStatus，实际上使用的是统一的 NodeState
 
+// validNodeTransitions defines allowed state transitions for Node
+var validNodeTransitions = map[NodeStatus][]NodeStatus{
+	NodeStatusOffline: {NodeStatusOnline},
+	NodeStatusOnline:  {NodeStatusOffline, NodeStatusError, NodeStatusBusy},
+	NodeStatusBusy:    {NodeStatusOnline, NodeStatusOffline, NodeStatusError},
+	NodeStatusError:   {NodeStatusOffline, NodeStatusOnline},
+}
+
+// isValidNodeTransition checks if a state transition is valid
+func isValidNodeTransition(from, to NodeStatus) bool {
+	allowed, ok := validNodeTransitions[from]
+	if !ok {
+		return false
+	}
+	for _, s := range allowed {
+		if s == to {
+			return true
+		}
+	}
+	return false
+}
+
 // NodeCapabilities describes what a node can do
 type NodeCapabilities struct {
 	GPU               bool              `json:"gpu"`

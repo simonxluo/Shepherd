@@ -48,4 +48,9 @@ export {
   useModelLoadConfig,
   useSaveModelLoadConfig,
   useDeleteModelLoadConfig,
+  useModelLoadConfigs,
+  useSaveNamedModelLoadConfig,
+  useDeleteNamedModelLoadConfig,
+  type ModelLoadConfigEntry,
+  type ModelLoadConfigsResponse,
 } from './config';

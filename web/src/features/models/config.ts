@@ -19,7 +19,25 @@ interface ModelLoadConfigResponse {
 }
 
 /**
- * Fetch model load config hook
+ * Named model load config entry
+ */
+export interface ModelLoadConfigEntry {
+  name: string;
+  config: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Named model load configs response
+ */
+export interface ModelLoadConfigsResponse {
+  modelId: string;
+  configs: ModelLoadConfigEntry[];
+}
+
+/**
+ * Fetch model load config hook (default config)
  */
 export function useModelLoadConfig(modelId: string) {
   return useQuery<ModelLoadConfigResponse>({
@@ -37,7 +55,7 @@ export function useModelLoadConfig(modelId: string) {
 }
 
 /**
- * Save model load config hook
+ * Save model load config hook (default config)
  */
 export function useSaveModelLoadConfig() {
   const queryClient = useQueryClient();
@@ -59,7 +77,7 @@ export function useSaveModelLoadConfig() {
 }
 
 /**
- * Delete model load config hook
+ * Delete model load config hook (default config)
  */
 export function useDeleteModelLoadConfig() {
   const queryClient = useQueryClient();
@@ -73,6 +91,67 @@ export function useDeleteModelLoadConfig() {
     },
     onSuccess: (_, modelId) => {
       queryClient.invalidateQueries({ queryKey: ['models', modelId, 'load-config'] });
+    },
+  });
+}
+
+/**
+ * List all load configs (default + named) for a model
+ */
+export function useModelLoadConfigs(modelId: string) {
+  return useQuery<ModelLoadConfigsResponse>({
+    queryKey: ['models', modelId, 'load-configs'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ success: boolean; data: ModelLoadConfigsResponse }>(
+        `/models/${modelId}/load-configs`
+      );
+      return response.data;
+    },
+    enabled: !!modelId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Save a named load config preset
+ */
+export function useSaveNamedModelLoadConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ modelId, name, config }: { modelId: string; name: string; config: Record<string, unknown> }) => {
+      const response = await apiClient.put<{ success: boolean }>(
+        `/models/${modelId}/load-configs/${encodeURIComponent(name)}`,
+        { config }
+      );
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['models', variables.modelId, 'load-configs']
+      });
+    },
+  });
+}
+
+/**
+ * Delete a named load config preset
+ */
+export function useDeleteNamedModelLoadConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ modelId, name }: { modelId: string; name: string }) => {
+      const response = await apiClient.delete<{ success: boolean }>(
+        `/models/${modelId}/load-configs/${encodeURIComponent(name)}`
+      );
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['models', variables.modelId, 'load-configs']
+      });
     },
   });
 }

@@ -79,7 +79,7 @@ func nodeInfoToClusterClient(info *node.NodeInfo) *cluster.Client {
 		Address:      info.Address,
 		Port:         info.Port,
 		Tags:         info.Tags,
-		Capabilities: convertNodeCapabilitiesToCluster(info.Capabilities),
+		Capabilities: info.Capabilities,
 		Status:       cluster.ClientStatus(info.Status),
 		LastSeen:     info.LastSeen,
 		Metadata:     make(map[string]string),
@@ -92,22 +92,9 @@ func nodeInfoToClusterClient(info *node.NodeInfo) *cluster.Client {
 }
 
 // SendCommand 向客户端发送命令
-func (m *nodeClientManager) SendCommand(clientID string, command *cluster.Command) (map[string]interface{}, error) {
-	// 将 cluster.Command 转换为 node.Command
-	nodeCmd := &node.Command{
-		ID:         command.ID,
-		Type:       node.CommandType(command.Type),
-		Payload:    command.Payload,
-		FromNodeID: m.node.GetID(),
-		ToNodeID:   clientID,
-		CreatedAt:  time.Now(),
-		Priority:   5, // 默认优先级
-		RetryCount: 0,
-		MaxRetries: 3,
-	}
-
+func (m *nodeClientManager) SendCommand(clientID string, command *node.Command) (map[string]interface{}, error) {
 	// 将命令加入队列
-	if err := m.node.QueueCommand(clientID, nodeCmd); err != nil {
+	if err := m.node.QueueCommand(clientID, command); err != nil {
 		return nil, err
 	}
 
@@ -115,24 +102,6 @@ func (m *nodeClientManager) SendCommand(clientID string, command *cluster.Comman
 		"commandId": command.ID,
 		"status":    "queued",
 	}, nil
-}
-
-// convertNodeCapabilitiesToCluster 转换节点能力格式
-func convertNodeCapabilitiesToCluster(cap *node.NodeCapabilities) *cluster.Capabilities {
-	if cap == nil {
-		return nil
-	}
-
-	return &cluster.Capabilities{
-		GPU:            cap.GPU,
-		GPUCount:       cap.GPUCount,
-		GPUName:        cap.GPUName,
-		GPUMemory:      cap.GPUMemory,
-		CPUCount:       cap.CPUCount,
-		Memory:         cap.Memory,
-		SupportsLlama:  cap.SupportsLlama,
-		SupportsPython: cap.SupportsPython,
-	}
 }
 
 // ==================== 节点管理 API ====================
@@ -310,7 +279,7 @@ func (a *NodeAdapter) convertNodeToFrontendFormat(client *node.NodeInfo) gin.H {
 		"tags":         client.Tags,
 		"status":       client.Status,
 		"lastSeen":     client.LastSeen.Format(time.RFC3339),
-		"connected":    client.Status == "online",
+		"connected":    client.Status == node.NodeStatusOnline,
 		"metadata":     client.Metadata,
 		"capabilities": capabilities,
 	}

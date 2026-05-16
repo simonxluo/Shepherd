@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 	"net"
 	"net/http"
 	"strconv"
@@ -14,7 +13,9 @@ import (
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
 )
 
 // ScanConfig contains network scan configuration
@@ -235,7 +236,7 @@ func (s *Scanner) checkClient(host string, port int) *cluster.DiscoveredClient {
 		ID           string                `json:"id"`
 		Name         string                `json:"name"`
 		Version      string                `json:"version"`
-		Capabilities *cluster.Capabilities `json:"capabilities"`
+		Capabilities *node.NodeCapabilities `json:"capabilities"`
 		Tags         []string              `json:"tags"`
 	}
 

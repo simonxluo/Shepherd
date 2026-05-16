@@ -494,8 +494,9 @@ func (m *Manager) loadHuggingFaceModel(dirPath string) (*Model, error) {
 		PathPrefix:  pathPrefix,
 		Size:        hfInfo.TotalSize,
 		Metadata: &gguf.Metadata{
-			Name:         hfInfo.Name,
-			Architecture: strings.Join(hfInfo.Architectures, ","),
+			Name:          hfInfo.Name,
+			Architecture:  strings.Join(hfInfo.Architectures, ","),
+			ContextLength: hfInfo.ContextLength,
 		},
 		ScannedAt:  time.Now(),
 		SourcePath: dirPath,
