@@ -709,6 +709,107 @@ func (s *Server) HandleDeleteModelLoadConfig(c *gin.Context) {
 	api.SuccessWithMessage(c, "模型加载配置已删除")
 }
 
+// HandleListModelLoadConfigs returns all load configs (default + named) for a model.
+func (s *Server) HandleListModelLoadConfigs(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		api.BadRequest(c, "模型ID不能为空")
+		return
+	}
+
+	nodeID := s.getNodeID()
+	ctx := context.Background()
+
+	configs, err := s.storageMgr.GetStore().ListModelLoadConfigs(ctx, nodeID, id)
+	if err != nil {
+		api.ErrorWithDetails(c, types.ErrInternalError, "获取模型加载配置列表失败", err.Error())
+		return
+	}
+
+	api.Success(c, gin.H{
+		"modelId": id,
+		"configs": configs,
+	})
+}
+
+// HandleSaveNamedModelLoadConfig saves a named load config preset.
+func (s *Server) HandleSaveNamedModelLoadConfig(c *gin.Context) {
+	id := c.Param("id")
+	name := c.Param("name")
+	if id == "" {
+		api.BadRequest(c, "模型ID不能为空")
+		return
+	}
+	if name == "" {
+		api.BadRequest(c, "配置名称不能为空")
+		return
+	}
+
+	var req struct {
+		Config map[string]interface{} `json:"config"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		api.ErrorWithDetails(c, types.ErrInvalidRequest, "无效的请求格式", err.Error())
+		return
+	}
+
+	m, exists := s.modelMgr.GetModel(id)
+	modelName := ""
+	if exists {
+		modelName = m.Name
+	}
+
+	nodeID := s.getNodeID()
+	ctx := context.Background()
+
+	loadConfig := &storage.ModelLoadConfig{
+		NodeID:    nodeID,
+		ModelID:   id,
+		ModelName: modelName,
+		Name:      name,
+		Config:    req.Config,
+	}
+
+	if err := s.storageMgr.GetStore().SaveNamedModelLoadConfig(ctx, loadConfig); err != nil {
+		api.ErrorWithDetails(c, types.ErrInternalError, "保存命名配置失败", err.Error())
+		return
+	}
+
+	logger.Infof("命名配置已保存: modelId=%s, name=%s, nodeId=%s", id, name, nodeID)
+
+	api.Success(c, gin.H{
+		"modelId": id,
+		"name":    name,
+		"config":  req.Config,
+	})
+}
+
+// HandleDeleteNamedModelLoadConfig deletes a named load config preset.
+func (s *Server) HandleDeleteNamedModelLoadConfig(c *gin.Context) {
+	id := c.Param("id")
+	name := c.Param("name")
+	if id == "" {
+		api.BadRequest(c, "模型ID不能为空")
+		return
+	}
+	if name == "" {
+		api.BadRequest(c, "配置名称不能为空")
+		return
+	}
+
+	nodeID := s.getNodeID()
+	ctx := context.Background()
+
+	if err := s.storageMgr.GetStore().DeleteNamedModelLoadConfig(ctx, nodeID, id, name); err != nil {
+		api.ErrorWithDetails(c, types.ErrInternalError, "删除命名配置失败", err.Error())
+		return
+	}
+
+	logger.Infof("命名配置已删除: modelId=%s, name=%s, nodeId=%s", id, name, nodeID)
+
+	api.SuccessWithMessage(c, "命名配置已删除")
+}
+
 // HandleScanModels triggers a model scan across configured paths.
 // @Summary      Scan for models
 // @Description  Triggers a scan of all configured model paths to discover GGUF models

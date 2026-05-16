@@ -154,6 +154,7 @@ type ModelLoadConfig struct {
 	NodeID    string                 `json:"nodeId" db:"node_id"`       // Machine/Node ID
 	ModelID   string                 `json:"modelId" db:"model_id"`     // Model ID
 	ModelName string                 `json:"modelName" db:"model_name"` // Model name (for reference)
+	Name      string                 `json:"name" db:"name"`            // '' = default, non-empty = named preset
 	Config    map[string]interface{} `json:"config" db:"config"`        // LoadModelParams as JSON
 	CreatedAt time.Time              `json:"createdAt" db:"created_at"`
 	UpdatedAt time.Time              `json:"updatedAt" db:"updated_at"`
@@ -208,6 +209,11 @@ type Store interface {
 	SaveModelLoadConfig(ctx context.Context, config *ModelLoadConfig) error
 	GetModelLoadConfig(ctx context.Context, nodeID, modelID string) (*ModelLoadConfig, error)
 	DeleteModelLoadConfig(ctx context.Context, nodeID, modelID string) error
+
+	// Named ModelLoadConfig operations (multi-preset support)
+	ListModelLoadConfigs(ctx context.Context, nodeID, modelID string) ([]*ModelLoadConfig, error)
+	SaveNamedModelLoadConfig(ctx context.Context, config *ModelLoadConfig) error
+	DeleteNamedModelLoadConfig(ctx context.Context, nodeID, modelID, name string) error
 
 	// ModelMetadata operations - 用户设置的模型元数据
 	SaveModelMetadata(ctx context.Context, metadata *ModelMetadata) error

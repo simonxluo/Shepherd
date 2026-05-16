@@ -177,6 +177,11 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 		return fmt.Errorf("failed to migrate capabilities column: %w", err)
 	}
 
+	// Database migration: add name column to model_load_configs for multi-preset support
+	if err := s.migrateModelLoadConfigsTable(); err != nil {
+		return fmt.Errorf("failed to migrate model_load_configs table: %w", err)
+	}
+
 	return nil
 }
 
@@ -214,6 +219,46 @@ func (s *SQLiteStore) migrateCapabilitiesColumn() error {
 			return fmt.Errorf("failed to add capabilities column: %w", err)
 		}
 	}
+
+	return nil
+}
+
+// migrateModelLoadConfigsTable adds name column and unique index for multi-preset support
+func (s *SQLiteStore) migrateModelLoadConfigsTable() error {
+	nameExists := false
+	rows, err := s.db.Query("PRAGMA table_info(model_load_configs)")
+	if err != nil {
+		return err
+	}
+	defer utils.CloseQuietly(rows)
+
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notnull, pk int
+		var dflt_value interface{}
+		if err := rows.Scan(&cid, &name, &colType, &notnull, &dflt_value, &pk); err != nil {
+			return err
+		}
+		if name == "name" {
+			nameExists = true
+			break
+		}
+	}
+
+	if !nameExists {
+		if _, err := s.db.Exec("ALTER TABLE model_load_configs ADD COLUMN name TEXT NOT NULL DEFAULT ''"); err != nil {
+			return fmt.Errorf("failed to add name column: %w", err)
+		}
+	}
+
+	// Create new unique index including name
+	if _, err := s.db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_mlc_node_model_name ON model_load_configs(node_id, model_id, name)"); err != nil {
+		return fmt.Errorf("failed to create new index: %w", err)
+	}
+
+	// Drop old index (may fail if already dropped, ignore)
+	s.db.Exec("DROP INDEX IF EXISTS idx_model_load_configs_node_model")
 
 	return nil
 }
@@ -883,9 +928,9 @@ func (s *SQLiteStore) SaveModelLoadConfig(ctx context.Context, config *ModelLoad
 
 	// Use UPSERT (INSERT OR REPLACE)
 	query := `
-		INSERT INTO model_load_configs (id, node_id, model_id, model_name, config, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(node_id, model_id) DO UPDATE SET
+		INSERT INTO model_load_configs (id, node_id, model_id, model_name, config, created_at, updated_at, name)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(node_id, model_id, name) DO UPDATE SET
 			config = excluded.config,
 			model_name = excluded.model_name,
 			updated_at = excluded.updated_at
@@ -899,6 +944,7 @@ func (s *SQLiteStore) SaveModelLoadConfig(ctx context.Context, config *ModelLoad
 		string(configJSON),
 		config.CreatedAt.Unix(),
 		config.UpdatedAt.Unix(),
+		config.Name,
 	)
 
 	return err
@@ -914,9 +960,9 @@ func (s *SQLiteStore) GetModelLoadConfig(ctx context.Context, nodeID, modelID st
 	var createdUnix, updatedUnix int64
 
 	query := `
-		SELECT id, node_id, model_id, model_name, config, created_at, updated_at
+		SELECT id, node_id, model_id, model_name, config, created_at, updated_at, name
 		FROM model_load_configs
-		WHERE node_id = ? AND model_id = ?
+		WHERE node_id = ? AND model_id = ? AND name = ''
 	`
 
 	err := s.db.QueryRowContext(ctx, query, nodeID, modelID).Scan(
@@ -927,6 +973,7 @@ func (s *SQLiteStore) GetModelLoadConfig(ctx context.Context, nodeID, modelID st
 		&configJSON,
 		&createdUnix,
 		&updatedUnix,
+		&c.Name,
 	)
 
 	if err == sql.ErrNoRows {
@@ -956,11 +1003,118 @@ func (s *SQLiteStore) DeleteModelLoadConfig(ctx context.Context, nodeID, modelID
 	defer s.mu.Unlock()
 
 	result, err := s.db.ExecContext(ctx,
-		"DELETE FROM model_load_configs WHERE node_id = ? AND model_id = ?",
+		"DELETE FROM model_load_configs WHERE node_id = ? AND model_id = ? AND name = ''",
 		nodeID, modelID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to delete model load config: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrModelLoadConfigNotFound
+	}
+
+	return nil
+}
+
+// ListModelLoadConfigs returns all load configs (default + named) for a model on a node
+func (s *SQLiteStore) ListModelLoadConfigs(ctx context.Context, nodeID, modelID string) ([]*ModelLoadConfig, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	query := `
+		SELECT id, node_id, model_id, model_name, config, created_at, updated_at, name
+		FROM model_load_configs
+		WHERE node_id = ? AND model_id = ?
+		ORDER BY name
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, nodeID, modelID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list model load configs: %w", err)
+	}
+	defer utils.CloseQuietly(rows)
+
+	var configs []*ModelLoadConfig
+	for rows.Next() {
+		var c ModelLoadConfig
+		var configJSON []byte
+		var createdUnix, updatedUnix int64
+
+		if err := rows.Scan(
+			&c.ID, &c.NodeID, &c.ModelID, &c.ModelName,
+			&configJSON, &createdUnix, &updatedUnix, &c.Name,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan model load config: %w", err)
+		}
+
+		if len(configJSON) > 0 {
+			if err := json.Unmarshal(configJSON, &c.Config); err != nil {
+				c.Config = make(map[string]interface{})
+			}
+		}
+
+		c.CreatedAt = time.Unix(createdUnix, 0).UTC()
+		c.UpdatedAt = time.Unix(updatedUnix, 0).UTC()
+		configs = append(configs, &c)
+	}
+
+	return configs, nil
+}
+
+// SaveNamedModelLoadConfig saves a named load config preset
+func (s *SQLiteStore) SaveNamedModelLoadConfig(ctx context.Context, config *ModelLoadConfig) error {
+	if config.Name == "" {
+		return fmt.Errorf("named config requires a non-empty name")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if config.ID == "" {
+		config.ID = generateID("mlcfg")
+	}
+
+	now := timeNow()
+	if config.CreatedAt.IsZero() {
+		config.CreatedAt = now
+	}
+	config.UpdatedAt = now
+
+	configJSON, err := json.Marshal(config.Config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal model load config: %w", err)
+	}
+
+	query := `
+		INSERT INTO model_load_configs (id, node_id, model_id, model_name, config, created_at, updated_at, name)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(node_id, model_id, name) DO UPDATE SET
+			config = excluded.config,
+			model_name = excluded.model_name,
+			updated_at = excluded.updated_at
+	`
+
+	_, err = s.db.ExecContext(ctx, query,
+		config.ID, config.NodeID, config.ModelID, config.ModelName,
+		string(configJSON), config.CreatedAt.Unix(), config.UpdatedAt.Unix(), config.Name,
+	)
+
+	return err
+}
+
+// DeleteNamedModelLoadConfig deletes a named load config preset
+func (s *SQLiteStore) DeleteNamedModelLoadConfig(ctx context.Context, nodeID, modelID, name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result, err := s.db.ExecContext(ctx,
+		"DELETE FROM model_load_configs WHERE node_id = ? AND model_id = ? AND name = ?",
+		nodeID, modelID, name,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to delete named model load config: %w", err)
 	}
 
 	rows, _ := result.RowsAffected()

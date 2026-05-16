@@ -68,6 +68,9 @@ type ServerHandlers interface {
 	HandleGetModelLoadConfig(c *gin.Context)
 	HandleSaveModelLoadConfig(c *gin.Context)
 	HandleDeleteModelLoadConfig(c *gin.Context)
+	HandleListModelLoadConfigs(c *gin.Context)
+	HandleSaveNamedModelLoadConfig(c *gin.Context)
+	HandleDeleteNamedModelLoadConfig(c *gin.Context)
 	HandleScanModels(c *gin.Context)
 	HandleGetScanStatus(c *gin.Context)
 	HandleListDownloads(c *gin.Context)
@@ -285,6 +288,9 @@ func registerModelRoutes(apiGroup *gin.RouterGroup, sh ServerHandlers, h *Handle
 		models.GET("/:id/load-config", sh.HandleGetModelLoadConfig)
 		models.PUT("/:id/load-config", sh.HandleSaveModelLoadConfig)
 		models.DELETE("/:id/load-config", sh.HandleDeleteModelLoadConfig)
+		models.GET("/:id/load-configs", sh.HandleListModelLoadConfigs)
+		models.PUT("/:id/load-configs/:name", sh.HandleSaveNamedModelLoadConfig)
+		models.DELETE("/:id/load-configs/:name", sh.HandleDeleteNamedModelLoadConfig)
 	}
 }
 

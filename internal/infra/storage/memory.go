@@ -16,7 +16,7 @@ type MemoryStore struct {
 	messagesByID     map[string]*Message
 	benchmarks       map[string]*Benchmark
 	benchmarkConfigs map[string]*BenchmarkConfig
-	modelLoadConfigs map[string]*ModelLoadConfig // key: "nodeID:modelID"
+	modelLoadConfigs map[string]*ModelLoadConfig // key: "nodeID:modelID:name"
 	modelMetadata    map[string]*ModelMetadata   // key: modelID
 }
 
@@ -375,8 +375,9 @@ func (s *MemoryStore) SaveModelLoadConfig(ctx context.Context, config *ModelLoad
 	}
 	config.UpdatedAt = now
 
-	// Use composite key: nodeID:modelID
-	key := config.NodeID + ":" + config.ModelID
+	// Use composite key: nodeID:modelID:name
+	name := config.Name
+	key := config.NodeID + ":" + config.ModelID + ":" + name
 	s.modelLoadConfigs[key] = config
 
 	return nil
@@ -387,7 +388,7 @@ func (s *MemoryStore) GetModelLoadConfig(ctx context.Context, nodeID, modelID st
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	key := nodeID + ":" + modelID
+	key := nodeID + ":" + modelID + ":"
 	config, exists := s.modelLoadConfigs[key]
 	if !exists {
 		return nil, ErrModelLoadConfigNotFound
@@ -401,7 +402,67 @@ func (s *MemoryStore) DeleteModelLoadConfig(ctx context.Context, nodeID, modelID
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	key := nodeID + ":" + modelID
+	key := nodeID + ":" + modelID + ":"
+	if _, exists := s.modelLoadConfigs[key]; !exists {
+		return ErrModelLoadConfigNotFound
+	}
+
+	delete(s.modelLoadConfigs, key)
+	return nil
+}
+
+// ListModelLoadConfigs returns all load configs for a model on a node
+func (s *MemoryStore) ListModelLoadConfigs(ctx context.Context, nodeID, modelID string) ([]*ModelLoadConfig, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	prefix := nodeID + ":" + modelID + ":"
+	var result []*ModelLoadConfig
+
+	for key, cfg := range s.modelLoadConfigs {
+		if len(key) > len(prefix) && key[:len(prefix)] == prefix {
+			cfgCopy := *cfg
+			result = append(result, &cfgCopy)
+		} else if key == prefix {
+			cfgCopy := *cfg
+			result = append(result, &cfgCopy)
+		}
+	}
+
+	return result, nil
+}
+
+// SaveNamedModelLoadConfig saves a named load config preset
+func (s *MemoryStore) SaveNamedModelLoadConfig(ctx context.Context, config *ModelLoadConfig) error {
+	if config.Name == "" {
+		return fmt.Errorf("named config requires a non-empty name")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if config.ID == "" {
+		config.ID = generateID("mlcfg")
+	}
+
+	now := time.Now()
+	if config.CreatedAt.IsZero() {
+		config.CreatedAt = now
+	}
+	config.UpdatedAt = now
+
+	key := config.NodeID + ":" + config.ModelID + ":" + config.Name
+	s.modelLoadConfigs[key] = config
+
+	return nil
+}
+
+// DeleteNamedModelLoadConfig deletes a named load config preset
+func (s *MemoryStore) DeleteNamedModelLoadConfig(ctx context.Context, nodeID, modelID, name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	key := nodeID + ":" + modelID + ":" + name
 	if _, exists := s.modelLoadConfigs[key]; !exists {
 		return ErrModelLoadConfigNotFound
 	}
