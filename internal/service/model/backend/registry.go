@@ -75,14 +75,20 @@ func (r *Registry) Resolve(modelPath string, explicitType BackendType, hints ...
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	// If explicit type is specified, use it
+	// If explicit type is specified and configured, use it
 	if explicitType != "" && explicitType != BackendLlamaCpp {
 		b, ok := r.backends[explicitType]
 		if !ok {
 			return nil, nil, ErrBackendNotFound(explicitType)
 		}
 		cfg := r.configs[explicitType]
-		return b, cfg, nil
+		if cfg != nil {
+			return b, cfg, nil
+		}
+		// Explicit type not configured — fall through to auto-detection
+		// rather than returning nil config and failing at Discover.
+		// This handles the case where the frontend recommends vllm_omni
+		// for TTS models but the user hasn't configured it.
 	}
 
 	// Capability-aware routing: multimodal models prefer vLLM-Omni

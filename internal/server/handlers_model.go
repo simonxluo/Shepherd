@@ -221,14 +221,10 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 		req.RepeatPenalty = 1.1
 	}
 
-	// 根据模型能力自动设置后端类型（如果前端未指定）
-	if req.BackendType == "" {
-		caps := s.modelMgr.GetModelCapabilities(id)
-		if caps != nil && (caps.TTS || caps.ASR) {
-			req.BackendType = "vllm_omni"
-			logger.Infof("根据模型能力自动设置后端类型: modelId=%s, backendType=vllm_omni", id)
-		}
-	}
+	// 不再强制设置 vllm_omni 后端，交给 Resolve 的能力感知路由处理：
+	// - 有 vllm_omni 配置时，能力感知路由会优先选择它
+	// - 无 vllm_omni 配置时，GGUF 模型会 fallback 到 llama.cpp
+	// 前端显式指定 BackendType 时仍然会被尊重
 
 	result, err := s.modelMgr.LoadAsync(&req)
 	if err != nil {
@@ -924,10 +920,16 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 	if len(m.ShardFiles) > 0 {
 		modelPath = m.ShardFiles[0]
 	}
-	// 根据能力 + 格式决定推荐后端：多模态模型优先 vllm_omni，无论 GGUF 还是 safetensors
+	// 根据能力 + 格式 + 后端可用性决定推荐后端
 	caps := s.modelMgr.GetModelCapabilities(m.ID)
-	if caps != nil && (caps.TTS || caps.ASR) {
+	vllmOmniConfigured := s.config != nil && s.config.ServerCfg != nil &&
+		s.config.ServerCfg.Backends.VLLMOmni != nil &&
+		s.config.ServerCfg.Backends.VLLMOmni.Enabled
+	if caps != nil && (caps.TTS || caps.ASR) && vllmOmniConfigured {
 		dto.BackendType = "vllm_omni"
+	} else if caps != nil && (caps.TTS || caps.ASR) && !vllmOmniConfigured {
+		// vllm_omni 未配置，GGUF TTS/ASR 模型 fallback 到 llama.cpp
+		dto.BackendType = "llamacpp"
 	} else if backend.IsSafeTensorsModel(modelPath) || filepath.Ext(modelPath) == "" {
 		dto.BackendType = "vllm"
 	} else {
