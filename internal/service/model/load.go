@@ -189,11 +189,10 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 	loadError := make(chan error, 1)
 	stopHealthCheck := make(chan bool, 1)
 
-	// 启动进程健康检查 goroutine (llama-swap 风格：单一总超时，不计失败次数)
+	// 启动进程健康检查 goroutine
+	// 不设独立总超时，由外层 calculateLoadTimeout 统一控制
 	// 503 视为正常加载中，不作为失败处理
 	go func() {
-		checkStart := time.Now()
-		healthCheckTimeout := 120 * time.Second
 		checkInterval := 5 * time.Second
 
 		ticker := time.NewTicker(checkInterval)
@@ -207,16 +206,6 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 				return
 			case <-ticker.C:
 				checkCount++
-
-				// 检查总超时
-				if time.Since(checkStart) > healthCheckTimeout {
-					logger.Errorf("健康检查总超时: modelId=%s, timeout=%s, checkCount=%d", req.ModelID, healthCheckTimeout, checkCount)
-					select {
-					case loadError <- fmt.Errorf("健康检查超时 (%v)，模型可能加载失败", healthCheckTimeout):
-					default:
-					}
-					return
-				}
 
 				// 检查进程是否仍在运行
 				if !proc.IsRunning() {
@@ -232,7 +221,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 				result, err := b.CheckHealth(port)
 				if err != nil {
 					// 连接失败，可能是进程尚未监听端口
-					logger.Warnf("健康检查连接失败（正常：后端可能仍在启动）: modelId=%s, error=%v, checkCount=%d", req.ModelID, err, checkCount)
+					logger.Debugf("健康检查连接失败（正常：后端可能仍在启动）: modelId=%s, error=%v, checkCount=%d", req.ModelID, err, checkCount)
 				} else if !result.Healthy {
 					// HTTP 503 等 - 模型仍在加载中，继续等待
 					logger.Infof("后端尚未就绪（正常加载中）: modelId=%s, statusCode=%s, checkCount=%d", req.ModelID, "non-200", checkCount)

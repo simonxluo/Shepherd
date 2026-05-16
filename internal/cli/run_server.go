@@ -442,26 +442,13 @@ func (app *App) Start() error {
 }
 
 func (app *App) printStartupInfo() {
-	logger.Infof("HTTP 服务器已启动，监听 %s:%d", app.cfg.Server.Host, app.cfg.Server.WebPort)
+	port := app.cfg.Server.WebPort
+	localIP := netutil.GetBestLocalIP()
+
+	logger.Infof("HTTP 服务器已启动，监听 %s:%d", app.cfg.Server.Host, port)
 	fmt.Printf("  节点角色: %s\n", app.role)
-	fmt.Printf("  HTTP 服务器已启动，监听 %s:%d\n", app.cfg.Server.Host, app.cfg.Server.WebPort)
-	fmt.Printf("  Web UI: http://localhost:%d\n", app.cfg.Server.WebPort)
-	fmt.Printf("  OpenAI API: http://localhost:%d/v1\n", app.cfg.Server.WebPort)
-
-	if app.cfg.Compatibility.Ollama.Enabled {
-		fmt.Printf("  Ollama API: http://localhost:%d\n", app.cfg.Server.OllamaPort)
-	}
-
-	if app.role == "master" || app.role == "hybrid" {
-		fmt.Printf("  Master API: http://localhost:%d/api/master\n", app.cfg.Server.WebPort)
-	}
-
-	if app.role == "client" && app.node != nil {
-		masterAddr := app.cfg.Node.ClientRole.MasterAddress
-		if masterAddr != "" {
-			fmt.Printf("  连接到 Master: %s\n", masterAddr)
-		}
-	}
+	fmt.Printf("  HTTP 服务器已启动，监听 %s:%d\n", app.cfg.Server.Host, port)
+	fmt.Printf("  Web UI: http://%s:%d\n", localIP, port)
 
 	fmt.Println("\n按 Ctrl+C 停止服务器...")
 }

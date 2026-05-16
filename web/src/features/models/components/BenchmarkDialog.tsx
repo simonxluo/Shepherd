@@ -204,12 +204,14 @@ export function BenchmarkDialog({
     const value = paramValues[param.fullName] || param.defaultValue || '';
     const id = `param-${param.fullName.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-    if (param.values && param.values.length > 0) {
+    const nonEmptyValues = param.values?.filter(v => v !== '') ?? [];
+
+    if (nonEmptyValues.length > 0) {
       return (
         <div key={param.fullName} className="space-y-1">
           <ParamLabel name={param.name} abbreviation={param.abbreviation} description={param.description} />
           <Select
-            value={value}
+            value={value || undefined}
             onValueChange={(v) => handleParamChange(param.fullName, v)}
             disabled={isLoading}
           >
@@ -222,7 +224,7 @@ export function BenchmarkDialog({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {param.values.map((v) => (
+              {nonEmptyValues.map((v) => (
                 <SelectItem key={v} value={v}>
                   {v}
                 </SelectItem>
@@ -288,7 +290,6 @@ export function BenchmarkDialog({
           <Input
             id={id}
             type="number"
-            step="0.01"
             value={value}
             onChange={(e) => handleParamChange(param.fullName, e.target.value)}
             disabled={isLoading}
@@ -367,7 +368,7 @@ export function BenchmarkDialog({
                       Llama.cpp 版本
                     </label>
                     <Select
-                      value={llamaCppPath}
+                      value={llamaCppPath || undefined}
                       onValueChange={setLlamaCppPath}
                       disabled={isLoading || versionsLoading}
                     >
@@ -380,15 +381,11 @@ export function BenchmarkDialog({
                         <SelectValue placeholder="未配置 llama.cpp 路径" />
                       </SelectTrigger>
                       <SelectContent>
-                        {llamaCppVersions.length > 0 ? (
-                          llamaCppVersions.map((version) => (
-                            <SelectItem key={version.path} value={version.path}>
-                              {version.name || version.path} {version.description && `(${version.description})`}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="" disabled>未配置 llama.cpp 路径</SelectItem>
-                        )}
+                        {llamaCppVersions.map((version) => (
+                          <SelectItem key={version.path} value={version.path}>
+                            {version.name || version.path} {version.description && `(${version.description})`}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

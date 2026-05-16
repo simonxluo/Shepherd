@@ -216,7 +216,7 @@ function getDefaultLoadModelParams(modelId: string): LoadModelParams {
     modelId,
     ctxSize: 8192,
     batchSize: 4096,
-    threads: 4,
+    threads: -1,
     gpuLayers: 99,
     temperature: 0.7,
     topP: 0.95,
@@ -796,9 +796,7 @@ export function LoadModelDialog({
                       value={params.maxModelLen || params.ctxSize}
                       onChange={(v) => setParams({ ...params, maxModelLen: v, ctxSize: v })}
                       disabled={isLoading}
-                      min={0}
                       max={modelMaxCtxSize}
-                      step={256}
                       placeholder="8192"
                     />
                   </div>
@@ -823,9 +821,6 @@ export function LoadModelDialog({
                       value={params.gpuMemoryUtilization ?? 0.92}
                       onChange={(v) => setParams({ ...params, gpuMemoryUtilization: v })}
                       disabled={isLoading}
-                      min={0}
-                      max={1}
-                      step={0.01}
                       placeholder="0.92"
                     />
                   </div>
@@ -879,9 +874,6 @@ export function LoadModelDialog({
                       value={params.tensorParallelSize}
                       onChange={(v) => setParams({ ...params, tensorParallelSize: v })}
                       disabled={isLoading}
-                      min={1}
-                      max={16}
-                      step={1}
                       placeholder="1"
                     />
                   </div>
@@ -1005,9 +997,6 @@ export function LoadModelDialog({
                         value={params.maxNumSeqs}
                         onChange={(v) => setParams({ ...params, maxNumSeqs: v })}
                         disabled={isLoading}
-                        min={1}
-                        max={1024}
-                        step={1}
                         placeholder="256"
                       />
                     </div>
@@ -1032,9 +1021,6 @@ export function LoadModelDialog({
                         value={params.maxNumBatchedTokens}
                         onChange={(v) => setParams({ ...params, maxNumBatchedTokens: v })}
                         disabled={isLoading}
-                        min={1}
-                        max={1048576}
-                        step={256}
                         placeholder="自动"
                       />
                     </div>
@@ -1059,9 +1045,6 @@ export function LoadModelDialog({
                         value={params.pipelineParallelSize}
                         onChange={(v) => setParams({ ...params, pipelineParallelSize: v })}
                         disabled={isLoading}
-                        min={1}
-                        max={16}
-                        step={1}
                         placeholder="1"
                       />
                     </div>
@@ -1178,9 +1161,6 @@ export function LoadModelDialog({
                         value={params.videoPruningRate}
                         onChange={(v) => setParams({ ...params, videoPruningRate: v })}
                         disabled={isLoading}
-                        min={0}
-                        max={1}
-                        step={0.01}
                         placeholder="0"
                       />
                     </div>
@@ -1242,9 +1222,6 @@ export function LoadModelDialog({
                       value={params.unloadAfterMinutes}
                       onChange={(v) => setParams({ ...params, unloadAfterMinutes: v })}
                       disabled={isLoading}
-                      min={0}
-                      max={10080}
-                      step={1}
                       placeholder="0为永不自动卸载"
                     />
                   </div>
@@ -1254,9 +1231,6 @@ export function LoadModelDialog({
                       value={params.concurrencyLimit}
                       onChange={(v) => setParams({ ...params, concurrencyLimit: v })}
                       disabled={isLoading}
-                      min={0}
-                      max={10000}
-                      step={1}
                       placeholder="0为不限"
                     />
                   </div>
@@ -1854,9 +1828,7 @@ export function LoadModelDialog({
                       value={params.ctxSize}
                       onChange={(v) => setParams({ ...params, ctxSize: v })}
                       disabled={getInputDisabled('ctxSize')}
-                      min={0}
                       max={modelMaxCtxSize}
-                      step={1}
                       placeholder="8192"
                     />
                   </div>
@@ -1935,9 +1907,6 @@ export function LoadModelDialog({
                       value={params.gpuLayers}
                       onChange={(v) => setParams({ ...params, gpuLayers: v })}
                       disabled={getInputDisabled('gpuLayers')}
-                      min={-1}
-                      max={999}
-                      step={1}
                       placeholder="-1 表示全部"
                       allowMinusOne={true}
                     />
@@ -1960,9 +1929,6 @@ export function LoadModelDialog({
                       value={params.temperature}
                       onChange={(v) => setParams({ ...params, temperature: v })}
                       disabled={getInputDisabled('temperature')}
-                      min={0}
-                      max={2}
-                      step={0.1}
                       placeholder="0.7"
                     />
                   </div>
@@ -1976,9 +1942,6 @@ export function LoadModelDialog({
                       value={params.topP}
                       onChange={(v) => setParams({ ...params, topP: v })}
                       disabled={getInputDisabled('topP')}
-                      min={0}
-                      max={1}
-                      step={0.05}
                       placeholder="0.95"
                     />
                   </div>
@@ -1992,9 +1955,6 @@ export function LoadModelDialog({
                       value={params.topK}
                       onChange={(v) => setParams({ ...params, topK: v })}
                       disabled={getInputDisabled('topK')}
-                      min={1}
-                      max={1000}
-                      step={1}
                       placeholder="40"
                     />
                   </div>
@@ -2008,9 +1968,6 @@ export function LoadModelDialog({
                       value={params.minP}
                       onChange={(v) => setParams({ ...params, minP: v })}
                       disabled={getInputDisabled('minP')}
-                      min={0}
-                      max={1}
-                      step={0.01}
                       placeholder="0.05"
                     />
                   </div>
@@ -2024,10 +1981,7 @@ export function LoadModelDialog({
                       value={params.repeatPenalty}
                       onChange={(v) => setParams({ ...params, repeatPenalty: v })}
                       disabled={getInputDisabled('repeatPenalty')}
-                      min={0}
-                      max={2}
-                      step={0.05}
-                      placeholder="1.1"
+                      placeholder="1.0"
                     />
                   </div>
 
@@ -2040,9 +1994,6 @@ export function LoadModelDialog({
                       value={params.presencePenalty}
                       onChange={(v) => setParams({ ...params, presencePenalty: v })}
                       disabled={getInputDisabled('presencePenalty')}
-                      min={0}
-                      max={2}
-                      step={0.1}
                       placeholder="0.0"
                     />
                   </div>
@@ -2056,9 +2007,6 @@ export function LoadModelDialog({
                       value={params.frequencyPenalty}
                       onChange={(v) => setParams({ ...params, frequencyPenalty: v })}
                       disabled={getInputDisabled('frequencyPenalty')}
-                      min={0}
-                      max={2}
-                      step={0.1}
                       placeholder="0.0"
                     />
                   </div>
@@ -2080,9 +2028,6 @@ export function LoadModelDialog({
                       value={params.batchSize}
                       onChange={(v) => setParams({ ...params, batchSize: v })}
                       disabled={getInputDisabled('batchSize')}
-                      min={64}
-                      max={16384}
-                      step={64}
                       placeholder="4096"
                     />
                   </div>
@@ -2096,9 +2041,6 @@ export function LoadModelDialog({
                       value={params.uBatchSize}
                       onChange={(v) => setParams({ ...params, uBatchSize: v })}
                       disabled={getInputDisabled('uBatchSize')}
-                      min={64}
-                      max={8192}
-                      step={64}
                       placeholder="512"
                     />
                   </div>
@@ -2112,9 +2054,6 @@ export function LoadModelDialog({
                       value={params.parallelSlots}
                       onChange={(v) => setParams({ ...params, parallelSlots: v })}
                       disabled={getInputDisabled('parallelSlots')}
-                      min={1}
-                      max={128}
-                      step={1}
                       placeholder="4"
                     />
                   </div>
@@ -2128,9 +2067,6 @@ export function LoadModelDialog({
                       value={params.threads}
                       onChange={(v) => setParams({ ...params, threads: v })}
                       disabled={getInputDisabled('threads')}
-                      min={-1}
-                      max={256}
-                      step={1}
                       placeholder="-1 表示自动"
                       allowMinusOne={true}
                     />
@@ -2153,9 +2089,6 @@ export function LoadModelDialog({
                       value={params.unloadAfterMinutes}
                       onChange={(v) => setParams({ ...params, unloadAfterMinutes: v })}
                       disabled={getInputDisabled('unloadAfterMinutes')}
-                      min={0}
-                      max={10080}
-                      step={1}
                       placeholder="0为永不自动卸载"
                     />
                   </div>
@@ -2169,9 +2102,6 @@ export function LoadModelDialog({
                       value={params.concurrencyLimit}
                       onChange={(v) => setParams({ ...params, concurrencyLimit: v })}
                       disabled={getInputDisabled('concurrencyLimit')}
-                      min={0}
-                      max={10000}
-                      step={1}
                       placeholder="0为不限"
                     />
                   </div>
@@ -2261,42 +2191,42 @@ export function LoadModelDialog({
                         <span>--spec-draft-n-max</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>每轮推测中 draft 模型生成的最大 token 数（默认 16）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specDraftNMax ?? 16} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftNMax: val } }))} min={1} max={256} step={1} placeholder="16" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specDraftNMax ?? 16} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftNMax: val } }))} placeholder="16" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-draft-n-min</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>每轮推测中 draft 模型生成的最小 token 数（默认 1）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specDraftNMin ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftNMin: val } }))} min={0} max={256} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specDraftNMin ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftNMin: val } }))} placeholder="1" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-draft-p-split</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Draft 模型拆分概率阈值（0.0-1.0）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specDraftPSplit ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftPSplit: val } }))} min={0} max={1} step={0.01} placeholder="0.00" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specDraftPSplit ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftPSplit: val } }))} placeholder="0.00" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-draft-p-min</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Draft 模型最小概率阈值（0.0-1.0）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specDraftPMin ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftPMin: val } }))} min={0} max={1} step={0.01} placeholder="0.00" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specDraftPMin ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftPMin: val } }))} placeholder="0.00" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-draft-ctx-size</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Draft 模型上下文大小</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specDraftCtxSize ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftCtxSize: val } }))} min={0} step={256} placeholder="0" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specDraftCtxSize ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftCtxSize: val } }))} placeholder="0" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-draft-ngl</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>Draft 模型 GPU 层数（-1 表示全部）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specDraftNgl ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftNgl: val } }))} min={-1} max={999} step={1} placeholder="0" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specDraftNgl ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specDraftNgl: val } }))} placeholder="0" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
@@ -2316,21 +2246,21 @@ export function LoadModelDialog({
                         <span>--spec-ngram-simple-size-n</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 前缀长度（默认 1）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramSimpleSizeN ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramSimpleSizeN: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramSimpleSizeN ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramSimpleSizeN: val } }))} placeholder="1" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-ngram-simple-size-m</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 预测长度（默认 2）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramSimpleSizeM ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramSimpleSizeM: val } }))} min={1} step={1} placeholder="2" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramSimpleSizeM ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramSimpleSizeM: val } }))} placeholder="2" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-ngram-simple-min-hits</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最小命中次数（默认 1）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramSimpleMinHits ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramSimpleMinHits: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramSimpleMinHits ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramSimpleMinHits: val } }))} placeholder="1" className="w-full h-7 text-xs" />
                     </div>
                   </div>
                   )}
@@ -2343,21 +2273,21 @@ export function LoadModelDialog({
                         <span>--spec-ngram-mod-n-min</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最小 NGram 长度（默认 1）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramModNMin ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramModNMin: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramModNMin ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramModNMin: val } }))} placeholder="1" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-ngram-mod-n-max</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最大 NGram 长度（默认 64）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramModNMax ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramModNMax: val } }))} min={1} step={1} placeholder="64" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramModNMax ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramModNMax: val } }))} placeholder="64" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-ngram-mod-n-match</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>匹配长度（默认 2）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramModNMatch ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramModNMatch: val } }))} min={1} step={1} placeholder="2" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramModNMatch ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramModNMatch: val } }))} placeholder="2" className="w-full h-7 text-xs" />
                     </div>
                   </div>
                   )}
@@ -2370,21 +2300,21 @@ export function LoadModelDialog({
                         <span>--spec-ngram-map-k-size-n</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 前缀长度（默认 1）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramMapKSizeN ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapKSizeN: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramMapKSizeN ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapKSizeN: val } }))} placeholder="1" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-ngram-map-k-size-m</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 预测长度（默认 2）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramMapKSizeM ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapKSizeM: val } }))} min={1} step={1} placeholder="2" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramMapKSizeM ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapKSizeM: val } }))} placeholder="2" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-ngram-map-k-min-hits</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最小命中次数（默认 1）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramMapKMinHits ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapKMinHits: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramMapKMinHits ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapKMinHits: val } }))} placeholder="1" className="w-full h-7 text-xs" />
                     </div>
                   </div>
                   )}
@@ -2397,21 +2327,21 @@ export function LoadModelDialog({
                         <span>--spec-ngram-map-k4v-size-n</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 前缀长度（默认 1）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramMapK4VSizeN ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapK4VSizeN: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramMapK4VSizeN ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapK4VSizeN: val } }))} placeholder="1" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-ngram-map-k4v-size-m</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>NGram 预测长度（默认 2）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramMapK4VSizeM ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapK4VSizeM: val } }))} min={1} step={1} placeholder="2" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramMapK4VSizeM ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapK4VSizeM: val } }))} placeholder="2" className="w-full h-7 text-xs" />
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-foreground mb-1">
                         <span>--spec-ngram-map-k4v-min-hits</span>
                         <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent>最小命中次数（默认 1）</TooltipContent></Tooltip></TooltipProvider>
                       </div>
-                      <NumberInput value={params.specDecoding?.specNgramMapK4VMinHits ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapK4VMinHits: val } }))} min={1} step={1} placeholder="1" className="w-full h-7 text-xs" />
+                      <NumberInput value={params.specDecoding?.specNgramMapK4VMinHits ?? 0} onChange={(val) => setParams(prev => ({ ...prev, specDecoding: { ...prev.specDecoding, specNgramMapK4VMinHits: val } }))} placeholder="1" className="w-full h-7 text-xs" />
                     </div>
                   </div>
                   )}
@@ -2453,9 +2383,6 @@ export function LoadModelDialog({
                       value={params.seed}
                       onChange={(v) => setParams({ ...params, seed: v })}
                       disabled={getInputDisabled('seed')}
-                      min={-1}
-                      max={4294967295}
-                      step={1}
                       placeholder="-1 表示随机"
                       allowMinusOne={true}
                     />
@@ -2470,9 +2397,6 @@ export function LoadModelDialog({
                       value={params.nPredict}
                       onChange={(v) => setParams({ ...params, nPredict: v })}
                       disabled={getInputDisabled('nPredict')}
-                      min={-1}
-                      max={65536}
-                      step={64}
                       placeholder="-1 表示无限"
                       allowMinusOne={true}
                     />
@@ -2630,9 +2554,6 @@ export function LoadModelDialog({
                       value={params.reasoningBudget}
                       onChange={(v) => setParams({ ...params, reasoningBudget: v })}
                       disabled={getInputDisabled('reasoningBudget')}
-                      min={-1}
-                      max={100000}
-                      step={256}
                       placeholder="-1 无限制"
                       allowMinusOne={true}
                     />

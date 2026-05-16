@@ -207,7 +207,7 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 		req.BatchSize = 512
 	}
 	if req.Threads == 0 {
-		req.Threads = 4
+		req.Threads = -1
 	}
 	if req.Temperature == 0 {
 		req.Temperature = 0.7

@@ -405,7 +405,7 @@ func DefaultLaunchConfig() *LaunchConfig {
 	return &LaunchConfig{
 		CtxSize:       4096,
 		BatchSize:     512,
-		Threads:       8,
+		Threads:       -1, // Auto-detect
 		GPULayers:     99,
 		Temperature:   0.7,
 		TopP:          0.9,
