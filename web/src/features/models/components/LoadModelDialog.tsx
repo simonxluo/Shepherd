@@ -1213,6 +1213,33 @@ export function LoadModelDialog({
                 </div>
               )}
 
+              {/* 多模态能力配置 */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase">模型能力</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['tts', 'asr', 'imageGeneration', 'music'] as const).map(key => {
+                    const labels: Record<string, string> = {
+                      tts: 'TTS (语音合成)',
+                      asr: 'ASR (语音识别)',
+                      imageGeneration: '图像生成',
+                      music: '音乐生成',
+                    };
+                    return (
+                      <label key={key} className="flex items-center gap-2 text-sm text-foreground cursor-pointer hover:bg-accent p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={params.capabilities?.[key] || false}
+                          onChange={(e) => handleCapabilityChange(key, e.target.checked)}
+                          disabled={isLoading}
+                          className="rounded border-border text-blue-600 focus:ring-blue-500 w-4 h-4"
+                        />
+                        <span>{labels[key]}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* GPU 选择 */}
               {gpus.length > 0 && (
                 <div>
@@ -1329,21 +1356,102 @@ export function LoadModelDialog({
               </div>
             </div>
 
-            {/* 底部按钮 */}
-            <div className="flex items-center justify-end gap-3 p-4 border-t border-border flex-shrink-0">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
-                取消
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    加载中...
-                  </>
-                ) : (
-                  '开始加载'
+            {/* Footer：配置管理 + 操作按钮 */}
+            <div className="flex justify-between items-center gap-3 px-4 py-3 border-t border-border bg-card flex-shrink-0">
+              {/* 左侧：命名配置选择 + 删除 */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedConfigName}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      handleLoadNamedConfig(val);
+                    }
+                  }}
+                  className={cn(
+                    "h-9 px-3 text-sm border-2 border-border rounded-md",
+                    "bg-input text-foreground",
+                    "focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  )}
+                >
+                  <option value="">选择配置...</option>
+                  {savedConfigs.map(c => (
+                    <option key={c.name} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+                {selectedConfigName && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteNamedConfig(selectedConfigName)}
+                    className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                    title="删除此配置"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 )}
-              </Button>
+              </div>
+
+              {/* 右侧：取消 + 配置保存 + 加载 */}
+              <div className="flex items-center gap-3">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+                  取消
+                </Button>
+
+                {/* 保存命名配置 */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={configName}
+                    onChange={(e) => setConfigName(e.target.value)}
+                    placeholder="配置名称"
+                    className={cn(
+                      "h-9 px-3 text-sm w-32 border-2 border-border rounded-md",
+                      "bg-input text-foreground",
+                      "focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    )}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveConfig();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleSaveConfig}
+                    disabled={isLoading}
+                    className={cn(
+                      saveStatus === 'saved' && 'bg-green-600 text-white hover:bg-green-700',
+                      saveStatus === 'error' && 'bg-red-600 text-white hover:bg-red-700'
+                    )}
+                  >
+                    {saveStatus === 'saved' ? (
+                      <>✓ 已保存</>
+                    ) : saveStatus === 'error' ? (
+                      <>✗ 保存失败</>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        保存配置
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      加载中...
+                    </>
+                  ) : (
+                    '开始加载'
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </DialogContent>

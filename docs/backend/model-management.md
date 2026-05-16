@@ -215,6 +215,39 @@ SSE 广播通知
 
 `load_config` 是独立的存储实体（`ModelLoadConfig`），不是 `ModelMetadata` 的一部分。
 
+### 加载配置管理
+
+`ModelLoadConfig` 通过 SQLite `model_load_configs` 表持久化，使用 UPSERT 语义（`UNIQUE(node_id, model_id)` 约束），确保每个节点上每个模型仅保存一份配置。
+
+**存储机制**：
+
+- 表名：`model_load_configs`
+- 唯一约束：`(node_id, model_id)`
+- `Config` 字段存储 `LoadModelParams` 的 JSON 序列化结果（`map[string]interface{}`）
+- 写入时使用 `INSERT ... ON CONFLICT DO UPDATE` 实现 UPSERT
+
+**API 端点**：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/models/:id/load-config` | 获取保存的加载配置 |
+| PUT | `/api/models/:id/load-config` | 保存/更新加载配置 |
+| DELETE | `/api/models/:id/load-config` | 删除加载配置 |
+
+**配置自动恢复流程**：
+
+1. 前端打开 LoadModelDialog → 调用 `GET /api/models/:id/load-config`
+2. 如果存在已保存配置，将 `config` 字段填充到表单各参数
+3. 用户可在恢复的基础上修改参数
+
+**配置自动保存流程**：
+
+1. 用户在 LoadModelDialog 中点击"开始加载"
+2. 前端先调用 `PUT /api/models/:id/load-config` 保存当前参数
+3. 然后调用 `POST /api/models/:id/load` 实际加载模型
+
+**应用范围**：该配置管理机制不仅适用于 LLM 模型加载，也适用于多模态模型（TTS/ASR/图像生成）的参数持久化。由于 TTS/ASR 模型与 LLM 模型是互斥的（一个模型不会同时具有 TTS 和 LLM 能力），不存在配置冲突问题。
+
 ## Benchmark
 
 - 任务创建与隔离进程执行
