@@ -12,45 +12,20 @@ import (
 	"time"
 )
 
-// closeQuietly closes an io.Closer and ignores the error.
+// CloseQuietly closes an io.Closer and ignores the error.
 // This is intended for use in defer statements where the error is not critical.
-//
-// Example:
-//
-//	file, err := os.Open("file.txt")
-//	if err != nil {
-//	    return err
-//	}
-//	defer utils.CloseQuietly(file)
-func closeQuietly(c io.Closer) {
+func CloseQuietly(c io.Closer) {
 	_ = c.Close()
 }
 
-// removeQuietly removes a file and ignores errors if file doesn't exist.
-// Other errors are printed to stderr for debugging.
-//
-// Example:
-//
-//	utils.RemoveQuietly("/tmp/temp-file.txt")
-func removeQuietly(path string) {
+// RemoveQuietly removes a file and logs a warning if removal fails.
+// Ignores "not exist" errors since cleanup of already-removed files is expected.
+func RemoveQuietly(path string) {
 	if err := os.Remove(path); err != nil {
-		// Don't print if file doesn't exist - that's expected for cleanup
 		if !os.IsNotExist(err) {
 			fmt.Fprintf(os.Stderr, "[WARN] 删除文件失败 %s: %v\n", path, err)
 		}
 	}
-}
-
-// CloseQuietly closes an io.Closer and ignores the error.
-// This is the exported version for use in other packages.
-func CloseQuietly(c io.Closer) {
-	closeQuietly(c)
-}
-
-// RemoveQuietly removes a file and logs a warning if removal fails.
-// This is the exported version for use in other packages.
-func RemoveQuietly(path string) {
-	removeQuietly(path)
 }
 
 // WriteQuietly writes data and logs a warning if it fails.
@@ -84,7 +59,6 @@ func SignalQuietly(process *os.Process, sig syscall.Signal) {
 }
 
 // SetReadDeadlineQuietly sets a read deadline and ignores errors.
-// This is useful for network operations where deadline failures are acceptable.
 func SetReadDeadlineQuietly(conn interface{ SetReadDeadline(time.Time) error }, timeout time.Duration) {
 	if timeout > 0 {
 		_ = conn.SetReadDeadline(time.Now().Add(timeout))
@@ -92,7 +66,6 @@ func SetReadDeadlineQuietly(conn interface{ SetReadDeadline(time.Time) error }, 
 }
 
 // SetWriteDeadlineQuietly sets a write deadline and ignores errors.
-// This is useful for network operations where deadline failures are acceptable.
 func SetWriteDeadlineQuietly(conn interface{ SetWriteDeadline(time.Time) error }, timeout time.Duration) {
 	if timeout > 0 {
 		_ = conn.SetWriteDeadline(time.Now().Add(timeout))
@@ -101,7 +74,6 @@ func SetWriteDeadlineQuietly(conn interface{ SetWriteDeadline(time.Time) error }
 
 // UnmarshalQuietly unmarshals JSON data and logs a warning if it fails.
 // Returns true if unmarshaling succeeded, false otherwise.
-// This is useful for optional metadata fields where parsing failures are acceptable.
 func UnmarshalQuietly(data []byte, v interface{}, fieldName string) bool {
 	if err := json.Unmarshal(data, v); err != nil {
 		fmt.Fprintf(os.Stderr, "[WARN] 解析%s失败: %v\n", fieldName, err)
@@ -111,11 +83,8 @@ func UnmarshalQuietly(data []byte, v interface{}, fieldName string) bool {
 }
 
 // WriteMessageQuietly writes a WebSocket message and ignores errors.
-// This is useful for WebSocket close messages where failures are acceptable.
 func WriteMessageQuietly(conn interface{ WriteMessage(int, []byte) error }, messageType int, data []byte) {
 	if err := conn.WriteMessage(messageType, data); err != nil {
 		fmt.Fprintf(os.Stderr, "[WARN] 写入WebSocket消息失败: %v\n", err)
 	}
 }
-
-

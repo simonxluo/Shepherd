@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
@@ -28,6 +29,10 @@ type Manager struct {
 	statuses   map[string]*ModelStatus
 	scanStatus *ScanStatus
 	groups     map[string]*ModelGroup
+
+	// version is incremented on every models/statuses map mutation.
+	// Used by ModelLookupIndex to avoid full rebuilds on every request.
+	version atomic.Int64
 
 	mu          sync.RWMutex
 	scannedOnce bool
@@ -93,6 +98,18 @@ func (m *Manager) Close() error {
 	m.cancel()
 	m.wg.Wait()
 	return nil
+}
+
+// Version returns the current models version counter.
+// This is incremented whenever models or statuses are mutated.
+func (m *Manager) Version() int64 {
+	return m.version.Load()
+}
+
+// bumpVersion increments the version counter. Must be called under m.mu lock
+// or at points where models/statuses maps are mutated.
+func (m *Manager) bumpVersion() {
+	m.version.Add(1)
 }
 
 // GetProcessManager returns the process manager

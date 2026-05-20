@@ -1,7 +1,7 @@
 import type { UnifiedNode } from './node';
 
 /**
- * Cluster overview — matches backend GET /api/master/overview
+ * Cluster overview — matches backend GET /api/overview
  */
 export interface ClusterOverview {
   totalClients: number;
@@ -24,7 +24,7 @@ export interface ClusterOverview {
 }
 
 /**
- * Client list response — matches backend GET /api/master/clients
+ * Client list response — matches backend GET /api/nodes
  */
 export interface ClientListResponse {
   clients: UnifiedNode[];

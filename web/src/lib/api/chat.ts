@@ -60,7 +60,7 @@ export const chatApi = {
 
   getChatModels: async (): Promise<ChatModelInfo[]> => {
     const res = await apiClient.get<{ success: boolean; models: ChatModelInfo[] }>(
-      '/langchain/chat/models',
+      '/chat/models',
     );
     return res.models ?? [];
   },
@@ -121,7 +121,7 @@ export const chatApi = {
 
     (async () => {
       try {
-        const response = await fetch('/api/langchain/chat/completions', {
+        const response = await fetch('/api/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

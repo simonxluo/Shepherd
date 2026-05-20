@@ -137,6 +137,7 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 	}
 
 	modelCount := len(m.models)
+	m.bumpVersion()
 	m.mu.Unlock()
 	logger.Infof("模型缓存已更新: modelCount=%d", modelCount)
 

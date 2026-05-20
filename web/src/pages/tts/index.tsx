@@ -9,8 +9,9 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useLoadedModels, BACKEND_LABELS } from '@/features/creative/hooks';
+import { useLoadedModels, BACKEND_LABELS, useAvailableModels } from '@/features/creative/hooks';
 import { ModelSelect } from '@/features/creative/ModelSelect';
+import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import {
   useTTS,
   useVoices,
@@ -28,12 +29,12 @@ import { cn } from '@/lib/utils';
 
 const FALLBACK_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
 
-const AUDIO_FORMATS = [
+const AUDIO_FORMATS: Array<{ value: string; label: string; i18nKey?: string }> = [
   { value: 'mp3', label: 'MP3' },
   { value: 'wav', label: 'WAV' },
   { value: 'opus', label: 'Opus' },
   { value: 'flac', label: 'FLAC' },
-  { value: 'pcm', label: 'PCM (流式)' },
+  { value: 'pcm', label: 'PCM', i18nKey: 'tts.pcmFormat' },
 ];
 
 export function TTSPage() {
@@ -43,6 +44,7 @@ export function TTSPage() {
     () => allModels.filter((m) => m.capabilities?.tts),
     [allModels]
   );
+  const availableModels = useAvailableModels('tts');
 
   const tts = useTTS();
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -68,6 +70,10 @@ export function TTSPage() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [seed, setSeed] = useState('');
   const [maxNewTokens, setMaxNewTokens] = useState('');
+  const [language, setLanguage] = useState('');
+  const [emotion, setEmotion] = useState('');
+  const [cfgValue, setCfgValue] = useState('2');
+  const [inferenceTimesteps, setInferenceTimesteps] = useState('10');
 
   // 流式播放状态
   const [streamState, setStreamState] = useState<StreamState>('idle');
@@ -97,6 +103,9 @@ export function TTSPage() {
         supportsRefAudio: false,
         supportsUltimateCloning: false,
         supportsStreamPcm: false,
+        supportsCfgValue: false,
+        supportsInferenceTimesteps: false,
+        supportsEmotion: false,
         defaultSampleRate: 24000,
         defaultFormat: 'mp3',
       };
@@ -129,6 +138,10 @@ export function TTSPage() {
       if (ttsConfig.ultimateCloning !== undefined) setUltimateCloning(ttsConfig.ultimateCloning);
       if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
       if (ttsConfig.maxNewTokens !== undefined) setMaxNewTokens(ttsConfig.maxNewTokens);
+      if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language);
+      if (ttsConfig.emotion !== undefined) setEmotion(ttsConfig.emotion);
+      if (ttsConfig.cfgValue !== undefined) setCfgValue(ttsConfig.cfgValue);
+      if (ttsConfig.inferenceTimesteps !== undefined) setInferenceTimesteps(ttsConfig.inferenceTimesteps);
     }
   }, [ttsConfig]);
 
@@ -175,10 +188,15 @@ export function TTSPage() {
       ultimateCloning: ultimateCloning || undefined,
       seed: seed || undefined,
       maxNewTokens: maxNewTokens || undefined,
+      language: language || undefined,
+      emotion: emotion || undefined,
+      cfgValue: cfgValue || undefined,
+      inferenceTimesteps: inferenceTimesteps || undefined,
     };
     saveConfig.mutate({ modelId: modelIdForConfig, config: config as any });
   }, [modelIdForConfig, voice, speed, responseFormat, stream, instructions,
-      refAudio, refText, promptAudio, promptText, ultimateCloning, seed, maxNewTokens, saveConfig]);
+      refAudio, refText, promptAudio, promptText, ultimateCloning, seed, maxNewTokens,
+      language, emotion, cfgValue, inferenceTimesteps, saveConfig]);
 
   // 从 localStorage 加载命名配置
   const handleLoadNamedConfig = useCallback((name: string) => {
@@ -198,6 +216,10 @@ export function TTSPage() {
       if (cfg.ultimateCloning !== undefined) setUltimateCloning(cfg.ultimateCloning);
       if (cfg.seed !== undefined) setSeed(cfg.seed);
       if (cfg.maxNewTokens !== undefined) setMaxNewTokens(cfg.maxNewTokens);
+      if (cfg.language !== undefined) setLanguage(cfg.language);
+      if (cfg.emotion !== undefined) setEmotion(cfg.emotion);
+      if (cfg.cfgValue !== undefined) setCfgValue(cfg.cfgValue);
+      if (cfg.inferenceTimesteps !== undefined) setInferenceTimesteps(cfg.inferenceTimesteps);
       setSelectedConfigName(name);
       setConfigName(name);
     }
@@ -224,6 +246,10 @@ export function TTSPage() {
       ultimateCloning: ultimateCloning || undefined,
       seed: seed || undefined,
       maxNewTokens: maxNewTokens || undefined,
+      language: language || undefined,
+      emotion: emotion || undefined,
+      cfgValue: cfgValue || undefined,
+      inferenceTimesteps: inferenceTimesteps || undefined,
     };
     try {
       const configs = getSavedConfigs();
@@ -245,7 +271,7 @@ export function TTSPage() {
     }
   }, [CONFIGS_STORAGE_KEY, configName, voice, speed, responseFormat, stream,
       instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
-      seed, maxNewTokens, getSavedConfigs, t]);
+      seed, maxNewTokens, language, emotion, cfgValue, inferenceTimesteps, getSavedConfigs, t]);
 
   // 删除命名配置
   const handleDeleteNamedConfig = useCallback((name: string) => {
@@ -300,6 +326,16 @@ export function TTSPage() {
 
     if (seed) payload.seed = parseInt(seed, 10) || undefined;
     if (maxNewTokens) payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
+    if (language) payload.language = language;
+    if (emotion) payload.emotion = emotion;
+    if (features.supportsCfgValue && cfgValue) {
+      const val = parseFloat(cfgValue);
+      if (!isNaN(val)) payload.cfg_value = val;
+    }
+    if (features.supportsInferenceTimesteps && inferenceTimesteps) {
+      const val = parseInt(inferenceTimesteps, 10);
+      if (!isNaN(val)) payload.inference_timesteps = val;
+    }
 
     if (useStreamPcm) {
       try {
@@ -341,6 +377,10 @@ export function TTSPage() {
               ultimateCloning: ultimateCloning || undefined,
               seed: seed || undefined,
               maxNewTokens: maxNewTokens || undefined,
+              language: language || undefined,
+              emotion: emotion || undefined,
+              cfgValue: cfgValue || undefined,
+              inferenceTimesteps: inferenceTimesteps || undefined,
             };
             saveConfig.mutate({ modelId: modelIdForConfig, config: config as any });
           }
@@ -352,6 +392,7 @@ export function TTSPage() {
     }
   }, [model, input, voice, speed, responseFormat, stream, features, instructions,
       refAudio, refText, promptAudio, promptText, ultimateCloning, seed, maxNewTokens,
+      language, emotion, cfgValue, inferenceTimesteps,
       audioUrl, tts, modelIdForConfig, saveConfig, t]);
 
   const handlePlayPause = () => {
@@ -391,10 +432,11 @@ export function TTSPage() {
           </div>
 
           {ttsModels.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>{t('tts.noModels', '没有已加载的 TTS 模型')}</p>
-              <p className="text-sm mt-1">{t('tts.noModelsHint', '请先加载一个支持语音合成的模型')}</p>
-            </div>
+            <AvailableModelList
+              models={availableModels}
+              emptyText={t('creative.noScannedModels')}
+              emptyHint={t('creative.noScannedModelsHint')}
+            />
           ) : (
             <div className="space-y-6">
               <div className="space-y-4">
@@ -484,7 +526,9 @@ export function TTSPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {AUDIO_FORMATS.map((f) => (
-                          <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                          <SelectItem key={f.value} value={f.value}>
+                            {f.i18nKey ? t(f.i18nKey, f.label) : f.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -494,15 +538,13 @@ export function TTSPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1.5">
-                      {t('tts.speedLabel', '语速')}: {speed}x
+                      {t('tts.languageLabel', '语言')}
                     </label>
-                    <Slider
-                      value={[speed]}
-                      onValueChange={([val]) => setSpeed(val)}
-                      min={0.25}
-                      max={4}
-                      step={0.25}
-                      className="w-full mt-2"
+                    <Input
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                      placeholder={t('tts.languagePlaceholder', '如：zh, en, ja')}
+                      className="bg-background"
                     />
                   </div>
                   <div className="flex items-center gap-3 pt-6">
@@ -511,6 +553,20 @@ export function TTSPage() {
                       {t('tts.streaming', '流式生成')}
                     </label>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    {t('tts.speedLabel', '语速')}: {speed}x
+                  </label>
+                  <Slider
+                    value={[speed]}
+                    onValueChange={([val]) => setSpeed(val)}
+                    min={0.25}
+                    max={4}
+                    step={0.25}
+                    className="w-full mt-2"
+                  />
                 </div>
 
                 {features.supportsRefAudio && (
@@ -594,6 +650,27 @@ export function TTSPage() {
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-4 pt-2">
+                    {features.supportsEmotion && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          {t('tts.emotionLabel', '情感')}
+                        </label>
+                        <Select value={emotion} onValueChange={setEmotion}>
+                          <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                            <SelectValue placeholder={t('tts.emotionDefault', '默认')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">{t('tts.emotionDefault', '默认')}</SelectItem>
+                            <SelectItem value="happy">{t('tts.emotionHappy', '开心')}</SelectItem>
+                            <SelectItem value="sad">{t('tts.emotionSad', '悲伤')}</SelectItem>
+                            <SelectItem value="angry">{t('tts.emotionAngry', '愤怒')}</SelectItem>
+                            <SelectItem value="gentle">{t('tts.emotionGentle', '温柔')}</SelectItem>
+                            <SelectItem value="surprised">{t('tts.emotionSurprised', '惊讶')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium mb-1.5">
@@ -614,12 +691,44 @@ export function TTSPage() {
                         <Input
                           value={maxNewTokens}
                           onChange={(e) => setMaxNewTokens(e.target.value)}
-                          placeholder="默认值"
+                          placeholder={t('tts.seedPlaceholder', '留空为随机')}
                           type="number"
                           className="bg-background"
                         />
                       </div>
                     </div>
+
+                    {features.supportsCfgValue && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          {t('tts.cfgLabel', 'CFG 引导')}: {cfgValue}
+                        </label>
+                        <Slider
+                          value={[parseFloat(cfgValue) || 2]}
+                          onValueChange={([val]) => setCfgValue(String(val))}
+                          min={1}
+                          max={5}
+                          step={0.5}
+                          className="w-full mt-2"
+                        />
+                      </div>
+                    )}
+
+                    {features.supportsInferenceTimesteps && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          {t('tts.stepsLabel', '扩散步数')}: {inferenceTimesteps}
+                        </label>
+                        <Slider
+                          value={[parseInt(inferenceTimesteps) || 10]}
+                          onValueChange={([val]) => setInferenceTimesteps(String(val))}
+                          min={4}
+                          max={30}
+                          step={1}
+                          className="w-full mt-2"
+                        />
+                      </div>
+                    )}
                   </CollapsibleContent>
                 </Collapsible>
 
@@ -631,7 +740,7 @@ export function TTSPage() {
                   {isGenerating ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {isStreamActive ? '流式生成中...' : t('tts.generating', '生成中...')}
+                      {isStreamActive ? t('tts.streamingInProgress', '流式生成中...') : t('tts.generating', '生成中...')}
                     </>
                   ) : (
                     <>
@@ -644,7 +753,7 @@ export function TTSPage() {
                 {model && (
                   <div className="border rounded-lg p-3 space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-muted-foreground">配置管理</h4>
+                      <h4 className="text-sm font-medium text-muted-foreground">{t('tts.configManagement', '配置管理')}</h4>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
@@ -654,7 +763,7 @@ export function TTSPage() {
                           className="text-xs h-7"
                         >
                           <Save className="w-3.5 h-3.5 mr-1" />
-                          保存到服务端
+                          {t('tts.saveToServer', '保存到服务端')}
                         </Button>
                         <Button
                           variant="outline"
@@ -662,8 +771,8 @@ export function TTSPage() {
                           onClick={() => {
                             if (modelIdForConfig) {
                               deleteConfig.mutate(modelIdForConfig, {
-                                onSuccess: () => toast.success('配置已删除'),
-                                onError: (err: Error) => toast.error('删除失败', err.message),
+                                onSuccess: () => toast.success(t('tts.configDeleted', '配置已删除')),
+                                onError: (err: Error) => toast.error(t('tts.deleteFailed', '删除失败'), err.message),
                               });
                             }
                           }}
@@ -671,7 +780,7 @@ export function TTSPage() {
                           className="text-xs h-7"
                         >
                           <Trash2 className="w-3.5 h-3.5 mr-1" />
-                          删除服务端配置
+                          {t('tts.deleteServerConfig', '删除服务端配置')}
                         </Button>
                       </div>
                     </div>
@@ -688,7 +797,7 @@ export function TTSPage() {
                           "focus:outline-none focus:ring-2 focus:ring-blue-500"
                         )}
                       >
-                        <option value="">选择预设...</option>
+                        <option value="">{t('tts.selectPreset', '选择预设...')}</option>
                         {savedConfigs.map(c => (
                           <option key={c.name} value={c.name}>{c.name}</option>
                         ))}
@@ -699,7 +808,7 @@ export function TTSPage() {
                           size="sm"
                           onClick={() => handleDeleteNamedConfig(selectedConfigName)}
                           className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                          title="删除此预设"
+                          title={t('tts.deletePreset', '删除此预设')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -709,7 +818,7 @@ export function TTSPage() {
                         type="text"
                         value={configName}
                         onChange={(e) => setConfigName(e.target.value)}
-                        placeholder="预设名称"
+                        placeholder={t('tts.presetName', '预设名称')}
                         className={cn(
                           "h-8 px-2 text-sm w-28 border-2 border-border rounded-md",
                           "bg-input text-foreground",
@@ -732,7 +841,7 @@ export function TTSPage() {
                           saveStatus === 'error' && 'bg-red-600 text-white hover:bg-red-700'
                         )}
                       >
-                        {saveStatus === 'saved' ? '✓ 已保存' : saveStatus === 'error' ? '✗ 失败' : '保存预设'}
+                        {saveStatus === 'saved' ? `✓ ${t('tts.saved', '已保存')}` : saveStatus === 'error' ? `✗ ${t('tts.saveFailed', '失败')}` : t('tts.savePreset', '保存预设')}
                       </Button>
                     </div>
                   </div>

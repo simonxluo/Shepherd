@@ -32,17 +32,17 @@ func NewHandler(modelMgr *model.Manager) *Handler {
 func (h *Handler) HandleChatCompletions(c *gin.Context) {
 	var req ChatCompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
 		return
 	}
 
 	if req.Model == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
 		return
 	}
 
 	if len(req.Messages) == 0 {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Messages array is empty", "messages")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Messages array is empty", "messages")
 		return
 	}
 
@@ -51,13 +51,13 @@ func (h *Handler) HandleChatCompletions(c *gin.Context) {
 	} else {
 		actualModelID, err := h.FindModel(req.Model)
 		if err != nil {
-			h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+			h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
 			return
 		}
 
 		port, err := h.GetModelPort(actualModelID)
 		if err != nil {
-			h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+			h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 			return
 		}
 
@@ -79,14 +79,14 @@ func (h *Handler) HandleChatCompletions(c *gin.Context) {
 func (h *Handler) HandleCompletions(c *gin.Context) {
 	var req CompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
 		return
 	}
 
 	if req.Model == "" {
 		models := h.ModelMgr.ListStatus()
 		if len(models) == 0 {
-			h.sendError(c, http.StatusNotFound, "model_not_found", "No models are currently loaded", "model")
+			h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", "No models are currently loaded", "model")
 			return
 		}
 		for modelID := range models {
@@ -97,13 +97,13 @@ func (h *Handler) HandleCompletions(c *gin.Context) {
 
 	actualModelID, err := h.FindModel(req.Model)
 	if err != nil {
-		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
 		return
 	}
 
 	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 		return
 	}
 
@@ -121,26 +121,6 @@ func (h *Handler) HandleCompletions(c *gin.Context) {
 // @Success      200  {object}  ModelsResponse
 // @Router       /v1/models [get]
 func (h *Handler) HandleModels(c *gin.Context) {
-	statuses := h.ModelMgr.ListStatus()
-	models := h.ModelMgr.ListModels()
-
-	var openaiModels []Model
-	for _, m := range models {
-		if status, exists := statuses[m.ID]; exists && status.State == model.StateLoaded {
-			openaiModels = append(openaiModels, Model{
-				ID:      m.ID,
-				Object:  "model",
-				Created: m.ScannedAt.Unix(),
-				OwnedBy: "shepherd",
-			})
-		}
-	}
-
-	response := NewModelsResponse(openaiModels)
-	c.JSON(http.StatusOK, response)
-}
-
-func (h *Handler) sendError(c *gin.Context, statusCode int, errorType, message, param string) {
-	response := NewErrorResponse(message, errorType, param, statusCode)
-	c.JSON(statusCode, response)
+	models := h.ListLoadedModels("shepherd")
+	c.JSON(http.StatusOK, models)
 }

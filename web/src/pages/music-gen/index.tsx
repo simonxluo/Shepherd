@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { useLoadedModels } from '@/features/creative/hooks';
+import { useLoadedModels, useAvailableModels } from '@/features/creative/hooks';
 import { ModelSelect } from '@/features/creative/ModelSelect';
+import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import { useMusicGeneration } from '@/features/music-gen/hooks';
 import { toast } from '@/hooks/useToast';
 
@@ -22,6 +23,7 @@ export function MusicGenPage() {
     () => allModels.filter((m) => m.capabilities?.music),
     [allModels]
   );
+  const availableModels = useAvailableModels('music');
 
   const musicGen = useMusicGeneration();
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -100,10 +102,11 @@ export function MusicGenPage() {
           </div>
 
           {musicModels.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>{t('musicGen.noModels', '没有已加载的音乐生成模型')}</p>
-              <p className="text-sm mt-1">{t('musicGen.noModelsHint', '请先加载一个支持音乐生成的模型')}</p>
-            </div>
+            <AvailableModelList
+              models={availableModels}
+              emptyText={t('creative.noScannedModels')}
+              emptyHint={t('creative.noScannedModelsHint')}
+            />
           ) : (
             <div className="space-y-6">
               <div className="space-y-4">

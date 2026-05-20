@@ -377,7 +377,45 @@
     "seed": "随机种子",
     "seedPlaceholder": "留空为随机",
     "maxNewTokens": "最大 Token 数",
-    "sampleRate": "采样率"
+    "sampleRate": "采样率",
+    "languageLabel": "语言",
+    "languagePlaceholder": "如：zh, en, ja",
+    "emotionLabel": "情感",
+    "emotionDefault": "默认",
+    "emotionHappy": "开心",
+    "emotionSad": "悲伤",
+    "emotionAngry": "愤怒",
+    "emotionGentle": "温柔",
+    "emotionSurprised": "惊讶",
+    "cfgLabel": "CFG 引导",
+    "stepsLabel": "扩散步数",
+    "configManagement": "配置管理",
+    "saveToServer": "保存到服务端",
+    "deleteServerConfig": "删除服务端配置",
+    "selectPreset": "选择预设...",
+    "presetName": "预设名称",
+    "savePreset": "保存预设",
+    "saved": "已保存",
+    "saveFailed": "失败",
+    "deletePreset": "删除此预设",
+    "configDeleted": "配置已删除",
+    "deleteFailed": "删除失败",
+    "streamingInProgress": "流式生成中...",
+    "streamStatus": {
+      "streaming": "流式中",
+      "playing": "播放中",
+      "completed": "完成",
+      "error": "错误"
+    },
+    "received": "已接收",
+    "refAudioLoaded": "已加载音频",
+    "refAudioDragOrClick": "拖拽或点击上传音频文件",
+    "refAudioRecording": "录制中...",
+    "refAudioRecorded": "已录制",
+    "refAudioUpload": "上传",
+    "refAudioRecord": "录制",
+    "refAudioUrl": "链接",
+    "refAudioUrlPlaceholder": "输入音频文件 URL..."
   },
   "asr": {
     "title": "语音识别 (ASR)",
@@ -613,6 +651,12 @@
       "roleClient": "工作节点",
       "roleHybrid": "混合节点"
     }
+  },
+  "creative": {
+    "availableModels": "可加载的模型",
+    "noScannedModels": "未扫描到支持此功能的模型",
+    "noScannedModelsHint": "请在模型目录中放置对应模型文件并执行扫描",
+    "loadButton": "加载"
   },
   "error": {
     "pageError": "页面发生错误",

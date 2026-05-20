@@ -1,10 +1,10 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient, ApiClient } from '@/lib/api/client';
 import type { ModelCapabilities } from '@/types/model';
+import { useModels, useAllModelCapabilities } from '@/features/models';
+import type { Model } from '@/types/model';
 
-/**
- * API client for OpenAI-compatible /v1 endpoints (audio, images, etc.)
- */
 export const v1Client = new ApiClient('/v1');
 
 export interface LoadedModel {
@@ -42,4 +42,18 @@ export function useLoadedModels() {
     },
     refetchInterval: 5000,
   });
+}
+
+export function useAvailableModels(capability: keyof ModelCapabilities) {
+  const { data: allModels = [] } = useModels();
+  const modelIds = useMemo(() => allModels.map((m: Model) => m.id), [allModels]);
+  const capsResults = useAllModelCapabilities(modelIds);
+
+  return useMemo(() => {
+    return allModels.filter((m: Model, i: number) => {
+      if (m.isLoaded || m.status === 'loading') return false;
+      const caps = capsResults[i]?.data;
+      return caps?.[capability] === true;
+    });
+  }, [allModels, capsResults, capability]);
 }

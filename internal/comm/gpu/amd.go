@@ -321,5 +321,3 @@ func (p *amdProvider) parseUpdateOutput(output string, gpu *Info) error {
 	}
 	return nil
 }
-
-

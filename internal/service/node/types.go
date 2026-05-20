@@ -209,5 +209,3 @@ type NodeConfig struct {
 	Capabilities        *NodeCapabilities `json:"capabilities"`   // 节点能力
 	Version             string            `json:"version"`
 }
-
-

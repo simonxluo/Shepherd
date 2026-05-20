@@ -4,8 +4,9 @@ import { Image, Loader2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLoadedModels } from '@/features/creative/hooks';
+import { useLoadedModels, useAvailableModels } from '@/features/creative/hooks';
 import { ModelSelect } from '@/features/creative/ModelSelect';
+import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import { useImageGeneration } from '@/features/image-gen/hooks';
 import { toast } from '@/hooks/useToast';
 
@@ -16,6 +17,7 @@ export function ImageGenPage() {
     () => allModels.filter((m) => m.capabilities?.imageGeneration),
     [allModels]
   );
+  const availableModels = useAvailableModels('imageGeneration');
 
   const imageGen = useImageGeneration();
 
@@ -73,10 +75,11 @@ export function ImageGenPage() {
           </div>
 
           {imageModels.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>{t('imageGen.noModels', '没有已加载的图像生成模型')}</p>
-              <p className="text-sm mt-1">{t('imageGen.noModelsHint', '请先加载一个支持图像生成的模型')}</p>
-            </div>
+            <AvailableModelList
+              models={availableModels}
+              emptyText={t('creative.noScannedModels')}
+              emptyHint={t('creative.noScannedModelsHint')}
+            />
           ) : (
             <div className="space-y-6">
               <div className="space-y-4">

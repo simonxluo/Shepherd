@@ -461,7 +461,6 @@ func (p *Process) GetExitCode() (int, error) {
 	return p.exitCode, nil
 }
 
-
 // splitCommandLineArgs splits a command line string into arguments
 // Handles quoted strings and escape sequences (ported from Java)
 func splitCommandLineArgs(commandLine string) ([]string, error) {

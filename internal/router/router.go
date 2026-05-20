@@ -274,6 +274,7 @@ func registerModelRoutes(apiGroup *gin.RouterGroup, sh ServerHandlers, h *Handle
 			benchmark.GET("/tasks", h.Benchmark.List)
 			benchmark.GET("/tasks/:benchmarkId", h.Benchmark.Get)
 			benchmark.POST("/tasks/:benchmarkId/cancel", h.Benchmark.Cancel)
+			benchmark.DELETE("/tasks/:benchmarkId", h.Benchmark.Delete)
 			benchmark.GET("/configs", h.Benchmark.ListConfigs)
 			benchmark.POST("/configs", h.Benchmark.SaveConfig)
 			benchmark.GET("/configs/:name", h.Benchmark.GetConfig)

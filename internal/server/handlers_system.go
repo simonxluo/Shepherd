@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/gpu"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
@@ -142,99 +142,19 @@ func (s *Server) HandleGetGPUs(c *gin.Context) {
 	// 如果 llama-bench 失败，尝试使用 rocminfo 获取 GPU 信息
 	// rocminfo 对于 APU 能提供更准确的内存池大小（共享系统内存）
 	if len(deviceStrings) == 0 {
-		cmd := exec.Command("rocminfo")
-		output, err := cmd.Output()
-		if err == nil {
-			lines := strings.Split(string(output), "\n")
-			type GPUMemoryInfo struct {
-				deviceIndex   int
-				name          string
-				marketingName string
-				totalKB       int64 // 总内存（KB）
-			}
-			gpuMemories := []GPUMemoryInfo{}
-
-			currentAgentType := ""
-			var currentGPU GPUMemoryInfo
-			inPoolInfo := false
-			poolIndex := 0
-
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-
-				// 检测新的 Agent
-				if regexp.MustCompile(`^Agent\s+\d+\s*$`).MatchString(line) {
-					// 保存前一个 GPU 的信息（如果是 GPU）
-					if currentAgentType == "GPU" && currentGPU.totalKB > 0 {
-						gpuMemories = append(gpuMemories, currentGPU)
-					}
-					// 重置状态
-					currentAgentType = ""
-					currentGPU = GPUMemoryInfo{}
-					inPoolInfo = false
-					poolIndex = 0
-				}
-
-				// 检测 Device Type（在 Marketing Name 之后，但需要先收集信息）
-				if regexp.MustCompile(`^\s*Device Type:\s+GPU`).MatchString(line) {
-					currentAgentType = "GPU"
-				}
-
-				// 解析 Agent 基本信息
-				if matches := regexp.MustCompile(`^\s*Name:\s+(\S+)`).FindStringSubmatch(line); len(matches) > 1 {
-					currentGPU.name = matches[1]
-				}
-				// Marketing Name
-				if strings.Contains(line, "Marketing Name:") {
-					marketingName := strings.ReplaceAll(line, "Marketing Name:", "")
-					currentGPU.marketingName = strings.TrimSpace(marketingName)
-				}
-
-				// 检测 Pool Info 开始
-				if regexp.MustCompile(`^\s*Pool Info:\s*$`).MatchString(line) {
-					inPoolInfo = true
-					poolIndex = 0
-				}
-
-				// 检测 Pool 开始
-				if inPoolInfo && regexp.MustCompile(`^\s*Pool\s+(\d+)\s*$`).MatchString(line) {
-					if matches := regexp.MustCompile(`Pool\s+(\d+)`).FindStringSubmatch(line); len(matches) > 1 {
-						if idx, err := strconv.Atoi(matches[1]); err == nil {
-							poolIndex = idx
-						}
-					}
-				}
-
-				// 解析 Pool Size（只在 Pool 1 解析）
-				if inPoolInfo && poolIndex == 1 {
-					if matches := regexp.MustCompile(`^\s*Size:\s+(\d+)\s*\(0x[0-9a-fA-F]+\)\s*KB`).FindStringSubmatch(line); len(matches) > 1 {
-						if kb, err := strconv.ParseInt(matches[1], 10, 64); err == nil {
-							currentGPU.totalKB = kb
-						}
-					}
-				}
-			}
-
-			// 保存最后一个 GPU 的信息
-			if currentAgentType == "GPU" && currentGPU.totalKB > 0 {
-				gpuMemories = append(gpuMemories, currentGPU)
-			}
-
-			// 生成 GPU 列表
-			for i, gpuInfo := range gpuMemories {
-				// 转换为 GB（保留两位小数）
-				totalGB := float64(gpuInfo.totalKB) / 1024 / 1024
+		rocmGPUs, err := gpu.DetectROCmGPUs()
+		if err == nil && len(rocmGPUs) > 0 {
+			for i, gpuInfo := range rocmGPUs {
+				totalGB := float64(gpuInfo.TotalKB) / 1024 / 1024
 				totalMemory := fmt.Sprintf("%.2f GB", totalGB)
 
 				deviceID := fmt.Sprintf("ROCm%d", i)
-				gpuName := gpuInfo.marketingName
+				gpuName := gpuInfo.MarketingName
 				if gpuName == "" {
 					gpuName = "AMD GPU"
 				}
 
-				deviceString := fmt.Sprintf("%s: %s", deviceID, gpuName)
-				deviceString += fmt.Sprintf(" (%s)", totalMemory)
-
+				deviceString := fmt.Sprintf("%s: %s (%s)", deviceID, gpuName, totalMemory)
 				deviceStrings = append(deviceStrings, deviceString)
 
 				gpus = append(gpus, gin.H{

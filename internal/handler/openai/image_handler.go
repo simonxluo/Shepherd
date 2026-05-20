@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,29 +32,36 @@ func (h *ImageHandler) HandleCreateImage(c *gin.Context) {
 		User           string `json:"user,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
 		return
 	}
 
 	if req.Model == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
 		return
 	}
 
 	if req.Prompt == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: prompt", "prompt")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: prompt", "prompt")
 		return
 	}
 
 	actualModelID, err := h.FindModel(req.Model)
 	if err != nil {
-		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		return
+	}
+
+	caps := h.ModelMgr.GetModelCapabilities(actualModelID)
+	if caps == nil || !caps.ImageGeneration {
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_model",
+			fmt.Sprintf("Model %q does not support image generation, please select a model with image generation capability", req.Model), "model")
 		return
 	}
 
 	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 		return
 	}
 

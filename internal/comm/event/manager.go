@@ -324,5 +324,3 @@ func (m *Manager) closeConnection(connID string) {
 		delete(m.connectionStatus, connID)
 	}
 }
-
-

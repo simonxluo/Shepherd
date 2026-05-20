@@ -114,13 +114,20 @@ func (h *Handler) HandleChatCompletions(c *gin.Context) {
 
 // RegisterRoutes registers the chat API routes.
 func (h *Handler) RegisterRoutes(router *gin.RouterGroup) {
-	// Keep backward-compatible paths so the frontend doesn't need changes
+	// New canonical paths
+	chat := router.Group("/chat")
+	{
+		chat.GET("/models", h.HandleChatModels)
+		chat.POST("/completions", h.HandleChatCompletions)
+	}
+
+	// Legacy /langchain/chat/* paths kept as aliases for backward compatibility
 	langchain := router.Group("/langchain")
 	{
-		chat := langchain.Group("/chat")
+		legacyChat := langchain.Group("/chat")
 		{
-			chat.GET("/models", h.HandleChatModels)
-			chat.POST("/completions", h.HandleChatCompletions)
+			legacyChat.GET("/models", h.HandleChatModels)
+			legacyChat.POST("/completions", h.HandleChatCompletions)
 		}
 	}
 }

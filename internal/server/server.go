@@ -57,16 +57,16 @@ type ModelDTO struct {
 
 // Server represents the HTTP server
 type Server struct {
-	engine           *gin.Engine
-	httpServer       *http.Server
-	config           *Config
-	handlers         *router.Handlers
-	wsMgr            *event.Manager
-	modelMgr         *model.Manager
-	storageMgr       *storage.Manager
-	downloadMgr      *download.Manager
-	nodeAdapter      *api.NodeAdapter
-	repoClient       *modelrepoclient.Client
+	engine      *gin.Engine
+	httpServer  *http.Server
+	config      *Config
+	handlers    *router.Handlers
+	wsMgr       *event.Manager
+	modelMgr    *model.Manager
+	storageMgr  *storage.Manager
+	downloadMgr *download.Manager
+	nodeAdapter *api.NodeAdapter
+	repoClient  *modelrepoclient.Client
 
 	wsHub *WebSocketHub
 
@@ -322,5 +322,3 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return ctx.Err()
 	}
 }
-
-

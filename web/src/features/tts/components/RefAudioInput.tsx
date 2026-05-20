@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Upload, Mic, MicOff, Link, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ interface RefAudioInputProps {
 }
 
 export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<InputMode>('upload');
   const [recording, setRecording] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -60,7 +62,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
         mediaRecorderRef.current = recorder;
         setRecording(true);
       } catch {
-        // 麦克风权限被拒绝
+        // Microphone permission denied
       }
     }
   };
@@ -71,12 +73,12 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
 
   return (
     <div className="space-y-2">
-      {/* 模式切换 */}
+      {/* Mode switcher */}
       <div className="flex gap-1">
         {([
-          { key: 'upload' as InputMode, icon: Upload, label: '上传' },
-          { key: 'record' as InputMode, icon: Mic, label: '录制' },
-          { key: 'url' as InputMode, icon: Link, label: '链接' },
+          { key: 'upload' as InputMode, icon: Upload, label: t('tts.refAudioUpload', '上传') },
+          { key: 'record' as InputMode, icon: Mic, label: t('tts.refAudioRecord', '录制') },
+          { key: 'url' as InputMode, icon: Link, label: t('tts.refAudioUrl', '链接') },
         ]).map(({ key, icon: Icon, label }) => (
           <Button
             key={key}
@@ -91,7 +93,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
         ))}
       </div>
 
-      {/* 上传模式 */}
+      {/* Upload mode */}
       {mode === 'upload' && (
         <div
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -104,13 +106,13 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
         >
           {hasValue ? (
             <div className="flex items-center justify-center gap-2">
-              <span className="text-sm text-muted-foreground">已加载音频</span>
+              <span className="text-sm text-muted-foreground">{t('tts.refAudioLoaded', '已加载音频')}</span>
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); clearValue(); }}>
                 <X className="w-3 h-3" />
               </Button>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">拖拽或点击上传音频文件</p>
+            <p className="text-sm text-muted-foreground">{t('tts.refAudioDragOrClick', '拖拽或点击上传音频文件')}</p>
           )}
           <input
             ref={fileInputRef}
@@ -122,7 +124,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
         </div>
       )}
 
-      {/* 录制模式 */}
+      {/* Record mode */}
       {mode === 'record' && (
         <div className="flex items-center gap-3">
           <Button
@@ -131,23 +133,23 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
             onClick={toggleRecording}
           >
             {recording ? <MicOff className="w-4 h-4 mr-1" /> : <Mic className="w-4 h-4 mr-1" />}
-            {recording ? '停止录制' : '开始录制'}
+            {recording ? t('tts.stopRecord', '停止录制') : t('tts.startRecord', '开始录制')}
           </Button>
           {recording && (
-            <span className="text-sm text-red-500 animate-pulse">录制中...</span>
+            <span className="text-sm text-red-500 animate-pulse">{t('tts.refAudioRecording', '录制中...')}</span>
           )}
           {hasValue && !recording && (
-            <span className="text-sm text-muted-foreground">已录制</span>
+            <span className="text-sm text-muted-foreground">{t('tts.refAudioRecorded', '已录制')}</span>
           )}
         </div>
       )}
 
-      {/* URL 模式 */}
+      {/* URL mode */}
       {mode === 'url' && (
         <Input
           value={value && !value.startsWith('data:') ? value : ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="输入音频文件 URL..."
+          placeholder={t('tts.refAudioUrlPlaceholder', '输入音频文件 URL...')}
           className="bg-background"
         />
       )}

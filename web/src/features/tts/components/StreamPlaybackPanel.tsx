@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Download, Square } from 'lucide-react';
@@ -19,6 +20,8 @@ export function StreamPlaybackPanel({
   sampleRate,
   onStop,
 }: StreamPlaybackPanelProps) {
+  const { t } = useTranslation();
+
   if (state === 'idle') return null;
 
   const handleDownload = () => {
@@ -42,10 +45,10 @@ export function StreamPlaybackPanel({
 
   const statusLabel = {
     idle: '',
-    streaming: '流式中',
-    playing: '播放中',
-    completed: '完成',
-    error: '错误',
+    streaming: t('tts.streamStatus.streaming', '流式中'),
+    playing: t('tts.streamStatus.playing', '播放中'),
+    completed: t('tts.streamStatus.completed', '完成'),
+    error: t('tts.streamStatus.error', '错误'),
   }[state];
 
   return (
@@ -57,29 +60,29 @@ export function StreamPlaybackPanel({
           </span>
           {(state === 'streaming' || state === 'playing') && (
             <span className="text-xs text-muted-foreground">
-              {formatBytes(metrics.bytesReceived)} 已接收
+              {formatBytes(metrics.bytesReceived)} {t('tts.received', '已接收')}
             </span>
           )}
         </div>
         {(state === 'streaming' || state === 'playing') && (
           <Button variant="outline" size="sm" onClick={onStop}>
             <Square className="w-3 h-3 mr-1" />
-            停止
+            {t('tts.stop', '停止')}
           </Button>
         )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <MetricCard label="首包延迟" value={metrics.ttfp !== null ? `${metrics.ttfp} ms` : '--'} />
-        <MetricCard label="实时率" value={metrics.rtf !== null ? `${metrics.rtf}x` : '--'} />
-        <MetricCard label="音频时长" value={metrics.audioDuration > 0 ? `${metrics.audioDuration} s` : '--'} />
-        <MetricCard label="速度倍率" value={metrics.speedMultiplier > 0 ? `${metrics.speedMultiplier}x` : '--'} />
+        <MetricCard label={t('tts.ttfp', '首包延迟')} value={metrics.ttfp !== null ? `${metrics.ttfp} ms` : '--'} />
+        <MetricCard label={t('tts.rtf', '实时率')} value={metrics.rtf !== null ? `${metrics.rtf}x` : '--'} />
+        <MetricCard label={t('tts.audioDuration', '音频时长')} value={metrics.audioDuration > 0 ? `${metrics.audioDuration} s` : '--'} />
+        <MetricCard label={t('tts.speedMultiplier', '速度倍率')} value={metrics.speedMultiplier > 0 ? `${metrics.speedMultiplier}x` : '--'} />
       </div>
 
       {state === 'completed' && pcmChunks.length > 0 && (
         <Button variant="outline" size="sm" onClick={handleDownload} className="w-full">
           <Download className="w-4 h-4 mr-2" />
-          下载 WAV
+          {t('tts.downloadWav', '下载 WAV')}
         </Button>
       )}
     </div>

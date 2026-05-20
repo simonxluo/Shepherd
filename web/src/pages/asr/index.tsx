@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Mic, Loader2, Upload, FileAudio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useLoadedModels } from '@/features/creative/hooks';
+import { useLoadedModels, useAvailableModels } from '@/features/creative/hooks';
 import { ModelSelect } from '@/features/creative/ModelSelect';
+import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import { useASR } from '@/features/asr/hooks';
 import { toast } from '@/hooks/useToast';
 import { formatBytes } from '@/lib/utils';
@@ -16,6 +17,7 @@ export function ASRPage() {
     () => allModels.filter((m) => m.capabilities?.asr),
     [allModels]
   );
+  const availableModels = useAvailableModels('asr');
 
   const asr = useASR();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -80,10 +82,11 @@ export function ASRPage() {
           </div>
 
           {asrModels.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>{t('asr.noModels', '没有已加载的 ASR 模型')}</p>
-              <p className="text-sm mt-1">{t('asr.noModelsHint', '请先加载一个支持语音识别的模型')}</p>
-            </div>
+            <AvailableModelList
+              models={availableModels}
+              emptyText={t('creative.noScannedModels')}
+              emptyHint={t('creative.noScannedModelsHint')}
+            />
           ) : (
             <div className="space-y-6">
               <div className="space-y-4">
