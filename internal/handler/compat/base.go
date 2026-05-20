@@ -42,8 +42,12 @@ func (b *BaseHandler) RebuildIndex() {
 }
 
 func (b *BaseHandler) FindModel(modelName string) (string, error) {
-	// 每次查找前刷新索引，确保扫描/加载/别名变更后模型能被正确解析
-	b.RebuildIndex()
+	// Only rebuild the index when the model manager's version has changed
+	currentVersion := b.ModelMgr.Version()
+	if currentVersion != b.ModelIndex.lastVersion {
+		b.RebuildIndex()
+		b.ModelIndex.lastVersion = currentVersion
+	}
 	return FindModelForAPI(b.ModelMgr, b.ModelIndex, modelName)
 }
 
@@ -236,7 +240,11 @@ func (b *BaseHandler) StreamWithLazyLoad(c *gin.Context, modelName string, path 
 		}
 	} else {
 		// 刷新索引后再查找，确保扫描/加载/别名变更后的模型能被解析
-		b.RebuildIndex()
+		currentVersion := b.ModelMgr.Version()
+		if currentVersion != b.ModelIndex.lastVersion {
+			b.RebuildIndex()
+			b.ModelIndex.lastVersion = currentVersion
+		}
 		if m, ok := b.ModelIndex.Find(modelName); ok {
 			actualModelID = m.ID
 		} else {
@@ -430,6 +438,37 @@ func (b *BaseHandler) ForwardMultipartRequest(c *gin.Context, port int, path str
 }
 
 // ForwardGetRequest 代理 GET 请求到后端模型服务
+// SendOpenAIError sends an error response in OpenAI API format.
+func (b *BaseHandler) SendOpenAIError(c *gin.Context, status int, errType, msg, param string) {
+	response := NewErrorResponse(msg, errType, param, status)
+	c.JSON(status, response)
+}
+
+// SendSimpleError sends a simple JSON error response with {"error": msg}.
+func (b *BaseHandler) SendSimpleError(c *gin.Context, status int, msg string) {
+	c.JSON(status, gin.H{"error": msg})
+}
+
+// ListLoadedModels returns loaded models in OpenAI ModelsResponse format.
+func (b *BaseHandler) ListLoadedModels(ownedBy string) *ModelsResponse {
+	statuses := b.ModelMgr.ListStatus()
+	models := b.ModelMgr.ListModels()
+
+	var result []Model
+	for _, m := range models {
+		if status, exists := statuses[m.ID]; exists && status.State == model.StateLoaded {
+			result = append(result, Model{
+				ID:      m.ID,
+				Object:  "model",
+				Created: m.ScannedAt.Unix(),
+				OwnedBy: ownedBy,
+			})
+		}
+	}
+
+	return NewModelsResponse(result)
+}
+
 func (b *BaseHandler) ForwardGetRequest(c *gin.Context, port int, path string) {
 	reqURL := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
 

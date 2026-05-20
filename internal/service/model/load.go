@@ -138,6 +138,7 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 	applyRuntimeConfig(status, req.UnloadAfterMinutes, req.ConcurrencyLimit)
 	status.LoadWait.Add(1)
 	m.statuses[req.ModelID] = status
+	m.bumpVersion()
 	m.mu.Unlock()
 
 	m.swapBeforeLoad(req.ModelID)
@@ -263,6 +264,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		status.Port = port
 		status.LoadedAt = time.Now()
 		status.BackendType = b.Type().String()
+		m.bumpVersion()
 		m.mu.Unlock()
 		status.LoadWait.Done()
 		duration := time.Since(startTime)
@@ -343,6 +345,7 @@ func (m *Manager) Unload(modelID string) error {
 	status.transitionTo(StateUnloaded)
 	status.ProcessID = ""
 	status.Port = 0
+	m.bumpVersion()
 
 	logger.Infof("模型卸载成功: modelId=%s, modelName=%s", modelID, status.Name)
 
@@ -352,12 +355,12 @@ func (m *Manager) Unload(modelID string) error {
 // toBackendLoadRequest converts model.LoadRequest to backend.LoadRequest
 func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port int) *backend.LoadRequest {
 	br := &backend.LoadRequest{
-		ModelPath:   modelPath,
-		Port:        port,
-		CtxSize:     req.CtxSize,
-		GPULayers:   req.GPULayers,
-		Threads:     req.Threads,
-		Devices:     req.Devices,
+		ModelPath:    modelPath,
+		Port:         port,
+		CtxSize:      req.CtxSize,
+		GPULayers:    req.GPULayers,
+		Threads:      req.Threads,
+		Devices:      req.Devices,
 		SpecDecoding: req.SpecDecoding.ToBackend(),
 	}
 
@@ -368,7 +371,7 @@ func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port 
 		br.VLLMParams = m.buildVLLMParams(req)
 	case backend.BackendVLLMOmni:
 		br.VLLOmniParams = &backend.VLLOmniLoadParams{
-			VLLMLoadParams: *m.buildVLLMParams(req),
+			VLLMLoadParams:   *m.buildVLLMParams(req),
 			Omni:             req.Omni,
 			VideoPruningRate: req.VideoPruningRate,
 			MMTensorIPC:      req.MMTensorIPC,

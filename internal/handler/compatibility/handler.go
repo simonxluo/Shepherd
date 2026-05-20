@@ -105,6 +105,60 @@ func checkPortAvailability(port int) PortCheckResult {
 	return PortCheckResult{Available: true}
 }
 
+// tryEnableService checks port availability and attempts to start a service.
+// Returns true if the caller should return (error was sent to client), false if processing should continue.
+func (h *Handler) tryEnableService(c *gin.Context, serviceName string, port int, startFn func(int) error, cfg *config.Config, otherService gin.H) bool {
+	// Check port availability
+	result := checkPortAvailability(port)
+	if !result.Available {
+		logger.Warnf("%s API 端口检查失败: %s", serviceName, result.Error)
+		thisService := gin.H{"enabled": false, "port": port}
+		data := gin.H{}
+		if serviceName == "ollama" {
+			data["ollama"] = thisService
+			data["lmstudio"] = otherService
+		} else {
+			data["ollama"] = otherService
+			data["lmstudio"] = thisService
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success":      false,
+			"error":        result.Error,
+			"errorType":    result.ErrorType,
+			"service":      serviceName,
+			"autoDisabled": true,
+			"data":         data,
+		})
+		return true
+	}
+
+	// Try to start the service
+	if startFn != nil {
+		if err := startFn(port); err != nil {
+			logger.Errorf("启动 %s 服务器失败: %v", serviceName, err)
+			thisService := gin.H{"enabled": false, "port": port}
+			data := gin.H{}
+			if serviceName == "ollama" {
+				data["ollama"] = thisService
+				data["lmstudio"] = otherService
+			} else {
+				data["ollama"] = otherService
+				data["lmstudio"] = thisService
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success":      false,
+				"error":        fmt.Sprintf("启动 %s 服务器失败: %v", serviceName, err),
+				"errorType":    "start_failed",
+				"service":      serviceName,
+				"autoDisabled": true,
+				"data":         data,
+			})
+			return true
+		}
+	}
+	return false
+}
+
 // UpdateCompatibility updates the compatibility configuration.
 // @Summary      Update compatibility config
 // @Description  Updates the Ollama and LM Studio compatibility server configuration, starting/stopping servers as needed
@@ -143,51 +197,15 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 
 	// Check port availability if enabling
 	if ollamaEnabling {
-		result := checkPortAvailability(req.Ollama.Port)
-		if !result.Available {
-			logger.Warnf("Ollama API 端口检查失败: %s", result.Error)
-			c.JSON(http.StatusOK, gin.H{
-				"success":      false,
-				"error":        result.Error,
-				"errorType":    result.ErrorType,
-				"service":      "ollama",
-				"autoDisabled": true,
-				"data": gin.H{
-					"ollama": gin.H{
-						"enabled": false,
-						"port":    req.Ollama.Port,
-					},
-					"lmstudio": gin.H{
-						"enabled": cfg.Compatibility.LMStudio.Enabled,
-						"port":    cfg.Compatibility.LMStudio.Port,
-					},
-				},
-			})
+		otherService := gin.H{"enabled": cfg.Compatibility.LMStudio.Enabled, "port": cfg.Compatibility.LMStudio.Port}
+		if h.tryEnableService(c, "ollama", req.Ollama.Port, nil, cfg, otherService) {
 			return
 		}
 	}
 
 	if lmstudioEnabling {
-		result := checkPortAvailability(req.LMStudio.Port)
-		if !result.Available {
-			logger.Warnf("LM Studio API 端口检查失败: %s", result.Error)
-			c.JSON(http.StatusOK, gin.H{
-				"success":      false,
-				"error":        result.Error,
-				"errorType":    result.ErrorType,
-				"service":      "lmstudio",
-				"autoDisabled": true,
-				"data": gin.H{
-					"ollama": gin.H{
-						"enabled": cfg.Compatibility.Ollama.Enabled,
-						"port":    cfg.Compatibility.Ollama.Port,
-					},
-					"lmstudio": gin.H{
-						"enabled": false,
-						"port":    req.LMStudio.Port,
-					},
-				},
-			})
+		otherService := gin.H{"enabled": cfg.Compatibility.Ollama.Enabled, "port": cfg.Compatibility.Ollama.Port}
+		if h.tryEnableService(c, "lmstudio", req.LMStudio.Port, nil, cfg, otherService) {
 			return
 		}
 	}
@@ -223,30 +241,11 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 	if h.serverManager != nil {
 		// Handle Ollama server
 		if req.Ollama.Enabled && !ollamaWasEnabled {
-			// Starting Ollama server
-			if err := h.serverManager.StartOllamaServer(req.Ollama.Port); err != nil {
-				logger.Errorf("启动 Ollama 服务器失败: %v", err)
-				c.JSON(http.StatusOK, gin.H{
-					"success":      false,
-					"error":        fmt.Sprintf("启动 Ollama 服务器失败: %v", err),
-					"errorType":    "start_failed",
-					"service":      "ollama",
-					"autoDisabled": true,
-					"data": gin.H{
-						"ollama": gin.H{
-							"enabled": false,
-							"port":    req.Ollama.Port,
-						},
-						"lmstudio": gin.H{
-							"enabled": cfg.Compatibility.LMStudio.Enabled,
-							"port":    cfg.Compatibility.LMStudio.Port,
-						},
-					},
-				})
+			lmstudioState := gin.H{"enabled": cfg.Compatibility.LMStudio.Enabled, "port": cfg.Compatibility.LMStudio.Port}
+			if h.tryEnableService(c, "ollama", req.Ollama.Port, h.serverManager.StartOllamaServer, cfg, lmstudioState) {
 				return
 			}
 		} else if !req.Ollama.Enabled && ollamaWasEnabled {
-			// Stopping Ollama server
 			if err := h.serverManager.StopOllamaServer(); err != nil {
 				logger.Errorf("停止 Ollama 服务器失败: %v", err)
 			}
@@ -254,30 +253,11 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 
 		// Handle LM Studio server
 		if req.LMStudio.Enabled && !lmstudioWasEnabled {
-			// Starting LM Studio server
-			if err := h.serverManager.StartLMStudioServer(req.LMStudio.Port); err != nil {
-				logger.Errorf("启动 LM Studio 服务器失败: %v", err)
-				c.JSON(http.StatusOK, gin.H{
-					"success":      false,
-					"error":        fmt.Sprintf("启动 LM Studio 服务器失败: %v", err),
-					"errorType":    "start_failed",
-					"service":      "lmstudio",
-					"autoDisabled": true,
-					"data": gin.H{
-						"ollama": gin.H{
-							"enabled": req.Ollama.Enabled,
-							"port":    req.Ollama.Port,
-						},
-						"lmstudio": gin.H{
-							"enabled": false,
-							"port":    req.LMStudio.Port,
-						},
-					},
-				})
+			ollamaState := gin.H{"enabled": req.Ollama.Enabled, "port": req.Ollama.Port}
+			if h.tryEnableService(c, "lmstudio", req.LMStudio.Port, h.serverManager.StartLMStudioServer, cfg, ollamaState) {
 				return
 			}
 		} else if !req.LMStudio.Enabled && lmstudioWasEnabled {
-			// Stopping LM Studio server
 			if err := h.serverManager.StopLMStudioServer(); err != nil {
 				logger.Errorf("停止 LM Studio 服务器失败: %v", err)
 			}

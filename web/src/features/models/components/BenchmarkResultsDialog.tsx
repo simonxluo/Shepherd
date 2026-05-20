@@ -34,11 +34,17 @@ export function BenchmarkResultsDialog({
   const loadResultFiles = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/models/benchmark/list?modelId=${encodeURIComponent(modelId)}`);
+      const response = await fetch(`/api/models/benchmark/tasks?modelId=${encodeURIComponent(modelId)}`);
       const data = await response.json();
 
-      if (data.success && data.data?.files) {
-        setResultFiles(data.data.files);
+      if (data.success && data.data?.benchmarks) {
+        // Map benchmark tasks to result file format for display
+        setResultFiles(data.data.benchmarks.map((b: { id: string; status: string; createdAt: string }) => ({
+          name: b.id,
+          size: 0,
+          modified: b.createdAt || '',
+          status: b.status,
+        })));
       } else {
         setResultFiles([]);
       }
@@ -112,7 +118,7 @@ export function BenchmarkResultsDialog({
   const loadBenchmarkResult = async (fileName: string) => {
     setLoadingFile(fileName);
     try {
-      const response = await fetch(`/api/models/benchmark/get?fileName=${encodeURIComponent(fileName)}`);
+      const response = await fetch(`/api/models/benchmark/tasks/${encodeURIComponent(fileName)}`);
       const data = await response.json();
 
       if (data.success && data.data) {
@@ -141,8 +147,8 @@ export function BenchmarkResultsDialog({
     if (!confirmed) return;
 
     try {
-      const response = await fetch(`/api/models/benchmark/delete?fileName=${encodeURIComponent(fileName)}`, {
-        method: 'POST',
+      const response = await fetch(`/api/models/benchmark/tasks/${encodeURIComponent(fileName)}`, {
+        method: 'DELETE',
       });
       const data = await response.json();
 

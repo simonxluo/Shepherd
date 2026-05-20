@@ -29,30 +29,30 @@ func (h *MusicHandler) HandleCreateMusic(c *gin.Context) {
 		Temperature    float64 `json:"temperature,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
 		return
 	}
 
 	if req.Model == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
 		return
 	}
 
 	if req.Prompt == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: prompt", "prompt")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: prompt", "prompt")
 		return
 	}
 
 	actualModelID, err := h.FindModel(req.Model)
 	if err != nil {
-		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
 		return
 	}
 
 	// Validate model has Music capability
 	caps := h.ModelMgr.GetModelCapabilities(actualModelID)
 	if caps == nil || !caps.Music {
-		h.sendError(c, http.StatusBadRequest, "invalid_model",
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_model",
 			fmt.Sprintf("Model %q does not support music generation, please select a model with music capability", req.Model), "model")
 		return
 	}
@@ -62,7 +62,7 @@ func (h *MusicHandler) HandleCreateMusic(c *gin.Context) {
 	if b != nil {
 		endpoints := b.SupportedEndpoints()
 		if supported, ok := endpoints["/v1/audio/music"]; !ok || !supported {
-			h.sendError(c, http.StatusBadRequest, "backend_not_supported",
+			h.SendOpenAIError(c, http.StatusBadRequest, "backend_not_supported",
 				fmt.Sprintf("Backend %q does not support the music generation endpoint", b.Type()), "model")
 			return
 		}
@@ -70,7 +70,7 @@ func (h *MusicHandler) HandleCreateMusic(c *gin.Context) {
 
 	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 		return
 	}
 

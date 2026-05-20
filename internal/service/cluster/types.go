@@ -42,16 +42,16 @@ const (
 
 // Client represents a connected client node
 type Client struct {
-	ID           string               `json:"id"`
-	Name         string               `json:"name"`
-	Address      string               `json:"address"`
-	Port         int                  `json:"port"`
-	Tags         []string             `json:"tags"`
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
+	Address      string                 `json:"address"`
+	Port         int                    `json:"port"`
+	Tags         []string               `json:"tags"`
 	Capabilities *node.NodeCapabilities `json:"capabilities"`
-	Status       ClientStatus         `json:"status"`
-	LastSeen     time.Time            `json:"lastSeen"`
-	Metadata     map[string]string    `json:"metadata"`
-	Connected    bool                 `json:"connected"`
+	Status       ClientStatus           `json:"status"`
+	LastSeen     time.Time              `json:"lastSeen"`
+	Metadata     map[string]string      `json:"metadata"`
+	Connected    bool                   `json:"connected"`
 }
 
 // Task represents a distributed task

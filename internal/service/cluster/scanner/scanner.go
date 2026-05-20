@@ -233,11 +233,11 @@ func (s *Scanner) checkClient(host string, port int) *cluster.DiscoveredClient {
 
 	// Parse response
 	var info struct {
-		ID           string                `json:"id"`
-		Name         string                `json:"name"`
-		Version      string                `json:"version"`
+		ID           string                 `json:"id"`
+		Name         string                 `json:"name"`
+		Version      string                 `json:"version"`
 		Capabilities *node.NodeCapabilities `json:"capabilities"`
-		Tags         []string              `json:"tags"`
+		Tags         []string               `json:"tags"`
 	}
 
 	if len(body) > 0 {

@@ -837,6 +837,33 @@ func (h *Handler) DeleteConfig(c *gin.Context) {
 	})
 }
 
+// Delete deletes a benchmark task by ID.
+// @Summary      Delete benchmark task
+// @Description  Deletes a benchmark task and its results
+// @Tags         Benchmark
+// @Produce      json
+// @Param        benchmarkId path string true "Benchmark task ID"
+// @Success      200 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/benchmark/tasks/{benchmarkId} [delete]
+func (h *Handler) Delete(c *gin.Context) {
+	taskID := c.Param("benchmarkId")
+
+	if err := h.store.DeleteBenchmark(h.ctx, taskID); err != nil {
+		h.log.Errorf("Failed to delete benchmark: %v", err)
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "Benchmark not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+	})
+}
+
 // Shutdown 优雅关闭处理器
 func (h *Handler) Shutdown() {
 	h.log.Infof("Benchmark handler shutting down, waiting for running tasks to complete...")

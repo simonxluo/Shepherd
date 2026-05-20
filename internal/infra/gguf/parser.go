@@ -228,4 +228,3 @@ func (p *Parser) GetArchitecture() string {
 	}
 	return ""
 }
-

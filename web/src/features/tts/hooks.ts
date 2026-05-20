@@ -23,6 +23,9 @@ export interface TTSRequest {
   prompt_text?: string;
   max_new_tokens?: number;
   seed?: number;
+  cfg_value?: number;
+  inference_timesteps?: number;
+  emotion?: string;
   extra_params?: Record<string, unknown>;
 }
 
@@ -32,6 +35,9 @@ export interface TTSModelFeatures {
   supportsRefAudio: boolean;
   supportsUltimateCloning: boolean;
   supportsStreamPcm: boolean;
+  supportsCfgValue: boolean;
+  supportsInferenceTimesteps: boolean;
+  supportsEmotion: boolean;
   defaultSampleRate: number;
   defaultFormat: string;
 }
@@ -48,6 +54,9 @@ export function getTTSModelFeatures(model: LoadedModel): TTSModelFeatures {
       supportsRefAudio: true,
       supportsUltimateCloning: isVoxCPM,
       supportsStreamPcm: true,
+      supportsCfgValue: isVoxCPM,
+      supportsInferenceTimesteps: isVoxCPM,
+      supportsEmotion: isVoxCPM,
       defaultSampleRate: 24000,
       defaultFormat: 'pcm',
     };
@@ -59,6 +68,9 @@ export function getTTSModelFeatures(model: LoadedModel): TTSModelFeatures {
     supportsRefAudio: false,
     supportsUltimateCloning: false,
     supportsStreamPcm: false,
+    supportsCfgValue: false,
+    supportsInferenceTimesteps: false,
+    supportsEmotion: false,
     defaultSampleRate: 24000,
     defaultFormat: 'mp3',
   };
@@ -113,6 +125,10 @@ export interface TTSConfig {
   ultimateCloning?: boolean;
   seed?: string;
   maxNewTokens?: string;
+  language?: string;
+  emotion?: string;
+  cfgValue?: string;
+  inferenceTimesteps?: string;
 }
 
 function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
@@ -130,6 +146,10 @@ function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
     ultimateCloning: raw.ultimateCloning as boolean | undefined,
     seed: (raw.seed as string) || undefined,
     maxNewTokens: (raw.maxNewTokens as string) || undefined,
+    language: (raw.language as string) || undefined,
+    emotion: (raw.emotion as string) || undefined,
+    cfgValue: (raw.cfgValue as string) || undefined,
+    inferenceTimesteps: (raw.inferenceTimesteps as string) || undefined,
   };
 }
 

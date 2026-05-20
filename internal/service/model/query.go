@@ -152,6 +152,7 @@ func (m *Manager) SetAlias(modelID, alias string) error {
 	}
 
 	model.Alias = alias
+	m.bumpVersion()
 
 	if err := m.updateModelMetadata(modelID, model, func(meta *storage.ModelMetadata) {
 		meta.Alias = alias
@@ -302,6 +303,7 @@ func (m *Manager) loadModels() {
 	if mergedCount > 0 {
 		logger.Infof("loadModels: merged shard files: mergedCount=%d", mergedCount)
 	}
+	m.bumpVersion()
 }
 
 // saveModels saves models to config
@@ -366,7 +368,6 @@ func (m *Manager) saveModels() {
 	}
 }
 
-
 func (m *Manager) GetLoadedModelCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -429,4 +430,3 @@ func (m *Manager) updateModelMetadata(modelID string, model *Model, updateFn fun
 	}
 	return nil
 }
-

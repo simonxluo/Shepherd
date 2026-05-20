@@ -554,4 +554,3 @@ func (rm *ResourceMonitor) detectKernelVersion() string {
 	}
 	return ""
 }
-

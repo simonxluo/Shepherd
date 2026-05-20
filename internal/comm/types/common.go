@@ -12,10 +12,10 @@ import (
 type NodeState string
 
 const (
-	StateOffline  NodeState = "offline"
-	StateOnline   NodeState = "online"
-	StateBusy     NodeState = "busy"
-	StateError    NodeState = "error"
+	StateOffline NodeState = "offline"
+	StateOnline  NodeState = "online"
+	StateBusy    NodeState = "busy"
+	StateError   NodeState = "error"
 )
 
 // String returns the string representation of the state
@@ -140,4 +140,3 @@ func NewErrorResponseWithDetails(code ErrorCode, message, details string, reques
 		Metadata: NewResponseMeta(requestID),
 	}
 }
-

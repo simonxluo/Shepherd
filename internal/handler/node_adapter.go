@@ -46,8 +46,6 @@ func (a *NodeAdapter) SetEventCallback(callback func(eventType string, data inte
 	a.eventCallback = callback
 }
 
-
-
 // nodeClientManager 将 node.Node 适配为 scheduler.ClientManager 接口
 type nodeClientManager struct {
 	node *node.Node

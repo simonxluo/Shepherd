@@ -31,40 +31,42 @@ func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
 		Language       string  `json:"language,omitempty"`
 		Stream         bool    `json:"stream,omitempty"`
 		// VoxCPM2 / 声音克隆扩展字段
-		Instructions   string  `json:"instructions,omitempty"`
-		RefAudio       string  `json:"ref_audio,omitempty"`
-		RefText        string  `json:"ref_text,omitempty"`
-		PromptAudio    string  `json:"prompt_audio,omitempty"`
-		PromptText     string  `json:"prompt_text,omitempty"`
-		MaxNewTokens   int     `json:"max_new_tokens,omitempty"`
-		Seed           int64   `json:"seed,omitempty"`
-		ExtraParams    any     `json:"extra_params,omitempty"`
+		Instructions       string  `json:"instructions,omitempty"`
+		RefAudio           string  `json:"ref_audio,omitempty"`
+		RefText            string  `json:"ref_text,omitempty"`
+		PromptAudio        string  `json:"prompt_audio,omitempty"`
+		PromptText         string  `json:"prompt_text,omitempty"`
+		MaxNewTokens       int     `json:"max_new_tokens,omitempty"`
+		Seed               int64   `json:"seed,omitempty"`
+		CfgValue           float64 `json:"cfg_value,omitempty"`
+		InferenceTimesteps int     `json:"inference_timesteps,omitempty"`
+		ExtraParams        any     `json:"extra_params,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
 		return
 	}
 
 	if req.Model == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
 		return
 	}
 
 	if req.Input == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: input", "input")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: input", "input")
 		return
 	}
 
 	actualModelID, err := h.FindModel(req.Model)
 	if err != nil {
-		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
 		return
 	}
 
 	// 验证模型具备 TTS 能力
 	caps := h.ModelMgr.GetModelCapabilities(actualModelID)
 	if caps == nil || !caps.TTS {
-		h.sendError(c, http.StatusBadRequest, "invalid_model", fmt.Sprintf("模型 %q 不支持 TTS（语音合成），请选择支持 TTS 的模型", req.Model), "model")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_model", fmt.Sprintf("模型 %q 不支持 TTS（语音合成），请选择支持 TTS 的模型", req.Model), "model")
 		return
 	}
 
@@ -73,7 +75,7 @@ func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
 	if b != nil {
 		endpoints := b.SupportedEndpoints()
 		if supported, ok := endpoints["/v1/audio/speech"]; !ok || !supported {
-			h.sendError(c, http.StatusBadRequest, "backend_not_supported",
+			h.SendOpenAIError(c, http.StatusBadRequest, "backend_not_supported",
 				fmt.Sprintf("当前后端 %q 不支持 TTS 端点，请使用 vLLM-Omni 后端加载模型", b.Type()), "model")
 			return
 		}
@@ -81,7 +83,7 @@ func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
 
 	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 		return
 	}
 
@@ -98,26 +100,26 @@ func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
 func (h *AudioHandler) HandleCreateTranscription(c *gin.Context) {
 	modelName := c.PostForm("model")
 	if modelName == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
 		return
 	}
 
 	actualModelID, err := h.FindModel(modelName)
 	if err != nil {
-		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
 		return
 	}
 
 	// 验证模型具备 ASR 能力
 	caps := h.ModelMgr.GetModelCapabilities(actualModelID)
 	if caps == nil || !caps.ASR {
-		h.sendError(c, http.StatusBadRequest, "invalid_model", fmt.Sprintf("模型 %q 不支持 ASR（语音识别），请选择支持 ASR 的模型", modelName), "model")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_model", fmt.Sprintf("模型 %q 不支持 ASR（语音识别），请选择支持 ASR 的模型", modelName), "model")
 		return
 	}
 
 	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 		return
 	}
 
@@ -138,19 +140,19 @@ func (h *AudioHandler) HandleCreateTranscription(c *gin.Context) {
 func (h *AudioHandler) HandleCreateTranslation(c *gin.Context) {
 	modelName := c.PostForm("model")
 	if modelName == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
 		return
 	}
 
 	actualModelID, err := h.FindModel(modelName)
 	if err != nil {
-		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
 		return
 	}
 
 	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 		return
 	}
 
@@ -170,19 +172,19 @@ func (h *AudioHandler) HandleCreateTranslation(c *gin.Context) {
 func (h *AudioHandler) HandleListVoices(c *gin.Context) {
 	modelName := c.Query("model")
 	if modelName == "" {
-		h.sendError(c, http.StatusBadRequest, "invalid_request", "缺少必要参数: model", "model")
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "缺少必要参数: model", "model")
 		return
 	}
 
 	actualModelID, err := h.FindModel(modelName)
 	if err != nil {
-		h.sendError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
 		return
 	}
 
 	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
 		return
 	}
 

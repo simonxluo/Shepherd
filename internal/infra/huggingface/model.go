@@ -9,11 +9,11 @@ import (
 )
 
 type HFModelConfig struct {
-	ModelType              string   `json:"model_type"`
-	Architectures          []string `json:"architectures"`
-	NameOrPath             string   `json:"_name_or_path"`
-	IsEncoderDecoder       bool     `json:"is_encoder_decoder"`
-	MaxPositionEmbeddings  int      `json:"max_position_embeddings"`
+	ModelType             string   `json:"model_type"`
+	Architectures         []string `json:"architectures"`
+	NameOrPath            string   `json:"_name_or_path"`
+	IsEncoderDecoder      bool     `json:"is_encoder_decoder"`
+	MaxPositionEmbeddings int      `json:"max_position_embeddings"`
 }
 
 type HFModelIndex struct {

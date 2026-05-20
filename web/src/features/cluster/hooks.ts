@@ -77,7 +77,7 @@ export function useClusterOverview() {
   return useQuery({
     queryKey: ['cluster', 'overview'],
     queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: ClusterOverview }>('/master/overview');
+      const response = await apiClient.get<{ success: boolean; data: ClusterOverview }>('/overview');
       return response.data;
     },
     staleTime: 10 * 1000,
@@ -95,7 +95,7 @@ export function useClients() {
   return useQuery({
     queryKey: ['cluster', 'clients'],
     queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: ClientListResponse }>('/master/clients');
+      const response = await apiClient.get<{ success: boolean; data: ClientListResponse }>('/nodes');
       return response.data.clients;
     },
     staleTime: 10 * 1000,
@@ -111,7 +111,7 @@ export function useClient(clientId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['cluster', 'clients', clientId],
     queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: { client: Client } }>(`/master/clients/${clientId}`);
+      const response = await apiClient.get<{ success: boolean; data: { client: Client } }>(`/nodes/${clientId}`);
       return response.data.client;
     },
     enabled: !!clientId && options?.enabled !== false,
@@ -128,7 +128,7 @@ export function useClusterTasks() {
   return useQuery({
     queryKey: ['cluster', 'tasks'],
     queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: TaskListResponse }>('/master/tasks');
+      const response = await apiClient.get<{ success: boolean; data: TaskListResponse }>('/tasks');
       return response.data.tasks;
     },
     staleTime: 5 * 1000,
@@ -149,7 +149,7 @@ export function useNetworkScan() {
       portRange?: string;
       timeout?: number;
     }) => {
-      const response = await apiClient.post<{ success: boolean }>('/master/scan', params || {});
+      const response = await apiClient.post<{ success: boolean }>('/scan', params || {});
       return response;
     },
     onSuccess: () => {

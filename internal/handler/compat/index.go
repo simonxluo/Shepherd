@@ -9,10 +9,11 @@ import (
 )
 
 type ModelLookupIndex struct {
-	byID    map[string]*model.Model
-	byAlias map[string]*model.Model
-	byName  map[string]*model.Model
-	mu      sync.RWMutex
+	byID        map[string]*model.Model
+	byAlias     map[string]*model.Model
+	byName      map[string]*model.Model
+	mu          sync.RWMutex
+	lastVersion int64
 }
 
 func NewModelLookupIndex() *ModelLookupIndex {

@@ -61,29 +61,29 @@ type ChatResponse struct {
 func (h *Handler) HandleChat(c *gin.Context) {
 	var req ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.sendError(c, http.StatusBadRequest, err.Error())
+		h.SendSimpleError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if req.Model == "" {
-		h.sendError(c, http.StatusBadRequest, "model is required")
+		h.SendSimpleError(c, http.StatusBadRequest, "model is required")
 		return
 	}
 
 	if len(req.Messages) == 0 {
-		h.sendError(c, http.StatusBadRequest, "messages array is empty")
+		h.SendSimpleError(c, http.StatusBadRequest, "messages array is empty")
 		return
 	}
 
 	actualModelID, err := h.FindModel(req.Model)
 	if err != nil {
-		h.sendError(c, http.StatusNotFound, err.Error())
+		h.SendSimpleError(c, http.StatusNotFound, err.Error())
 		return
 	}
 
 	port, err := h.GetModelPort(actualModelID)
 	if err != nil {
-		h.sendError(c, http.StatusInternalServerError, err.Error())
+		h.SendSimpleError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -131,10 +131,4 @@ func (h *Handler) convertToOpenAI(modelID string, ollamaReq ChatRequest) map[str
 	}
 
 	return openaiReq
-}
-
-func (h *Handler) sendError(c *gin.Context, statusCode int, message string) {
-	c.JSON(statusCode, map[string]interface{}{
-		"error": message,
-	})
 }

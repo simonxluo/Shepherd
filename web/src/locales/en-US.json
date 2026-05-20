@@ -379,7 +379,45 @@
     "seed": "Seed",
     "seedPlaceholder": "Leave empty for random",
     "maxNewTokens": "Max New Tokens",
-    "sampleRate": "Sample Rate"
+    "sampleRate": "Sample Rate",
+    "languageLabel": "Language",
+    "languagePlaceholder": "e.g., zh, en, ja",
+    "emotionLabel": "Emotion",
+    "emotionDefault": "Default",
+    "emotionHappy": "Happy",
+    "emotionSad": "Sad",
+    "emotionAngry": "Angry",
+    "emotionGentle": "Gentle",
+    "emotionSurprised": "Surprised",
+    "cfgLabel": "CFG Guidance",
+    "stepsLabel": "Diffusion Steps",
+    "configManagement": "Config Management",
+    "saveToServer": "Save to Server",
+    "deleteServerConfig": "Delete Server Config",
+    "selectPreset": "Select preset...",
+    "presetName": "Preset name",
+    "savePreset": "Save Preset",
+    "saved": "Saved",
+    "saveFailed": "Failed",
+    "deletePreset": "Delete preset",
+    "configDeleted": "Config deleted",
+    "deleteFailed": "Delete failed",
+    "streamingInProgress": "Streaming...",
+    "streamStatus": {
+      "streaming": "Streaming",
+      "playing": "Playing",
+      "completed": "Completed",
+      "error": "Error"
+    },
+    "received": "received",
+    "refAudioLoaded": "Audio loaded",
+    "refAudioDragOrClick": "Drag & drop or click to upload audio file",
+    "refAudioRecording": "Recording...",
+    "refAudioRecorded": "Recorded",
+    "refAudioUpload": "Upload",
+    "refAudioRecord": "Record",
+    "refAudioUrl": "URL",
+    "refAudioUrlPlaceholder": "Enter audio file URL..."
   },
   "asr": {
     "title": "Speech Recognition (ASR)",
@@ -621,6 +659,12 @@
       "roleClient": "Worker Node",
       "roleHybrid": "Hybrid Node"
     }
+  },
+  "creative": {
+    "availableModels": "Available Models to Load",
+    "noScannedModels": "No models with this capability found",
+    "noScannedModelsHint": "Please place compatible model files in the model directory and run a scan",
+    "loadButton": "Load"
   },
   "error": {
     "pageError": "An error occurred",

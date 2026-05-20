@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { Volume2, Loader2, Play, Pause, Download, ChevronDown, Settings2, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,8 +9,9 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useLoadedModels, BACKEND_LABELS } from '@/features/creative/hooks';
+import { useLoadedModels, BACKEND_LABELS, useAvailableModels } from '@/features/creative/hooks';
 import { ModelSelect } from '@/features/creative/ModelSelect';
+import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import {
   useTTS,
   useVoices,
@@ -29,22 +29,22 @@ import { cn } from '@/lib/utils';
 
 const FALLBACK_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
 
-const AUDIO_FORMATS = [
+const AUDIO_FORMATS: Array<{ value: string; label: string; i18nKey?: string }> = [
   { value: 'mp3', label: 'MP3' },
   { value: 'wav', label: 'WAV' },
   { value: 'opus', label: 'Opus' },
   { value: 'flac', label: 'FLAC' },
-  { value: 'pcm', label: 'PCM (流式)' },
+  { value: 'pcm', label: 'PCM', i18nKey: 'tts.pcmFormat' },
 ];
 
 export function TTSPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { data: allModels = [] } = useLoadedModels();
   const ttsModels = useMemo(
     () => allModels.filter((m) => m.capabilities?.tts),
     [allModels]
   );
+  const availableModels = useAvailableModels('tts');
 
   const tts = useTTS();
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -70,6 +70,10 @@ export function TTSPage() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [seed, setSeed] = useState('');
   const [maxNewTokens, setMaxNewTokens] = useState('');
+  const [language, setLanguage] = useState('');
+  const [emotion, setEmotion] = useState('');
+  const [cfgValue, setCfgValue] = useState('2');
+  const [inferenceTimesteps, setInferenceTimesteps] = useState('10');
 
   // 流式播放状态
   const [streamState, setStreamState] = useState<StreamState>('idle');
@@ -99,6 +103,9 @@ export function TTSPage() {
         supportsRefAudio: false,
         supportsUltimateCloning: false,
         supportsStreamPcm: false,
+        supportsCfgValue: false,
+        supportsInferenceTimesteps: false,
+        supportsEmotion: false,
         defaultSampleRate: 24000,
         defaultFormat: 'mp3',
       };
@@ -131,6 +138,10 @@ export function TTSPage() {
       if (ttsConfig.ultimateCloning !== undefined) setUltimateCloning(ttsConfig.ultimateCloning);
       if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
       if (ttsConfig.maxNewTokens !== undefined) setMaxNewTokens(ttsConfig.maxNewTokens);
+      if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language);
+      if (ttsConfig.emotion !== undefined) setEmotion(ttsConfig.emotion);
+      if (ttsConfig.cfgValue !== undefined) setCfgValue(ttsConfig.cfgValue);
+      if (ttsConfig.inferenceTimesteps !== undefined) setInferenceTimesteps(ttsConfig.inferenceTimesteps);
     }
   }, [ttsConfig]);
 
@@ -177,10 +188,15 @@ export function TTSPage() {
       ultimateCloning: ultimateCloning || undefined,
       seed: seed || undefined,
       maxNewTokens: maxNewTokens || undefined,
+      language: language || undefined,
+      emotion: emotion || undefined,
+      cfgValue: cfgValue || undefined,
+      inferenceTimesteps: inferenceTimesteps || undefined,
     };
     saveConfig.mutate({ modelId: modelIdForConfig, config: config as any });
   }, [modelIdForConfig, voice, speed, responseFormat, stream, instructions,
-      refAudio, refText, promptAudio, promptText, ultimateCloning, seed, maxNewTokens, saveConfig]);
+      refAudio, refText, promptAudio, promptText, ultimateCloning, seed, maxNewTokens,
+      language, emotion, cfgValue, inferenceTimesteps, saveConfig]);
 
   // 从 localStorage 加载命名配置
   const handleLoadNamedConfig = useCallback((name: string) => {
@@ -200,6 +216,10 @@ export function TTSPage() {
       if (cfg.ultimateCloning !== undefined) setUltimateCloning(cfg.ultimateCloning);
       if (cfg.seed !== undefined) setSeed(cfg.seed);
       if (cfg.maxNewTokens !== undefined) setMaxNewTokens(cfg.maxNewTokens);
+      if (cfg.language !== undefined) setLanguage(cfg.language);
+      if (cfg.emotion !== undefined) setEmotion(cfg.emotion);
+      if (cfg.cfgValue !== undefined) setCfgValue(cfg.cfgValue);
+      if (cfg.inferenceTimesteps !== undefined) setInferenceTimesteps(cfg.inferenceTimesteps);
       setSelectedConfigName(name);
       setConfigName(name);
     }
@@ -226,6 +246,10 @@ export function TTSPage() {
       ultimateCloning: ultimateCloning || undefined,
       seed: seed || undefined,
       maxNewTokens: maxNewTokens || undefined,
+      language: language || undefined,
+      emotion: emotion || undefined,
+      cfgValue: cfgValue || undefined,
+      inferenceTimesteps: inferenceTimesteps || undefined,
     };
     try {
       const configs = getSavedConfigs();
@@ -247,7 +271,7 @@ export function TTSPage() {
     }
   }, [CONFIGS_STORAGE_KEY, configName, voice, speed, responseFormat, stream,
       instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
-      seed, maxNewTokens, getSavedConfigs, t]);
+      seed, maxNewTokens, language, emotion, cfgValue, inferenceTimesteps, getSavedConfigs, t]);
 
   // 删除命名配置
   const handleDeleteNamedConfig = useCallback((name: string) => {
@@ -302,6 +326,16 @@ export function TTSPage() {
 
     if (seed) payload.seed = parseInt(seed, 10) || undefined;
     if (maxNewTokens) payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
+    if (language) payload.language = language;
+    if (emotion) payload.emotion = emotion;
+    if (features.supportsCfgValue && cfgValue) {
+      const val = parseFloat(cfgValue);
+      if (!isNaN(val)) payload.cfg_value = val;
+    }
+    if (features.supportsInferenceTimesteps && inferenceTimesteps) {
+      const val = parseInt(inferenceTimesteps, 10);
+      if (!isNaN(val)) payload.inference_timesteps = val;
+    }
 
     if (useStreamPcm) {
       try {
@@ -343,6 +377,10 @@ export function TTSPage() {
               ultimateCloning: ultimateCloning || undefined,
               seed: seed || undefined,
               maxNewTokens: maxNewTokens || undefined,
+              language: language || undefined,
+              emotion: emotion || undefined,
+              cfgValue: cfgValue || undefined,
+              inferenceTimesteps: inferenceTimesteps || undefined,
             };
             saveConfig.mutate({ modelId: modelIdForConfig, config: config as any });
           }
@@ -354,6 +392,7 @@ export function TTSPage() {
     }
   }, [model, input, voice, speed, responseFormat, stream, features, instructions,
       refAudio, refText, promptAudio, promptText, ultimateCloning, seed, maxNewTokens,
+      language, emotion, cfgValue, inferenceTimesteps,
       audioUrl, tts, modelIdForConfig, saveConfig, t]);
 
   const handlePlayPause = () => {
@@ -383,404 +422,466 @@ export function TTSPage() {
   const isGenerating = tts.isPending || isStreamActive;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">
-          {t('tts.title', '语音合成 (TTS)')}
-        </h1>
-        <p className="text-muted-foreground">
-          {t('tts.description', '将文本转换为自然语音，支持流式播放和声音克隆')}
-        </p>
-      </div>
+    <div className="h-full flex flex-col bg-background text-foreground">
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-foreground">
+              {t('tts.title', '语音合成 (TTS)')}
+            </h1>
+          </div>
 
-      <div className="space-y-4">
-        {ttsModels.length > 0 ? (
-          <div>
-            <ModelSelect
-              models={ttsModels}
-              value={model}
-              onValueChange={(v) => {
-                setModel(v);
-                setVoice('');
-                setUltimateCloning(false);
-                setRefAudio('');
-                setPromptAudio('');
-              }}
-              placeholder={t('tts.selectModel', '选择 TTS 模型')}
-              label={t('tts.modelLabel', 'TTS 模型')}
-              showBackend
+          {ttsModels.length === 0 ? (
+            <AvailableModelList
+              models={availableModels}
+              emptyText={t('creative.noScannedModels')}
+              emptyHint={t('creative.noScannedModelsHint')}
             />
-            {backendLabel && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {t('tts.backend', '后端')}: {backendLabel}
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center rounded-lg border border-dashed p-8 text-center">
-            <Volume2 className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm font-medium">{t('tts.noModels', '没有已加载的 TTS 模型')}</p>
-            <p className="text-xs text-muted-foreground mt-1">{t('tts.noModelsHint', '请先加载一个支持语音合成的模型')}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => navigate('/models')}
-            >
-              {t('tts.goToModels', '前往模型管理')}
-            </Button>
-          </div>
-        )}
-
-        {!ultimateCloning && (
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.inputLabel', '输入文本')}
-            </label>
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={t('tts.inputPlaceholder', '输入要转换为语音的文本...')}
-              className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
-              rows={4}
-            />
-          </div>
-        )}
-
-        {features.supportsInstructions && (
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.instructions', '风格指令')}
-            </label>
-            <Input
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder={t('tts.instructionsPlaceholder', '输入风格指令，如：用温柔的语气朗读...')}
-              className="bg-background"
-            />
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4">
-          {features.supportsVoiceSelection && (
-            <div>
-              <label className="block text-sm font-medium mb-1.5">
-                {t('tts.voiceLabel', '语音 (Voice)')}
-              </label>
-              <Select value={voice} onValueChange={setVoice}>
-                <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-                  <SelectValue placeholder={voices.length > 0 ? t('tts.selectVoice', '选择语音') : t('tts.enterVoice', '输入语音名称')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {voices.length > 0
-                    ? voices.map((v) => (
-                        <SelectItem key={v.id} value={v.id}>
-                          {v.name || v.id}
-                        </SelectItem>
-                      ))
-                    : FALLBACK_VOICES.map((v) => (
-                        <SelectItem key={v} value={v}>{v}</SelectItem>
-                      ))
-                  }
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          <div className={features.supportsVoiceSelection ? '' : 'col-span-2'}>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.formatLabel', '输出格式')}
-            </label>
-            <Select value={responseFormat} onValueChange={setResponseFormat}>
-              <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {AUDIO_FORMATS.map((f) => (
-                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.speedLabel', '语速')}: {speed}x
-            </label>
-            <Slider
-              value={[speed]}
-              onValueChange={([val]) => setSpeed(val)}
-              min={0.25}
-              max={4}
-              step={0.25}
-              className="w-full mt-2"
-            />
-          </div>
-          <div className="flex items-center gap-3 pt-6">
-            <Switch checked={stream} onCheckedChange={setStream} />
-            <label className="text-sm font-medium">
-              {t('tts.streaming', '流式生成')}
-            </label>
-          </div>
-        </div>
-
-        {features.supportsRefAudio && (
-          <Collapsible open={cloningOpen} onOpenChange={setCloningOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-0 h-auto text-sm font-medium hover:bg-transparent">
-                {t('tts.voiceCloning', '声音克隆')}
-                <ChevronDown className={`w-4 h-4 transition-transform ${cloningOpen ? 'rotate-180' : ''}`} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-4 pt-2">
-              {features.supportsUltimateCloning && (
-                <div className="flex items-center gap-3">
-                  <Switch checked={ultimateCloning} onCheckedChange={setUltimateCloning} />
-                  <div>
-                    <Label className="text-sm font-medium">
-                      {t('tts.ultimateCloning', '终极克隆模式')}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t('tts.ultimateCloningDesc', '使用 prompt_audio + prompt_text 进行精确声音克隆')}
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <ModelSelect
+                    models={ttsModels}
+                    value={model}
+                    onValueChange={(v) => {
+                      setModel(v);
+                      setVoice('');
+                      setUltimateCloning(false);
+                      setRefAudio('');
+                      setPromptAudio('');
+                    }}
+                    placeholder={t('tts.selectModel', '选择 TTS 模型')}
+                    label={t('tts.modelLabel', 'TTS 模型')}
+                    showBackend
+                  />
+                  {backendLabel && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t('tts.backend', '后端')}: {backendLabel}
                     </p>
+                  )}
+                </div>
+
+                {!ultimateCloning && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">
+                      {t('tts.inputLabel', '输入文本')}
+                    </label>
+                    <Textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder={t('tts.inputPlaceholder', '输入要转换为语音的文本...')}
+                      className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
+                      rows={4}
+                    />
+                  </div>
+                )}
+
+                {features.supportsInstructions && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">
+                      {t('tts.instructions', '风格指令')}
+                    </label>
+                    <Input
+                      value={instructions}
+                      onChange={(e) => setInstructions(e.target.value)}
+                      placeholder={t('tts.instructionsPlaceholder', '输入风格指令，如：用温柔的语气朗读...')}
+                      className="bg-background"
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  {features.supportsVoiceSelection && (
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">
+                        {t('tts.voiceLabel', '语音 (Voice)')}
+                      </label>
+                      <Select value={voice} onValueChange={setVoice}>
+                        <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                          <SelectValue placeholder={voices.length > 0 ? t('tts.selectVoice', '选择语音') : t('tts.enterVoice', '输入语音名称')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {voices.length > 0
+                            ? voices.map((v) => (
+                                <SelectItem key={v.id} value={v.id}>
+                                  {v.name || v.id}
+                                </SelectItem>
+                              ))
+                            : FALLBACK_VOICES.map((v) => (
+                                <SelectItem key={v} value={v}>{v}</SelectItem>
+                              ))
+                          }
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className={features.supportsVoiceSelection ? '' : 'col-span-2'}>
+                    <label className="block text-sm font-medium mb-1.5">
+                      {t('tts.formatLabel', '输出格式')}
+                    </label>
+                    <Select value={responseFormat} onValueChange={setResponseFormat}>
+                      <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AUDIO_FORMATS.map((f) => (
+                          <SelectItem key={f.value} value={f.value}>
+                            {f.i18nKey ? t(f.i18nKey, f.label) : f.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">
+                      {t('tts.languageLabel', '语言')}
+                    </label>
+                    <Input
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                      placeholder={t('tts.languagePlaceholder', '如：zh, en, ja')}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 pt-6">
+                    <Switch checked={stream} onCheckedChange={setStream} />
+                    <label className="text-sm font-medium">
+                      {t('tts.streaming', '流式生成')}
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    {t('tts.speedLabel', '语速')}: {speed}x
+                  </label>
+                  <Slider
+                    value={[speed]}
+                    onValueChange={([val]) => setSpeed(val)}
+                    min={0.25}
+                    max={4}
+                    step={0.25}
+                    className="w-full mt-2"
+                  />
+                </div>
+
+                {features.supportsRefAudio && (
+                  <Collapsible open={cloningOpen} onOpenChange={setCloningOpen}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between p-0 h-auto text-sm font-medium hover:bg-transparent">
+                        {t('tts.voiceCloning', '声音克隆')}
+                        <ChevronDown className={`w-4 h-4 transition-transform ${cloningOpen ? 'rotate-180' : ''}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-4 pt-2">
+                      {features.supportsUltimateCloning && (
+                        <div className="flex items-center gap-3">
+                          <Switch checked={ultimateCloning} onCheckedChange={setUltimateCloning} />
+                          <div>
+                            <Label className="text-sm font-medium">
+                              {t('tts.ultimateCloning', '终极克隆模式')}
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              {t('tts.ultimateCloningDesc', '使用 prompt_audio + prompt_text 进行精确声音克隆')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {ultimateCloning ? (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium mb-1.5">
+                              {t('tts.refAudio', '克隆音频')}
+                            </label>
+                            <RefAudioInput value={promptAudio} onChange={setPromptAudio} />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1.5">
+                              {t('tts.refText', '音频转录文本')}
+                            </label>
+                            <Textarea
+                              value={promptText}
+                              onChange={(e) => setPromptText(e.target.value)}
+                              placeholder={t('tts.refTextPlaceholder', '输入音频的转录文本')}
+                              rows={2}
+                              className="bg-background"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium mb-1.5">
+                              {t('tts.refAudio', '参考音频')}
+                            </label>
+                            <RefAudioInput value={refAudio} onChange={setRefAudio} />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1.5">
+                              {t('tts.refText', '参考音频转录文本')}
+                            </label>
+                            <Textarea
+                              value={refText}
+                              onChange={(e) => setRefText(e.target.value)}
+                              placeholder={t('tts.refTextPlaceholder', '输入参考音频的转录文本（可选）')}
+                              rows={2}
+                              className="bg-background"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-between p-0 h-auto text-sm font-medium hover:bg-transparent">
+                      <span className="flex items-center gap-2">
+                        <Settings2 className="w-4 h-4" />
+                        {t('tts.advanced', '高级设置')}
+                      </span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 pt-2">
+                    {features.supportsEmotion && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          {t('tts.emotionLabel', '情感')}
+                        </label>
+                        <Select value={emotion} onValueChange={setEmotion}>
+                          <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                            <SelectValue placeholder={t('tts.emotionDefault', '默认')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">{t('tts.emotionDefault', '默认')}</SelectItem>
+                            <SelectItem value="happy">{t('tts.emotionHappy', '开心')}</SelectItem>
+                            <SelectItem value="sad">{t('tts.emotionSad', '悲伤')}</SelectItem>
+                            <SelectItem value="angry">{t('tts.emotionAngry', '愤怒')}</SelectItem>
+                            <SelectItem value="gentle">{t('tts.emotionGentle', '温柔')}</SelectItem>
+                            <SelectItem value="surprised">{t('tts.emotionSurprised', '惊讶')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          {t('tts.seed', '随机种子')}
+                        </label>
+                        <Input
+                          value={seed}
+                          onChange={(e) => setSeed(e.target.value)}
+                          placeholder={t('tts.seedPlaceholder', '留空为随机')}
+                          type="number"
+                          className="bg-background"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          {t('tts.maxNewTokens', '最大 Token 数')}
+                        </label>
+                        <Input
+                          value={maxNewTokens}
+                          onChange={(e) => setMaxNewTokens(e.target.value)}
+                          placeholder={t('tts.seedPlaceholder', '留空为随机')}
+                          type="number"
+                          className="bg-background"
+                        />
+                      </div>
+                    </div>
+
+                    {features.supportsCfgValue && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          {t('tts.cfgLabel', 'CFG 引导')}: {cfgValue}
+                        </label>
+                        <Slider
+                          value={[parseFloat(cfgValue) || 2]}
+                          onValueChange={([val]) => setCfgValue(String(val))}
+                          min={1}
+                          max={5}
+                          step={0.5}
+                          className="w-full mt-2"
+                        />
+                      </div>
+                    )}
+
+                    {features.supportsInferenceTimesteps && (
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">
+                          {t('tts.stepsLabel', '扩散步数')}: {inferenceTimesteps}
+                        </label>
+                        <Slider
+                          value={[parseInt(inferenceTimesteps) || 10]}
+                          onValueChange={([val]) => setInferenceTimesteps(String(val))}
+                          min={4}
+                          max={30}
+                          step={1}
+                          className="w-full mt-2"
+                        />
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Button
+                  onClick={handleGenerate}
+                  disabled={isGenerating || !model || (!input.trim() && !ultimateCloning)}
+                  className="w-full"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {isStreamActive ? t('tts.streamingInProgress', '流式生成中...') : t('tts.generating', '生成中...')}
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="w-4 h-4 mr-2" />
+                      {t('tts.generate', '生成语音')}
+                    </>
+                  )}
+                </Button>
+
+                {model && (
+                  <div className="border rounded-lg p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-muted-foreground">{t('tts.configManagement', '配置管理')}</h4>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSaveToServer}
+                          disabled={!modelIdForConfig}
+                          className="text-xs h-7"
+                        >
+                          <Save className="w-3.5 h-3.5 mr-1" />
+                          {t('tts.saveToServer', '保存到服务端')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (modelIdForConfig) {
+                              deleteConfig.mutate(modelIdForConfig, {
+                                onSuccess: () => toast.success(t('tts.configDeleted', '配置已删除')),
+                                onError: (err: Error) => toast.error(t('tts.deleteFailed', '删除失败'), err.message),
+                              });
+                            }
+                          }}
+                          disabled={!modelIdForConfig || !ttsConfig}
+                          className="text-xs h-7"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1" />
+                          {t('tts.deleteServerConfig', '删除服务端配置')}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={selectedConfigName}
+                        onChange={(e) => {
+                          if (e.target.value) handleLoadNamedConfig(e.target.value);
+                        }}
+                        className={cn(
+                          "h-8 px-2 text-sm border-2 border-border rounded-md flex-1",
+                          "bg-input text-foreground",
+                          "focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        )}
+                      >
+                        <option value="">{t('tts.selectPreset', '选择预设...')}</option>
+                        {savedConfigs.map(c => (
+                          <option key={c.name} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                      {selectedConfigName && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteNamedConfig(selectedConfigName)}
+                          className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                          title={t('tts.deletePreset', '删除此预设')}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                      <div className="w-px h-6 bg-border" />
+                      <input
+                        type="text"
+                        value={configName}
+                        onChange={(e) => setConfigName(e.target.value)}
+                        placeholder={t('tts.presetName', '预设名称')}
+                        className={cn(
+                          "h-8 px-2 text-sm w-28 border-2 border-border rounded-md",
+                          "bg-input text-foreground",
+                          "focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        )}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveNamedConfig();
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleSaveNamedConfig}
+                        className={cn(
+                          "text-xs h-8",
+                          saveStatus === 'saved' && 'bg-green-600 text-white hover:bg-green-700',
+                          saveStatus === 'error' && 'bg-red-600 text-white hover:bg-red-700'
+                        )}
+                      >
+                        {saveStatus === 'saved' ? `✓ ${t('tts.saved', '已保存')}` : saveStatus === 'error' ? `✗ ${t('tts.saveFailed', '失败')}` : t('tts.savePreset', '保存预设')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 流式播放面板 */}
+              <StreamPlaybackPanel
+                state={streamState}
+                metrics={streamMetrics}
+                pcmChunks={playerRef.current?.pcmChunks ?? []}
+                sampleRate={features.defaultSampleRate}
+                onStop={handleStopStream}
+              />
+
+              {/* 非流式结果 */}
+              {audioUrl && !isStreamActive && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  <h3 className="text-sm font-medium">{t('tts.result', '生成结果')}</h3>
+                  <audio
+                    ref={audioRef}
+                    src={audioUrl}
+                    onEnded={() => setIsPlaying(false)}
+                    onPause={() => setIsPlaying(false)}
+                    onPlay={() => setIsPlaying(true)}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={handlePlayPause}>
+                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={handleDownload} title={t('tts.download', '下载音频')}>
+                      <Download className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               )}
-
-              {ultimateCloning ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      {t('tts.refAudio', '克隆音频')}
-                    </label>
-                    <RefAudioInput value={promptAudio} onChange={setPromptAudio} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      {t('tts.refText', '音频转录文本')}
-                    </label>
-                    <Textarea
-                      value={promptText}
-                      onChange={(e) => setPromptText(e.target.value)}
-                      placeholder={t('tts.refTextPlaceholder', '输入音频的转录文本')}
-                      rows={2}
-                      className="bg-background"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      {t('tts.refAudio', '参考音频')}
-                    </label>
-                    <RefAudioInput value={refAudio} onChange={setRefAudio} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      {t('tts.refText', '参考音频转录文本')}
-                    </label>
-                    <Textarea
-                      value={refText}
-                      onChange={(e) => setRefText(e.target.value)}
-                      placeholder={t('tts.refTextPlaceholder', '输入参考音频的转录文本（可选）')}
-                      rows={2}
-                      className="bg-background"
-                    />
-                  </div>
-                </>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-
-        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-between p-0 h-auto text-sm font-medium hover:bg-transparent">
-              <span className="flex items-center gap-2">
-                <Settings2 className="w-4 h-4" />
-                {t('tts.advanced', '高级设置')}
-              </span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  {t('tts.seed', '随机种子')}
-                </label>
-                <Input
-                  value={seed}
-                  onChange={(e) => setSeed(e.target.value)}
-                  placeholder={t('tts.seedPlaceholder', '留空为随机')}
-                  type="number"
-                  className="bg-background"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  {t('tts.maxNewTokens', '最大 Token 数')}
-                </label>
-                <Input
-                  value={maxNewTokens}
-                  onChange={(e) => setMaxNewTokens(e.target.value)}
-                  placeholder="默认值"
-                  type="number"
-                  className="bg-background"
-                />
-              </div>
             </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        <Button
-          onClick={handleGenerate}
-          disabled={isGenerating || !model || (!input.trim() && !ultimateCloning)}
-          className="w-full"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              {isStreamActive ? '流式生成中...' : t('tts.generating', '生成中...')}
-            </>
-          ) : (
-            <>
-              <Volume2 className="w-4 h-4 mr-2" />
-              {t('tts.generate', '生成语音')}
-            </>
           )}
-        </Button>
-
-        {model && (
-          <div className="border rounded-lg p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-muted-foreground">配置管理</h4>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSaveToServer}
-                  disabled={!modelIdForConfig}
-                  className="text-xs h-7"
-                >
-                  <Save className="w-3.5 h-3.5 mr-1" />
-                  保存到服务端
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (modelIdForConfig) {
-                      deleteConfig.mutate(modelIdForConfig, {
-                        onSuccess: () => toast.success('配置已删除'),
-                        onError: (err: Error) => toast.error('删除失败', err.message),
-                      });
-                    }
-                  }}
-                  disabled={!modelIdForConfig || !ttsConfig}
-                  className="text-xs h-7"
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-1" />
-                  删除服务端配置
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedConfigName}
-                onChange={(e) => {
-                  if (e.target.value) handleLoadNamedConfig(e.target.value);
-                }}
-                className={cn(
-                  "h-8 px-2 text-sm border-2 border-border rounded-md flex-1",
-                  "bg-input text-foreground",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500"
-                )}
-              >
-                <option value="">选择预设...</option>
-                {savedConfigs.map(c => (
-                  <option key={c.name} value={c.name}>{c.name}</option>
-                ))}
-              </select>
-              {selectedConfigName && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteNamedConfig(selectedConfigName)}
-                  className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                  title="删除此预设"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              )}
-              <div className="w-px h-6 bg-border" />
-              <input
-                type="text"
-                value={configName}
-                onChange={(e) => setConfigName(e.target.value)}
-                placeholder="预设名称"
-                className={cn(
-                  "h-8 px-2 text-sm w-28 border-2 border-border rounded-md",
-                  "bg-input text-foreground",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500"
-                )}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSaveNamedConfig();
-                  }
-                }}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleSaveNamedConfig}
-                className={cn(
-                  "text-xs h-8",
-                  saveStatus === 'saved' && 'bg-green-600 text-white hover:bg-green-700',
-                  saveStatus === 'error' && 'bg-red-600 text-white hover:bg-red-700'
-                )}
-              >
-                {saveStatus === 'saved' ? '✓ 已保存' : saveStatus === 'error' ? '✗ 失败' : '保存预设'}
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 流式播放面板 */}
-      <StreamPlaybackPanel
-        state={streamState}
-        metrics={streamMetrics}
-        pcmChunks={playerRef.current?.pcmChunks ?? []}
-        sampleRate={features.defaultSampleRate}
-        onStop={handleStopStream}
-      />
-
-      {/* 非流式结果 */}
-      {audioUrl && !isStreamActive && (
-        <div className="border rounded-lg p-4 space-y-3">
-          <h3 className="text-sm font-medium">{t('tts.result', '生成结果')}</h3>
-          <audio
-            ref={audioRef}
-            src={audioUrl}
-            onEnded={() => setIsPlaying(false)}
-            onPause={() => setIsPlaying(false)}
-            onPlay={() => setIsPlaying(true)}
-          />
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={handlePlayPause}>
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            </Button>
-            <Button variant="outline" size="icon" onClick={handleDownload} title={t('tts.download', '下载音频')}>
-              <Download className="w-4 h-4" />
-            </Button>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

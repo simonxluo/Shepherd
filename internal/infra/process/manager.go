@@ -169,4 +169,3 @@ func (m *Manager) StopAll() []error {
 
 	return errs
 }
-
