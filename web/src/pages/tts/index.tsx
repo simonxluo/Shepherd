@@ -71,7 +71,7 @@ export function TTSPage() {
   const [seed, setSeed] = useState('');
   const [maxNewTokens, setMaxNewTokens] = useState('');
   const [language, setLanguage] = useState('');
-  const [emotion, setEmotion] = useState('');
+  const [emotion, setEmotion] = useState('default');
   const [cfgValue, setCfgValue] = useState('2');
   const [inferenceTimesteps, setInferenceTimesteps] = useState('10');
 
@@ -139,7 +139,7 @@ export function TTSPage() {
       if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
       if (ttsConfig.maxNewTokens !== undefined) setMaxNewTokens(ttsConfig.maxNewTokens);
       if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language);
-      if (ttsConfig.emotion !== undefined) setEmotion(ttsConfig.emotion);
+      if (ttsConfig.emotion !== undefined) setEmotion(ttsConfig.emotion || 'default');
       if (ttsConfig.cfgValue !== undefined) setCfgValue(ttsConfig.cfgValue);
       if (ttsConfig.inferenceTimesteps !== undefined) setInferenceTimesteps(ttsConfig.inferenceTimesteps);
     }
@@ -189,7 +189,7 @@ export function TTSPage() {
       seed: seed || undefined,
       maxNewTokens: maxNewTokens || undefined,
       language: language || undefined,
-      emotion: emotion || undefined,
+      emotion: emotion && emotion !== 'default' ? emotion : undefined,
       cfgValue: cfgValue || undefined,
       inferenceTimesteps: inferenceTimesteps || undefined,
     };
@@ -217,7 +217,7 @@ export function TTSPage() {
       if (cfg.seed !== undefined) setSeed(cfg.seed);
       if (cfg.maxNewTokens !== undefined) setMaxNewTokens(cfg.maxNewTokens);
       if (cfg.language !== undefined) setLanguage(cfg.language);
-      if (cfg.emotion !== undefined) setEmotion(cfg.emotion);
+      if (cfg.emotion !== undefined) setEmotion(cfg.emotion || 'default');
       if (cfg.cfgValue !== undefined) setCfgValue(cfg.cfgValue);
       if (cfg.inferenceTimesteps !== undefined) setInferenceTimesteps(cfg.inferenceTimesteps);
       setSelectedConfigName(name);
@@ -247,7 +247,7 @@ export function TTSPage() {
       seed: seed || undefined,
       maxNewTokens: maxNewTokens || undefined,
       language: language || undefined,
-      emotion: emotion || undefined,
+      emotion: emotion && emotion !== 'default' ? emotion : undefined,
       cfgValue: cfgValue || undefined,
       inferenceTimesteps: inferenceTimesteps || undefined,
     };
@@ -327,7 +327,7 @@ export function TTSPage() {
     if (seed) payload.seed = parseInt(seed, 10) || undefined;
     if (maxNewTokens) payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
     if (language) payload.language = language;
-    if (emotion) payload.emotion = emotion;
+    if (emotion && emotion !== 'default') payload.emotion = emotion;
     if (features.supportsCfgValue && cfgValue) {
       const val = parseFloat(cfgValue);
       if (!isNaN(val)) payload.cfg_value = val;
@@ -378,7 +378,7 @@ export function TTSPage() {
               seed: seed || undefined,
               maxNewTokens: maxNewTokens || undefined,
               language: language || undefined,
-              emotion: emotion || undefined,
+              emotion: emotion && emotion !== 'default' ? emotion : undefined,
               cfgValue: cfgValue || undefined,
               inferenceTimesteps: inferenceTimesteps || undefined,
             };
@@ -660,7 +660,7 @@ export function TTSPage() {
                             <SelectValue placeholder={t('tts.emotionDefault', '默认')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">{t('tts.emotionDefault', '默认')}</SelectItem>
+                            <SelectItem value="default">{t('tts.emotionDefault', '默认')}</SelectItem>
                             <SelectItem value="happy">{t('tts.emotionHappy', '开心')}</SelectItem>
                             <SelectItem value="sad">{t('tts.emotionSad', '悲伤')}</SelectItem>
                             <SelectItem value="angry">{t('tts.emotionAngry', '愤怒')}</SelectItem>
