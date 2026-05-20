@@ -415,7 +415,11 @@
     "refAudioUpload": "上传",
     "refAudioRecord": "录制",
     "refAudioUrl": "链接",
-    "refAudioUrlPlaceholder": "输入音频文件 URL..."
+    "refAudioUrlPlaceholder": "输入音频文件 URL...",
+    "tabs": {
+      "generic": "通用",
+      "voxcpm2": "VoxCPM2"
+    }
   },
   "asr": {
     "title": "语音识别 (ASR)",

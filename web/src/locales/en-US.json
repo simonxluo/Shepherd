@@ -415,7 +415,11 @@
     "refAudioUpload": "Upload",
     "refAudioRecord": "Record",
     "refAudioUrl": "URL",
-    "refAudioUrlPlaceholder": "Enter audio file URL..."
+    "refAudioUrlPlaceholder": "Enter audio file URL...",
+    "tabs": {
+      "generic": "Generic",
+      "voxcpm2": "VoxCPM2"
+    }
   },
   "asr": {
     "title": "Speech Recognition (ASR)",
