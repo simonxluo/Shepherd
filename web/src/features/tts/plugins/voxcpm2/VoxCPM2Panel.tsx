@@ -18,8 +18,8 @@ import {
   type TTSRequest,
   type TTSConfig,
 } from '../../hooks';
-import { RefAudioInput } from '../RefAudioInput';
-import { ConfigManager } from '../ConfigManager';
+import { RefAudioInput } from '../../components/RefAudioInput';
+import { ConfigManager } from '../../components/ConfigManager';
 import { toast } from '@/hooks/useToast';
 import type { TTSPluginPanelProps } from '../../types';
 
