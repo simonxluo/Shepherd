@@ -1,6 +1,6 @@
 import { apiClient } from './client';
 
-// ===== Types =====
+//  Types 
 
 export interface ChatModelInfo {
   id: string;
@@ -31,7 +31,7 @@ export interface Message {
   createdAt: string;
 }
 
-// ===== Streaming Chat =====
+//  Streaming Chat 
 
 export interface ContentPart {
   type: 'text' | 'image_url';
@@ -56,7 +56,7 @@ export interface StreamingChatParams {
  * Chat API — unified object matching the pattern used by downloadsApi, systemApi, etc.
  */
 export const chatApi = {
-  // ===== Models =====
+  //  Models 
 
   getChatModels: async (): Promise<ChatModelInfo[]> => {
     const res = await apiClient.get<{ success: boolean; models: ChatModelInfo[] }>(
@@ -65,7 +65,7 @@ export const chatApi = {
     return res.models ?? [];
   },
 
-  // ===== Conversations =====
+  //  Conversations 
 
   listConversations: (
     limit = 50,
@@ -95,7 +95,7 @@ export const chatApi = {
     await apiClient.delete(`/conversations/${id}`);
   },
 
-  // ===== Messages =====
+  //  Messages 
 
   createMessage: (
     conversationId: string,
@@ -103,7 +103,7 @@ export const chatApi = {
   ): Promise<{ message: Message }> =>
     apiClient.post(`/conversations/${conversationId}/messages`, body),
 
-  // ===== Streaming Chat =====
+  //  Streaming Chat 
 
   streamingChatCompletion: (params: StreamingChatParams): void => {
     const {

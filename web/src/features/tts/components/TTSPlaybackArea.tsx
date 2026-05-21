@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, Download } from 'lucide-react';
+import { Play, Pause, Download, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StreamPlaybackPanel } from './StreamPlaybackPanel';
 import type { StreamState, TTSStreamMetrics } from '../lib/StreamAudioPlayer';
@@ -70,7 +70,13 @@ export function TTSPlaybackArea({
       {/* Non-stream result */}
       {audioUrl && !isStreamActive && (
         <div className="border rounded-lg p-4 space-y-3">
-          <h3 className="text-sm font-medium">{t('tts.result', 'Result')}</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">{t('tts.result', 'Result')}</h3>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <CheckCircle2 className="w-3 h-3 text-green-500" />
+              {t('tts.autoSaved', 'Auto-saved')}
+            </span>
+          </div>
           <audio
             ref={audioRef}
             src={audioUrl}

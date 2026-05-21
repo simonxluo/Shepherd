@@ -3,7 +3,7 @@ import { apiClient } from '@/lib/api/client';
 import i18n from '@/lib/i18n';
 import type { ModelCapabilities } from '@/types';
 
-// ========== Model category ==========
+// Model category
 
 export type ModelCategory = 'all' | 'chat' | 'tts' | 'asr' | 'image' | 'music' | 'embedding' | 'rerank';
 
@@ -43,7 +43,7 @@ export function useAllModelCapabilities(modelIds: string[]) {
   });
 }
 
-// ========== GPU & llama.cpp backend ==========
+// GPU & llama.cpp backend
 
 /**
  * System endpoint GPU info type (Shepherd extended format)
@@ -114,7 +114,7 @@ export function useLlamacppBackends() {
   });
 }
 
-// ========== Model capabilities ==========
+// Model capabilities
 
 /**
  * Model capabilities config hook
@@ -179,7 +179,7 @@ export function useAutoDetectCapabilities() {
   });
 }
 
-// ========== VRAM estimation ==========
+// VRAM estimation
 
 /**
  * VRAM estimation request params

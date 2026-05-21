@@ -40,11 +40,15 @@ release: build-all
 
 # 运行测试
 test:
-	@echo "暂无测试文件，跳过"
+	@echo "运行测试..."
+	@$(GO) test $(GOFLAGS) -v -count=1 ./tests/... ./internal/...
 
 # 运行测试并生成覆盖率
 test-coverage:
-	@echo "暂无测试文件，跳过"
+	@echo "运行测试并生成覆盖率..."
+	@$(GO) test $(GOFLAGS) -v -count=1 -coverprofile=coverage.out ./tests/... ./internal/...
+	@$(GO) tool cover -html=coverage.out -o coverage.html
+	@echo "✓ 覆盖率报告已生成: coverage.html"
 
 # 代码检查
 lint:

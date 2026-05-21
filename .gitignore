@@ -94,6 +94,7 @@ config/*.local.yml
 config/server.config.yaml
 /internal/model/config
 /internal/**/config/
+tests/config/
 .playwright-mcp/*
 
 # Example AGENTS.md (may contain sensitive instructions)

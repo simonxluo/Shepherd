@@ -296,7 +296,7 @@ func (m *Manager) loadModels() {
 		}
 	}
 	logger.Infof("loadModels: successfully loaded models into cache: count=%d", loadedCount)
-	// ========== 合并分卷文件 ==========
+	// 合并分卷文件
 	// 注意：如果配置中已经保存了分卷信息，这里不需要再次合并
 	// 但如果配置中没有分卷信息，则尝试合并
 	mergedCount := m.mergeSplitModels()

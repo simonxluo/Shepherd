@@ -102,7 +102,7 @@ func (m *nodeClientManager) SendCommand(clientID string, command *node.Command) 
 	}, nil
 }
 
-// ==================== 节点管理 API ====================
+// 节点管理 API
 
 // RegisterNode registers a new node in the cluster.
 // @Summary      Register a node
@@ -331,7 +331,7 @@ func (a *NodeAdapter) UnregisterNode(c *gin.Context) {
 	})
 }
 
-// ==================== 心跳管理 API ====================
+// 心跳管理 API
 
 // HandleHeartbeat processes a heartbeat from a node.
 // @Summary      Process node heartbeat
@@ -385,7 +385,7 @@ func (a *NodeAdapter) HandleHeartbeat(c *gin.Context) {
 	})
 }
 
-// ==================== 命令管理 API ====================
+// 命令管理 API
 
 // SendCommand sends a command to a specific node.
 // @Summary      Send command to node
@@ -542,11 +542,11 @@ func (a *NodeAdapter) ReportCommandResult(c *gin.Context) {
 	SuccessWithMessage(c, "命令结果已记录")
 }
 
-// ==================== 路由注册 ====================
+// 路由注册
 
 // RegisterRoutes 注册所有 API 路由（统一版本）
 func (a *NodeAdapter) RegisterRoutes(router *gin.RouterGroup) {
-	// ========== 主路由：/api/nodes/* ==========
+	// 主路由：/api/nodes/*
 	nodes := router.Group("/nodes")
 	{
 		// 节点管理
@@ -561,24 +561,24 @@ func (a *NodeAdapter) RegisterRoutes(router *gin.RouterGroup) {
 		nodes.POST("/:id/test", a.TestNodeLlamacpp)
 	}
 
-	// ========== 全局路由 ==========
+	// 全局路由
 	router.POST("/heartbeat", a.HandleHeartbeat)
 	router.POST("/command/result", a.ReportCommandResult)
 
-	// ========== 任务管理 ==========
+	// 任务管理
 	router.POST("/tasks", a.CreateTask)
 	router.GET("/tasks", a.ListTasks)
 	router.DELETE("/tasks/:id", a.DeleteTask)
 	router.POST("/tasks/:id/retry", a.RetryTask)
 
-	// ========== 网络扫描 ==========
+	// 网络扫描
 	router.POST("/scan", a.HandleScanClients)
 	router.GET("/scan/status", a.GetClientScanStatus)
 
-	// ========== 集群概览 ==========
+	// 集群概览
 	router.GET("/overview", a.GetClusterOverview)
 
-	// ========== 兼容性路由（已废弃）==========
+	// 兼容性路由（已废弃）
 	a.registerDeprecatedRoutes(router)
 
 	a.log.Infof("Node API 适配器路由已注册")
@@ -648,7 +648,7 @@ func (a *NodeAdapter) deprecationWarningMiddleware() gin.HandlerFunc {
 	}
 }
 
-// ==================== 辅助方法 ====================
+// 辅助方法
 
 // HandleScanClients initiates a network scan for client nodes.
 // @Summary      Scan for clients
@@ -691,7 +691,7 @@ func (a *NodeAdapter) GetClientScanStatus(c *gin.Context) {
 	Success(c, status)
 }
 
-// ==================== 任务管理 API ====================
+// 任务管理 API
 
 // ListTasks returns all scheduled tasks.
 // @Summary      List tasks
@@ -820,7 +820,7 @@ func (a *NodeAdapter) RetryTask(c *gin.Context) {
 	})
 }
 
-// ==================== 兼容性 API 方法 ====================
+// 兼容性 API 方法
 
 // ListClients returns the client list in frontend-expected format.
 // @Summary      List clients

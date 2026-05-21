@@ -20,7 +20,7 @@ func main() {
 			fmt.Println("\n" + string(make([]byte, 60)))
 		}
 
-		fmt.Printf("\n========== 测试文件 %d: %s ==========\n", i+1, filepath.Base(path))
+		fmt.Printf("\n测试文件 %d: %s\n", i+1, filepath.Base(path))
 
 		// 检查文件是否存在
 		if _, err := os.Stat(path); os.IsNotExist(err) {

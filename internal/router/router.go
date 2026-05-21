@@ -17,6 +17,7 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/openai"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/paths"
 	storageapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/storage"
+	ttsapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/tts"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,7 @@ type Handlers struct {
 	Filesystem    *filesystemapi.Handler
 	Benchmark     *benchmarkapi.Handler
 	Chat          *chatapi.Handler
+	TTS           *ttsapi.Handler
 }
 
 // ServerHandlers defines the interface for server-owned handler methods
@@ -163,6 +165,7 @@ func registerRoutes(
 		registerProcessRoutes(apiGroup, sh)
 		registerLogRoutes(apiGroup, sh)
 		registerSystemRoutes(apiGroup, h)
+		registerTTSRoutes(apiGroup, h)
 
 		apiGroup.GET("/model/device/list", h.Benchmark.GetDevices)
 		apiGroup.GET("/models/param/benchmark/list", h.Benchmark.GetParams)
@@ -347,6 +350,21 @@ func registerSystemRoutes(apiGroup *gin.RouterGroup, h *Handlers) {
 	{
 		system.GET("/filesystem", h.Filesystem.ListDirectory)
 		system.POST("/filesystem/validate", h.Filesystem.ValidatePath)
+	}
+}
+
+func registerTTSRoutes(apiGroup *gin.RouterGroup, h *Handlers) {
+	if h.TTS == nil {
+		return
+	}
+	tts := apiGroup.Group("/tts")
+	{
+		tts.GET("/history", h.TTS.ListHistory)
+		tts.GET("/history/:id", h.TTS.GetHistory)
+		tts.POST("/history", h.TTS.CreateHistory)
+		tts.PUT("/history/:id/favourite", h.TTS.ToggleFavourite)
+		tts.DELETE("/history/:id", h.TTS.DeleteHistory)
+		tts.GET("/audio/:id", h.TTS.ServeAudio)
 	}
 }
 

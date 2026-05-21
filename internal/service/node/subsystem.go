@@ -186,7 +186,7 @@ func (sm *SubsystemManager) IsRunning() bool {
 	return sm.running
 }
 
-// ==================== 内置子系统实现 ====================
+// 内置子系统实现
 
 // HeartbeatSubsystem manages heartbeats for client nodes
 type HeartbeatSubsystem struct {

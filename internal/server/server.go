@@ -25,6 +25,7 @@ import (
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/openai"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/paths"
 	storageapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/storage"
+	ttsapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/tts"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/download"
 	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/infra/modelrepo"
 	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
@@ -155,6 +156,7 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.Filesystem = filesystemapi.NewHandler()
 	s.handlers.Benchmark = benchmarkapi.NewHandler(logger.GetLogger(), storageMgr.GetStore())
 	s.handlers.Chat = chatapi.NewHandler(modelMgr)
+	s.handlers.TTS = ttsapi.NewHandler(storageMgr, "./data/tts")
 
 	// Setup Gin engine
 	if config.WebUIPath == "" {

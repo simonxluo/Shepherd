@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, Mic, MicOff, Link, X } from 'lucide-react';
+import { Upload, Mic, MicOff, Link, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useTTSHistory } from '../historyHooks';
+import { getTTSAudioUrl, type TTSHistoryItem } from '../api';
 
-type InputMode = 'upload' | 'record' | 'url';
+type InputMode = 'upload' | 'record' | 'url' | 'history';
 
 interface RefAudioInputProps {
   value: string;
@@ -67,6 +69,11 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
     }
   };
 
+  const handleSelectFromHistory = (item: TTSHistoryItem) => {
+    const audioUrl = getTTSAudioUrl(item.id);
+    onChange(audioUrl);
+  };
+
   const clearValue = () => onChange('');
 
   const hasValue = !!value;
@@ -79,6 +86,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
           { key: 'upload' as InputMode, icon: Upload, label: t('tts.refAudioUpload', '上传') },
           { key: 'record' as InputMode, icon: Mic, label: t('tts.refAudioRecord', '录制') },
           { key: 'url' as InputMode, icon: Link, label: t('tts.refAudioUrl', '链接') },
+          { key: 'history' as InputMode, icon: Clock, label: t('tts.refAudioHistory', '历史') },
         ]).map(({ key, icon: Icon, label }) => (
           <Button
             key={key}
@@ -153,6 +161,48 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
           className="bg-background"
         />
       )}
+
+      {/* History mode */}
+      {mode === 'history' && (
+        <HistoryPicker onSelect={handleSelectFromHistory} selectedUrl={value} />
+      )}
+    </div>
+  );
+}
+
+/** Sub-component: pick a past TTS generation as reference */
+function HistoryPicker({ onSelect, selectedUrl }: { onSelect: (item: TTSHistoryItem) => void; selectedUrl: string }) {
+  const { t } = useTranslation();
+  const { data, isLoading } = useTTSHistory({ limit: 20 });
+
+  const items = data?.items ?? [];
+
+  if (isLoading) {
+    return <p className="text-xs text-muted-foreground py-2">{t('tts.historyLoading', 'Loading...')}</p>;
+  }
+
+  if (items.length === 0) {
+    return <p className="text-xs text-muted-foreground py-2">{t('tts.noHistory', 'No TTS history yet')}</p>;
+  }
+
+  return (
+    <div className="max-h-40 overflow-y-auto space-y-1 border rounded-lg p-2">
+      {items.map((item) => {
+        const itemUrl = getTTSAudioUrl(item.id);
+        const isSelected = selectedUrl === itemUrl;
+        return (
+          <button
+            key={item.id}
+            onClick={() => onSelect(item)}
+            className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-accent/50 transition-colors ${
+              isSelected ? 'bg-primary/10 border border-primary/30' : ''
+            }`}
+          >
+            <p className="truncate">{item.inputText}</p>
+            <p className="text-xs text-muted-foreground">{item.model} &middot; {item.format}</p>
+          </button>
+        );
+      })}
     </div>
   );
 }

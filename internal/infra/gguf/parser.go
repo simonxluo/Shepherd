@@ -44,7 +44,7 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		Extra: make(map[string]interface{}),
 	}
 
-	// ========== 从 gguf-parser-go 直接获取的元数据 ==========
+	// 从 gguf-parser-go 直接获取的元数据
 
 	// 基本信息
 	meta.Name = gmeta.Name
@@ -70,7 +70,7 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 	meta.FileSize = uint64(gmeta.FileSize)
 	meta.ModelSize = uint64(gmeta.Size)
 
-	// ========== 从 Header.MetadataKV 中读取架构特定字段 ==========
+	// 从 Header.MetadataKV 中读取架构特定字段
 	metadataKV := p.file.Header.MetadataKV
 
 	// 辅助函数：从 KV map 中获取值
@@ -98,7 +98,7 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		}
 	}
 
-	// ========== 读取架构特定字段 ==========
+	// 读取架构特定字段
 	// 不同架构使用不同的前缀，如 llama.context_length, qwen3next.context_length, gpt-oss.context_length
 	// 使用架构名称动态构建键名
 
@@ -157,7 +157,7 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		}
 	}
 
-	// ========== Tokenizer 信息 ==========
+	// Tokenizer 信息
 	if kv, ok := getKV("tokenizer.ggml.model"); ok {
 		meta.TokenizerModel = kv.ValueString()
 	}
@@ -204,18 +204,18 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		}
 	}
 
-	// ========== Chat Template - 用于能力检测 ==========
+	// Chat Template - 用于能力检测
 	// 读取 tokenizer.chat_template（Jinja 模板用于对话格式化）
 	if kv, ok := getKV("tokenizer.chat_template"); ok {
 		meta.ChatTemplate = kv.ValueString()
 	}
 
-	// ========== 架构特定信息 ==========
+	// 架构特定信息
 	// 读取 pooling_type 等架构级别的元数据
 	archInfo := p.file.Architecture()
 	meta.PoolingType = archInfo.PoolingType
 
-	// ========== 计算量化字符串 ==========
+	// 计算量化字符串
 	meta.Quantization = meta.GetQuantizationString()
 
 	return meta, nil

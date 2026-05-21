@@ -649,7 +649,7 @@ func (n *Node) GetLlamacppInfo() *LlamacppInfo {
 	return n.resource.GetLlamacppInfo()
 }
 
-// ==================== Master 功能：客户端管理 ====================
+// Master 功能：客户端管理
 // 以下方法供 Master 角色使用
 
 // clients 存储已注册的客户端节点
@@ -817,7 +817,7 @@ func (n *Node) GetClientCount() (total, online, offline, busy int) {
 	return total, online, offline, busy
 }
 
-// ==================== Client 功能：命令管理 ====================
+// Client 功能：命令管理
 // 以下方法供 Client 角色使用
 
 // pendingCommands 存储待执行的命令
@@ -881,7 +881,7 @@ func (n *Node) GetPendingCommands(nodeID string) []*Command {
 	return result
 }
 
-// ==================== 命令结果存储 ====================
+// 命令结果存储
 
 // StoreCommandResult 存储命令执行结果
 func (n *Node) StoreCommandResult(result *CommandResult) error {

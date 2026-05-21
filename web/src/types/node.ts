@@ -65,7 +65,7 @@ export interface NodeCapabilities {
 }
 
 /**
- * ==================== Unified Node Types (v0.2.0+) ====================
+ * Unified Node Types (v0.2.0+)
  */
 
 /**
@@ -91,7 +91,7 @@ export interface UnifiedNode {
 }
 
 /**
- * ==================== Type Aliases (Backward Compatibility) ====================
+ * Type Aliases (Backward Compatibility)
  */
 
 /**

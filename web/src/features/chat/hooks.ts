@@ -5,14 +5,14 @@ import {
   type StreamingChatParams,
 } from '@/lib/api/chat';
 
-// ===== Query keys =====
+//  Query keys 
 const chatKeys = {
   models: ['chat', 'models'] as const,
   conversations: ['chat', 'conversations'] as const,
   conversation: (id: string) => ['chat', 'conversations', id] as const,
 };
 
-// ===== Model hooks =====
+//  Model hooks 
 
 export function useChatModels() {
   return useQuery({
@@ -23,7 +23,7 @@ export function useChatModels() {
   });
 }
 
-// ===== Conversation hooks =====
+//  Conversation hooks 
 
 export function useConversations() {
   return useQuery({
@@ -88,7 +88,7 @@ export function useSaveMessage() {
   });
 }
 
-// ===== Streaming chat hook =====
+//  Streaming chat hook 
 
 export interface UseStreamingChatOptions {
   onChunk?: (text: string) => void;

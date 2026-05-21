@@ -68,7 +68,7 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 	result.Duration = time.Since(result.ScannedAt)
 	logger.Infof("模型扫描完成: totalModels=%d, duration=%s, totalErrors=%d", len(result.Models), result.Duration.String(), len(result.Errors))
 
-	// ========== 修复：从数据库加载用户设置的属性 ==========
+	// 修复：从数据库加载用户设置的属性
 	// 从数据库加载所有模型的元数据（别名、收藏、标签、描述、使用统计等）
 	modelMetadataMap := make(map[string]*storage.ModelMetadata)
 	if m.storageMgr != nil {
@@ -81,7 +81,6 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 			logger.Infof("从数据库加载模型元数据: count=%d", len(metadata))
 		}
 	}
-	// ==============================================
 
 	// Update models map（合并扫描结果，保留扫描路径之外的模型）
 	m.mu.Lock()
@@ -111,7 +110,7 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 		}
 	}
 
-	// ========== 修复：恢复用户设置的属性 ==========
+	// 修复：恢复用户设置的属性
 	// 将数据库中的用户属性合并回新扫描的模型中
 	for id, model := range m.models {
 		if metadata, exists := modelMetadataMap[id]; exists {
@@ -128,9 +127,8 @@ func (m *Manager) Scan(ctx context.Context) (*ScanResult, error) {
 			logger.Debugf("恢复模型用户属性: id=%s, alias=%s, favourite=%v", id, metadata.Alias, metadata.Favourite)
 		}
 	}
-	// ==============================================
 
-	// ========== 新增：合并分卷文件 ==========
+	// 新增：合并分卷文件
 	mergedCount := m.mergeSplitModels()
 	if mergedCount > 0 {
 		logger.Infof("已合并分卷文件: mergedCount=%d", mergedCount)
@@ -743,7 +741,7 @@ func (m *Manager) mergeSplitModels() int {
 			shardFiles[i] = m.Path
 		}
 
-		// ========== 查找并添加 mmproj 文件大小 ==========
+		// 查找并添加 mmproj 文件大小
 		// 参考 LlamacppServer GGUFBundle.java 的实现
 		mmprojSize := int64(0)
 		mmprojPath := ""
