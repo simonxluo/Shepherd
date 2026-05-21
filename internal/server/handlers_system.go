@@ -470,6 +470,79 @@ func (s *Server) HandleStopProcess(c *gin.Context) {
 	})
 }
 
+// HandleGetResources returns real-time system resource usage.
+// @Summary      Get system resources
+// @Description  Returns current CPU, memory, disk, GPU usage, load average, and uptime
+// @Tags         System
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/system/resources [get]
+func (s *Server) HandleGetResources(c *gin.Context) {
+	// Try to get resources from the node adapter
+	if s.nodeAdapter != nil {
+		snapshot := s.nodeAdapter.GetResourceSnapshot()
+		if snapshot != nil {
+			// Calculate percentages
+			var cpuPercent, memPercent, diskPercent float64
+			if snapshot.CPUTotal > 0 {
+				cpuPercent = float64(snapshot.CPUUsed) / float64(snapshot.CPUTotal) * 100
+			}
+			if snapshot.MemoryTotal > 0 {
+				memPercent = float64(snapshot.MemoryUsed) / float64(snapshot.MemoryTotal) * 100
+			}
+			if snapshot.DiskTotal > 0 {
+				diskPercent = float64(snapshot.DiskUsed) / float64(snapshot.DiskTotal) * 100
+			}
+
+			// Build GPU array
+			gpuList := []gin.H{}
+			for _, g := range snapshot.GPUInfo {
+				gpuList = append(gpuList, gin.H{
+					"index":       g.Index,
+					"name":        g.Name,
+					"vendor":      g.Vendor,
+					"memoryUsed":  g.UsedMemory,
+					"memoryTotal": g.TotalMemory,
+				})
+			}
+
+			api.Success(c, gin.H{
+				"cpu": gin.H{
+					"used":    snapshot.CPUUsed,
+					"total":   snapshot.CPUTotal,
+					"percent": cpuPercent,
+				},
+				"memory": gin.H{
+					"used":    snapshot.MemoryUsed,
+					"total":   snapshot.MemoryTotal,
+					"percent": memPercent,
+				},
+				"disk": gin.H{
+					"used":    snapshot.DiskUsed,
+					"total":   snapshot.DiskTotal,
+					"percent": diskPercent,
+				},
+				"gpu":           gpuList,
+				"loadAverage":   snapshot.LoadAverage,
+				"uptime":        snapshot.Uptime,
+				"kernelVersion": snapshot.KernelVersion,
+				"rocmVersion":   snapshot.ROCmVersion,
+			})
+			return
+		}
+	}
+
+	// Fallback: return empty/minimal response if no resource monitor available
+	api.Success(c, gin.H{
+		"cpu":         gin.H{"used": 0, "total": 0, "percent": 0},
+		"memory":      gin.H{"used": 0, "total": 0, "percent": 0},
+		"disk":        gin.H{"used": 0, "total": 0, "percent": 0},
+		"gpu":         []gin.H{},
+		"loadAverage": []float64{0, 0, 0},
+		"uptime":      0,
+	})
+}
+
 // HandleLogStreamText streams server logs as plain text in real-time.
 // @Summary      Stream server logs
 // @Description  Streams server logs in real-time as plain text using chunked transfer encoding

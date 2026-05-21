@@ -54,6 +54,7 @@ type ServerHandlers interface {
 	HandleServerInfo(c *gin.Context)
 	HandleGetGPUs(c *gin.Context)
 	HandleGetLlamacppBackends(c *gin.Context)
+	HandleGetResources(c *gin.Context)
 	HandleGetConfig(c *gin.Context)
 	HandleUpdateConfig(c *gin.Context)
 	HandleListModels(c *gin.Context)
@@ -155,6 +156,7 @@ func registerRoutes(
 		apiGroup.GET("/info", sh.HandleServerInfo)
 		apiGroup.GET("/system/gpus", sh.HandleGetGPUs)
 		apiGroup.GET("/system/llamacpp-backends", sh.HandleGetLlamacppBackends)
+		apiGroup.GET("/system/resources", sh.HandleGetResources)
 
 		registerConfigRoutes(apiGroup, h, sh)
 		registerConversationRoutes(apiGroup, h)

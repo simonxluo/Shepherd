@@ -991,3 +991,11 @@ func (a *NodeAdapter) TestNodeLlamacpp(c *gin.Context) {
 		"commandID": cmd.ID,
 	})
 }
+
+// GetResourceSnapshot returns the current resource snapshot from the node.
+func (a *NodeAdapter) GetResourceSnapshot() *node.NodeResources {
+	if a.node == nil {
+		return nil
+	}
+	return a.node.GetResourceSnapshot()
+}

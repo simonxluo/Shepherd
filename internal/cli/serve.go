@@ -17,8 +17,6 @@ var (
 	flagConfig string
 	flagWeb    bool
 	flagBuild  bool
-	flagHost   string
-	flagPort   int
 )
 
 var serveCmd = &cobra.Command{
@@ -42,8 +40,6 @@ func init() {
 	serveCmd.Flags().StringVarP(&flagConfig, "config", "c", "", "配置文件路径")
 	serveCmd.Flags().BoolVarP(&flagWeb, "web", "w", false, "同时启动前端开发服务器")
 	serveCmd.Flags().BoolVarP(&flagBuild, "build", "b", false, "启动前先编译")
-	serveCmd.Flags().StringVar(&flagHost, "host", "", "监听地址 (覆盖配置文件)")
-	serveCmd.Flags().IntVar(&flagPort, "port", 0, "监听端口 (覆盖配置文件)")
 
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.SetOut(os.Stdout)
@@ -100,10 +96,10 @@ func runServe(cmd *cobra.Command, args []string) error {
 	var execArgs []string
 	execArgs = append(execArgs, "run-server")
 	execArgs = append(execArgs, "--config="+configPath)
-	if flagHost != "" {
+	if cmd.Flags().Changed("host") || rootCmd.PersistentFlags().Changed("host") {
 		execArgs = append(execArgs, "--host="+flagHost)
 	}
-	if flagPort > 0 {
+	if cmd.Flags().Changed("port") || rootCmd.PersistentFlags().Changed("port") {
 		execArgs = append(execArgs, fmt.Sprintf("--port=%d", flagPort))
 	}
 
