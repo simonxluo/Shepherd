@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -118,7 +119,7 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 		config TEXT NOT NULL,
 		created_at INTEGER NOT NULL,
 		updated_at INTEGER NOT NULL,
-		UNIQUE(node_id, model_id)
+		name TEXT NOT NULL DEFAULT ''
 	);
 
 	CREATE TABLE IF NOT EXISTS model_metadata (
@@ -223,32 +224,68 @@ func (s *SQLiteStore) migrateCapabilitiesColumn() error {
 	return nil
 }
 
-// migrateModelLoadConfigsTable adds name column and unique index for multi-preset support
+// migrateModelLoadConfigsTable adds name column and unique index for multi-preset support.
+// Also recreates the table to remove the legacy UNIQUE(node_id, model_id) table-level constraint,
+// which SQLite cannot drop via ALTER TABLE.
 func (s *SQLiteStore) migrateModelLoadConfigsTable() error {
-	nameExists := false
-	rows, err := s.db.Query("PRAGMA table_info(model_load_configs)")
+	// 检查表级 UNIQUE(node_id, model_id) 约束是否仍然存在
+	var hasLegacyConstraint bool
+	var sql string
+	err := s.db.QueryRow("SELECT sql FROM sqlite_master WHERE type='table' AND name='model_load_configs'").Scan(&sql)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check table schema: %w", err)
 	}
-	defer utils.CloseQuietly(rows)
+	hasLegacyConstraint = strings.Contains(sql, "UNIQUE(node_id, model_id)")
 
-	for rows.Next() {
-		var cid int
-		var name, colType string
-		var notnull, pk int
-		var dflt_value interface{}
-		if err := rows.Scan(&cid, &name, &colType, &notnull, &dflt_value, &pk); err != nil {
+	if hasLegacyConstraint {
+		// SQLite 不支持 ALTER TABLE DROP CONSTRAINT，需要重建表
+		steps := []string{
+			"ALTER TABLE model_load_configs RENAME TO model_load_configs_old",
+			`CREATE TABLE model_load_configs (
+				id TEXT PRIMARY KEY,
+				node_id TEXT NOT NULL,
+				model_id TEXT NOT NULL,
+				model_name TEXT NOT NULL,
+				config TEXT NOT NULL,
+				created_at INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL,
+				name TEXT NOT NULL DEFAULT ''
+			)`,
+			"INSERT INTO model_load_configs SELECT id, node_id, model_id, model_name, config, created_at, updated_at, '' FROM model_load_configs_old",
+			"DROP TABLE model_load_configs_old",
+		}
+		for _, stmt := range steps {
+			if _, err := s.db.Exec(stmt); err != nil {
+				return fmt.Errorf("failed to rebuild model_load_configs table (%s): %w", stmt, err)
+			}
+		}
+	} else {
+		// 表结构正确，只需确保 name 列存在
+		nameExists := false
+		rows, err := s.db.Query("PRAGMA table_info(model_load_configs)")
+		if err != nil {
 			return err
 		}
-		if name == "name" {
-			nameExists = true
-			break
-		}
-	}
+		defer utils.CloseQuietly(rows)
 
-	if !nameExists {
-		if _, err := s.db.Exec("ALTER TABLE model_load_configs ADD COLUMN name TEXT NOT NULL DEFAULT ''"); err != nil {
-			return fmt.Errorf("failed to add name column: %w", err)
+		for rows.Next() {
+			var cid int
+			var name, colType string
+			var notnull, pk int
+			var dflt_value interface{}
+			if err := rows.Scan(&cid, &name, &colType, &notnull, &dflt_value, &pk); err != nil {
+				return err
+			}
+			if name == "name" {
+				nameExists = true
+				break
+			}
+		}
+
+		if !nameExists {
+			if _, err := s.db.Exec("ALTER TABLE model_load_configs ADD COLUMN name TEXT NOT NULL DEFAULT ''"); err != nil {
+				return fmt.Errorf("failed to add name column: %w", err)
+			}
 		}
 	}
 

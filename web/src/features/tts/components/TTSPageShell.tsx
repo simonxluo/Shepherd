@@ -1,5 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { Volume2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useLoadedModels } from '@/features/creative/hooks';
 import { useTTS, getTTSModelFeatures, type TTSRequest } from '../hooks';
 import { StreamAudioPlayer, type StreamState, type TTSStreamMetrics } from '../lib/StreamAudioPlayer';
@@ -15,6 +18,7 @@ import '../plugins/voxcpm2';
 
 export function TTSPageShell() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data: allModels = [] } = useLoadedModels();
 
   // Filter to TTS-capable models only
@@ -178,8 +182,26 @@ export function TTSPageShell() {
               <h1 className="text-2xl font-bold text-foreground">
                 {t('tts.title', 'Text-to-Speech (TTS)')}
               </h1>
+              <p className="text-muted-foreground">
+                {t('tts.description', 'Convert text to natural speech with streaming playback and voice cloning')}
+              </p>
             </div>
 
+            {ttsModels.length === 0 ? (
+              <div className="flex flex-col items-center rounded-lg border border-dashed p-8 text-center">
+                <Volume2 className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm font-medium">{t('tts.noModels', 'No loaded TTS models')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('tts.noModelsHint', 'Please load a model that supports text-to-speech first')}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => navigate('/models')}
+                >
+                  {t('tts.goToModels', 'Go to Model Management')}
+                </Button>
+              </div>
+            ) : (
             <div className="space-y-6">
               {/* Plugin panel */}
               {PanelComponent && <PanelComponent {...panelProps} />}
@@ -195,6 +217,7 @@ export function TTSPageShell() {
                 responseFormat={currentFeatures.defaultFormat}
               />
             </div>
+            )}
           </div>
         </div>
 
