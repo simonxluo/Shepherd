@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { MessageSquare, Plus, Trash2, Loader2, History, X, CircleDot, Pencil, Check, Search } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Loader2, History, X, CircleDot, Pencil, Check, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ChatMessage } from '@/features/chat/components/ChatMessage';
 import { ChatInput } from '@/features/chat/components/ChatInput';
+import { ChatParams } from '@/features/chat/components/ChatParams';
 import {
   useChatModels,
   useConversations,
@@ -23,6 +24,7 @@ import {
   type ChatModelInfo,
 } from '@/features/chat';
 import { chatApi } from '@/lib/api/chat';
+import type { GenerationStats, ContentPart } from '@/lib/api/chat';
 import { toast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 import { useChatStore } from '@/stores/chatStore';
@@ -32,6 +34,7 @@ interface DisplayMessage {
   content: string;
   images?: string[];
   timestamp: number;
+  stats?: GenerationStats;
 }
 
 function groupConversations(conversations: { id: string; title?: string; model: string; updatedAt: string }[], t: TFunction) {
@@ -71,6 +74,9 @@ export function ChatPage() {
   const setSelectedModel = useChatStore((s) => s.setSelectedModel);
   const setShowSidebar = useChatStore((s) => s.setShowSidebar);
   const toggleSidebar = useChatStore((s) => s.toggleSidebar);
+  const systemPrompt = useChatStore((s) => s.systemPrompt);
+  const setSystemPrompt = useChatStore((s) => s.setSystemPrompt);
+  const samplingParams = useChatStore((s) => s.samplingParams);
 
   // Models
   const { data: models = [], isLoading: modelsLoading } = useChatModels();
@@ -93,17 +99,19 @@ export function ChatPage() {
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [editingConvId, setEditingConvId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const initialLoadDone = useRef(false);
 
   const streaming = useStreamingChat({
     onChunk: (text) => {
       setCurrentResponse((prev) => prev + text);
     },
-    onComplete: (fullText) => {
+    onComplete: (fullText, stats) => {
       const assistantMsg: DisplayMessage = {
         role: 'assistant',
         content: fullText,
         timestamp: Date.now(),
+        stats,
       };
       setMessages((prev) => {
         const updated = [...prev, assistantMsg];
@@ -189,6 +197,44 @@ export function ChatPage() {
     }
   }, [activeConvId, selectedModelInfo, selectedModel, createConv, setActiveConvId, toast]);
 
+  const sendMessages = useCallback(
+    (messagesToSend: DisplayMessage[]) => {
+      const modelId = selectedModelInfo?.id ?? selectedModel;
+
+      // Build message content — multimodal if images present
+      const apiMessages: { role: string; content: string | ContentPart[] }[] = [];
+
+      // Inject system prompt if set
+      if (systemPrompt.trim()) {
+        apiMessages.push({ role: 'system', content: systemPrompt.trim() });
+      }
+
+      for (const m of messagesToSend) {
+        if (m.role === 'system') continue; // skip display-level system messages
+        if (m.images?.length) {
+          const parts: ContentPart[] = [
+            { type: 'text', text: m.content },
+            ...m.images.map((url): ContentPart => ({ type: 'image_url', image_url: { url } })),
+          ];
+          apiMessages.push({ role: m.role, content: parts });
+        } else {
+          apiMessages.push({ role: m.role, content: m.content });
+        }
+      }
+
+      streaming.send({
+        model: modelId,
+        messages: apiMessages,
+        temperature: samplingParams.temperature,
+        topP: samplingParams.topP,
+        topK: samplingParams.topK,
+        maxTokens: samplingParams.maxTokens,
+        repeatPenalty: samplingParams.repeatPenalty,
+      });
+    },
+    [selectedModel, selectedModelInfo, systemPrompt, samplingParams, streaming],
+  );
+
   const handleSend = useCallback(
     async (content: string, images?: string[]) => {
       if (!selectedModel) {
@@ -234,28 +280,7 @@ export function ChatPage() {
         }
       }
 
-      const modelId = selectedModelInfo?.id ?? selectedModel;
-
-      // Build message content — multimodal if images present
-      const apiMessages = newMessages.map((m) => {
-        if (m.images?.length) {
-          return {
-            role: m.role,
-            content: [
-              { type: 'text' as const, text: m.content },
-              ...m.images.map((url) => ({ type: 'image_url' as const, image_url: { url } })),
-            ],
-          };
-        }
-        return { role: m.role, content: m.content };
-      });
-
-      streaming.send({
-        model: modelId,
-        messages: apiMessages,
-        temperature: 0.7,
-        topP: 0.95,
-      });
+      sendMessages(newMessages);
 
       const loadingTimeout = setTimeout(() => setModelLoading(false), 15_000);
       return () => clearTimeout(loadingTimeout);
@@ -266,10 +291,23 @@ export function ChatPage() {
       ensureConversation,
       saveMessage,
       updateConv,
-      streaming,
+      sendMessages,
       toast,
     ],
   );
+
+  const handleRegenerate = (messageIndex: number) => {
+    if (isStreaming || !selectedModel) return;
+
+    // Remove the assistant message at messageIndex and everything after
+    const newMessages = messagesRef.current.slice(0, messageIndex);
+    setMessages(newMessages);
+    messagesRef.current = newMessages;
+    setIsStreaming(true);
+    setCurrentResponse('');
+
+    sendMessages(newMessages);
+  };
 
   // Clear model loading once we receive first chunk
   useEffect(() => {
@@ -568,6 +606,33 @@ export function ChatPage() {
           </div>
         </div>
 
+        {/* System prompt section */}
+        <div className="border-b">
+          <button
+            type="button"
+            onClick={() => setShowSystemPrompt(!showSystemPrompt)}
+            className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
+          >
+            <span>{t('chat.systemPrompt.title')}</span>
+            {systemPrompt.trim() && (
+              <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                {t('chat.systemPrompt.active')}
+              </span>
+            )}
+            {showSystemPrompt ? <ChevronUp className="w-3.5 h-3.5 ml-auto" /> : <ChevronDown className="w-3.5 h-3.5 ml-auto" />}
+          </button>
+          {showSystemPrompt && (
+            <div className="px-4 pb-3">
+              <textarea
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                placeholder={t('chat.systemPrompt.placeholder')}
+                className="w-full h-20 px-3 py-2 text-sm bg-background border border-input rounded-md resize-none outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+              />
+            </div>
+          )}
+        </div>
+
         {/* Model loading indicator */}
         {modelLoading && (
           <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 text-sm text-yellow-600 dark:text-yellow-400">
@@ -592,7 +657,15 @@ export function ChatPage() {
           ) : (
             <div className="divide-y divide-border">
               {messages.map((message, index) => (
-                <ChatMessage key={index} message={message} />
+                <ChatMessage
+                  key={index}
+                  message={message}
+                  onRegenerate={
+                    message.role === 'assistant' && !isStreaming
+                      ? () => handleRegenerate(index)
+                      : undefined
+                  }
+                />
               ))}
 
               {/* Streaming response */}
@@ -610,6 +683,9 @@ export function ChatPage() {
           )}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Sampling parameters panel */}
+        <ChatParams />
 
         {/* Input area */}
         <ChatInput

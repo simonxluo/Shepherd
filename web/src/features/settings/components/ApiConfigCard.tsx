@@ -33,6 +33,8 @@ export function ApiConfigCard({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const testTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failedNotifiedRef = useRef(false);
+  // Track whether enabled was just toggled by user (waiting for save confirmation before testing)
+  const pendingSaveRef = useRef(false);
   const [prevEnabled, setPrevEnabled] = useState(config.enabled);
   const [prevPort, setPrevPort] = useState(config.port);
 
@@ -43,9 +45,12 @@ export function ApiConfigCard({
     if (!config.enabled && prevEnabled) {
       setPrevEnabled(false);
       setConnectionStatus('unknown');
+      pendingSaveRef.current = false;
     }
     if (config.enabled && !prevEnabled) {
       setPrevEnabled(true);
+      // User just toggled enable - mark as pending save, don't test yet
+      pendingSaveRef.current = true;
     }
     if (config.port !== prevPort) {
       setPrevPort(config.port);
@@ -100,6 +105,11 @@ export function ApiConfigCard({
       return;
     }
 
+    // If just enabled by user, wait for save confirmation before testing
+    if (pendingSaveRef.current) {
+      return;
+    }
+
     testTimeoutRef.current = setTimeout(() => {
       runTest();
       intervalRef.current = setInterval(runTest, 10000);
@@ -107,6 +117,18 @@ export function ApiConfigCard({
 
     return clearTimers;
   }, [config.enabled, config.port, runTest, clearTimers]);
+
+  // When save succeeds and we're pending, start testing (server should be running now)
+  useEffect(() => {
+    if (saveStatus === 'success' && config.enabled && pendingSaveRef.current) {
+      pendingSaveRef.current = false;
+      clearTimers();
+      testTimeoutRef.current = setTimeout(() => {
+        runTest();
+        intervalRef.current = setInterval(runTest, 10000);
+      }, 500);
+    }
+  }, [saveStatus, config.enabled, runTest, clearTimers]);
 
   const handleToggle = () => {
     const newEnabled = !config.enabled;

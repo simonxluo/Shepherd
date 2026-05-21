@@ -1,6 +1,6 @@
 import { apiClient } from './client';
 
-//  Types 
+//  Types
 
 export interface ChatModelInfo {
   id: string;
@@ -31,7 +31,17 @@ export interface Message {
   createdAt: string;
 }
 
-//  Streaming Chat 
+//  Generation Stats
+
+export interface GenerationStats {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  tokensPerSecond: number;
+  durationMs: number;
+}
+
+//  Streaming Chat
 
 export interface ContentPart {
   type: 'text' | 'image_url';
@@ -45,10 +55,12 @@ export interface StreamingChatParams {
   temperature?: number;
   maxTokens?: number;
   topP?: number;
+  topK?: number;
+  repeatPenalty?: number;
   stop?: string[];
   signal?: AbortSignal;
   onChunk: (text: string) => void;
-  onComplete: (fullText: string) => void;
+  onComplete: (fullText: string, stats?: GenerationStats) => void;
   onError: (error: Error) => void;
 }
 
@@ -56,7 +68,7 @@ export interface StreamingChatParams {
  * Chat API — unified object matching the pattern used by downloadsApi, systemApi, etc.
  */
 export const chatApi = {
-  //  Models 
+  //  Models
 
   getChatModels: async (): Promise<ChatModelInfo[]> => {
     const res = await apiClient.get<{ success: boolean; models: ChatModelInfo[] }>(
@@ -65,7 +77,7 @@ export const chatApi = {
     return res.models ?? [];
   },
 
-  //  Conversations 
+  //  Conversations
 
   listConversations: (
     limit = 50,
@@ -95,7 +107,7 @@ export const chatApi = {
     await apiClient.delete(`/conversations/${id}`);
   },
 
-  //  Messages 
+  //  Messages
 
   createMessage: (
     conversationId: string,
@@ -103,7 +115,7 @@ export const chatApi = {
   ): Promise<{ message: Message }> =>
     apiClient.post(`/conversations/${conversationId}/messages`, body),
 
-  //  Streaming Chat 
+  //  Streaming Chat
 
   streamingChatCompletion: (params: StreamingChatParams): void => {
     const {
@@ -112,6 +124,8 @@ export const chatApi = {
       temperature = 0.7,
       maxTokens,
       topP,
+      topK,
+      repeatPenalty,
       stop,
       signal,
       onChunk,
@@ -121,18 +135,22 @@ export const chatApi = {
 
     (async () => {
       try {
+        const body: Record<string, unknown> = {
+          model,
+          messages,
+          stream: true,
+          temperature,
+          top_p: topP,
+        };
+        if (maxTokens !== undefined) body.max_tokens = maxTokens;
+        if (topK !== undefined) body.top_k = topK;
+        if (repeatPenalty !== undefined) body.repeat_penalty = repeatPenalty;
+        if (stop !== undefined) body.stop = stop;
+
         const response = await fetch('/api/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model,
-            messages,
-            stream: true,
-            temperature,
-            max_tokens: maxTokens,
-            top_p: topP,
-            stop,
-          }),
+          body: JSON.stringify(body),
           signal,
         });
 
@@ -147,6 +165,9 @@ export const chatApi = {
         const decoder = new TextDecoder();
         let fullText = '';
         let buffer = '';
+        let chunkCount = 0;
+        const startTime = Date.now();
+        let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -162,15 +183,40 @@ export const chatApi = {
 
             const data = trimmed.slice(6);
             if (data === '[DONE]') {
-              onComplete(fullText);
+              const durationMs = Date.now() - startTime;
+              const stats: GenerationStats | undefined = usage
+                ? {
+                    promptTokens: usage.prompt_tokens ?? 0,
+                    completionTokens: usage.completion_tokens ?? chunkCount,
+                    totalTokens: usage.total_tokens ?? chunkCount,
+                    tokensPerSecond: durationMs > 0
+                      ? ((usage.completion_tokens ?? chunkCount) / durationMs) * 1000
+                      : 0,
+                    durationMs,
+                  }
+                : chunkCount > 0
+                  ? {
+                      promptTokens: 0,
+                      completionTokens: chunkCount,
+                      totalTokens: chunkCount,
+                      tokensPerSecond: durationMs > 0 ? (chunkCount / durationMs) * 1000 : 0,
+                      durationMs,
+                    }
+                  : undefined;
+              onComplete(fullText, stats);
               return;
             }
 
             try {
               const parsed = JSON.parse(data);
+              // Capture usage from chunk (some backends include in final chunk)
+              if (parsed.usage) {
+                usage = parsed.usage;
+              }
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) {
                 fullText += content;
+                chunkCount++;
                 onChunk(content);
               }
             } catch {
@@ -179,7 +225,18 @@ export const chatApi = {
           }
         }
 
-        onComplete(fullText);
+        // If we got here without [DONE], still complete
+        const durationMs = Date.now() - startTime;
+        const stats: GenerationStats | undefined = chunkCount > 0
+          ? {
+              promptTokens: usage?.prompt_tokens ?? 0,
+              completionTokens: usage?.completion_tokens ?? chunkCount,
+              totalTokens: usage?.total_tokens ?? chunkCount,
+              tokensPerSecond: durationMs > 0 ? (chunkCount / durationMs) * 1000 : 0,
+              durationMs,
+            }
+          : undefined;
+        onComplete(fullText, stats);
       } catch (err: unknown) {
         if (signal?.aborted) return;
         onError(err instanceof Error ? err : new Error('Unknown error'));

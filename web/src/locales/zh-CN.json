@@ -299,12 +299,34 @@
     "message": {
       "you": "你",
       "aiAssistant": "AI 助手",
+      "system": "系统",
       "imageAlt": "图片 {{index}}",
       "uploadedImageAlt": "上传图片 {{index}}",
       "copy": "复制",
+      "copyCode": "复制代码",
+      "copied": "已复制",
+      "regenerate": "重新生成",
       "uploadImage": "上传图片",
       "stopGeneration": "停止生成",
       "sendMessage": "发送 (Enter)"
+    },
+    "stats": {
+      "tokensPerSec": "tokens/s",
+      "tokens": "tokens"
+    },
+    "params": {
+      "title": "采样参数",
+      "temperature": "温度",
+      "topP": "Top P",
+      "topK": "Top K",
+      "maxTokens": "最大 Token",
+      "repeatPenalty": "重复惩罚",
+      "reset": "恢复默认"
+    },
+    "systemPrompt": {
+      "title": "系统提示词",
+      "active": "已启用",
+      "placeholder": "输入系统提示词，用于设置 AI 助手的行为..."
     },
     "timeGroups": {
       "today": "今天",

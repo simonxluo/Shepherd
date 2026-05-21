@@ -299,12 +299,34 @@
     "message": {
       "you": "You",
       "aiAssistant": "AI Assistant",
+      "system": "System",
       "imageAlt": "Image {{index}}",
       "uploadedImageAlt": "Uploaded image {{index}}",
       "copy": "Copy",
+      "copyCode": "Copy code",
+      "copied": "Copied",
+      "regenerate": "Regenerate",
       "uploadImage": "Upload image",
       "stopGeneration": "Stop generation",
       "sendMessage": "Send (Enter)"
+    },
+    "stats": {
+      "tokensPerSec": "tokens/s",
+      "tokens": "tokens"
+    },
+    "params": {
+      "title": "Sampling Parameters",
+      "temperature": "Temperature",
+      "topP": "Top P",
+      "topK": "Top K",
+      "maxTokens": "Max Tokens",
+      "repeatPenalty": "Repeat Penalty",
+      "reset": "Reset to Defaults"
+    },
+    "systemPrompt": {
+      "title": "System Prompt",
+      "active": "Active",
+      "placeholder": "Enter a system prompt to set the behavior of the AI assistant..."
     },
     "timeGroups": {
       "today": "Today",
