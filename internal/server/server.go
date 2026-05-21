@@ -158,6 +158,18 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.Chat = chatapi.NewHandler(modelMgr)
 	s.handlers.TTS = ttsapi.NewHandler(storageMgr, "./data/tts")
 
+	// Auto-start compatibility servers if config says enabled
+	if cfg.Compatibility.Ollama.Enabled {
+		if err := compatServerManager.StartOllamaServer(cfg.Compatibility.Ollama.Port); err != nil {
+			logger.Warnf("自动启动 Ollama 兼容服务器失败: %v", err)
+		}
+	}
+	if cfg.Compatibility.LMStudio.Enabled {
+		if err := compatServerManager.StartLMStudioServer(cfg.Compatibility.LMStudio.Port); err != nil {
+			logger.Warnf("自动启动 LM Studio 兼容服务器失败: %v", err)
+		}
+	}
+
 	// Setup Gin engine
 	if config.WebUIPath == "" {
 		gin.SetMode(gin.ReleaseMode)

@@ -326,7 +326,7 @@ func DefaultConfig() *Config {
 		},
 		Compatibility: CompatibilityConfig{
 			Ollama: OllamaConfig{
-				Enabled: true,
+				Enabled: false,
 				Port:    11434,
 			},
 			LMStudio: LMStudioConfig{

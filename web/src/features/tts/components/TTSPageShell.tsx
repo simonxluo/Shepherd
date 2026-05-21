@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PanelLeftOpen } from 'lucide-react';
 import { useLoadedModels } from '@/features/creative/hooks';
+import { Button } from '@/components/ui/button';
 import { useTTS, getTTSModelFeatures, type TTSRequest } from '../hooks';
 import { StreamAudioPlayer, type StreamState, type TTSStreamMetrics } from '../lib/StreamAudioPlayer';
 import { ttsRegistry } from '../registry';
@@ -193,6 +195,9 @@ export function TTSPageShell() {
   const isStreamActive = streamState === 'streaming' || streamState === 'playing';
   const isGenerating = tts.isPending || isStreamActive;
 
+  // Sidebar visibility for mobile
+  const [showSidebar, setShowSidebar] = useState(false);
+
   // "Use as reference" handler for history panel
   const [refAudioOverride, setRefAudioOverride] = useState<string | undefined>();
 
@@ -219,16 +224,35 @@ export function TTSPageShell() {
   return (
     <div className="h-full flex flex-col bg-background text-foreground">
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: main content area */}
+        {/* Left: History sidebar */}
+        <div className={`w-72 border-r flex-col bg-muted/20 shrink-0 ${showSidebar ? 'flex' : 'hidden md:flex'}`}>
+          <TTSHistoryPanel
+            onUseAsReference={handleUseAsReference}
+            supportsRefAudio={currentFeatures.supportsRefAudio}
+          />
+        </div>
+
+        {/* Center: main content area */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-3xl mx-auto">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-foreground">
-                {t('tts.title', 'Text-to-Speech (TTS)')}
-              </h1>
-              <p className="text-muted-foreground">
-                {t('tts.description', 'Convert text to natural speech with streaming playback and voice cloning')}
-              </p>
+            <div className="mb-6 flex items-start gap-3">
+              {/* Mobile sidebar toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden shrink-0 mt-0.5"
+                onClick={() => setShowSidebar((v) => !v)}
+              >
+                <PanelLeftOpen className="w-5 h-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">
+                  {t('tts.title', 'Text-to-Speech (TTS)')}
+                </h1>
+                <p className="text-muted-foreground">
+                  {t('tts.description', 'Convert text to natural speech with streaming playback and voice cloning')}
+                </p>
+              </div>
             </div>
 
             <div className="space-y-6">
@@ -244,12 +268,6 @@ export function TTSPageShell() {
                 onStopStream={handleStopStream}
                 audioUrl={audioUrl}
                 responseFormat={currentFeatures.defaultFormat}
-              />
-
-              {/* History panel */}
-              <TTSHistoryPanel
-                onUseAsReference={handleUseAsReference}
-                supportsRefAudio={currentFeatures.supportsRefAudio}
               />
             </div>
           </div>

@@ -190,27 +190,7 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 		return
 	}
 
-	// Get current config to check if we're enabling
-	cfg := h.configMgr.Get()
-	ollamaEnabling := req.Ollama.Enabled && !cfg.Compatibility.Ollama.Enabled
-	lmstudioEnabling := req.LMStudio.Enabled && !cfg.Compatibility.LMStudio.Enabled
-
-	// Check port availability if enabling
-	if ollamaEnabling {
-		otherService := gin.H{"enabled": cfg.Compatibility.LMStudio.Enabled, "port": cfg.Compatibility.LMStudio.Port}
-		if h.tryEnableService(c, "ollama", req.Ollama.Port, nil, cfg, otherService) {
-			return
-		}
-	}
-
-	if lmstudioEnabling {
-		otherService := gin.H{"enabled": cfg.Compatibility.Ollama.Enabled, "port": cfg.Compatibility.Ollama.Port}
-		if h.tryEnableService(c, "lmstudio", req.LMStudio.Port, nil, cfg, otherService) {
-			return
-		}
-	}
-
-	// Validate port ranges
+	// Validate port ranges first
 	if req.Ollama.Port < 1 || req.Ollama.Port > 65535 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -226,6 +206,9 @@ func (h *Handler) UpdateCompatibility(c *gin.Context) {
 		})
 		return
 	}
+
+	// Get current config to determine state transitions
+	cfg := h.configMgr.Get()
 
 	// Save original enabled states before modifying cfg
 	ollamaWasEnabled := cfg.Compatibility.Ollama.Enabled

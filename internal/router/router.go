@@ -390,7 +390,7 @@ func registerCompatibilityRoutes(engine *gin.Engine, sh ServerHandlers) {
 	ollama := engine.Group("/api")
 	{
 		ollama.POST("/chat", sh.HandleOllamaChat)
-		ollama.POST("/tags", sh.HandleOllamaTags)
+		ollama.GET("/tags", sh.HandleOllamaTags)
 	}
 
 	lmstudioGroup := engine.Group("/lmstudio")

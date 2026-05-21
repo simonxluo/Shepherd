@@ -47,7 +47,7 @@ cors:
 features:
   models: true        # 模型管理（已实现）
   downloads: true     # 下载管理（已实现）
-  cluster: true       # 集群管理（开发中）
+  cluster: true      # 集群管理（开发中）
   logs: true          # 日志查看（已实现）
   chat: true          # 聊天功能（已实现）
   settings: true      # 设置页面（已实现）

@@ -75,14 +75,14 @@ export function TTSHistoryPanel({ onUseAsReference, supportsRefAudio }: TTSHisto
 
   if (isLoading) {
     return (
-      <div className="border rounded-lg p-4">
+      <div className="h-full flex items-center justify-center">
         <p className="text-sm text-muted-foreground">{t('tts.historyLoading', 'Loading history...')}</p>
       </div>
     );
   }
 
   return (
-    <div className="border rounded-lg p-4 space-y-3">
+    <div className="h-full flex flex-col">
       {/* Hidden audio element for playback */}
       <audio
         ref={audioRef}
@@ -91,7 +91,7 @@ export function TTSHistoryPanel({ onUseAsReference, supportsRefAudio }: TTSHisto
       />
 
       {/* Header with filter tabs */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <h3 className="text-sm font-medium flex items-center gap-1.5">
           <Clock className="w-4 h-4" />
           {t('tts.history', 'History')}
@@ -119,83 +119,87 @@ export function TTSHistoryPanel({ onUseAsReference, supportsRefAudio }: TTSHisto
 
       {/* History list */}
       {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-4">
-          {filter === 'favourites'
-            ? t('tts.noFavourites', 'No favourites yet')
-            : t('tts.noHistory', 'No TTS history yet. Generated audio will appear here.')}
-        </p>
+        <div className="flex-1 flex items-center justify-center px-4">
+          <p className="text-xs text-muted-foreground text-center">
+            {filter === 'favourites'
+              ? t('tts.noFavourites', 'No favourites yet')
+              : t('tts.noHistory', 'No TTS history yet. Generated audio will appear here.')}
+          </p>
+        </div>
       ) : (
-        <div className="space-y-1 max-h-64 overflow-y-auto">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-2 p-2 rounded hover:bg-accent/50 group transition-colors"
-            >
-              {/* Play button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 shrink-0"
-                onClick={() => handlePlay(item)}
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-1 p-2">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-2 p-2 rounded hover:bg-accent/50 group transition-colors"
               >
-                {playingId === item.id ? (
-                  <Pause className="w-3.5 h-3.5" />
-                ) : (
-                  <Play className="w-3.5 h-3.5" />
-                )}
-              </Button>
+                {/* Play button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => handlePlay(item)}
+                >
+                  {playingId === item.id ? (
+                    <Pause className="w-3.5 h-3.5" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5" />
+                  )}
+                </Button>
 
-              {/* Text & meta */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm truncate">{item.inputText}</p>
-                <p className="text-xs text-muted-foreground">
-                  {item.model} &middot; {formatDuration(item.duration)} &middot; {formatDate(item.createdAt)}
-                </p>
-              </div>
+                {/* Text & meta */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm truncate">{item.inputText}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.model} &middot; {formatDuration(item.duration)} &middot; {formatDate(item.createdAt)}
+                  </p>
+                </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                {supportsRefAudio && onUseAsReference && (
+                {/* Actions */}
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {supportsRefAudio && onUseAsReference && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      onClick={() => onUseAsReference(getTTSAudioUrl(item.id))}
+                      title={t('tts.useAsRef', 'Use as reference audio')}
+                    >
+                      {t('tts.useAsRef', 'Ref')}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="text-xs h-7 px-2"
-                    onClick={() => onUseAsReference(getTTSAudioUrl(item.id))}
-                    title={t('tts.useAsRef', 'Use as reference audio')}
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleToggleFavourite(item)}
+                    title={t('tts.toggleFavourite', 'Toggle favourite')}
                   >
-                    {t('tts.useAsRef', 'Ref')}
+                    <Star className={`w-3.5 h-3.5 ${item.favourite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                   </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => handleToggleFavourite(item)}
-                  title={t('tts.toggleFavourite', 'Toggle favourite')}
-                >
-                  <Star className={`w-3.5 h-3.5 ${item.favourite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => handleDownload(item)}
-                  title={t('tts.download', 'Download')}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
-                  onClick={() => handleDelete(item.id)}
-                  title={t('tts.delete', 'Delete')}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => handleDownload(item)}
+                    title={t('tts.download', 'Download')}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    onClick={() => handleDelete(item.id)}
+                    title={t('tts.delete', 'Delete')}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

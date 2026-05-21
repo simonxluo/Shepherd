@@ -68,7 +68,7 @@ security:
         - '*'
 compatibility:
     ollama:
-        enabled: true
+        enabled: false
         port: 11434
     lmstudio:
         enabled: false
