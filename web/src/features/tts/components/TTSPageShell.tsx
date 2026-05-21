@@ -1,15 +1,15 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { Volume2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { useLoadedModels } from '@/features/creative/hooks';
 import { useTTS, getTTSModelFeatures, type TTSRequest } from '../hooks';
 import { StreamAudioPlayer, type StreamState, type TTSStreamMetrics } from '../lib/StreamAudioPlayer';
 import { ttsRegistry } from '../registry';
 import { VerticalTabBar } from './VerticalTabBar';
 import { TTSPlaybackArea } from './TTSPlaybackArea';
+import { TTSHistoryPanel } from './TTSHistoryPanel';
+import { useCreateTTSHistory } from '../historyHooks';
 import { toast } from '@/hooks/useToast';
+import { pcmToWav } from '../lib/pcmToWav';
 import type { TTSPluginPanelProps } from '../types';
 
 // Import plugins to register them
@@ -18,7 +18,6 @@ import '../plugins/voxcpm2';
 
 export function TTSPageShell() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { data: allModels = [] } = useLoadedModels();
 
   // Filter to TTS-capable models only
@@ -38,6 +37,12 @@ export function TTSPageShell() {
 
   // TTS mutation (non-stream)
   const tts = useTTS();
+
+  // History saving
+  const createHistory = useCreateTTSHistory();
+
+  // Track last generation payload for history saving
+  const lastPayloadRef = useRef<TTSRequest | null>(null);
 
   // Stream player ref
   const playerRef = useRef<StreamAudioPlayer | null>(null);
@@ -102,13 +107,32 @@ export function TTSPageShell() {
 
   // Get features for current model (for sample rate)
   const currentFeatures = useMemo(
-    () => (selectedModel ? getTTSModelFeatures(selectedModel) : { defaultSampleRate: 24000, defaultFormat: 'mp3', supportsStreamPcm: false }),
+    () => (selectedModel ? getTTSModelFeatures(selectedModel) : { defaultSampleRate: 24000, defaultFormat: 'mp3', supportsStreamPcm: false, supportsRefAudio: false }),
     [selectedModel]
   );
+
+  // Save to history helper
+  const saveToHistory = useCallback(async (blob: Blob, payload: TTSRequest, format: string) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', blob, `audio.${format}`);
+      formData.append('metadata', JSON.stringify({
+        model: payload.model,
+        inputText: payload.input,
+        format: format,
+        duration: 0, // We don't know exact duration from blob
+        params: payload,
+      }));
+      createHistory.mutate(formData);
+    } catch {
+      // Silent fail for history saving - non-critical
+    }
+  }, [createHistory]);
 
   // Unified generate handler
   const handleGenerate = useCallback(async (payload: TTSRequest) => {
     const isStreamRequest = payload.stream === true;
+    lastPayloadRef.current = payload;
 
     if (isStreamRequest) {
       try {
@@ -121,7 +145,14 @@ export function TTSPageShell() {
           setStreamState(state);
           // Sync pcmChunks when stream completes
           if (state === 'completed' || state === 'error' || state === 'idle') {
-            setPcmChunks(playerRef.current?.pcmChunks ? [...playerRef.current.pcmChunks] : []);
+            const chunks = playerRef.current?.pcmChunks ? [...playerRef.current.pcmChunks] : [];
+            setPcmChunks(chunks);
+
+            // Auto-save to history on stream completion
+            if (state === 'completed' && chunks.length > 0 && lastPayloadRef.current) {
+              const wavBlob = pcmToWav(chunks, currentFeatures.defaultSampleRate);
+              saveToHistory(wavBlob, lastPayloadRef.current, 'wav');
+            }
           }
         };
         playerRef.current.onMetricsUpdate = (metrics) => {
@@ -147,16 +178,28 @@ export function TTSPageShell() {
           const url = URL.createObjectURL(typedBlob);
           setAudioUrl(url);
           toast.success(t('tts.generateSuccess', 'Speech synthesis complete'));
+
+          // Auto-save to history
+          const format = payload.response_format || 'mp3';
+          saveToHistory(typedBlob, payload, format);
         },
         onError: (error) => {
           toast.error(t('tts.generateFailed', 'Speech synthesis failed'), error.message);
         },
       });
     }
-  }, [currentFeatures.defaultSampleRate, audioUrl, tts, t]);
+  }, [currentFeatures.defaultSampleRate, audioUrl, tts, t, saveToHistory]);
 
   const isStreamActive = streamState === 'streaming' || streamState === 'playing';
   const isGenerating = tts.isPending || isStreamActive;
+
+  // "Use as reference" handler for history panel
+  const [refAudioOverride, setRefAudioOverride] = useState<string | undefined>();
+
+  const handleUseAsReference = useCallback((audioUrl: string) => {
+    setRefAudioOverride(audioUrl);
+    toast.success(t('tts.refAudioSet', 'Reference audio set from history'));
+  }, [t]);
 
   // Build panel props
   const panelProps: TTSPluginPanelProps = {
@@ -168,6 +211,7 @@ export function TTSPageShell() {
     streamMetrics,
     audioUrl,
     onModelChange: handleModelChange,
+    refAudioOverride,
   };
 
   const PanelComponent = activePlugin?.component;
@@ -187,23 +231,8 @@ export function TTSPageShell() {
               </p>
             </div>
 
-            {ttsModels.length === 0 ? (
-              <div className="flex flex-col items-center rounded-lg border border-dashed p-8 text-center">
-                <Volume2 className="h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">{t('tts.noModels', 'No loaded TTS models')}</p>
-                <p className="text-xs text-muted-foreground mt-1">{t('tts.noModelsHint', 'Please load a model that supports text-to-speech first')}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => navigate('/models')}
-                >
-                  {t('tts.goToModels', 'Go to Model Management')}
-                </Button>
-              </div>
-            ) : (
             <div className="space-y-6">
-              {/* Plugin panel */}
+              {/* Plugin panel - always render, let plugin handle no-model state */}
               {PanelComponent && <PanelComponent {...panelProps} />}
 
               {/* Playback area (shared) */}
@@ -216,12 +245,17 @@ export function TTSPageShell() {
                 audioUrl={audioUrl}
                 responseFormat={currentFeatures.defaultFormat}
               />
+
+              {/* History panel */}
+              <TTSHistoryPanel
+                onUseAsReference={handleUseAsReference}
+                supportsRefAudio={currentFeatures.supportsRefAudio}
+              />
             </div>
-            )}
           </div>
         </div>
 
-        {/* Right: vertical tab bar */}
+        {/* Right: vertical tab bar - always shown regardless of model state */}
         <VerticalTabBar
           plugins={plugins}
           activeId={activePluginId}

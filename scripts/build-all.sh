@@ -30,9 +30,9 @@ PLATFORMS=(
     "windows/386"
 )
 
-echo -e "${GREEN}========================================${NC}"
+echo ""
 echo -e "${GREEN}  Shepherd Cross-Platform Build${NC}"
-echo -e "${GREEN}========================================${NC}"
+echo ""
 echo ""
 echo "版本: ${VERSION}"
 echo "Git Commit: ${GIT_COMMIT}"
@@ -96,9 +96,9 @@ for platform in "${PLATFORMS[@]}"; do
 done
 
 echo ""
-echo -e "${GREEN}========================================${NC}"
+echo ""
 echo -e "${GREEN}  构建完成${NC}"
-echo -e "${GREEN}========================================${NC}"
+echo ""
 echo "成功: ${SUCCESS_COUNT}"
 echo "失败: ${FAIL_COUNT}"
 echo ""
@@ -123,7 +123,7 @@ echo ""
 # 生成编译报告
 REPORT_FILE="${BUILD_DIR}/build-report.txt"
 echo "Shepherd Build Report" > "${REPORT_FILE}"
-echo "=====================" >> "${REPORT_FILE}"
+echo "=" >> "${REPORT_FILE}"
 echo "" >> "${REPORT_FILE}"
 echo "Version: ${VERSION}" >> "${REPORT_FILE}"
 echo "Build Time: ${BUILD_TIME}" >> "${REPORT_FILE}"

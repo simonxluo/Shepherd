@@ -177,6 +177,19 @@ type ModelMetadata struct {
 	UpdatedAt    time.Time     `json:"updatedAt" db:"updated_at"`                // Last update time
 }
 
+// TTSHistoryItem represents a TTS generation history record
+type TTSHistoryItem struct {
+	ID        string                 `json:"id" db:"id"`
+	Model     string                 `json:"model" db:"model"`
+	InputText string                 `json:"inputText" db:"input_text"`
+	AudioPath string                 `json:"audioPath" db:"audio_path"`
+	Format    string                 `json:"format" db:"format"`
+	Duration  float64                `json:"duration" db:"duration"`
+	Favourite bool                   `json:"favourite" db:"favourite"`
+	Params    map[string]interface{} `json:"params,omitempty" db:"params"`
+	CreatedAt time.Time              `json:"createdAt" db:"created_at"`
+}
+
 // Store defines the storage interface
 type Store interface {
 	// Conversation operations
@@ -221,6 +234,13 @@ type Store interface {
 	ListModelMetadata(ctx context.Context, limit, offset int) ([]*ModelMetadata, error)
 	DeleteModelMetadata(ctx context.Context, modelID string) error
 	GetAllModelMetadata(ctx context.Context) (map[string]*ModelMetadata, error) // 批量获取所有模型元数据
+
+	// TTS History operations
+	CreateTTSHistory(ctx context.Context, item *TTSHistoryItem) error
+	GetTTSHistory(ctx context.Context, id string) (*TTSHistoryItem, error)
+	ListTTSHistory(ctx context.Context, limit, offset int, favouriteOnly *bool) ([]*TTSHistoryItem, error)
+	UpdateTTSHistoryFavourite(ctx context.Context, id string, favourite bool) error
+	DeleteTTSHistory(ctx context.Context, id string) error
 
 	// Cleanup
 	Close() error
@@ -287,6 +307,7 @@ var (
 	ErrBenchmarkConfigNotFound = &StorageError{Code: "NOT_FOUND", Message: "Benchmark config not found"}
 	ErrModelLoadConfigNotFound = &StorageError{Code: "NOT_FOUND", Message: "Model load config not found"}
 	ErrModelMetadataNotFound   = &StorageError{Code: "NOT_FOUND", Message: "Model metadata not found"}
+	ErrTTSHistoryNotFound      = &StorageError{Code: "NOT_FOUND", Message: "TTS history item not found"}
 )
 
 // StorageError represents a storage error

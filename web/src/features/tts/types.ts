@@ -22,6 +22,8 @@ export interface TTSPluginPanelProps {
   audioUrl: string | null;
   /** Selected model change callback */
   onModelChange: (modelName: string) => void;
+  /** External ref audio override (e.g., from history "Use as reference") */
+  refAudioOverride?: string;
 }
 
 /**

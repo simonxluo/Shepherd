@@ -23,9 +23,9 @@ set BUILD_DATETIME=%BUILD_DATE%T%BUILD_TIME%Z
 :: 设置 Go 代理（如果需要）
 if "%GOPROXY%"=="" set GOPROXY=https://goproxy.cn,direct
 
-echo ========================================
+echo.
 echo   Shepherd Build Script (Windows)
-echo ========================================
+echo.
 echo.
 echo 版本: %VERSION%
 echo 构建时间: %BUILD_DATETIME%
@@ -65,9 +65,9 @@ if %ERRORLEVEL% EQU 0 (
 )
 
 echo.
-echo ========================================
+echo.
 echo   构建完成
-echo ========================================
+echo.
 echo 二进制: %BUILD_DIR%\%BINARY_NAME%
 echo.
 

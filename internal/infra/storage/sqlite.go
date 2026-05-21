@@ -145,6 +145,21 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 	CREATE INDEX IF NOT EXISTS idx_benchmarks_status ON benchmarks(status);
 	CREATE INDEX IF NOT EXISTS idx_benchmarks_created ON benchmarks(created_at);
 	CREATE INDEX IF NOT EXISTS idx_model_load_configs_node_model ON model_load_configs(node_id, model_id);
+
+	CREATE TABLE IF NOT EXISTS tts_history (
+		id TEXT PRIMARY KEY,
+		model TEXT NOT NULL,
+		input_text TEXT NOT NULL,
+		audio_path TEXT NOT NULL,
+		format TEXT NOT NULL,
+		duration REAL DEFAULT 0,
+		favourite INTEGER DEFAULT 0,
+		params TEXT,
+		created_at INTEGER NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_tts_history_created ON tts_history(created_at);
+	CREATE INDEX IF NOT EXISTS idx_tts_history_favourite ON tts_history(favourite);
 	`
 
 	if _, err := s.db.Exec(schema); err != nil {
@@ -181,6 +196,11 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 	// Database migration: add name column to model_load_configs for multi-preset support
 	if err := s.migrateModelLoadConfigsTable(); err != nil {
 		return fmt.Errorf("failed to migrate model_load_configs table: %w", err)
+	}
+
+	// Database migration: ensure tts_history table exists for existing databases
+	if err := s.migrateTTSHistoryTable(); err != nil {
+		return fmt.Errorf("failed to migrate tts_history table: %w", err)
 	}
 
 	return nil
@@ -1162,7 +1182,7 @@ func (s *SQLiteStore) DeleteNamedModelLoadConfig(ctx context.Context, nodeID, mo
 	return nil
 }
 
-// ========== ModelMetadata Operations ==========
+// ModelMetadata Operations
 
 // SaveModelMetadata saves or updates model metadata
 func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMetadata) error {
@@ -1483,6 +1503,190 @@ func (s *SQLiteStore) GetAllModelMetadata(ctx context.Context) (map[string]*Mode
 	}
 
 	return result, nil
+}
+
+// TTS History Operations
+
+// migrateTTSHistoryTable ensures the tts_history table exists for databases created before this feature
+func (s *SQLiteStore) migrateTTSHistoryTable() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS tts_history (
+		id TEXT PRIMARY KEY,
+		model TEXT NOT NULL,
+		input_text TEXT NOT NULL,
+		audio_path TEXT NOT NULL,
+		format TEXT NOT NULL,
+		duration REAL DEFAULT 0,
+		favourite INTEGER DEFAULT 0,
+		params TEXT,
+		created_at INTEGER NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_tts_history_created ON tts_history(created_at);
+	CREATE INDEX IF NOT EXISTS idx_tts_history_favourite ON tts_history(favourite);
+	`
+	_, err := s.db.Exec(query)
+	return err
+}
+
+// CreateTTSHistory creates a new TTS history record
+func (s *SQLiteStore) CreateTTSHistory(ctx context.Context, item *TTSHistoryItem) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if item.ID == "" {
+		item.ID = generateID("tts")
+	}
+	if item.CreatedAt.IsZero() {
+		item.CreatedAt = timeNow()
+	}
+
+	paramsJSON, _ := json.Marshal(item.Params)
+
+	query := `
+	INSERT INTO tts_history (id, model, input_text, audio_path, format, duration, favourite, params, created_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	_, err := s.db.ExecContext(ctx, query,
+		item.ID,
+		item.Model,
+		item.InputText,
+		item.AudioPath,
+		item.Format,
+		item.Duration,
+		item.Favourite,
+		string(paramsJSON),
+		item.CreatedAt.Unix(),
+	)
+	return err
+}
+
+// GetTTSHistory retrieves a TTS history item by ID
+func (s *SQLiteStore) GetTTSHistory(ctx context.Context, id string) (*TTSHistoryItem, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	query := `
+	SELECT id, model, input_text, audio_path, format, duration, favourite, params, created_at
+	FROM tts_history WHERE id = ?
+	`
+
+	var item TTSHistoryItem
+	var paramsJSON sql.NullString
+	var createdUnix int64
+	var favouriteInt int
+
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&item.ID, &item.Model, &item.InputText, &item.AudioPath,
+		&item.Format, &item.Duration, &favouriteInt, &paramsJSON, &createdUnix,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrTTSHistoryNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get TTS history: %w", err)
+	}
+
+	item.Favourite = favouriteInt != 0
+	item.CreatedAt = time.Unix(createdUnix, 0).UTC()
+
+	if paramsJSON.Valid && paramsJSON.String != "" {
+		if err := json.Unmarshal([]byte(paramsJSON.String), &item.Params); err != nil {
+			item.Params = make(map[string]interface{})
+		}
+	}
+
+	return &item, nil
+}
+
+// ListTTSHistory lists TTS history items with pagination, ordered by created_at DESC
+func (s *SQLiteStore) ListTTSHistory(ctx context.Context, limit, offset int, favouriteOnly *bool) ([]*TTSHistoryItem, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	query := `SELECT id, model, input_text, audio_path, format, duration, favourite, params, created_at FROM tts_history`
+	args := []interface{}{}
+
+	if favouriteOnly != nil && *favouriteOnly {
+		query += ` WHERE favourite = 1`
+	}
+	query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list TTS history: %w", err)
+	}
+	defer rows.Close()
+
+	var items []*TTSHistoryItem
+	for rows.Next() {
+		var item TTSHistoryItem
+		var paramsJSON sql.NullString
+		var createdUnix int64
+		var favouriteInt int
+
+		err := rows.Scan(
+			&item.ID, &item.Model, &item.InputText, &item.AudioPath,
+			&item.Format, &item.Duration, &favouriteInt, &paramsJSON, &createdUnix,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan TTS history: %w", err)
+		}
+
+		item.Favourite = favouriteInt != 0
+		item.CreatedAt = time.Unix(createdUnix, 0).UTC()
+
+		if paramsJSON.Valid && paramsJSON.String != "" {
+			if err := json.Unmarshal([]byte(paramsJSON.String), &item.Params); err != nil {
+				item.Params = make(map[string]interface{})
+			}
+		}
+
+		items = append(items, &item)
+	}
+
+	return items, nil
+}
+
+// UpdateTTSHistoryFavourite updates the favourite flag of a TTS history item
+func (s *SQLiteStore) UpdateTTSHistoryFavourite(ctx context.Context, id string, favourite bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	favInt := 0
+	if favourite {
+		favInt = 1
+	}
+
+	result, err := s.db.ExecContext(ctx, "UPDATE tts_history SET favourite = ? WHERE id = ?", favInt, id)
+	if err != nil {
+		return fmt.Errorf("failed to update TTS history favourite: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrTTSHistoryNotFound
+	}
+	return nil
+}
+
+// DeleteTTSHistory deletes a TTS history item by ID
+func (s *SQLiteStore) DeleteTTSHistory(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result, err := s.db.ExecContext(ctx, "DELETE FROM tts_history WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete TTS history: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrTTSHistoryNotFound
+	}
+	return nil
 }
 
 // Close closes the database connection

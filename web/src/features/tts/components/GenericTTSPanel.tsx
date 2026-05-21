@@ -39,6 +39,7 @@ export function GenericTTSPanel({
   onGenerate,
   isGenerating,
   onModelChange,
+  refAudioOverride,
 }: TTSPluginPanelProps) {
   const { t } = useTranslation();
   const availableModels = useAvailableModels('tts');
@@ -85,6 +86,13 @@ export function GenericTTSPanel({
       if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language);
     }
   }, [ttsConfig]);
+
+  // Sync external ref audio override from history panel
+  useEffect(() => {
+    if (refAudioOverride) {
+      setRefAudio(refAudioOverride);
+    }
+  }, [refAudioOverride]);
 
   // Auto-adjust format on model change
   useEffect(() => {

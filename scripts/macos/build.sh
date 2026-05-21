@@ -26,9 +26,9 @@ BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 GO_VERSION=$(go version | awk '{print $3}')
 
-echo -e "${BLUE}========================================${NC}"
+echo ""
 echo -e "${BLUE}  Shepherd Build Script (macOS)${NC}"
-echo -e "${BLUE}========================================${NC}"
+echo ""
 echo ""
 echo "版本: ${VERSION}"
 echo "Go 版本: ${GO_VERSION}"
@@ -145,9 +145,9 @@ fi
 # 获取二进制大小
 BINARY_SIZE=$(du -h "${BUILD_DIR}/${BINARY_NAME}" | cut -f1)
 echo ""
-echo -e "${BLUE}========================================${NC}"
+echo ""
 echo -e "${BLUE}  构建完成${NC}"
-echo -e "${BLUE}========================================${NC}"
+echo ""
 echo "二进制: ${BUILD_DIR}/${BINARY_NAME}"
 echo "大小: ${BINARY_SIZE}"
 echo ""

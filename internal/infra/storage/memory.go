@@ -18,6 +18,7 @@ type MemoryStore struct {
 	benchmarkConfigs map[string]*BenchmarkConfig
 	modelLoadConfigs map[string]*ModelLoadConfig // key: "nodeID:modelID:name"
 	modelMetadata    map[string]*ModelMetadata   // key: modelID
+	ttsHistory       map[string]*TTSHistoryItem  // key: id
 }
 
 // NewMemoryStore creates a new in-memory store
@@ -30,6 +31,7 @@ func NewMemoryStore() (*MemoryStore, error) {
 		benchmarkConfigs: make(map[string]*BenchmarkConfig),
 		modelLoadConfigs: make(map[string]*ModelLoadConfig),
 		modelMetadata:    make(map[string]*ModelMetadata),
+		ttsHistory:       make(map[string]*TTSHistoryItem),
 	}, nil
 }
 
@@ -550,6 +552,99 @@ func (s *MemoryStore) GetAllModelMetadata(ctx context.Context) (map[string]*Mode
 	}
 
 	return result, nil
+}
+
+//  TTS History Operations 
+
+// CreateTTSHistory creates a new TTS history record
+func (s *MemoryStore) CreateTTSHistory(ctx context.Context, item *TTSHistoryItem) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if item.ID == "" {
+		item.ID = generateID("tts")
+	}
+	if item.CreatedAt.IsZero() {
+		item.CreatedAt = time.Now()
+	}
+
+	s.ttsHistory[item.ID] = item
+	return nil
+}
+
+// GetTTSHistory retrieves a TTS history item by ID
+func (s *MemoryStore) GetTTSHistory(ctx context.Context, id string) (*TTSHistoryItem, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	item, exists := s.ttsHistory[id]
+	if !exists {
+		return nil, ErrTTSHistoryNotFound
+	}
+
+	itemCopy := *item
+	return &itemCopy, nil
+}
+
+// ListTTSHistory lists TTS history items with pagination
+func (s *MemoryStore) ListTTSHistory(ctx context.Context, limit, offset int, favouriteOnly *bool) ([]*TTSHistoryItem, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var result []*TTSHistoryItem
+	for _, item := range s.ttsHistory {
+		if favouriteOnly != nil && *favouriteOnly && !item.Favourite {
+			continue
+		}
+		result = append(result, item)
+	}
+
+	// Sort by created_at desc (simple bubble for in-memory)
+	for i := 0; i < len(result); i++ {
+		for j := i + 1; j < len(result); j++ {
+			if result[j].CreatedAt.After(result[i].CreatedAt) {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	}
+
+	if offset >= len(result) {
+		return []*TTSHistoryItem{}, nil
+	}
+
+	end := offset + limit
+	if end > len(result) {
+		end = len(result)
+	}
+
+	return result[offset:end], nil
+}
+
+// UpdateTTSHistoryFavourite updates the favourite flag of a TTS history item
+func (s *MemoryStore) UpdateTTSHistoryFavourite(ctx context.Context, id string, favourite bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	item, exists := s.ttsHistory[id]
+	if !exists {
+		return ErrTTSHistoryNotFound
+	}
+
+	item.Favourite = favourite
+	return nil
+}
+
+// DeleteTTSHistory deletes a TTS history item by ID
+func (s *MemoryStore) DeleteTTSHistory(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.ttsHistory[id]; !exists {
+		return ErrTTSHistoryNotFound
+	}
+
+	delete(s.ttsHistory, id)
+	return nil
 }
 
 // Close closes the store (no-op for memory store)

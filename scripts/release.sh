@@ -15,9 +15,9 @@ PROJECT_NAME="shepherd"
 BUILD_DIR="build"
 RELEASE_DIR="release"
 
-echo -e "${GREEN}========================================${NC}"
+echo ""
 echo -e "${GREEN}  Shepherd Release Package${NC}"
-echo -e "${GREEN}========================================${NC}"
+echo ""
 echo ""
 echo "版本: ${VERSION}"
 echo ""
@@ -235,7 +235,7 @@ EOF
             # 创建 README
             cat > "../${RELEASE_DIR}/${PACKAGE_DIR}/README.txt" << EOF
 Shepherd v${VERSION}
-==================
+
 
 Shepherd 是一个轻量级的 llama.cpp 模型管理系统，支持多 API 兼容和分布式部署。
 
@@ -306,9 +306,9 @@ fi
 cd ..
 
 echo ""
-echo -e "${GREEN}========================================${NC}"
+echo ""
 echo -e "${GREEN}  打包完成${NC}"
-echo -e "${GREEN}========================================${NC}"
+echo ""
 echo ""
 echo -e "${YELLOW}发布文件:${NC}"
 ls -lh "${RELEASE_DIR}/" | grep -E "\.(zip|tar\.gz|SHA256SUMS)$"

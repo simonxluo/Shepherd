@@ -121,9 +121,9 @@ if "%BUILD_FIRST%"=="1" (
 call :check_binary
 
 echo.
-echo ==========================================
+echo.
 echo   Shepherd
-echo ==========================================
+echo.
 echo.
 
 cd /d "%PROJECT_DIR%"

@@ -67,7 +67,7 @@ export function BenchmarkResultsDialog({
   const appendResult = (result: BenchmarkResult, fileName: string) => {
     let text = '';
 
-    text += '==============================\n';
+    text += '---\n';
     text += `文件: ${fileName}\n`;
     text += `模型: ${result.modelName || modelName}\n`;
     text += `模型ID: ${result.modelId || modelId}\n`;

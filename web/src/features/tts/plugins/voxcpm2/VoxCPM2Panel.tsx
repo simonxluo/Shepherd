@@ -30,6 +30,7 @@ export function VoxCPM2Panel({
   isGenerating,
   streamState,
   onModelChange,
+  refAudioOverride,
 }: TTSPluginPanelProps) {
   const { t } = useTranslation();
   const availableModels = useAvailableModels('tts');
@@ -84,6 +85,13 @@ export function VoxCPM2Panel({
       if (ttsConfig.inferenceTimesteps !== undefined) setInferenceTimesteps(ttsConfig.inferenceTimesteps);
     }
   }, [ttsConfig]);
+
+  // Sync external ref audio override from history panel
+  useEffect(() => {
+    if (refAudioOverride) {
+      setRefAudio(refAudioOverride);
+    }
+  }, [refAudioOverride]);
 
   const getCurrentConfig = useCallback((): TTSConfig => ({
     stream: true,

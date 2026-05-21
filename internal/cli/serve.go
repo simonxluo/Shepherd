@@ -86,15 +86,15 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println()
-	fmt.Println("==========================================")
+	fmt.Println("---")
 	fmt.Println("  Shepherd")
-	fmt.Println("==========================================")
+	fmt.Println("---")
 	fmt.Printf("  配置文件: %s\n", configPath)
 	fmt.Printf("  节点角色: (从配置文件读取)\n")
 	if flagWeb {
 		fmt.Println("  前端服务器: 已启动")
 	}
-	fmt.Println("==========================================")
+	fmt.Println("---")
 	fmt.Println()
 
 	var execArgs []string
