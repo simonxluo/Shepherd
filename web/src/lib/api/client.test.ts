@@ -9,7 +9,7 @@ describe('ApiClient', () => {
   it('GET fetch calls correct URL and returns parsed JSON', async () => {
     const fakeJson = { ok: true }
     // @ts-expect-error mock global fetch
-    global.fetch.mockResolvedValue({ json: async () => fakeJson })
+    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => fakeJson })
     const client = new ApiClient('https://api.example.com')
     const data = await client.get('/test')
     expect(data).toEqual(fakeJson)
@@ -21,7 +21,7 @@ describe('ApiClient', () => {
 
   it('POST fetch sends JSON body and returns parsed JSON', async () => {
     const fakeJson = { created: true }
-    const mockFetch = vi.fn().mockResolvedValue({ json: async () => fakeJson })
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => fakeJson })
     global.fetch = mockFetch
     const client = new ApiClient('https://api.example.com')
     const body = { name: 'test' }
