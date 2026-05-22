@@ -156,10 +156,17 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
   };
 
   const handleTest = async (path: AnyPathConfig) => {
-    if (type !== 'llamacpp') return;
+    if (type !== 'llamacpp' && type !== 'vllm' && type !== 'vllm_omni') return;
 
     try {
-      const response = await llamacppPathsApi.test(path.path);
+      let response;
+      if (type === 'llamacpp') {
+        response = await llamacppPathsApi.test(path.path);
+      } else if (type === 'vllm') {
+        response = await vllmPathsApi.test(path.path);
+      } else {
+        response = await vllmOmniPathsApi.test(path.path);
+      }
 
       if (response.success && response.data?.valid) {
         toast.success(t('settings.pathConfig.testSuccess'), response.data.message || t('settings.pathConfig.testSuccessDesc'));
@@ -219,7 +226,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
               path={path}
               onEdit={() => handleOpenEditDialog(path)}
               onRemove={() => handleRemove(path)}
-              onTest={type === 'llamacpp' ? () => handleTest(path) : undefined}
+              onTest={(type === 'llamacpp' || type === 'vllm' || type === 'vllm_omni') ? () => handleTest(path) : undefined}
             />
           ))}
         </div>

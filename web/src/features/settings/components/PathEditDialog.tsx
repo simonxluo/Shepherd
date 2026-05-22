@@ -15,7 +15,7 @@ import { DirectoryBrowser } from '@/features/settings/components/DirectoryBrowse
 import { cn } from '@/lib/utils';
 import type { LlamaCppPathConfig, ModelPathConfig, BackendPathConfig, MultimodalPathConfig } from '@/lib/config';
 import { toast } from '@/hooks/useToast';
-import { llamacppPathsApi } from '@/lib/api/paths';
+import { llamacppPathsApi, vllmPathsApi, vllmOmniPathsApi } from '@/lib/api/paths';
 
 type AnyPathConfig = LlamaCppPathConfig | ModelPathConfig | BackendPathConfig | MultimodalPathConfig;
 
@@ -102,7 +102,12 @@ export function PathEditDialog({
         let response;
         if (type === 'llamacpp') {
           response = await llamacppPathsApi.test(formData.path);
+        } else if (type === 'vllm') {
+          response = await vllmPathsApi.test(formData.path);
+        } else if (type === 'vllm_omni') {
+          response = await vllmOmniPathsApi.test(formData.path);
         } else {
+          // Model and multimodal paths are directories - basic format check is enough
           setPathValidation({
             valid: true,
             checking: false,
@@ -115,7 +120,7 @@ export function PathEditDialog({
           setPathValidation({
             valid: true,
             checking: false,
-            message: '路径有效',
+            message: response.data.message || '路径有效',
           });
         } else {
           setPathValidation({
@@ -236,10 +241,11 @@ export function PathEditDialog({
                       setFormData({ ...formData, path: e.target.value })
                     }
                     placeholder={
-                      type === 'llamacpp' ? '/usr/local/bin/llama.cpp'
+                      type === 'llamacpp' ? '/path/to/llama-server 或 /path/to/llama.cpp/build/bin/'
                       : type === 'models' ? '~/.cache/huggingface/hub'
                       : type === 'multimodal' ? './models/multimodal'
-                      : '/usr/local/bin/'
+                      : type === 'vllm' ? '/path/to/vllm 或 /path/to/conda/envs/vllm/bin/'
+                      : '/path/to/vllm-omni 或 /path/to/conda/envs/vllm-omni/bin/'
                     }
                     className={cn(
                       "w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm",
@@ -273,12 +279,14 @@ export function PathEditDialog({
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-muted-foreground">
                   {type === 'llamacpp'
-                    ? 'llama.cpp 可执行文件所在目录的绝对路径'
+                    ? '可直接指向 llama-server 可执行文件，或包含该文件的目录'
                     : type === 'multimodal'
                     ? '包含 safetensors 多模态模型 (含 config.json) 的目录绝对路径'
                     : type === 'models'
                     ? '包含 GGUF 模型文件的目录绝对路径'
-                    : `${typeLabel} 可执行文件所在目录的绝对路径`}
+                    : type === 'vllm'
+                    ? '可直接指向 vllm 可执行文件，或包含该文件的目录'
+                    : '可直接指向 vllm-omni 可执行文件，或包含该文件的目录'}
                 </p>
                 {pathValidation.message && (
                   <p className={cn(
@@ -336,6 +344,7 @@ export function PathEditDialog({
           <DirectoryBrowser
             open={isBrowserOpen}
             initialPath={formData.path}
+            allowFileSelection={type === 'llamacpp' || type === 'vllm' || type === 'vllm_omni'}
             onSelect={handleDirectorySelect}
             onClose={() => setIsBrowserOpen(false)}
           />

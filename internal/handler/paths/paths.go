@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"github.com/simonxluo/Shepherd/internal/handler"
 )
 
@@ -193,7 +194,7 @@ func NewHandler(configManager *config.Manager) *Handler {
 
 func (h *Handler) GetLlamaCppPaths(c *gin.Context) { h.llamacpp.list(c) }
 func (h *Handler) RemoveLlamaCppPath(c *gin.Context) {
-	h.llamacpp.remove(c, h.validateAndNormalizePath)
+	h.llamacpp.remove(c, h.validateAndNormalizeBinaryPath)
 }
 
 func (h *Handler) AddLlamaCppPath(c *gin.Context) {
@@ -206,13 +207,13 @@ func (h *Handler) AddLlamaCppPath(c *gin.Context) {
 		handler.BadRequest(c, "Path is required")
 		return
 	}
-	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	normalizedPath, err := h.validateAndNormalizeBinaryPath(req.Path)
 	if err != nil {
 		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
 		return
 	}
 	req.Path = normalizedPath
-	h.llamacpp.add(c, &req, h.validateAndNormalizePath)
+	h.llamacpp.add(c, &req, h.validateAndNormalizeBinaryPath)
 }
 
 func (h *Handler) UpdateLlamaCppPath(c *gin.Context) {
@@ -230,7 +231,7 @@ func (h *Handler) UpdateLlamaCppPath(c *gin.Context) {
 		handler.BadRequest(c, "Path is required")
 		return
 	}
-	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	normalizedPath, err := h.validateAndNormalizeBinaryPath(req.Path)
 	if err != nil {
 		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
 		return
@@ -238,7 +239,7 @@ func (h *Handler) UpdateLlamaCppPath(c *gin.Context) {
 
 	var normalizedOriginalPath string
 	if req.OriginalPath != "" {
-		normalizedOriginalPath, _ = h.validateAndNormalizePath(req.OriginalPath)
+		normalizedOriginalPath, _ = h.validateAndNormalizeBinaryPath(req.OriginalPath)
 		if normalizedOriginalPath == "" {
 			normalizedOriginalPath = req.OriginalPath
 		}
@@ -248,7 +249,7 @@ func (h *Handler) UpdateLlamaCppPath(c *gin.Context) {
 	found := false
 	updatedIndex := -1
 	for i, p := range cfg.Llamacpp.Paths {
-		normalizedExistingPath, _ := h.validateAndNormalizePath(p.Path)
+		normalizedExistingPath, _ := h.validateAndNormalizeBinaryPath(p.Path)
 		if normalizedExistingPath == "" {
 			normalizedExistingPath = p.Path
 		}
@@ -282,7 +283,7 @@ func (h *Handler) UpdateLlamaCppPath(c *gin.Context) {
 	handler.Success(c, gin.H{"message": "Llama.cpp path updated successfully", "updated": cfg.Llamacpp.Paths})
 }
 
-// TestLlamaCppPath tests if a llama.cpp path is valid.
+// TestLlamaCppPath tests if a llama.cpp path is valid and contains the required binary.
 func (h *Handler) TestLlamaCppPath(c *gin.Context) {
 	var req struct {
 		Path string `json:"path" binding:"required"`
@@ -291,12 +292,22 @@ func (h *Handler) TestLlamaCppPath(c *gin.Context) {
 		handler.BadRequest(c, "Invalid request body")
 		return
 	}
-	_, err := h.validateAndNormalizePath(req.Path)
+	normalizedPath, err := h.validateAndNormalizeBinaryPath(req.Path)
 	if err != nil {
 		handler.Success(c, gin.H{"valid": false, "error": err.Error()})
 		return
 	}
-	handler.Success(c, gin.H{"valid": true, "message": "Path is valid"})
+	// Check if llama-server binary is findable at this path
+	serverBin := utils.FindLlamacppBinary(normalizedPath, "server")
+	if serverBin == "" {
+		handler.Success(c, gin.H{
+			"valid":   false,
+			"error":   fmt.Sprintf("llama-server not found in path: %s (looked for llama-server, server in the directory and bin/, build/bin/ subdirectories)", normalizedPath),
+			"path":    normalizedPath,
+		})
+		return
+	}
+	handler.Success(c, gin.H{"valid": true, "message": "Path is valid", "binary": serverBin, "path": normalizedPath})
 }
 
 // --- Model paths ---
@@ -458,7 +469,7 @@ func (h *Handler) UpdateMultimodalPath(c *gin.Context) {
 // --- vLLM paths ---
 
 func (h *Handler) GetVLLMPaths(c *gin.Context)   { h.vllm.list(c) }
-func (h *Handler) RemoveVLLMPath(c *gin.Context) { h.vllm.remove(c, h.validateAndNormalizePath) }
+func (h *Handler) RemoveVLLMPath(c *gin.Context) { h.vllm.remove(c, h.validateAndNormalizeBinaryPath) }
 
 func (h *Handler) AddVLLMPath(c *gin.Context) {
 	var req config.BackendPath
@@ -470,13 +481,13 @@ func (h *Handler) AddVLLMPath(c *gin.Context) {
 		handler.BadRequest(c, "Path is required")
 		return
 	}
-	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	normalizedPath, err := h.validateAndNormalizeBinaryPath(req.Path)
 	if err != nil {
 		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
 		return
 	}
 	req.Path = normalizedPath
-	h.vllm.add(c, &req, h.validateAndNormalizePath)
+	h.vllm.add(c, &req, h.validateAndNormalizeBinaryPath)
 }
 
 func (h *Handler) UpdateVLLMPath(c *gin.Context) {
@@ -492,7 +503,7 @@ func (h *Handler) UpdateVLLMPath(c *gin.Context) {
 		handler.BadRequest(c, "Path is required")
 		return
 	}
-	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	normalizedPath, err := h.validateAndNormalizeBinaryPath(req.Path)
 	if err != nil {
 		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
 		return
@@ -531,11 +542,38 @@ func (h *Handler) UpdateVLLMPath(c *gin.Context) {
 	handler.Success(c, gin.H{"message": "vLLM path updated successfully", "updated": cfg.Backends.VLLM.Paths[updatedIndex]})
 }
 
+// TestVLLMPath tests if a vLLM path is valid and contains the vllm binary.
+func (h *Handler) TestVLLMPath(c *gin.Context) {
+	var req struct {
+		Path string `json:"path" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body")
+		return
+	}
+	normalizedPath, err := h.validateAndNormalizeBinaryPath(req.Path)
+	if err != nil {
+		handler.Success(c, gin.H{"valid": false, "error": err.Error()})
+		return
+	}
+	// Check if it's a directory containing 'vllm' or is a vllm binary itself
+	binary := findVLLMBinary(normalizedPath, "vllm")
+	if binary == "" {
+		handler.Success(c, gin.H{
+			"valid": false,
+			"error": fmt.Sprintf("vllm binary not found at path: %s (looked for 'vllm' executable in directory or the file itself)", normalizedPath),
+			"path":  normalizedPath,
+		})
+		return
+	}
+	handler.Success(c, gin.H{"valid": true, "message": "Path is valid", "binary": binary, "path": normalizedPath})
+}
+
 // --- vLLM-Omni paths ---
 
 func (h *Handler) GetVLLMOmniPaths(c *gin.Context) { h.vllmOmni.list(c) }
 func (h *Handler) RemoveVLLMOmniPath(c *gin.Context) {
-	h.vllmOmni.remove(c, h.validateAndNormalizePath)
+	h.vllmOmni.remove(c, h.validateAndNormalizeBinaryPath)
 }
 
 func (h *Handler) AddVLLMOmniPath(c *gin.Context) {
@@ -548,13 +586,13 @@ func (h *Handler) AddVLLMOmniPath(c *gin.Context) {
 		handler.BadRequest(c, "Path is required")
 		return
 	}
-	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	normalizedPath, err := h.validateAndNormalizeBinaryPath(req.Path)
 	if err != nil {
 		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
 		return
 	}
 	req.Path = normalizedPath
-	h.vllmOmni.add(c, &req, h.validateAndNormalizePath)
+	h.vllmOmni.add(c, &req, h.validateAndNormalizeBinaryPath)
 }
 
 func (h *Handler) UpdateVLLMOmniPath(c *gin.Context) {
@@ -570,7 +608,7 @@ func (h *Handler) UpdateVLLMOmniPath(c *gin.Context) {
 		handler.BadRequest(c, "Path is required")
 		return
 	}
-	normalizedPath, err := h.validateAndNormalizePath(req.Path)
+	normalizedPath, err := h.validateAndNormalizeBinaryPath(req.Path)
 	if err != nil {
 		handler.BadRequest(c, fmt.Sprintf("Invalid path: %v", err))
 		return
@@ -609,9 +647,37 @@ func (h *Handler) UpdateVLLMOmniPath(c *gin.Context) {
 	handler.Success(c, gin.H{"message": "vLLM-Omni path updated successfully", "updated": cfg.Backends.VLLMOmni.Paths[updatedIndex]})
 }
 
+// TestVLLMOmniPath tests if a vLLM-Omni path is valid and contains the vllm-omni binary.
+func (h *Handler) TestVLLMOmniPath(c *gin.Context) {
+	var req struct {
+		Path string `json:"path" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		handler.BadRequest(c, "Invalid request body")
+		return
+	}
+	normalizedPath, err := h.validateAndNormalizeBinaryPath(req.Path)
+	if err != nil {
+		handler.Success(c, gin.H{"valid": false, "error": err.Error()})
+		return
+	}
+	// Check if it's a directory containing 'vllm-omni' or is a vllm-omni binary itself
+	binary := findVLLMBinary(normalizedPath, "vllm-omni")
+	if binary == "" {
+		handler.Success(c, gin.H{
+			"valid": false,
+			"error": fmt.Sprintf("vllm-omni binary not found at path: %s (looked for 'vllm-omni' executable in directory or the file itself)", normalizedPath),
+			"path":  normalizedPath,
+		})
+		return
+	}
+	handler.Success(c, gin.H{"valid": true, "message": "Path is valid", "binary": binary, "path": normalizedPath})
+}
+
 // --- Shared helpers ---
 
-// validateAndNormalizePath validates and normalizes a directory path
+// validateAndNormalizePath validates and normalizes a directory path.
+// Used for model paths and multimodal paths that must be directories.
 func (h *Handler) validateAndNormalizePath(path string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("path cannot be empty")
@@ -651,4 +717,89 @@ func (h *Handler) validateAndNormalizePath(path string) (string, error) {
 	}
 
 	return filepath.Clean(absPath), nil
+}
+
+// validateAndNormalizeBinaryPath validates and normalizes a binary path.
+// It accepts both:
+// 1. A directory containing the relevant binary (e.g., /usr/local/bin/ containing llama-server)
+// 2. A direct path to the executable file (e.g., /usr/local/bin/llama-server)
+//
+// For directories, only existence and accessibility are checked.
+// For files, it verifies the file is executable.
+func (h *Handler) validateAndNormalizeBinaryPath(path string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("path cannot be empty")
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	// Resolve symlinks first
+	realPath, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("path does not exist: %s", absPath)
+		}
+		return "", fmt.Errorf("failed to resolve path: %w", err)
+	}
+	absPath = realPath
+
+	info, err := os.Stat(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("path does not exist: %s", absPath)
+		}
+		return "", fmt.Errorf("failed to access path: %w", err)
+	}
+
+	if info.IsDir() {
+		// Directory is acceptable — backend will search for binary inside it
+		return filepath.Clean(absPath), nil
+	}
+
+	// It's a file — check if it's executable
+	if info.Mode().IsRegular() {
+		if info.Mode().Perm()&0111 == 0 {
+			return "", fmt.Errorf("file is not executable: %s", absPath)
+		}
+		// Valid executable file — return its parent directory for consistency
+		// with how the backend registry uses BinPaths (it joins dir + binary name).
+		// However, we store the actual path the user provided (could be the file itself)
+		// since FindLlamacppBinary and discoverVLLMVariant handle both cases.
+		return filepath.Clean(absPath), nil
+	}
+
+	return "", fmt.Errorf("path is not a regular file or directory: %s", absPath)
+}
+
+// findVLLMBinary finds a vLLM variant binary at the given path.
+// If path is a file and executable, it's returned directly.
+// If path is a directory, it searches for the named binary inside it.
+func findVLLMBinary(path string, binaryName string) string {
+	info, err := os.Stat(path)
+	if err != nil {
+		return ""
+	}
+
+	// If it's an executable file, return it directly
+	if info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
+		return path
+	}
+
+	// If it's a directory, look for the binary inside
+	if info.IsDir() {
+		candidate := filepath.Join(path, binaryName)
+		if fi, err := os.Stat(candidate); err == nil && fi.Mode().IsRegular() && fi.Mode().Perm()&0111 != 0 {
+			return candidate
+		}
+		// Also check bin/ subdirectory
+		candidate = filepath.Join(path, "bin", binaryName)
+		if fi, err := os.Stat(candidate); err == nil && fi.Mode().IsRegular() && fi.Mode().Perm()&0111 != 0 {
+			return candidate
+		}
+	}
+
+	return ""
 }

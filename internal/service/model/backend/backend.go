@@ -351,6 +351,18 @@ func discoverVLLMVariant(cfg *BackendConfig, backendType BackendType, name, bina
 	// 检查 BinPaths 配置的路径中是否有二进制
 	if len(cfg.BinPaths) > 0 {
 		for _, p := range cfg.BinPaths {
+			// Check if the path itself is the binary (file path case)
+			if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && fi.Mode().Perm()&0111 != 0 {
+				cmd := exec.Command(p, "--version")
+				cmd.Env = env
+				if output, err := cmd.CombinedOutput(); err == nil {
+					info.Version = strings.TrimSpace(string(output))
+					info.Available = true
+					info.BinPath = p
+					return info, nil
+				}
+			}
+			// Otherwise try as directory containing the binary
 			candidate := filepath.Join(p, binaryName)
 			cmd := exec.Command(candidate, "--version")
 			cmd.Env = env

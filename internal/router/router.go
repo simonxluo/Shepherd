@@ -225,6 +225,7 @@ func registerConfigRoutes(apiGroup *gin.RouterGroup, h *Handlers, sh ServerHandl
 			vllm.POST("", h.Paths.AddVLLMPath)
 			vllm.DELETE("", h.Paths.RemoveVLLMPath)
 			vllm.PUT("", h.Paths.UpdateVLLMPath)
+			vllm.POST("/test", h.Paths.TestVLLMPath)
 		}
 
 		vllmOmni := config.Group("/vllm_omni/paths")
@@ -233,6 +234,7 @@ func registerConfigRoutes(apiGroup *gin.RouterGroup, h *Handlers, sh ServerHandl
 			vllmOmni.POST("", h.Paths.AddVLLMOmniPath)
 			vllmOmni.DELETE("", h.Paths.RemoveVLLMOmniPath)
 			vllmOmni.PUT("", h.Paths.UpdateVLLMOmniPath)
+			vllmOmni.POST("/test", h.Paths.TestVLLMOmniPath)
 		}
 
 		storage := config.Group("/storage")

@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 interface DirectoryBrowserProps {
   open: boolean;
   initialPath?: string;
+  /** When true, executable files can also be selected (for binary path selection) */
+  allowFileSelection?: boolean;
   onSelect: (path: string) => void;
   onClose: () => void;
 }
@@ -21,6 +23,7 @@ interface DirectoryBrowserProps {
 export function DirectoryBrowser({
   open,
   initialPath,
+  allowFileSelection = false,
   onSelect,
   onClose,
 }: DirectoryBrowserProps) {
@@ -62,8 +65,15 @@ export function DirectoryBrowser({
   useEffect(() => {
     if (open) {
       loadDirectory(initialPath || '');
+      // If initialPath looks like a file (not ending with / and not empty),
+      // pre-select it so the user can confirm their previous choice
+      if (allowFileSelection && initialPath && !initialPath.endsWith('/')) {
+        setSelectedPath(initialPath);
+      } else {
+        setSelectedPath('');
+      }
     }
-  }, [open, initialPath, loadDirectory]);
+  }, [open, initialPath, loadDirectory, allowFileSelection]);
 
   const handleSelectFolder = (folder: DirectoryItem) => {
     setSelectedPath(folder.path);
@@ -199,11 +209,18 @@ export function DirectoryBrowser({
                     {files.slice(0, 50).map((file) => (
                       <div
                         key={file.path}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded text-sm text-muted-foreground"
+                        onClick={allowFileSelection ? () => setSelectedPath(file.path) : undefined}
+                        className={cn(
+                          "flex items-center gap-2 px-2 py-1.5 rounded text-sm",
+                          allowFileSelection
+                            ? "cursor-pointer hover:bg-accent transition-colors"
+                            : "text-muted-foreground",
+                          allowFileSelection && selectedPath === file.path && "bg-accent"
+                        )}
                       >
                         <File className="w-4 h-4 flex-shrink-0" />
                         <span className="truncate flex-1">{file.name}</span>
-                        <span className="text-xs">
+                        <span className="text-xs text-muted-foreground">
                           {file.size !== undefined && file.size > 1024 * 1024 * 1024
                             ? `${(file.size / (1024 * 1024 * 1024)).toFixed(1)} GB`
                             : file.size !== undefined && file.size > 1024 * 1024

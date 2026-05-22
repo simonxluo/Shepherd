@@ -117,6 +117,8 @@ export const vllmPathsApi = {
     apiClient.delete<PathMutationResponse>(
       `/config/vllm/paths?path=${encodeURIComponent(path)}`
     ),
+  test: (path: string) =>
+    apiClient.post<PathTestResponse>('/config/vllm/paths/test', { path }),
 };
 
 export const vllmOmniPathsApi = {
@@ -130,6 +132,8 @@ export const vllmOmniPathsApi = {
     apiClient.delete<PathMutationResponse>(
       `/config/vllm_omni/paths?path=${encodeURIComponent(path)}`
     ),
+  test: (path: string) =>
+    apiClient.post<PathTestResponse>('/config/vllm_omni/paths/test', { path }),
 };
 
 export const multimodalPathsApi = {
