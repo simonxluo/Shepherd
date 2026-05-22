@@ -125,17 +125,18 @@ export function MusicGenPage() {
   return (
     <div className="h-full flex flex-col bg-background text-foreground">
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">
-              {t('musicGen.title', '音乐生成')}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t('musicGen.description', '通过 AI 模型从文本描述生成音乐')}
-            </p>
-          </div>
+        {/* Header — left-aligned at the top */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">
+            {t('musicGen.title', '音乐生成')}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {t('musicGen.description', '通过 AI 模型从文本描述生成音乐')}
+          </p>
+        </div>
 
+        {/* Operation UI — centered */}
+        <div className="max-w-3xl mx-auto">
           {musicModels.length === 0 ? (
             <AvailableModelList
               models={availableModels}

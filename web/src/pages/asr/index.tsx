@@ -100,17 +100,18 @@ export function ASRPage() {
   return (
     <div className="h-full flex flex-col bg-background text-foreground">
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-foreground">
-              {t('asr.title', '语音识别 (ASR)')}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t('asr.description', '上传音频文件进行语音识别转录')}
-            </p>
-          </div>
+        {/* Header — left-aligned at the top */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">
+            {t('asr.title', '语音识别 (ASR)')}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {t('asr.description', '上传音频文件进行语音识别转录')}
+          </p>
+        </div>
 
+        {/* Operation UI — centered */}
+        <div className="max-w-3xl mx-auto">
           {asrModels.length === 0 ? (
             <AvailableModelList
               models={availableModels}
