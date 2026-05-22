@@ -111,6 +111,9 @@ func (app *App) Initialize(configPath string) error {
 	}
 	app.cfg = cfg
 
+	// Ensure model directories and HuggingFace cache directory exist
+	app.ensureDirectories()
+
 	app.role = app.determineRole()
 
 	if err := logger.InitLogger(&cfg.Log, app.role); err != nil {
@@ -201,6 +204,35 @@ func (app *App) determineRole() string {
 		return "hybrid"
 	}
 	return role
+}
+
+// ensureDirectories ensures required directories exist at startup
+func (app *App) ensureDirectories() {
+	// Ensure model directories exist
+	for _, modelPath := range app.cfg.Model.Paths {
+		if modelPath == "" {
+			continue
+		}
+		if err := os.MkdirAll(modelPath, 0755); err != nil {
+			fmt.Printf("警告: 无法创建模型目录 %s: %v\n", modelPath, err)
+		}
+	}
+
+	// Ensure HuggingFace cache directory exists
+	home := os.Getenv("HOME")
+	if home != "" {
+		hfCacheDir := fmt.Sprintf("%s/.cache/huggingface/hub", home)
+		if err := os.MkdirAll(hfCacheDir, 0755); err != nil {
+			fmt.Printf("警告: 无法创建 HuggingFace 缓存目录 %s: %v\n", hfCacheDir, err)
+		}
+	}
+
+	// Ensure download directory exists
+	if app.cfg.Download.Directory != "" {
+		if err := os.MkdirAll(app.cfg.Download.Directory, 0755); err != nil {
+			fmt.Printf("警告: 无法创建下载目录 %s: %v\n", app.cfg.Download.Directory, err)
+		}
+	}
 }
 
 func (app *App) initDistributedComponents() error {

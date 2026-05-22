@@ -3,6 +3,7 @@ package download
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -67,6 +68,11 @@ func (m *Manager) CreateTask(url, path, fileName, source, repoId string) (string
 	}
 	if path == "" {
 		return "", fmt.Errorf("path cannot be empty")
+	}
+
+	// Ensure download directory exists
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return "", fmt.Errorf("cannot create download directory %s: %w", path, err)
 	}
 
 	// Generate task ID
