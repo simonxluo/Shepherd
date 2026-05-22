@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Music, Loader2, Play, Pause, Download } from 'lucide-react';
+import { Music, Loader2, Play, Pause, Download, Clock, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +10,7 @@ import { ModelSelect } from '@/features/creative/ModelSelect';
 import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import { useMusicGeneration } from '@/features/music-gen/hooks';
 import { toast } from '@/hooks/useToast';
+import { formatBytes } from '@/lib/utils';
 
 const AUDIO_FORMATS = [
   { value: 'wav', label: 'WAV' },
@@ -34,7 +35,11 @@ export function MusicGenPage() {
   const [responseFormat, setResponseFormat] = useState('wav');
   const [temperature, setTemperature] = useState(0.7);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [generationTime, setGenerationTime] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
 
   const handleGenerate = () => {
     if (!model) {
@@ -50,6 +55,8 @@ export function MusicGenPage() {
       URL.revokeObjectURL(audioUrl);
     }
 
+    const startTime = Date.now();
+
     musicGen.mutate(
       {
         model,
@@ -60,9 +67,13 @@ export function MusicGenPage() {
       },
       {
         onSuccess: ({ blob, contentType }) => {
+          const elapsed = (Date.now() - startTime) / 1000;
+          setGenerationTime(elapsed);
           const typedBlob = new Blob([blob], { type: contentType });
+          setAudioBlob(typedBlob);
           const url = URL.createObjectURL(typedBlob);
           setAudioUrl(url);
+          setCurrentTime(0);
           toast.success(t('musicGen.generateSuccess', '音乐生成完成'));
         },
         onError: (error) => {
@@ -91,14 +102,38 @@ export function MusicGenPage() {
     a.click();
   };
 
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setAudioDuration(audioRef.current.duration);
+    }
+  };
+
+  const progressPercent = audioDuration > 0 ? (currentTime / audioDuration) * 100 : 0;
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="h-full flex flex-col bg-background text-foreground">
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-3xl mx-auto">
+          {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-foreground">
               {t('musicGen.title', '音乐生成')}
             </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t('musicGen.description', '通过 AI 模型从文本描述生成音乐')}
+            </p>
           </div>
 
           {musicModels.length === 0 ? (
@@ -109,6 +144,7 @@ export function MusicGenPage() {
             />
           ) : (
             <div className="space-y-6">
+              {/* Form */}
               <div className="space-y-4">
                 <ModelSelect
                   models={musicModels}
@@ -196,23 +232,85 @@ export function MusicGenPage() {
                 </Button>
               </div>
 
+              {/* Result */}
               {audioUrl && (
-                <div className="border rounded-lg p-4 space-y-3">
-                  <h3 className="text-sm font-medium">{t('musicGen.result', '生成结果')}</h3>
-                  <audio
-                    ref={audioRef}
-                    src={audioUrl}
-                    onEnded={() => setIsPlaying(false)}
-                    onPause={() => setIsPlaying(false)}
-                    onPlay={() => setIsPlaying(true)}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={handlePlayPause}>
-                      {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={handleDownload} title={t('musicGen.download', '下载音频')}>
-                      <Download className="w-4 h-4" />
-                    </Button>
+                <div className="border rounded-lg overflow-hidden">
+                  {/* Result header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+                    <h3 className="text-sm font-medium">
+                      {t('musicGen.result', '生成结果')}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">
+                      {isPlaying ? t('musicGen.playing', '播放中') : t('musicGen.paused', '已暂停')}
+                    </span>
+                  </div>
+
+                  {/* Audio player */}
+                  <div className="p-4 space-y-4">
+                    <audio
+                      ref={audioRef}
+                      src={audioUrl}
+                      onEnded={() => setIsPlaying(false)}
+                      onPause={() => setIsPlaying(false)}
+                      onPlay={() => setIsPlaying(true)}
+                      onTimeUpdate={handleTimeUpdate}
+                      onLoadedMetadata={handleLoadedMetadata}
+                    />
+
+                    {/* Progress bar */}
+                    <div className="space-y-1.5">
+                      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all duration-200"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{formatTime(currentTime)}</span>
+                        <span>{audioDuration > 0 ? formatTime(audioDuration) : '--:--'}</span>
+                      </div>
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="icon" onClick={handlePlayPause}>
+                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                      </Button>
+                      <Button variant="outline" size="icon" onClick={handleDownload} title={t('musicGen.download', '下载音频')}>
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {/* Metrics */}
+                    <div className="grid grid-cols-3 gap-3">
+                      {generationTime !== null && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 text-xs">
+                          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                          <div>
+                            <div className="text-muted-foreground">{t('musicGen.generationTime', '生成耗时')}</div>
+                            <div className="font-medium">{generationTime.toFixed(1)}s</div>
+                          </div>
+                        </div>
+                      )}
+                      {audioBlob && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 text-xs">
+                          <HardDrive className="w-3.5 h-3.5 text-muted-foreground" />
+                          <div>
+                            <div className="text-muted-foreground">{t('musicGen.fileSize', '文件大小')}</div>
+                            <div className="font-medium">{formatBytes(audioBlob.size)}</div>
+                          </div>
+                        </div>
+                      )}
+                      {audioDuration > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 text-xs">
+                          <Music className="w-3.5 h-3.5 text-muted-foreground" />
+                          <div>
+                            <div className="text-muted-foreground">{t('musicGen.audioDuration', '音频时长')}</div>
+                            <div className="font-medium">{formatTime(audioDuration)}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

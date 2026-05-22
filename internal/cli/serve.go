@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -75,8 +76,11 @@ func runServe(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(cmd.OutOrStderr(), "警告: 清理残留进程失败: %v\n", err)
 	}
 
+	var webDevCmd *exec.Cmd
 	if flagWeb {
-		if err := startWebDevServer(projectDir); err != nil {
+		var err error
+		webDevCmd, err = startWebDevServer(projectDir)
+		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "警告: 前端启动失败: %v\n", err)
 		}
 	}
@@ -112,7 +116,50 @@ func runServe(cmd *cobra.Command, args []string) error {
 		Setpgid: true,
 	}
 
-	return execCmd.Run()
+	if err := execCmd.Start(); err != nil {
+		return fmt.Errorf("启动服务进程失败: %w", err)
+	}
+
+	// 拦截信号，转发给子进程，确保 Ctrl+C 能正确关闭服务
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+
+	// 等待子进程退出或收到信号
+	done := make(chan error, 1)
+	go func() {
+		done <- execCmd.Wait()
+	}()
+
+	select {
+	case err := <-done:
+		// 子进程自行退出
+		cleanupWebDevServer(webDevCmd)
+		return err
+	case sig := <-sigChan:
+		// 收到信号，转发给子进程
+		fmt.Printf("\n收到信号 %v，正在停止服务...\n", sig)
+
+		// 向子进程发送信号，触发其优雅关闭
+		if execCmd.Process != nil {
+			execCmd.Process.Signal(sig)
+		}
+
+		// 等待子进程优雅退出，超时后强制终止
+		select {
+		case <-done:
+			// 子进程已退出
+		case <-time.After(15 * time.Second):
+			fmt.Println("子进程关闭超时，强制终止...")
+			if execCmd.Process != nil {
+				execCmd.Process.Kill()
+			}
+			<-done
+		}
+
+		// 清理前端开发服务器
+		cleanupWebDevServer(webDevCmd)
+		return nil
+	}
 }
 
 func getProjectDir() string {
@@ -248,10 +295,10 @@ func getGitCommit(dir string) string {
 	return strings.TrimSpace(string(out))
 }
 
-func startWebDevServer(projectDir string) error {
+func startWebDevServer(projectDir string) (*exec.Cmd, error) {
 	webDir := filepath.Join(projectDir, "web")
 	if _, err := os.Stat(webDir); os.IsNotExist(err) {
-		return fmt.Errorf("前端目录不存在: %s", webDir)
+		return nil, fmt.Errorf("前端目录不存在: %s", webDir)
 	}
 
 	npmCmd := "npm"
@@ -266,7 +313,7 @@ func startWebDevServer(projectDir string) error {
 		installCmd.Stdout = os.Stdout
 		installCmd.Stderr = os.Stderr
 		if err := installCmd.Run(); err != nil {
-			return fmt.Errorf("安装前端依赖失败: %w", err)
+			return nil, fmt.Errorf("安装前端依赖失败: %w", err)
 		}
 	}
 
@@ -278,16 +325,19 @@ func startWebDevServer(projectDir string) error {
 	fmt.Println("启动前端开发服务器...")
 	devCmd := exec.Command(npmCmd, "run", "dev")
 	devCmd.Dir = webDir
+	devCmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
 
 	logFile, err := os.CreateTemp("", "shepherd-web-dev-*.log")
 	if err != nil {
-		return fmt.Errorf("创建日志文件失败: %w", err)
+		return nil, fmt.Errorf("创建日志文件失败: %w", err)
 	}
 	devCmd.Stdout = logFile
 	devCmd.Stderr = logFile
 
 	if err := devCmd.Start(); err != nil {
-		return fmt.Errorf("启动前端失败: %w", err)
+		return nil, fmt.Errorf("启动前端失败: %w", err)
 	}
 
 	pidFile := filepath.Join(os.TempDir(), "shepherd-web-dev.pid")
@@ -298,7 +348,39 @@ func startWebDevServer(projectDir string) error {
 
 	time.Sleep(2 * time.Second)
 
-	return nil
+	return devCmd, nil
+}
+
+// cleanupWebDevServer 停止前端开发服务器进程
+func cleanupWebDevServer(devCmd *exec.Cmd) {
+	if devCmd == nil || devCmd.Process == nil {
+		return
+	}
+
+	pid := devCmd.Process.Pid
+	fmt.Printf("停止前端开发服务器 (PID: %d)...\n", pid)
+
+	// 向进程组发送 SIGTERM，确保 npm 及其子进程都被终止
+	syscall.Kill(-pid, syscall.SIGTERM)
+
+	// 等待进程退出
+	done := make(chan struct{})
+	go func() {
+		devCmd.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		// 超时强制终止
+		syscall.Kill(-pid, syscall.SIGKILL)
+		<-done
+	}
+
+	// 清理 PID 文件
+	pidFile := filepath.Join(os.TempDir(), "shepherd-web-dev.pid")
+	os.Remove(pidFile)
 }
 
 func cleanupStaleProcesses() error {

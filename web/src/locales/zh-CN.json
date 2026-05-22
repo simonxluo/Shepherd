@@ -443,7 +443,17 @@
     "tabs": {
       "generic": "通用",
       "voxcpm2": "VoxCPM2"
-    }
+    },
+    "history": "历史记录",
+    "historyLoading": "加载历史记录...",
+    "historyAll": "全部",
+    "historyFavourites": "收藏",
+    "noFavourites": "暂无收藏记录",
+    "noHistory": "暂无生成记录，合成的音频将显示在这里。",
+    "toggleFavourite": "切换收藏",
+    "delete": "删除",
+    "useAsRef": "用作参考",
+    "refAudioSet": "已从历史记录设置参考音频"
   },
   "asr": {
     "title": "语音识别 (ASR)",
@@ -462,16 +472,22 @@
     "languagePlaceholder": "如：zh, en, ja",
     "promptLabel": "提示词 (可选)",
     "promptPlaceholder": "可选的提示文本",
+    "responseFormatLabel": "响应格式",
+    "temperatureLabel": "温度",
     "transcribe": "开始识别",
     "transcribing": "识别中...",
     "transcribeFailed": "语音识别失败",
     "result": "识别结果",
     "detectedLanguage": "语言",
-    "duration": "时长"
+    "duration": "时长",
+    "wordCount": "词数",
+    "charCount": "字符数",
+    "copy": "复制",
+    "copied": "已复制"
   },
   "imageGen": {
     "title": "图像生成",
-    "description": "通过文本描述生成图像",
+    "description": "通过 AI 模型从文本描述生成图像",
     "noModels": "没有已加载的图像生成模型",
     "goToModels": "前往模型管理",
     "noModelsHint": "请先加载一个支持图像生成的模型",
@@ -481,6 +497,8 @@
     "modelLabel": "图像生成模型",
     "promptLabel": "图像描述",
     "promptPlaceholder": "描述要生成的图像...",
+    "negativePromptLabel": "反向提示词 (可选)",
+    "negativePromptPlaceholder": "描述要从图像中排除的内容...",
     "sizeLabel": "尺寸",
     "countLabel": "数量",
     "qualityLabel": "质量",
@@ -493,11 +511,17 @@
     "generating": "生成中...",
     "generateFailed": "图像生成失败",
     "result": "生成结果",
-    "imageAlt": "生成图像"
+    "resultCount": "{{count}} 张图像",
+    "imageAlt": "生成图像",
+    "copyPrompt": "复制提示词",
+    "promptCopied": "提示词已复制",
+    "download": "下载",
+    "emptyState": "暂无生成的图像",
+    "emptyStateHint": "输入描述并点击生成来创建图像"
   },
   "musicGen": {
     "title": "音乐生成",
-    "description": "通过文本描述生成音乐",
+    "description": "通过 AI 模型从文本描述生成音乐",
     "noModels": "没有已加载的音乐生成模型",
     "goToModels": "前往模型管理",
     "noModelsHint": "请先加载一个支持音乐生成的模型",
@@ -515,7 +539,13 @@
     "generateSuccess": "音乐生成完成",
     "generateFailed": "音乐生成失败",
     "result": "生成结果",
-    "download": "下载音频"
+    "download": "下载音频",
+    "fileSize": "文件大小",
+    "generationTime": "生成耗时",
+    "audioDuration": "音频时长",
+    "format": "格式",
+    "playing": "播放中",
+    "paused": "已暂停"
   },
   "footer": {
     "version": "版本",

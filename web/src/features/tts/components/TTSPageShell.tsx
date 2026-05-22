@@ -234,27 +234,29 @@ export function TTSPageShell() {
 
         {/* Center: main content area */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-3xl mx-auto">
-            <div className="mb-6 flex items-start gap-3">
-              {/* Mobile sidebar toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden shrink-0 mt-0.5"
-                onClick={() => setShowSidebar((v) => !v)}
-              >
-                <PanelLeftOpen className="w-5 h-5" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {t('tts.title', 'Text-to-Speech (TTS)')}
-                </h1>
-                <p className="text-muted-foreground">
-                  {t('tts.description', 'Convert text to natural speech with streaming playback and voice cloning')}
-                </p>
-              </div>
+          {/* Header — left-aligned at the top */}
+          <div className="mb-6 flex items-start gap-3">
+            {/* Mobile sidebar toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden shrink-0 mt-0.5"
+              onClick={() => setShowSidebar((v) => !v)}
+            >
+              <PanelLeftOpen className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">
+                {t('tts.title', 'Text-to-Speech (TTS)')}
+              </h1>
+              <p className="text-muted-foreground">
+                {t('tts.description', 'Convert text to natural speech with streaming playback and voice cloning')}
+              </p>
             </div>
+          </div>
 
+          {/* Operation UI — centered */}
+          <div className="max-w-3xl mx-auto">
             <div className="space-y-6">
               {/* Plugin panel - always render, let plugin handle no-model state */}
               {PanelComponent && <PanelComponent {...panelProps} />}

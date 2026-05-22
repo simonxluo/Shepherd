@@ -443,7 +443,17 @@
     "tabs": {
       "generic": "Generic",
       "voxcpm2": "VoxCPM2"
-    }
+    },
+    "history": "History",
+    "historyLoading": "Loading history...",
+    "historyAll": "All",
+    "historyFavourites": "Favourites",
+    "noFavourites": "No favourites yet",
+    "noHistory": "No TTS history yet. Generated audio will appear here.",
+    "toggleFavourite": "Toggle favourite",
+    "delete": "Delete",
+    "useAsRef": "Use as reference",
+    "refAudioSet": "Reference audio set from history"
   },
   "asr": {
     "title": "Speech Recognition (ASR)",
@@ -462,16 +472,22 @@
     "languagePlaceholder": "e.g., zh, en, ja",
     "promptLabel": "Prompt (optional)",
     "promptPlaceholder": "Optional prompt text",
+    "responseFormatLabel": "Response Format",
+    "temperatureLabel": "Temperature",
     "transcribe": "Transcribe",
     "transcribing": "Transcribing...",
     "transcribeFailed": "Transcription failed",
     "result": "Result",
     "detectedLanguage": "Language",
-    "duration": "Duration"
+    "duration": "Duration",
+    "wordCount": "Words",
+    "charCount": "Characters",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "imageGen": {
     "title": "Image Generation",
-    "description": "Generate images from text descriptions",
+    "description": "Generate images from text descriptions using AI models",
     "noModels": "No loaded image generation models",
     "goToModels": "Go to Model Management",
     "noModelsHint": "Please load a model that supports image generation first",
@@ -481,6 +497,8 @@
     "modelLabel": "Image Generation Model",
     "promptLabel": "Image Description",
     "promptPlaceholder": "Describe the image to generate...",
+    "negativePromptLabel": "Negative Prompt (optional)",
+    "negativePromptPlaceholder": "Describe what to exclude from the image...",
     "sizeLabel": "Size",
     "countLabel": "Count",
     "qualityLabel": "Quality",
@@ -492,12 +510,18 @@
     "generate": "Generate Image",
     "generating": "Generating...",
     "generateFailed": "Image generation failed",
-    "result": "Result",
-    "imageAlt": "Generated image"
+    "result": "Generated Images",
+    "resultCount": "{{count}} image(s)",
+    "imageAlt": "Generated image",
+    "copyPrompt": "Copy Prompt",
+    "promptCopied": "Prompt copied",
+    "download": "Download",
+    "emptyState": "No images generated yet",
+    "emptyStateHint": "Enter a description and click Generate to create images"
   },
   "musicGen": {
     "title": "Music Generation",
-    "description": "Generate music from text descriptions",
+    "description": "Generate music from text descriptions using AI models",
     "noModels": "No loaded music generation models",
     "goToModels": "Go to Model Management",
     "noModelsHint": "Please load a model that supports music generation first",
@@ -514,8 +538,14 @@
     "generating": "Generating...",
     "generateSuccess": "Music generation complete",
     "generateFailed": "Music generation failed",
-    "result": "Result",
-    "download": "Download audio"
+    "result": "Generated Audio",
+    "download": "Download audio",
+    "fileSize": "File Size",
+    "generationTime": "Generation Time",
+    "audioDuration": "Duration",
+    "format": "Format",
+    "playing": "Playing",
+    "paused": "Paused"
   },
   "footer": {
     "version": "Version",
