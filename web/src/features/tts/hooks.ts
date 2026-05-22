@@ -37,6 +37,8 @@ export interface TTSModelFeatures {
   supportsStreamPcm: boolean;
   supportsCfgValue: boolean;
   supportsInferenceTimesteps: boolean;
+  supportsCfgCutoffRatio: boolean;
+  supportsSwaySampling: boolean;
   supportsEmotion: boolean;
   defaultSampleRate: number;
   defaultFormat: string;
@@ -56,6 +58,8 @@ export function getTTSModelFeatures(model: LoadedModel): TTSModelFeatures {
       supportsStreamPcm: true,
       supportsCfgValue: isVoxCPM,
       supportsInferenceTimesteps: isVoxCPM,
+      supportsCfgCutoffRatio: isVoxCPM,
+      supportsSwaySampling: isVoxCPM,
       supportsEmotion: isVoxCPM,
       defaultSampleRate: 24000,
       defaultFormat: 'pcm',
@@ -70,6 +74,8 @@ export function getTTSModelFeatures(model: LoadedModel): TTSModelFeatures {
     supportsStreamPcm: false,
     supportsCfgValue: false,
     supportsInferenceTimesteps: false,
+    supportsCfgCutoffRatio: false,
+    supportsSwaySampling: false,
     supportsEmotion: false,
     defaultSampleRate: 24000,
     defaultFormat: 'mp3',
@@ -129,6 +135,8 @@ export interface TTSConfig {
   emotion?: string;
   cfgValue?: string;
   inferenceTimesteps?: string;
+  cfgCutoffRatio?: string;
+  swaySamplingCoef?: string;
 }
 
 function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
@@ -150,6 +158,8 @@ function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
     emotion: (raw.emotion as string) || undefined,
     cfgValue: (raw.cfgValue as string) || undefined,
     inferenceTimesteps: (raw.inferenceTimesteps as string) || undefined,
+    cfgCutoffRatio: (raw.cfgCutoffRatio as string) || undefined,
+    swaySamplingCoef: (raw.swaySamplingCoef as string) || undefined,
   };
 }
 

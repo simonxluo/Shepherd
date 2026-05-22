@@ -4,7 +4,7 @@ import { Volume2, Loader2, Settings2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,52 @@ import { RefAudioInput } from '../../components/RefAudioInput';
 import { ConfigManager } from '../../components/ConfigManager';
 import { toast } from '@/hooks/useToast';
 import type { TTSPluginPanelProps } from '../../types';
+
+const VOXCPM2_LANGUAGES = [
+  // Auto detect
+  { value: '', group: 'auto', label: 'tts.languageAuto', fallback: 'Auto Detect' },
+  // 30 official languages (alphabetical)
+  { value: 'Arabic', group: 'official', label: 'Arabic' },
+  { value: 'Burmese', group: 'official', label: 'Burmese' },
+  { value: 'Chinese', group: 'official', label: 'Chinese' },
+  { value: 'Danish', group: 'official', label: 'Danish' },
+  { value: 'Dutch', group: 'official', label: 'Dutch' },
+  { value: 'English', group: 'official', label: 'English' },
+  { value: 'Finnish', group: 'official', label: 'Finnish' },
+  { value: 'French', group: 'official', label: 'French' },
+  { value: 'German', group: 'official', label: 'German' },
+  { value: 'Greek', group: 'official', label: 'Greek' },
+  { value: 'Hebrew', group: 'official', label: 'Hebrew' },
+  { value: 'Hindi', group: 'official', label: 'Hindi' },
+  { value: 'Indonesian', group: 'official', label: 'Indonesian' },
+  { value: 'Italian', group: 'official', label: 'Italian' },
+  { value: 'Japanese', group: 'official', label: 'Japanese' },
+  { value: 'Khmer', group: 'official', label: 'Khmer' },
+  { value: 'Korean', group: 'official', label: 'Korean' },
+  { value: 'Lao', group: 'official', label: 'Lao' },
+  { value: 'Malay', group: 'official', label: 'Malay' },
+  { value: 'Norwegian', group: 'official', label: 'Norwegian' },
+  { value: 'Polish', group: 'official', label: 'Polish' },
+  { value: 'Portuguese', group: 'official', label: 'Portuguese' },
+  { value: 'Russian', group: 'official', label: 'Russian' },
+  { value: 'Spanish', group: 'official', label: 'Spanish' },
+  { value: 'Swahili', group: 'official', label: 'Swahili' },
+  { value: 'Swedish', group: 'official', label: 'Swedish' },
+  { value: 'Tagalog', group: 'official', label: 'Tagalog' },
+  { value: 'Thai', group: 'official', label: 'Thai' },
+  { value: 'Turkish', group: 'official', label: 'Turkish' },
+  { value: 'Vietnamese', group: 'official', label: 'Vietnamese' },
+  // 9 Chinese dialects
+  { value: '四川话', group: 'dialect', label: '四川话 (Sichuanese)' },
+  { value: '粤语', group: 'dialect', label: '粤语 (Cantonese)' },
+  { value: '吴语', group: 'dialect', label: '吴语 (Wu)' },
+  { value: '东北话', group: 'dialect', label: '东北话 (Northeastern)' },
+  { value: '河南话', group: 'dialect', label: '河南话 (Henan)' },
+  { value: '陕西方言', group: 'dialect', label: '陕西方言 (Shaanxi)' },
+  { value: '山东话', group: 'dialect', label: '山东话 (Shandong)' },
+  { value: '天津话', group: 'dialect', label: '天津话 (Tianjin)' },
+  { value: '闽南话', group: 'dialect', label: '闽南话 (Min Nan)' },
+];
 
 export function VoxCPM2Panel({
   model: selectedModel,
@@ -53,6 +99,8 @@ export function VoxCPM2Panel({
   const [emotion, setEmotion] = useState('default');
   const [cfgValue, setCfgValue] = useState('2');
   const [inferenceTimesteps, setInferenceTimesteps] = useState('10');
+  const [cfgCutoffRatio, setCfgCutoffRatio] = useState('1');
+  const [swaySamplingCoef, setSwaySamplingCoef] = useState('1');
 
   const features = useMemo(
     () => (selectedModel ? getTTSModelFeatures(selectedModel) : null),
@@ -83,6 +131,8 @@ export function VoxCPM2Panel({
       if (ttsConfig.emotion !== undefined) setEmotion(ttsConfig.emotion);
       if (ttsConfig.cfgValue !== undefined) setCfgValue(ttsConfig.cfgValue);
       if (ttsConfig.inferenceTimesteps !== undefined) setInferenceTimesteps(ttsConfig.inferenceTimesteps);
+      if (ttsConfig.cfgCutoffRatio !== undefined) setCfgCutoffRatio(ttsConfig.cfgCutoffRatio);
+      if (ttsConfig.swaySamplingCoef !== undefined) setSwaySamplingCoef(ttsConfig.swaySamplingCoef);
     }
   }, [ttsConfig]);
 
@@ -108,8 +158,11 @@ export function VoxCPM2Panel({
     emotion: emotion === 'default' ? undefined : emotion,
     cfgValue: cfgValue || undefined,
     inferenceTimesteps: inferenceTimesteps || undefined,
+    cfgCutoffRatio: cfgCutoffRatio !== '1' ? cfgCutoffRatio : undefined,
+    swaySamplingCoef: swaySamplingCoef !== '1' ? swaySamplingCoef : undefined,
   }), [instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
-       seed, maxNewTokens, language, emotion, cfgValue, inferenceTimesteps]);
+       seed, maxNewTokens, language, emotion, cfgValue, inferenceTimesteps,
+       cfgCutoffRatio, swaySamplingCoef]);
 
   const handleSaveToServer = useCallback(() => {
     if (!modelIdForConfig) return;
@@ -138,6 +191,8 @@ export function VoxCPM2Panel({
     if (cfg.emotion !== undefined) setEmotion(cfg.emotion);
     if (cfg.cfgValue !== undefined) setCfgValue(cfg.cfgValue);
     if (cfg.inferenceTimesteps !== undefined) setInferenceTimesteps(cfg.inferenceTimesteps);
+    if (cfg.cfgCutoffRatio !== undefined) setCfgCutoffRatio(cfg.cfgCutoffRatio);
+    if (cfg.swaySamplingCoef !== undefined) setSwaySamplingCoef(cfg.swaySamplingCoef);
   }, []);
 
   const handleGenerate = useCallback(() => {
@@ -187,9 +242,24 @@ export function VoxCPM2Panel({
       if (!isNaN(val)) payload.inference_timesteps = val;
     }
 
+    // extra_params for cfg_cutoff_ratio and sway_sampling_coef
+    const extraParams: Record<string, unknown> = {};
+    if (cfgCutoffRatio) {
+      const val = parseFloat(cfgCutoffRatio);
+      if (!isNaN(val) && val !== 1.0) extraParams.cfg_cutoff_ratio = val;
+    }
+    if (swaySamplingCoef) {
+      const val = parseFloat(swaySamplingCoef);
+      if (!isNaN(val) && val !== 1.0) extraParams.sway_sampling_coef = val;
+    }
+    if (Object.keys(extraParams).length > 0) {
+      payload.extra_params = extraParams;
+    }
+
     onGenerate(payload);
   }, [modelName, input, instructions, refAudio, refText, promptAudio, promptText,
       ultimateCloning, seed, maxNewTokens, language, emotion, cfgValue, inferenceTimesteps,
+      cfgCutoffRatio, swaySamplingCoef,
       onGenerate, t]);
 
   if (matchedModels.length === 0) {
@@ -260,12 +330,28 @@ export function VoxCPM2Panel({
         <label className="block text-sm font-medium mb-1.5">
           {t('tts.languageLabel', 'Language')}
         </label>
-        <Input
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          placeholder={t('tts.languagePlaceholder', 'e.g., zh, en, ja')}
-          className="bg-background"
-        />
+        <Select value={language} onValueChange={setLanguage}>
+          <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+            <SelectValue placeholder={t('tts.languageAuto', 'Auto Detect')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">{t('tts.languageAuto', 'Auto Detect')}</SelectItem>
+            <SelectSeparator />
+            <SelectGroup>
+              <SelectLabel>{t('tts.languageOfficial', 'Official Languages')}</SelectLabel>
+              {VOXCPM2_LANGUAGES.filter(l => l.group === 'official').map(l => (
+                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+              ))}
+            </SelectGroup>
+            <SelectSeparator />
+            <SelectGroup>
+              <SelectLabel>{t('tts.languageDialects', 'Chinese Dialects')}</SelectLabel>
+              {VOXCPM2_LANGUAGES.filter(l => l.group === 'dialect').map(l => (
+                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Voice cloning */}
@@ -429,6 +515,41 @@ export function VoxCPM2Panel({
                 max={30}
                 step={1}
                 className="w-full mt-2"
+              />
+            </div>
+          )}
+
+          {/* CFG Cutoff Ratio */}
+          {features?.supportsCfgCutoffRatio && (
+            <div>
+              <label className="block text-sm font-medium mb-1.5">
+                {t('tts.cfgCutoffRatio', 'CFG Cutoff Ratio')}: {cfgCutoffRatio}
+              </label>
+              <Slider
+                value={[parseFloat(cfgCutoffRatio) || 1]}
+                onValueChange={([val]) => setCfgCutoffRatio(String(val))}
+                min={0}
+                max={1}
+                step={0.05}
+                className="w-full mt-2"
+              />
+            </div>
+          )}
+
+          {/* Sway Sampling Coefficient */}
+          {features?.supportsSwaySampling && (
+            <div>
+              <label className="block text-sm font-medium mb-1.5">
+                {t('tts.swaySamplingCoef', 'Sway Sampling Coefficient')}
+              </label>
+              <Input
+                value={swaySamplingCoef}
+                onChange={(e) => setSwaySamplingCoef(e.target.value)}
+                placeholder="1.0"
+                type="number"
+                min="0"
+                step="0.1"
+                className="bg-background"
               />
             </div>
           )}
