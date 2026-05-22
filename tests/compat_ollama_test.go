@@ -8,8 +8,8 @@ import (
 func TestCompatOllamaTags(t *testing.T) {
 	env := SetupTestServer(t)
 
-	// Ollama uses POST /api/tags
-	w := DoRequest(env.Engine, http.MethodPost, "/api/tags", nil)
+	// Ollama uses GET /api/tags
+	w := DoRequest(env.Engine, http.MethodGet, "/api/tags", nil)
 	AssertStatus(t, w, http.StatusOK)
 
 	resp := ParseRawResponse(t, w)

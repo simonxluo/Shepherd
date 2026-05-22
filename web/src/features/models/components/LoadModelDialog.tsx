@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { X, Loader2, Info, Save, Wand2, ToggleRight, ToggleLeft, Download } from 'lucide-react';
+import { X, Loader2, Info, Save, Wand2, ToggleRight, ToggleLeft, ArrowDownToLine, FileDown, FileUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -379,13 +379,16 @@ export function LoadModelDialog({
   // Named config hooks
   const { data: namedConfigsData } = useModelLoadConfigs(modelId);
   const namedConfigs = namedConfigsData?.configs || [];
+  const DEFAULT_CONFIG_KEY = '__default__';
+  const getDisplayName = (name: string) => name || '默认配置';
   const saveNamedConfig = useSaveNamedModelLoadConfig();
   const deleteNamedConfig = useDeleteNamedModelLoadConfig();
 
   const hasLoadedDefaultConfig = useRef(false);
 
-  const handleLoadConfigByName = (name: string) => {
-    const found = namedConfigs.find(c => c.name === name);
+  const handleLoadConfigByName = (key: string) => {
+    const actualName = key === DEFAULT_CONFIG_KEY ? '' : key;
+    const found = namedConfigs.find(c => c.name === actualName);
     if (found) {
       const config = { ...found.config } as Partial<LoadModelParams>;
       setParams(prev => ({
@@ -394,23 +397,101 @@ export function LoadModelDialog({
         modelId: prev.modelId,
         enabled: config.enabled || prev.enabled,
       }));
-      setSelectedConfigToLoad(name);
-      toast.success(`已加载配置「${name}」`);
+      setSelectedConfigToLoad(key);
+      toast.success(`已加载配置「${getDisplayName(actualName)}」`);
     }
   };
 
   const handleSaveConfigByName = (name: string) => {
-    saveNamedConfig.mutateAsync({ modelId, name, config: params as unknown as Record<string, unknown> }).then(() => {
-      toast.success(`配置「${name}」已保存`);
-    }).catch(() => {
-      toast.error('保存配置失败');
-    });
+    if (name === '默认配置') {
+      saveModelLoadConfig.mutateAsync({ modelId, config: params }).then(() => {
+        toast.success('配置「默认配置」已保存');
+      }).catch(() => {
+        toast.error('保存配置失败');
+      });
+    } else {
+      saveNamedConfig.mutateAsync({ modelId, name, config: params as unknown as Record<string, unknown> }).then(() => {
+        toast.success(`配置「${name}」已保存`);
+      }).catch(() => {
+        toast.error('保存配置失败');
+      });
+    }
   };
 
   const handleDeleteConfigByName = (name: string) => {
     deleteNamedConfig.mutateAsync({ modelId, name }).catch(() => {
       toast.error('删除配置失败');
     });
+  };
+
+  const handleExportConfigs = () => {
+    const exportData = {
+      modelId,
+      modelName: modelName || modelId,
+      exportedAt: new Date().toISOString(),
+      configs: namedConfigs.map(c => ({
+        name: c.name || '默认配置',
+        config: c.config,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${modelName || modelId}_configs.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`已导出 ${namedConfigs.length} 个配置`);
+  };
+
+  const handleImportConfigs = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data.configs || !Array.isArray(data.configs)) {
+          toast.error('无效的配置文件格式');
+          return;
+        }
+        const existingNames = new Set(namedConfigs.map(c => c.name));
+        let imported = 0;
+        for (const entry of data.configs) {
+          if (!entry.name || !entry.config) continue;
+          let name = entry.name === '默认配置' ? '' : entry.name;
+          if (name && existingNames.has(name)) {
+            let counter = 1;
+            let newName = `${name}_${counter}`;
+            while (existingNames.has(newName)) {
+              counter++;
+              newName = `${name}_${counter}`;
+            }
+            name = newName;
+          }
+          existingNames.add(name);
+          try {
+            if (name === '') {
+              await saveModelLoadConfig.mutateAsync({ modelId, config: entry.config as LoadModelParams });
+            } else {
+              await saveNamedConfig.mutateAsync({ modelId, name, config: entry.config });
+            }
+            imported++;
+          } catch {
+            // skip failed imports
+          }
+        }
+        toast.success(`已导入 ${imported} 个配置`);
+      } catch {
+        toast.error('读取配置文件失败');
+      }
+    };
+    input.click();
   };
 
   useEffect(() => {
@@ -726,16 +807,16 @@ export function LoadModelDialog({
                         onChange={(e) => setSelectedConfigToLoad(e.target.value)}
                         className="h-7 px-2 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
-                        <option value="">加载配置...</option>
+                        <option value="">选择配置...</option>
                         {namedConfigs.map(c => (
-                          <option key={c.name} value={c.name}>{c.name}</option>
+                          <option key={c.name || DEFAULT_CONFIG_KEY} value={c.name || DEFAULT_CONFIG_KEY}>{getDisplayName(c.name)}</option>
                         ))}
                       </select>
                       <Button
                         type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
+                        variant="outline"
+                        size="xs"
+                        className="h-7 gap-1"
                         disabled={!selectedConfigToLoad}
                         onClick={() => {
                           if (selectedConfigToLoad) {
@@ -743,7 +824,8 @@ export function LoadModelDialog({
                           }
                         }}
                       >
-                        <Download className="w-3 h-3" />
+                        <ArrowDownToLine className="w-3 h-3" />
+                        加载
                       </Button>
                     </div>
                   )}
@@ -1358,7 +1440,7 @@ export function LoadModelDialog({
                 )}
               </div>
 
-              {/* 右侧：取消 + 保存配置 + 加载 */}
+              {/* 右侧：取消 + 保存配置 + 导入导出 + 加载 */}
               <div className="flex items-center gap-3">
                 <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
                   取消
@@ -1371,6 +1453,26 @@ export function LoadModelDialog({
                 >
                   <Save className="w-4 h-4" />
                   保存配置
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportConfigs}
+                  disabled={isLoading || namedConfigs.length === 0}
+                >
+                  <FileDown className="w-4 h-4" />
+                  导出
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImportConfigs}
+                  disabled={isLoading}
+                >
+                  <FileUp className="w-4 h-4" />
+                  导入
                 </Button>
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? (
@@ -1391,10 +1493,20 @@ export function LoadModelDialog({
         isOpen={saveConfigDialogOpen}
         onClose={() => setSaveConfigDialogOpen(false)}
         onConfirm={handleSaveConfigByName}
-        existingConfigs={namedConfigs.filter(c => c.name !== '')}
-        onDeleteConfig={handleDeleteConfigByName}
+        existingConfigs={namedConfigs.map(c => ({
+          ...c,
+          name: c.name || '默认配置',
+        }))}
+        onDeleteConfig={(name) => {
+          if (name === '默认配置') {
+            deleteModelLoadConfig.mutateAsync(modelId);
+          } else {
+            handleDeleteConfigByName(name);
+          }
+        }}
+        onUpdateConfig={(name) => handleSaveConfigByName(name)}
         modelName={modelName || modelId}
-        isSaving={saveNamedConfig.isPending}
+        isSaving={saveNamedConfig.isPending || saveModelLoadConfig.isPending}
       />
     </Fragment>
     );
@@ -1517,16 +1629,16 @@ export function LoadModelDialog({
                       onChange={(e) => setSelectedConfigToLoad(e.target.value)}
                       className="h-7 px-2 text-xs border border-border rounded bg-input text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
-                      <option value="">加载配置...</option>
+                      <option value="">选择配置...</option>
                       {namedConfigs.map(c => (
-                        <option key={c.name} value={c.name}>{c.name}</option>
+                        <option key={c.name || DEFAULT_CONFIG_KEY} value={c.name || DEFAULT_CONFIG_KEY}>{getDisplayName(c.name)}</option>
                       ))}
                     </select>
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
+                      variant="outline"
+                      size="xs"
+                      className="h-7 gap-1"
                       disabled={!selectedConfigToLoad}
                       onClick={() => {
                         if (selectedConfigToLoad) {
@@ -1534,7 +1646,8 @@ export function LoadModelDialog({
                         }
                       }}
                     >
-                      <Download className="w-3 h-3" />
+                      <ArrowDownToLine className="w-3 h-3" />
+                      加载
                     </Button>
                   </div>
                 )}
@@ -2747,6 +2860,26 @@ export function LoadModelDialog({
                 <Save className="w-4 h-4" />
                 保存配置
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleExportConfigs}
+                disabled={isLoading || namedConfigs.length === 0}
+              >
+                <FileDown className="w-4 h-4" />
+                导出
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleImportConfigs}
+                disabled={isLoading}
+              >
+                <FileUp className="w-4 h-4" />
+                导入
+              </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
                   <>
@@ -2766,10 +2899,20 @@ export function LoadModelDialog({
       isOpen={saveConfigDialogOpen}
       onClose={() => setSaveConfigDialogOpen(false)}
       onConfirm={handleSaveConfigByName}
-      existingConfigs={namedConfigs.filter(c => c.name !== '')}
-      onDeleteConfig={handleDeleteConfigByName}
+      existingConfigs={namedConfigs.map(c => ({
+        ...c,
+        name: c.name || '默认配置',
+      }))}
+      onDeleteConfig={(name) => {
+        if (name === '默认配置') {
+          deleteModelLoadConfig.mutateAsync(modelId);
+        } else {
+          handleDeleteConfigByName(name);
+        }
+      }}
+      onUpdateConfig={(name) => handleSaveConfigByName(name)}
       modelName={modelName || modelId}
-      isSaving={saveNamedConfig.isPending}
+      isSaving={saveNamedConfig.isPending || saveModelLoadConfig.isPending}
     />
     </Fragment>
   );

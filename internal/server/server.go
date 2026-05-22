@@ -68,6 +68,7 @@ type Server struct {
 	downloadMgr *download.Manager
 	nodeAdapter *api.NodeAdapter
 	repoClient  *modelrepoclient.Client
+	compatMgr   *compatibilityapi.ServerManager
 
 	wsHub *WebSocketHub
 
@@ -123,7 +124,7 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.storageMgr = storageMgr
 
 	// Create WebSocket manager
-	s.wsMgr = event.NewManager(modelMgr)
+	s.wsMgr = event.NewManager(modelMgr.GetLoadedModelCount)
 
 	// Load application config (used for download, model repo, compatibility, etc.)
 	cfg := config.ConfigMgr.Get()
@@ -151,7 +152,7 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.repoClient = modelrepoclient.NewClientWithConfig(cfg.ModelRepo.Endpoint, cfg.ModelRepo.Token, timeout)
 
 	// Create compatibility server manager
-	compatServerManager := compatibilityapi.NewServerManager(modelMgr)
+	s.compatMgr = compatibilityapi.NewServerManager(modelMgr)
 
 	// Create API handlers
 	s.handlers.OpenAI = openai.NewHandler(modelMgr)
@@ -163,7 +164,7 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.Music = openai.NewMusicHandler(modelMgr)
 	s.handlers.Paths = paths.NewHandler(config.ConfigMgr)
 	s.handlers.Storage = storageapi.NewHandler(config.ConfigMgr, storageMgr)
-	s.handlers.Compatibility = compatibilityapi.NewHandler(config.ConfigMgr, compatServerManager)
+	s.handlers.Compatibility = compatibilityapi.NewHandler(config.ConfigMgr, s.compatMgr)
 	s.handlers.Filesystem = filesystemapi.NewHandler()
 	s.handlers.Benchmark = benchmarkapi.NewHandler(logger.GetLogger(), storageMgr.GetStore())
 	s.handlers.Chat = chatapi.NewHandler(modelMgr)
@@ -171,12 +172,12 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 
 	// Auto-start compatibility servers if config says enabled
 	if cfg.Compatibility.Ollama.Enabled {
-		if err := compatServerManager.StartOllamaServer(cfg.Compatibility.Ollama.Port); err != nil {
+		if err := s.compatMgr.StartOllamaServer(cfg.Compatibility.Ollama.Port); err != nil {
 			logger.Warnf("自动启动 Ollama 兼容服务器失败: %v", err)
 		}
 	}
 	if cfg.Compatibility.LMStudio.Enabled {
-		if err := compatServerManager.StartLMStudioServer(cfg.Compatibility.LMStudio.Port); err != nil {
+		if err := s.compatMgr.StartLMStudioServer(cfg.Compatibility.LMStudio.Port); err != nil {
 			logger.Warnf("自动启动 LM Studio 兼容服务器失败: %v", err)
 		}
 	}
@@ -235,7 +236,7 @@ func (s *Server) Start() error {
 		Addr:         addr,
 		Handler:      s.engine,
 		ReadTimeout:  s.config.ReadTimeout,
-		WriteTimeout: s.config.WriteTimeout,
+		WriteTimeout: 0, // SSE 长连接需要无限写超时
 	}
 
 	// Start server in background
@@ -291,6 +292,13 @@ func (s *Server) Stop() error {
 	s.wsMgr.Stop()
 	logger.Info("WebSocket 管理器已停止")
 
+	// Step 4.1: Stop WebSocket Hub
+	if s.wsHub != nil {
+		logger.Info("停止 WebSocket Hub...")
+		s.wsHub.Stop()
+		logger.Info("WebSocket Hub 已停止")
+	}
+
 	// Step 4.5: Stop download manager
 	logger.Info("停止下载管理器...")
 	if s.downloadMgr != nil {
@@ -301,15 +309,15 @@ func (s *Server) Stop() error {
 		}
 	}
 
-	// Step 5: Close storage manager
-	logger.Info("关闭存储管理器...")
-	if s.storageMgr != nil {
-		if err := s.storageMgr.Close(); err != nil {
-			logger.Errorf("存储管理器关闭失败: %v", err)
-		} else {
-			logger.Info("存储管理器已关闭")
-		}
+	// Step 5: Stop compatibility servers (Ollama/LM Studio)
+	if s.compatMgr != nil {
+		logger.Info("停止兼容性服务器...")
+		_ = s.compatMgr.StopOllamaServer()
+		_ = s.compatMgr.StopLMStudioServer()
+		logger.Info("兼容性服务器已停止")
 	}
+
+	// 注意：storage manager 的关闭由 run_server.go 的 shutdown hook 统一管理，不在此处关闭
 
 	// Step 6: Wait for all goroutines to finish
 	logger.Info("等待所有协程完成...")

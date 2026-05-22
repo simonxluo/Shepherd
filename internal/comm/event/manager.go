@@ -9,8 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
-	"github.com/simonxluo/Shepherd/internal/service/model"
 )
+
+// LoadedModelCounter 返回当前已加载模型数量的函数类型
+type LoadedModelCounter func() int
 
 // Manager manages WebSocket connections and broadcasts events
 type Manager struct {
@@ -22,8 +24,8 @@ type Manager struct {
 	// Channels
 	eventChan chan *Event
 
-	// Model manager reference (for status updates)
-	modelMgr *model.Manager
+	// 获取已加载模型数量
+	loadedModelCountFn LoadedModelCounter
 
 	// Synchronization
 	mu sync.RWMutex
@@ -43,16 +45,16 @@ type Connection struct {
 }
 
 // NewManager creates a new WebSocket manager
-func NewManager(modelMgr *model.Manager) *Manager {
+func NewManager(loadedModelCountFn LoadedModelCounter) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mgr := &Manager{
-		connections:      make(map[string]*Connection),
-		connectionStatus: make(map[string]bool),
-		eventChan:        make(chan *Event, 256),
-		modelMgr:         modelMgr,
-		ctx:              ctx,
-		cancel:           cancel,
+		connections:        make(map[string]*Connection),
+		connectionStatus:   make(map[string]bool),
+		eventChan:          make(chan *Event, 256),
+		loadedModelCountFn: loadedModelCountFn,
+		ctx:                ctx,
+		cancel:             cancel,
 	}
 
 	return mgr
@@ -152,8 +154,8 @@ func (m *Manager) systemStatusLoop() {
 			confirmedCount := m.getConfirmedConnectionCount()
 			m.mu.RUnlock()
 
-			if count > 0 && m.modelMgr != nil {
-				loadedModels := m.modelMgr.GetLoadedModelCount()
+			if count > 0 && m.loadedModelCountFn != nil {
+				loadedModels := m.loadedModelCountFn()
 				m.Broadcast(NewSystemStatusEvent(loadedModels, count, confirmedCount))
 				logger.Debugf("发送系统状态: 已加载模型=%d, 连接=%d, 已确认=%d",
 					loadedModels, count, confirmedCount)

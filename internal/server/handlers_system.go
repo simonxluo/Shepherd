@@ -18,6 +18,9 @@ import (
 	api "github.com/simonxluo/Shepherd/internal/handler"
 )
 
+// gpuMemRe 预编译 GPU 内存信息正则，避免每次请求重新编译
+var gpuMemRe = regexp.MustCompile(`^(.+?)\s*\((\d+)\s+MiB(?:,\s*(\d+)\s+MiB\s+free)?\)`)
+
 // HandleServerInfo returns server information including version, ports, and status.
 // @Summary      Get server info
 // @Description  Returns server version, build info, status, role and configured ports
@@ -108,10 +111,8 @@ func (s *Server) HandleGetGPUs(c *gin.Context) {
 					gpuName := rest
 					var totalMemory, freeMemory string
 
-					// 使用正则表达式提取内存信息和分离名称
-					memRe := regexp.MustCompile(`^(.+?)\s*\((\d+)\s+MiB(?:,\s*(\d+)\s+MiB\s+free)?\)`)
-					if memMatches := memRe.FindStringSubmatch(rest); len(memMatches) > 0 {
-						gpuName = strings.TrimSpace(memMatches[1])
+					// 使用预编译正则提取内存信息
+					if memMatches := gpuMemRe.FindStringSubmatch(rest); len(memMatches) > 0 {
 						if totalMiB, err := strconv.ParseInt(memMatches[2], 10, 64); err == nil {
 							// 转换为 GB（保留两位小数）
 							totalGB := float64(totalMiB) / 1024
@@ -318,7 +319,7 @@ func (s *Server) HandleUpdateConfig(c *gin.Context) {
 		// 触发重新扫描
 		if req.AutoScan {
 			go func() {
-				if _, err := s.modelMgr.Scan(c.Request.Context()); err != nil {
+				if _, err := s.modelMgr.Scan(s.ctx); err != nil {
 					logger.Warnf("模型扫描失败: error=%v", err)
 				}
 			}()

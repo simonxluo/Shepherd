@@ -50,7 +50,7 @@ export function VoxCPM2Panel({
   const [seed, setSeed] = useState('');
   const [maxNewTokens, setMaxNewTokens] = useState('');
   const [language, setLanguage] = useState('');
-  const [emotion, setEmotion] = useState('');
+  const [emotion, setEmotion] = useState('default');
   const [cfgValue, setCfgValue] = useState('2');
   const [inferenceTimesteps, setInferenceTimesteps] = useState('10');
 
@@ -105,7 +105,7 @@ export function VoxCPM2Panel({
     seed: seed || undefined,
     maxNewTokens: maxNewTokens || undefined,
     language: language || undefined,
-    emotion: emotion || undefined,
+    emotion: emotion === 'default' ? undefined : emotion,
     cfgValue: cfgValue || undefined,
     inferenceTimesteps: inferenceTimesteps || undefined,
   }), [instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
@@ -176,7 +176,7 @@ export function VoxCPM2Panel({
     if (seed) payload.seed = parseInt(seed, 10) || undefined;
     if (maxNewTokens) payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
     if (language) payload.language = language;
-    if (emotion) payload.emotion = emotion;
+    if (emotion && emotion !== 'default') payload.emotion = emotion;
 
     if (cfgValue) {
       const val = parseFloat(cfgValue);
@@ -360,7 +360,7 @@ export function VoxCPM2Panel({
                   <SelectValue placeholder={t('tts.emotionDefault', 'Default')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('tts.emotionDefault', 'Default')}</SelectItem>
+                  <SelectItem value="default">{t('tts.emotionDefault', 'Default')}</SelectItem>
                   <SelectItem value="happy">{t('tts.emotionHappy', 'Happy')}</SelectItem>
                   <SelectItem value="sad">{t('tts.emotionSad', 'Sad')}</SelectItem>
                   <SelectItem value="angry">{t('tts.emotionAngry', 'Angry')}</SelectItem>

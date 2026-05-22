@@ -194,6 +194,9 @@ func (s *Scanner) scanSubnet(subnet string, results chan<- *cluster.DiscoveredCl
 		return
 	}
 
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 256) // 并发限制
+
 	// Iterate through all IPs in subnet
 	for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); inc(ip) {
 		// Skip network and broadcast addresses
@@ -205,17 +208,30 @@ func (s *Scanner) scanSubnet(subnet string, results chan<- *cluster.DiscoveredCl
 		for port := startPort; port <= endPort; port++ {
 			select {
 			case <-s.ctx.Done():
+				wg.Wait()
 				return
 			default:
-				// Check each host/port combination
-				go func(host string, portNum int) {
-					if client := s.checkClient(host, portNum); client != nil {
-						results <- client
-					}
-				}(ip.String(), port)
 			}
+
+			select {
+			case <-s.ctx.Done():
+				wg.Wait()
+				return
+			case sem <- struct{}{}:
+			}
+
+			wg.Add(1)
+			go func(host string, portNum int) {
+				defer wg.Done()
+				defer func() { <-sem }()
+				if client := s.checkClient(host, portNum); client != nil {
+					results <- client
+				}
+			}(ip.String(), port)
 		}
 	}
+
+	wg.Wait()
 }
 
 // checkClient checks if a client is running at the given address

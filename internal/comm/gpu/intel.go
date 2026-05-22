@@ -2,10 +2,9 @@ package gpu
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/shirou/gopsutil/v3/host"
 )
 
 // intelProvider implements GPU detection for Intel GPUs.
@@ -27,14 +26,12 @@ func (p *intelProvider) Vendor() string {
 }
 
 func (p *intelProvider) IsAvailable() bool {
-	// Check for Intel GPU kernel module
-	hostStat, err := host.Info()
+	// Check if i915 kernel module is loaded
+	data, err := os.ReadFile("/proc/modules")
 	if err != nil {
 		return false
 	}
-
-	kernelInfo := strings.ToLower(hostStat.KernelVersion)
-	return strings.Contains(kernelInfo, "i915") || strings.Contains(kernelInfo, "intel")
+	return strings.Contains(string(data), "i915")
 }
 
 func (p *intelProvider) Detect(ctx context.Context) ([]Info, error) {

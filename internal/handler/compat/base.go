@@ -24,6 +24,9 @@ type BaseHandler struct {
 	ModelIndex *ModelLookupIndex
 }
 
+// maxResponseSize 限制代理响应体的最大大小为 1GB
+const maxResponseSize = 1 << 30
+
 func NewBaseHandler(modelMgr *model.Manager) *BaseHandler {
 	b := &BaseHandler{
 		ModelMgr: modelMgr,
@@ -123,7 +126,7 @@ func (b *BaseHandler) ForwardRequest(c *gin.Context, port int, path string, mode
 	}
 	defer utils.CloseQuietly(resp.Body)
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -216,7 +219,7 @@ func (b *BaseHandler) ForwardRequestRaw(c *gin.Context, port int, path string, m
 	}
 	defer utils.CloseQuietly(resp.Body)
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		return nil, resp, err
 	}
@@ -350,7 +353,7 @@ func (b *BaseHandler) ForwardBinaryRequest(c *gin.Context, port int, path string
 	}
 	defer utils.CloseQuietly(resp.Body)
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -422,7 +425,7 @@ func (b *BaseHandler) ForwardMultipartRequest(c *gin.Context, port int, path str
 	}
 	defer utils.CloseQuietly(resp.Body)
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -487,7 +490,7 @@ func (b *BaseHandler) ForwardGetRequest(c *gin.Context, port int, path string) {
 	}
 	defer utils.CloseQuietly(resp.Body)
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

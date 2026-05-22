@@ -47,6 +47,10 @@ func NewSQLiteStore(config *SQLiteConfig) (*SQLiteStore, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	// 限制连接数，配合已有互斥锁消除 "database is locked" 错误
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+
 	store := &SQLiteStore{
 		db:   db,
 		path: config.Path,
@@ -538,12 +542,18 @@ func (s *SQLiteStore) CreateMessage(ctx context.Context, msg *Message) error {
 
 	metadataJSON, _ := json.Marshal(msg.Metadata)
 
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
 	query := `
 	INSERT INTO messages (id, conversation_id, role, content, name, token_count, created_at, metadata)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := s.db.ExecContext(ctx, query,
+	_, err = tx.ExecContext(ctx, query,
 		msg.ID,
 		msg.ConversationID,
 		msg.Role,
@@ -559,12 +569,15 @@ func (s *SQLiteStore) CreateMessage(ctx context.Context, msg *Message) error {
 	}
 
 	// Update conversation message count and timestamp
-	_, err = s.db.ExecContext(ctx,
+	_, err = tx.ExecContext(ctx,
 		"UPDATE conversations SET message_count = message_count + 1, updated_at = ? WHERE id = ?",
 		timeNow().Unix(), msg.ConversationID,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to update conversation: %w", err)
+	}
 
-	return err
+	return tx.Commit()
 }
 
 // GetMessages retrieves messages for a conversation
@@ -1210,6 +1223,10 @@ func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMeta
 		tagsJSON, _ := json.Marshal(metadata.Tags)
 		capsJSON, _ := json.Marshal(metadata.Capabilities)
 
+			var lastLoaded interface{}
+			if metadata.LastLoaded != nil {
+				lastLoaded = metadata.LastLoaded.Unix()
+			}
 		query := `
 		INSERT INTO model_metadata (model_id, node_id, storage_path, alias, favourite, tags, description,
 			load_count, last_loaded, total_tokens, capabilities, created_at, updated_at)
@@ -1225,7 +1242,7 @@ func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMeta
 			string(tagsJSON),
 			metadata.Description,
 			metadata.LoadCount,
-			nil, // last_loaded handled below
+			lastLoaded,
 			metadata.TotalTokens,
 			string(capsJSON),
 			metadata.CreatedAt.Unix(),

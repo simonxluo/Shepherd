@@ -139,8 +139,9 @@ export function TTSPageShell() {
     if (isStreamRequest) {
       try {
         if (!playerRef.current) {
-          playerRef.current = new StreamAudioPlayer(currentFeatures.defaultSampleRate);
-          await playerRef.current.init();
+          const player = new StreamAudioPlayer(currentFeatures.defaultSampleRate);
+          await player.init();
+          playerRef.current = player;
         }
 
         playerRef.current.onStateChange = (state) => {

@@ -391,6 +391,26 @@ func (m *Manager) executeDownload(task *Task) {
 	if err != nil {
 		if task.StopRequested || task.Paused {
 			task.State = StatePaused
+		} else if task.RetryCount < task.MaxRetries {
+			// 自动重试：指数退避
+			task.RetryCount++
+			task.State = StateIdle
+			delay := time.Duration(1<<(task.RetryCount-1)) * time.Second
+			if delay > 60*time.Second {
+				delay = 60 * time.Second
+			}
+			logger.Infof("下载任务 %s 失败，第 %d/%d 次重试，%v 后重试: %v",
+				task.ID, task.RetryCount, task.MaxRetries, delay, err)
+			m.broadcastStatus(task)
+			m.persistTask(task)
+
+			time.AfterFunc(delay, func() {
+				if m.canStartDownload() && m.ctx.Err() == nil {
+					m.wg.Add(1)
+					go m.executeDownload(task)
+				}
+			})
+			return
 		} else {
 			task.State = StateFailed
 			task.Error = err

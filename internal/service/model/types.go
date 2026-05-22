@@ -119,9 +119,9 @@ func (s LoadState) String() string {
 var validTransitions = map[LoadState][]LoadState{
 	StateUnloaded:  {StateLoading},
 	StateLoading:   {StateLoaded, StateError, StateUnloading},
-	StateLoaded:    {StateUnloading, StateError},
-	StateUnloading: {StateUnloaded, StateError},
-	StateError:     {StateUnloaded, StateLoading},
+	StateLoaded:    {StateUnloading},
+	StateUnloading: {StateUnloaded},
+	StateError:     {StateUnloaded},
 }
 
 func isValidTransition(from, to LoadState) bool {

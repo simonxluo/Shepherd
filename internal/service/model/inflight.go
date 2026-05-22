@@ -66,9 +66,3 @@ func (s *ModelStatus) AddTokens(prompt, completion int) {
 	s.TotalPromptTokens += int64(prompt)
 	s.TotalCompletionTokens += int64(completion)
 }
-
-func (s *ModelStatus) GetTokenCounts() (prompt, completion int64) {
-	s.tokenMu.Lock()
-	defer s.tokenMu.Unlock()
-	return s.TotalPromptTokens, s.TotalCompletionTokens
-}
