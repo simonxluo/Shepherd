@@ -14,6 +14,7 @@ import { ASRPage } from './pages/asr';
 import { ImageGenPage } from './pages/image-gen';
 import { MusicGenPage } from './pages/music-gen';
 import { SettingsPage } from './pages/settings';
+import { BenchmarkPage } from './pages/benchmark';
 import { useSSEConnection } from './hooks/useSSEConnection';
 import type { SSEEvent } from './types';
 import type { UnifiedNode } from './types/node';
@@ -100,6 +101,7 @@ function AppContent() {
         <Route path="/" element={<MainLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="models" element={<ModelsPage />} />
+          <Route path="benchmark" element={<BenchmarkPage />} />
           <Route path="downloads" element={<DownloadsPage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="cluster" element={<ClusterPage />} />

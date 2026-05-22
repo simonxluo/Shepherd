@@ -3,6 +3,7 @@ package benchmark
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -65,14 +66,18 @@ func NewHandler(log *logger.Logger, store storage.Store) *Handler {
 
 // BenchmarkParam 压测参数定义
 type BenchmarkParam struct {
-	FullName     string   `json:"fullName"`
-	Name         string   `json:"name"`
-	Abbreviation string   `json:"abbreviation"`
-	Description  string   `json:"description"`
-	DefaultValue string   `json:"defaultValue"`
-	Type         string   `json:"type"`
-	Values       []string `json:"values,omitempty"`
-	Sort         int      `json:"sort"`
+	FullName       string      `json:"fullName"`
+	Name           string      `json:"name"`
+	Abbreviation   string      `json:"abbreviation"`
+	Description    string      `json:"description"`
+	DefaultValue   string      `json:"defaultValue"`
+	DefaultEnabled *bool       `json:"defaultEnabled,omitempty"`
+	Type           string      `json:"type"`
+	Values         interface{} `json:"values,omitempty"`
+	Sort           int         `json:"sort"`
+	Group          string      `json:"group,omitempty"`
+	GroupOrder     int         `json:"groupOrder,omitempty"`
+	GroupCollapsed bool        `json:"groupCollapsed,omitempty"`
 }
 
 // BenchmarkConfig 压测配置
@@ -206,32 +211,77 @@ func (h *Handler) validatePathForDevices(path string) error {
 // @Success      200 {object} map[string]interface{}
 // @Router       /api/models/param/benchmark/list [get]
 func (h *Handler) GetParams(c *gin.Context) {
-	// 返回常见的 llama.cpp 压测参数
-	params := []BenchmarkParam{
-		{
-			FullName:     "-p",
-			Name:         "Prompt Tokens",
-			Abbreviation: "-p",
-			Description:  "提示词 token 数量 (建议 8192)",
-			DefaultValue: "8192",
-			Type:         "INTEGER",
-			Sort:         1,
-		},
-		{
-			FullName:     "-n",
-			Name:         "Max Tokens",
-			Abbreviation: "-n",
-			Description:  "生成的 token 数量 (建议 256)",
-			DefaultValue: "256",
-			Type:         "INTEGER",
-			Sort:         2,
-		},
+	// Try to load from config/benchmark-params.json
+	params, err := h.loadBenchmarkParams()
+	if err != nil {
+		h.log.Warnf("Failed to load benchmark params from file, using defaults: %v", err)
+		params = h.getDefaultParams()
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"params":  params,
 	})
+}
+
+func (h *Handler) loadBenchmarkParams() ([]BenchmarkParam, error) {
+	// Look for benchmark-params.json in multiple locations
+	possiblePaths := []string{
+		"config/benchmark-params.json",
+		filepath.Join("config", "benchmark-params.json"),
+	}
+
+	// Also check relative to executable
+	if execPath, err := os.Executable(); err == nil {
+		execDir := filepath.Dir(execPath)
+		possiblePaths = append(possiblePaths, filepath.Join(execDir, "config", "benchmark-params.json"))
+	}
+
+	var data []byte
+	var readErr error
+	for _, p := range possiblePaths {
+		data, readErr = os.ReadFile(p)
+		if readErr == nil {
+			break
+		}
+	}
+	if readErr != nil {
+		return nil, fmt.Errorf("benchmark-params.json not found in any expected location: %w", readErr)
+	}
+
+	var params []BenchmarkParam
+	if err := json.Unmarshal(data, &params); err != nil {
+		return nil, fmt.Errorf("failed to parse benchmark-params.json: %w", err)
+	}
+
+	return params, nil
+}
+
+func (h *Handler) getDefaultParams() []BenchmarkParam {
+	return []BenchmarkParam{
+		{
+			FullName:     "--n-prompt",
+			Name:         "Prompt Tokens",
+			Abbreviation: "-p",
+			Description:  "Number of prompt tokens",
+			DefaultValue: "512",
+			Type:         "STRING",
+			Sort:         10,
+			Group:        "page.params.group.test_data",
+			GroupOrder:   20,
+		},
+		{
+			FullName:     "--n-gen",
+			Name:         "Generation Tokens",
+			Abbreviation: "-n",
+			Description:  "Number of tokens to generate",
+			DefaultValue: "128",
+			Type:         "STRING",
+			Sort:         11,
+			Group:        "page.params.group.test_data",
+			GroupOrder:   20,
+		},
+	}
 }
 
 // GetDevices returns available compute devices for benchmarking.
@@ -483,6 +533,9 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string, arg
 	output, err := cmd.CombinedOutput()
 	finishedAt := time.Now()
 	task.FinishedAt = &finishedAt
+
+	// Save output to file
+	h.saveBenchmarkOutput(task.ModelID, string(output))
 
 	// 解析输出提取指标
 	metrics := h.parseBenchmarkOutput(string(output))
@@ -837,6 +890,221 @@ func (h *Handler) DeleteConfig(c *gin.Context) {
 	})
 }
 
+// HistoryFile represents a benchmark history file entry
+type HistoryFile struct {
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`
+	Modified string `json:"modified"`
+}
+
+// ListHistory returns benchmark result files for a model.
+func (h *Handler) ListHistory(c *gin.Context) {
+	modelId := c.Query("modelId")
+	if modelId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "modelId parameter is required",
+		})
+		return
+	}
+
+	safeModelId := sanitizeModelId(modelId)
+	dir := filepath.Join("data", "benchmark", safeModelId)
+
+	// Create directory if not exists
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		h.log.Errorf("Failed to create benchmark dir: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to access benchmark directory",
+		})
+		return
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data": gin.H{
+				"files": []HistoryFile{},
+			},
+		})
+		return
+	}
+
+	var files []HistoryFile
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		files = append(files, HistoryFile{
+			Name:     entry.Name(),
+			Size:     info.Size(),
+			Modified: info.ModTime().Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"files": files,
+		},
+	})
+}
+
+// GetHistoryFile returns the content of a benchmark result file.
+func (h *Handler) GetHistoryFile(c *gin.Context) {
+	fileName := c.Query("fileName")
+	if fileName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "fileName parameter is required",
+		})
+		return
+	}
+
+	// Prevent path traversal
+	cleanName := filepath.Base(fileName)
+	if cleanName != fileName || strings.Contains(fileName, "..") {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid file name",
+		})
+		return
+	}
+
+	// Search in all model directories under data/benchmark/
+	baseDir := filepath.Join("data", "benchmark")
+	var filePath string
+
+	if entries, err := os.ReadDir(baseDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			candidate := filepath.Join(baseDir, entry.Name(), cleanName)
+			if _, err := os.Stat(candidate); err == nil {
+				filePath = candidate
+				break
+			}
+		}
+	}
+
+	if filePath == "" {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "File not found",
+		})
+		return
+	}
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		h.log.Errorf("Failed to read benchmark file: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to read file",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"rawOutput": string(content),
+			"fileName":  cleanName,
+		},
+	})
+}
+
+// DeleteHistoryFile deletes a benchmark result file.
+func (h *Handler) DeleteHistoryFile(c *gin.Context) {
+	fileName := c.Query("fileName")
+	if fileName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "fileName parameter is required",
+		})
+		return
+	}
+
+	// Prevent path traversal
+	cleanName := filepath.Base(fileName)
+	if cleanName != fileName || strings.Contains(fileName, "..") {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid file name",
+		})
+		return
+	}
+
+	// Search in all model directories under data/benchmark/
+	baseDir := filepath.Join("data", "benchmark")
+	var filePath string
+
+	if entries, err := os.ReadDir(baseDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			candidate := filepath.Join(baseDir, entry.Name(), cleanName)
+			if _, err := os.Stat(candidate); err == nil {
+				filePath = candidate
+				break
+			}
+		}
+	}
+
+	if filePath == "" {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "File not found",
+		})
+		return
+	}
+
+	if err := os.Remove(filePath); err != nil {
+		h.log.Errorf("Failed to delete benchmark file: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to delete file",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+	})
+}
+
+// sanitizeModelId creates a safe directory name from a model ID
+func sanitizeModelId(modelId string) string {
+	// Replace path separators and special chars with underscores
+	replacer := strings.NewReplacer(
+		"/", "_",
+		"\\", "_",
+		":", "_",
+		" ", "_",
+		"..", "_",
+	)
+	safe := replacer.Replace(modelId)
+	// Remove any remaining problematic characters
+	result := strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '-' || r == '.' {
+			return r
+		}
+		return '_'
+	}, safe)
+	if result == "" {
+		result = "unknown"
+	}
+	return result
+}
+
 // Delete deletes a benchmark task by ID.
 // @Summary      Delete benchmark task
 // @Description  Deletes a benchmark task and its results
@@ -862,6 +1130,31 @@ func (h *Handler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 	})
+}
+
+// saveBenchmarkOutput saves the benchmark output to a timestamped file
+func (h *Handler) saveBenchmarkOutput(modelId string, output string) {
+	if output == "" {
+		return
+	}
+
+	safeModelId := sanitizeModelId(modelId)
+	dir := filepath.Join("data", "benchmark", safeModelId)
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		h.log.Errorf("Failed to create benchmark output dir: %v", err)
+		return
+	}
+
+	timestamp := time.Now().Format("20060102_150405")
+	fileName := fmt.Sprintf("%s_%s.txt", safeModelId, timestamp)
+	filePath := filepath.Join(dir, fileName)
+
+	if err := os.WriteFile(filePath, []byte(output), 0644); err != nil {
+		h.log.Errorf("Failed to save benchmark output: %v", err)
+	} else {
+		h.log.Infof("Benchmark output saved to %s", filePath)
+	}
 }
 
 // Shutdown 优雅关闭处理器

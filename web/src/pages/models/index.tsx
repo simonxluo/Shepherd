@@ -1,18 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, RefreshCw, Grid3X3, List, Gauge, FileText, Star, Layers, MessageSquare, Volume2, Ear, Image, Music, Database, ArrowUpDown } from 'lucide-react';
-import { useModels, useLoadModel, useUnloadModel, useSetModelFavourite, useUpdateModelAlias, useScanModels, useFilteredModels, useCreateBenchmark, useAllModelCapabilities, MODEL_CATEGORIES, getModelCategory } from '@/features/models';
+import { useNavigate } from 'react-router-dom';
+import { Search, RefreshCw, Grid3X3, List, Gauge, Star, Layers, MessageSquare, Volume2, Ear, Image, Music, Database, ArrowUpDown } from 'lucide-react';
+import { useModels, useLoadModel, useUnloadModel, useSetModelFavourite, useUpdateModelAlias, useScanModels, useFilteredModels, useAllModelCapabilities, MODEL_CATEGORIES, getModelCategory } from '@/features/models';
 import type { ModelCategory } from '@/features/models';
 import { ModelCard } from '@/features/models/components/ModelCard';
 import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
 import { EditAliasDialog } from '@/features/models/components/EditAliasDialog';
-import { BenchmarkDialog } from '@/features/models/components/BenchmarkDialog';
-import { BenchmarkResultsDialog } from '@/features/models/components/BenchmarkResultsDialog';
 import { ModelDetailDialog } from '@/features/models/components/ModelDetailDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { Model, ModelStatus, BenchmarkConfig, LoadModelParams, ModelCapabilities } from '@/types';
+import type { Model, ModelStatus, LoadModelParams, ModelCapabilities } from '@/types';
 import { useAlertDialog } from '@/providers/AlertDialog';
 import { toast } from '@/hooks/useToast';
 import { APIError } from '@/lib/api/client';
@@ -39,6 +38,7 @@ const STATUS_CHIPS = [
 
 export function ModelsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const alertDialog = useAlertDialog();
   const { data: models = [], isLoading } = useModels();
   const loadModel = useLoadModel();
@@ -46,7 +46,6 @@ export function ModelsPage() {
   const setFavourite = useSetModelFavourite();
   const updateAlias = useUpdateModelAlias();
   const scanModels = useScanModels();
-  const createBenchmark = useCreateBenchmark();
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<ModelCategory>('all');
@@ -56,8 +55,6 @@ export function ModelsPage() {
 
   const [dialogModel, setDialogModel] = useState<Model | null>(null);
   const [editAliasModel, setEditAliasModel] = useState<Model | null>(null);
-  const [benchmarkModel, setBenchmarkModel] = useState<Model | null>(null);
-  const [benchmarkResultsModel, setBenchmarkResultsModel] = useState<Model | null>(null);
   const [detailModel, setDetailModel] = useState<Model | null>(null);
 
   const modelIds = useMemo(() => models.map(m => m.id), [models]);
@@ -173,57 +170,8 @@ export function ModelsPage() {
     }
   };
 
-  const handleBenchmarkModel = (model: Model) => setBenchmarkModel(model);
+  const handleBenchmarkModel = (model: Model) => navigate(`/benchmark?model=${encodeURIComponent(model.id)}`);
 
-  const handleBenchmarkConfirm = async (config: BenchmarkConfig) => {
-    const model = models.find(m => m.id === config.modelId);
-    if (!model) {
-      toast.error(t('models.toast.modelNotFound'), t('models.toast.modelNotFoundDesc'));
-      return;
-    }
-
-    const cmdParts: string[] = [];
-    cmdParts.push('-m', model.path);
-
-    Object.entries(config.params).forEach(([key, value]) => {
-      if (value === 'true') {
-        cmdParts.push(key);
-      } else if (value !== 'false' && value !== '') {
-        cmdParts.push(key, String(value));
-      }
-    });
-    if (config.devices && config.devices.length > 0 && config.devices.length < 999) {
-      cmdParts.push('-dev', config.devices.join('/'));
-    }
-    const cmd = cmdParts.join(' ');
-
-    createBenchmark.mutate(
-      {
-        modelId: config.modelId,
-        llamaBinPath: config.llamaCppPath,
-        cmd,
-        args: cmdParts,
-      },
-      {
-        onSuccess: (data) => {
-          if (data) {
-            toast.success(t('models.toast.benchmarkCreated'), t('models.toast.benchmarkRunning'));
-            setBenchmarkModel(null);
-            const currentModel = models.find(m => m.id === config.modelId);
-            if (currentModel) {
-              setBenchmarkResultsModel(currentModel);
-            }
-          }
-        },
-        onError: (error) => {
-          (error as APIError).handled = true;
-          toast.error(t('models.toast.benchmarkFailed'), error.message);
-        },
-      }
-    );
-  };
-
-  const handleViewBenchmarkResults = (model: Model) => setBenchmarkResultsModel(model);
   const handleShowDetail = (model: Model) => setDetailModel(model);
 
   return (
@@ -377,26 +325,15 @@ export function ModelsPage() {
               onShowDetail={() => handleShowDetail(model)}
               onEditAlias={() => handleEditAlias(model)}
               actions={
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleBenchmarkModel(model)}
-                    title={t('models.actions.benchmark')}
-                    className="h-8 w-8 sm:h-9 sm:w-9"
-                  >
-                    <Gauge className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleViewBenchmarkResults(model)}
-                    title={t('models.actions.viewBenchmarkResults')}
-                    className="h-8 w-8 sm:h-9 sm:w-9"
-                  >
-                    <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                  </Button>
-                </>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleBenchmarkModel(model)}
+                  title={t('models.actions.benchmark')}
+                  className="h-8 w-8 sm:h-9 sm:w-9"
+                >
+                  <Gauge className="w-3 h-3 sm:w-4 sm:h-4" />
+                </Button>
               }
             />
           ))}
@@ -425,26 +362,6 @@ export function ModelsPage() {
           modelName={editAliasModel.name}
           currentAlias={editAliasModel.alias}
           isLoading={updateAlias.isPending}
-        />
-      )}
-
-      {benchmarkModel && (
-        <BenchmarkDialog
-          isOpen={!!benchmarkModel}
-          onClose={() => setBenchmarkModel(null)}
-          onConfirm={handleBenchmarkConfirm}
-          modelId={benchmarkModel.id}
-          modelName={benchmarkModel.alias || benchmarkModel.name}
-          isLoading={createBenchmark.isPending}
-        />
-      )}
-
-      {benchmarkResultsModel && (
-        <BenchmarkResultsDialog
-          isOpen={!!benchmarkResultsModel}
-          onClose={() => setBenchmarkResultsModel(null)}
-          modelId={benchmarkResultsModel.id}
-          modelName={benchmarkResultsModel.alias || benchmarkResultsModel.name}
         />
       )}
 

@@ -403,14 +403,18 @@ export type BenchmarkParamType = 'STRING' | 'INTEGER' | 'FLOAT' | 'LOGIC';
  * Benchmark parameter definition
  */
 export interface BenchmarkParam {
-  fullName: string;        // Full parameter name, e.g. -t
+  fullName: string;        // Full parameter name, e.g. --threads
   name: string;            // Display name
   abbreviation: string;    // Abbreviation
   description: string;     // Description
   type: BenchmarkParamType; // Parameter type
   defaultValue: string;    // Default value
-  values?: string[];       // Allowed values (enum)
+  defaultEnabled?: boolean; // Whether enabled by default (undefined = true)
+  values?: (string | { value: string; label: string })[]; // Allowed values (enum)
   sort?: number;           // Sort order
+  group?: string;          // Group identifier
+  groupOrder?: number;     // Group sort order
+  groupCollapsed?: boolean; // Whether group starts collapsed
 }
 
 /**
@@ -472,6 +476,15 @@ export interface BenchmarkResult {
  * Benchmark result file entry
  */
 export interface BenchmarkResultFile {
+  name: string;            // File name
+  size: number;            // File size
+  modified: string;        // Modified time
+}
+
+/**
+ * Benchmark history file (from file system)
+ */
+export interface BenchmarkHistoryFile {
   name: string;            // File name
   size: number;            // File size
   modified: string;        // Modified time

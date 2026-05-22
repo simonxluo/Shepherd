@@ -20,12 +20,7 @@ export {
   useFilteredModels,
 } from './load';
 
-// Benchmark
-export {
-  useBenchmarkParams,
-  useLlamaCppVersions,
-  useCreateBenchmark,
-} from './benchmark';
+// Benchmark hooks have moved to @/features/benchmark
 
 // GPU / llama.cpp backend / capabilities / VRAM estimation
 export {
