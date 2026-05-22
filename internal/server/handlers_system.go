@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/gpu"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
-	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
+	"github.com/simonxluo/Shepherd/internal/comm/gpu"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/types"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
+	api "github.com/simonxluo/Shepherd/internal/handler"
 )
 
 // HandleServerInfo returns server information including version, ports, and status.

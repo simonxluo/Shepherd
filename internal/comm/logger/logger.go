@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/config"
 )
 
 // LogLevel represents the severity level of a log message

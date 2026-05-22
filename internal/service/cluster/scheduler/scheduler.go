@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
+	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/service/cluster"
+	"github.com/simonxluo/Shepherd/internal/service/node"
 )
 
 // Scheduler manages task distribution across clients

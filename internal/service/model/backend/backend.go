@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
 )
 
 // BackendType identifies the type of inference backend

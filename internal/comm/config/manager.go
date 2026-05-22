@@ -3,7 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"os"
 	"path/filepath"
 	"time"

@@ -3,9 +3,9 @@ package model
 import (
 	"strings"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/huggingface"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/infra/gguf"
+	"github.com/simonxluo/Shepherd/internal/infra/huggingface"
+	"github.com/simonxluo/Shepherd/internal/infra/storage"
 )
 
 // 能力检测关键词常量

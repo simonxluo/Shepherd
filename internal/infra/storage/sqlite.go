@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	_ "modernc.org/sqlite" // Use modernc.org/sqlite for pure Go SQLite (CGO-free)
 )
 
@@ -201,6 +201,11 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 	// Database migration: ensure tts_history table exists for existing databases
 	if err := s.migrateTTSHistoryTable(); err != nil {
 		return fmt.Errorf("failed to migrate tts_history table: %w", err)
+	}
+
+	// Database migration: ensure download_tasks table exists
+	if err := s.migrateDownloadTasksTable(); err != nil {
+		return fmt.Errorf("failed to migrate download_tasks table: %w", err)
 	}
 
 	return nil
@@ -1687,6 +1692,356 @@ func (s *SQLiteStore) DeleteTTSHistory(ctx context.Context, id string) error {
 		return ErrTTSHistoryNotFound
 	}
 	return nil
+}
+
+// Download Task Operations
+
+// migrateDownloadTasksTable ensures the download_tasks table exists for databases created before this feature
+func (s *SQLiteStore) migrateDownloadTasksTable() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS download_tasks (
+		id TEXT PRIMARY KEY,
+		url TEXT NOT NULL,
+		path TEXT NOT NULL,
+		file_name TEXT NOT NULL DEFAULT '',
+		state TEXT NOT NULL DEFAULT 'idle',
+		downloaded_bytes INTEGER DEFAULT 0,
+		total_bytes INTEGER DEFAULT 0,
+		etag TEXT DEFAULT '',
+		range_supported INTEGER DEFAULT 0,
+		final_url TEXT DEFAULT '',
+		temp_file_name TEXT DEFAULT '',
+		parts_total INTEGER DEFAULT 0,
+		parts_completed INTEGER DEFAULT 0,
+		file_type TEXT DEFAULT '',
+		source_type TEXT DEFAULT '',
+		repo_id TEXT DEFAULT '',
+		error_message TEXT DEFAULT '',
+		retry_count INTEGER DEFAULT 0,
+		max_retries INTEGER DEFAULT 5,
+		created_at INTEGER NOT NULL,
+		started_at INTEGER DEFAULT 0,
+		finished_at INTEGER DEFAULT 0
+	);
+	CREATE INDEX IF NOT EXISTS idx_download_tasks_state ON download_tasks(state);
+	CREATE INDEX IF NOT EXISTS idx_download_tasks_created ON download_tasks(created_at);
+	`
+	_, err := s.db.Exec(query)
+	return err
+}
+
+// CreateDownloadTask creates a new download task record
+func (s *SQLiteStore) CreateDownloadTask(ctx context.Context, task *DownloadTask) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if task.ID == "" {
+		task.ID = generateID("dl")
+	}
+	if task.CreatedAt.IsZero() {
+		task.CreatedAt = timeNow()
+	}
+
+	rangeSupported := 0
+	if task.RangeSupported {
+		rangeSupported = 1
+	}
+
+	query := `
+	INSERT INTO download_tasks (id, url, path, file_name, state, downloaded_bytes, total_bytes,
+		etag, range_supported, final_url, temp_file_name, parts_total, parts_completed,
+		file_type, source_type, repo_id, error_message, retry_count, max_retries,
+		created_at, started_at, finished_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	_, err := s.db.ExecContext(ctx, query,
+		task.ID,
+		task.URL,
+		task.Path,
+		task.FileName,
+		task.State,
+		task.DownloadedBytes,
+		task.TotalBytes,
+		task.ETag,
+		rangeSupported,
+		task.FinalURL,
+		task.TempFileName,
+		task.PartsTotal,
+		task.PartsCompleted,
+		task.FileType,
+		task.SourceType,
+		task.RepoID,
+		task.ErrorMessage,
+		task.RetryCount,
+		task.MaxRetries,
+		task.CreatedAt.Unix(),
+		task.StartedAt.Unix(),
+		task.FinishedAt.Unix(),
+	)
+	return err
+}
+
+// GetDownloadTask retrieves a download task by ID
+func (s *SQLiteStore) GetDownloadTask(ctx context.Context, id string) (*DownloadTask, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	query := `
+	SELECT id, url, path, file_name, state, downloaded_bytes, total_bytes,
+		etag, range_supported, final_url, temp_file_name, parts_total, parts_completed,
+		file_type, source_type, repo_id, error_message, retry_count, max_retries,
+		created_at, started_at, finished_at
+	FROM download_tasks WHERE id = ?
+	`
+
+	task := &DownloadTask{}
+	var rangeSupported int
+	var createdAt, startedAt, finishedAt int64
+
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&task.ID,
+		&task.URL,
+		&task.Path,
+		&task.FileName,
+		&task.State,
+		&task.DownloadedBytes,
+		&task.TotalBytes,
+		&task.ETag,
+		&rangeSupported,
+		&task.FinalURL,
+		&task.TempFileName,
+		&task.PartsTotal,
+		&task.PartsCompleted,
+		&task.FileType,
+		&task.SourceType,
+		&task.RepoID,
+		&task.ErrorMessage,
+		&task.RetryCount,
+		&task.MaxRetries,
+		&createdAt,
+		&startedAt,
+		&finishedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrDownloadTaskNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get download task: %w", err)
+	}
+
+	task.RangeSupported = rangeSupported != 0
+	task.CreatedAt = time.Unix(createdAt, 0).UTC()
+	task.StartedAt = time.Unix(startedAt, 0).UTC()
+	task.FinishedAt = time.Unix(finishedAt, 0).UTC()
+
+	return task, nil
+}
+
+// ListDownloadTasks lists download tasks with pagination, ordered by created_at DESC
+func (s *SQLiteStore) ListDownloadTasks(ctx context.Context, limit, offset int) ([]*DownloadTask, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	query := `
+	SELECT id, url, path, file_name, state, downloaded_bytes, total_bytes,
+		etag, range_supported, final_url, temp_file_name, parts_total, parts_completed,
+		file_type, source_type, repo_id, error_message, retry_count, max_retries,
+		created_at, started_at, finished_at
+	FROM download_tasks
+	ORDER BY created_at DESC
+	LIMIT ? OFFSET ?
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list download tasks: %w", err)
+	}
+	defer utils.CloseQuietly(rows)
+
+	var tasks []*DownloadTask
+	for rows.Next() {
+		task := &DownloadTask{}
+		var rangeSupported int
+		var createdAt, startedAt, finishedAt int64
+
+		err := rows.Scan(
+			&task.ID,
+			&task.URL,
+			&task.Path,
+			&task.FileName,
+			&task.State,
+			&task.DownloadedBytes,
+			&task.TotalBytes,
+			&task.ETag,
+			&rangeSupported,
+			&task.FinalURL,
+			&task.TempFileName,
+			&task.PartsTotal,
+			&task.PartsCompleted,
+			&task.FileType,
+			&task.SourceType,
+			&task.RepoID,
+			&task.ErrorMessage,
+			&task.RetryCount,
+			&task.MaxRetries,
+			&createdAt,
+			&startedAt,
+			&finishedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan download task: %w", err)
+		}
+
+		task.RangeSupported = rangeSupported != 0
+		task.CreatedAt = time.Unix(createdAt, 0).UTC()
+		task.StartedAt = time.Unix(startedAt, 0).UTC()
+		task.FinishedAt = time.Unix(finishedAt, 0).UTC()
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
+}
+
+// UpdateDownloadTask updates all mutable fields of a download task
+func (s *SQLiteStore) UpdateDownloadTask(ctx context.Context, task *DownloadTask) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	rangeSupported := 0
+	if task.RangeSupported {
+		rangeSupported = 1
+	}
+
+	query := `
+	UPDATE download_tasks
+	SET url = ?, path = ?, file_name = ?, state = ?, downloaded_bytes = ?, total_bytes = ?,
+		etag = ?, range_supported = ?, final_url = ?, temp_file_name = ?,
+		parts_total = ?, parts_completed = ?, file_type = ?, source_type = ?,
+		repo_id = ?, error_message = ?, retry_count = ?, max_retries = ?,
+		started_at = ?, finished_at = ?
+	WHERE id = ?
+	`
+
+	result, err := s.db.ExecContext(ctx, query,
+		task.URL,
+		task.Path,
+		task.FileName,
+		task.State,
+		task.DownloadedBytes,
+		task.TotalBytes,
+		task.ETag,
+		rangeSupported,
+		task.FinalURL,
+		task.TempFileName,
+		task.PartsTotal,
+		task.PartsCompleted,
+		task.FileType,
+		task.SourceType,
+		task.RepoID,
+		task.ErrorMessage,
+		task.RetryCount,
+		task.MaxRetries,
+		task.StartedAt.Unix(),
+		task.FinishedAt.Unix(),
+		task.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update download task: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrDownloadTaskNotFound
+	}
+
+	return nil
+}
+
+// DeleteDownloadTask deletes a download task by ID
+func (s *SQLiteStore) DeleteDownloadTask(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result, err := s.db.ExecContext(ctx, "DELETE FROM download_tasks WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete download task: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrDownloadTaskNotFound
+	}
+
+	return nil
+}
+
+// ListActiveDownloadTasks returns all download tasks with active states
+func (s *SQLiteStore) ListActiveDownloadTasks(ctx context.Context) ([]*DownloadTask, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	query := `
+	SELECT id, url, path, file_name, state, downloaded_bytes, total_bytes,
+		etag, range_supported, final_url, temp_file_name, parts_total, parts_completed,
+		file_type, source_type, repo_id, error_message, retry_count, max_retries,
+		created_at, started_at, finished_at
+	FROM download_tasks
+	WHERE state IN ('idle', 'preparing', 'downloading', 'merging', 'verifying', 'paused')
+	ORDER BY created_at DESC
+	`
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list active download tasks: %w", err)
+	}
+	defer utils.CloseQuietly(rows)
+
+	var tasks []*DownloadTask
+	for rows.Next() {
+		task := &DownloadTask{}
+		var rangeSupported int
+		var createdAt, startedAt, finishedAt int64
+
+		err := rows.Scan(
+			&task.ID,
+			&task.URL,
+			&task.Path,
+			&task.FileName,
+			&task.State,
+			&task.DownloadedBytes,
+			&task.TotalBytes,
+			&task.ETag,
+			&rangeSupported,
+			&task.FinalURL,
+			&task.TempFileName,
+			&task.PartsTotal,
+			&task.PartsCompleted,
+			&task.FileType,
+			&task.SourceType,
+			&task.RepoID,
+			&task.ErrorMessage,
+			&task.RetryCount,
+			&task.MaxRetries,
+			&createdAt,
+			&startedAt,
+			&finishedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan download task: %w", err)
+		}
+
+		task.RangeSupported = rangeSupported != 0
+		task.CreatedAt = time.Unix(createdAt, 0).UTC()
+		task.StartedAt = time.Unix(startedAt, 0).UTC()
+		task.FinishedAt = time.Unix(finishedAt, 0).UTC()
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
 }
 
 // Close closes the database connection

@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/huggingface"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/infra/huggingface"
+	"github.com/simonxluo/Shepherd/internal/infra/storage"
 )
 
 // GetModel returns a model by ID

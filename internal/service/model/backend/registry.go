@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
 )
 
 // Registry manages available backends and provides lookup functionality

@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model/backend"
+	"github.com/simonxluo/Shepherd/internal/infra/gguf"
+	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // Model represents a discovered GGUF model with HuggingFace-style management

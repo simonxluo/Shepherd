@@ -19,6 +19,7 @@ type MemoryStore struct {
 	modelLoadConfigs map[string]*ModelLoadConfig // key: "nodeID:modelID:name"
 	modelMetadata    map[string]*ModelMetadata   // key: modelID
 	ttsHistory       map[string]*TTSHistoryItem  // key: id
+	downloadTasks    map[string]*DownloadTask    // key: id
 }
 
 // NewMemoryStore creates a new in-memory store
@@ -32,6 +33,7 @@ func NewMemoryStore() (*MemoryStore, error) {
 		modelLoadConfigs: make(map[string]*ModelLoadConfig),
 		modelMetadata:    make(map[string]*ModelMetadata),
 		ttsHistory:       make(map[string]*TTSHistoryItem),
+		downloadTasks:    make(map[string]*DownloadTask),
 	}, nil
 }
 
@@ -645,6 +647,132 @@ func (s *MemoryStore) DeleteTTSHistory(ctx context.Context, id string) error {
 
 	delete(s.ttsHistory, id)
 	return nil
+}
+
+// Download Task Operations
+
+// CreateDownloadTask creates a new download task record
+func (s *MemoryStore) CreateDownloadTask(ctx context.Context, task *DownloadTask) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if task.ID == "" {
+		task.ID = generateID("dl")
+	}
+	if task.CreatedAt.IsZero() {
+		task.CreatedAt = time.Now()
+	}
+
+	taskCopy := *task
+	s.downloadTasks[task.ID] = &taskCopy
+	return nil
+}
+
+// GetDownloadTask retrieves a download task by ID
+func (s *MemoryStore) GetDownloadTask(ctx context.Context, id string) (*DownloadTask, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	task, exists := s.downloadTasks[id]
+	if !exists {
+		return nil, ErrDownloadTaskNotFound
+	}
+
+	taskCopy := *task
+	return &taskCopy, nil
+}
+
+// ListDownloadTasks lists download tasks with pagination, ordered by created_at DESC
+func (s *MemoryStore) ListDownloadTasks(ctx context.Context, limit, offset int) ([]*DownloadTask, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var result []*DownloadTask
+	for _, task := range s.downloadTasks {
+		taskCopy := *task
+		result = append(result, &taskCopy)
+	}
+
+	// Sort by created_at desc
+	for i := 0; i < len(result); i++ {
+		for j := i + 1; j < len(result); j++ {
+			if result[j].CreatedAt.After(result[i].CreatedAt) {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	}
+
+	if offset >= len(result) {
+		return []*DownloadTask{}, nil
+	}
+
+	end := offset + limit
+	if end > len(result) {
+		end = len(result)
+	}
+
+	return result[offset:end], nil
+}
+
+// UpdateDownloadTask updates all mutable fields of a download task
+func (s *MemoryStore) UpdateDownloadTask(ctx context.Context, task *DownloadTask) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.downloadTasks[task.ID]; !exists {
+		return ErrDownloadTaskNotFound
+	}
+
+	taskCopy := *task
+	s.downloadTasks[task.ID] = &taskCopy
+	return nil
+}
+
+// DeleteDownloadTask deletes a download task by ID
+func (s *MemoryStore) DeleteDownloadTask(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.downloadTasks[id]; !exists {
+		return ErrDownloadTaskNotFound
+	}
+
+	delete(s.downloadTasks, id)
+	return nil
+}
+
+// ListActiveDownloadTasks returns all download tasks with active states
+func (s *MemoryStore) ListActiveDownloadTasks(ctx context.Context) ([]*DownloadTask, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	activeStates := map[string]bool{
+		"idle":        true,
+		"preparing":   true,
+		"downloading": true,
+		"merging":     true,
+		"verifying":   true,
+		"paused":      true,
+	}
+
+	var result []*DownloadTask
+	for _, task := range s.downloadTasks {
+		if activeStates[task.State] {
+			taskCopy := *task
+			result = append(result, &taskCopy)
+		}
+	}
+
+	// Sort by created_at desc
+	for i := 0; i < len(result); i++ {
+		for j := i + 1; j < len(result); j++ {
+			if result[j].CreatedAt.After(result[i].CreatedAt) {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	}
+
+	return result, nil
 }
 
 // Close closes the store (no-op for memory store)

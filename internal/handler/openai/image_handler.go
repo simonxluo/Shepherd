@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
 type ImageHandler struct {

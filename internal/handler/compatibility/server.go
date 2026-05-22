@@ -3,16 +3,16 @@ package compatibility
 import (
 	"context"
 	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/lmstudio"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/ollama"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/handler/lmstudio"
+	"github.com/simonxluo/Shepherd/internal/handler/ollama"
+	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
 type ServerManager struct {

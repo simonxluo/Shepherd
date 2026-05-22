@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler"
+	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/types"
+	"github.com/simonxluo/Shepherd/internal/handler"
 )
 
 // pathCRUD provides generic CRUD operations for path configuration slices.

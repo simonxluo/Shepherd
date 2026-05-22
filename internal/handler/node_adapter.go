@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster/scanner"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster/scheduler"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
+	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/types"
+	"github.com/simonxluo/Shepherd/internal/service/cluster"
+	"github.com/simonxluo/Shepherd/internal/service/cluster/scanner"
+	"github.com/simonxluo/Shepherd/internal/service/cluster/scheduler"
+	"github.com/simonxluo/Shepherd/internal/service/node"
 )
 
 // NodeAdapter 将 API 调用适配到 Node 和 Scheduler

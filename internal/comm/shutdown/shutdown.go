@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
 )
 
 // HookPriority defines the order in which hooks are executed

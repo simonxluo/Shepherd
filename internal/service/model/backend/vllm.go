@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
 )
 
 // VLLMBackend implements Backend for vLLM

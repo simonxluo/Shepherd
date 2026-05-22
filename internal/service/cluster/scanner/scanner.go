@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/cluster"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/service/cluster"
+	"github.com/simonxluo/Shepherd/internal/service/node"
 )
 
 // ScanConfig contains network scan configuration

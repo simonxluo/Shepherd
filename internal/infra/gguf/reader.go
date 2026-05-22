@@ -1,7 +1,7 @@
 package gguf
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
 )
 
 func ReadMetadata(path string) (*Metadata, error) {

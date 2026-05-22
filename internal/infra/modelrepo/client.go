@@ -7,7 +7,7 @@ package modelrepo
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"net"
 	"net/http"
 	"net/url"

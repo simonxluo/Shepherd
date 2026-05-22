@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/cli/client"
+	"github.com/simonxluo/Shepherd/internal/cli/client"
 	"github.com/spf13/cobra"
 )
 

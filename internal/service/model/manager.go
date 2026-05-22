@@ -6,12 +6,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/port"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model/backend"
+	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/infra/port"
+	"github.com/simonxluo/Shepherd/internal/infra/process"
+	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // Manager manages model scanning and loading

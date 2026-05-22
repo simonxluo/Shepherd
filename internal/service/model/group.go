@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
 )
 
 type ModelGroup struct {

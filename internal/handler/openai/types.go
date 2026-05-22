@@ -4,7 +4,7 @@ package openai
 import (
 	"encoding/json"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/compat"
+	"github.com/simonxluo/Shepherd/internal/handler/compat"
 )
 
 // Re-export compat types for backward compatibility within the package and swagger docs.

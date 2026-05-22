@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
 type ModelLookupIndex struct {

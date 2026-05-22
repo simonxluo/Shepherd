@@ -1,4 +1,4 @@
-module github.com/shepherd-project/shepherd/Shepherd
+module github.com/simonxluo/Shepherd
 
 go 1.25.7
 

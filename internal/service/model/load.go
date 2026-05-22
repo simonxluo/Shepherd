@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/process"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model/backend"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/infra/process"
+	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // prepareAndStartProcess contains the shared preparation logic for both Load and LoadAsync.

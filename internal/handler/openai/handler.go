@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/compat"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/simonxluo/Shepherd/internal/handler/compat"
+	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
 type Handler struct {

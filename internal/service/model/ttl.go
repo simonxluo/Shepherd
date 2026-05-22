@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
 )
 
 func (m *Manager) StartTTLChecker() {

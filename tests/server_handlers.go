@@ -4,13 +4,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
-	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/download"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/router"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/types"
+	api "github.com/simonxluo/Shepherd/internal/handler"
+	"github.com/simonxluo/Shepherd/internal/infra/download"
+	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/router"
+	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
 // testServerHandlers implements router.ServerHandlers for testing.
@@ -39,7 +39,7 @@ func newTestServerHandlers(
 		configMgr:   cfgMgr,
 		modelMgr:    modelMgr,
 		storageMgr:  storageMgr,
-		downloadMgr: download.NewManager(download.DownloadConfig{MaxConcurrent: 3}),
+		downloadMgr: download.NewManager(download.DownloadConfig{MaxConcurrent: 3}, download.ManagerDeps{}),
 		handlers:    handlers,
 	}
 }
@@ -47,6 +47,10 @@ func newTestServerHandlers(
 func (s *testServerHandlers) HandleEvents(c *gin.Context) {
 	// SSE not testable via httptest; return immediately
 	c.String(http.StatusOK, "event stream")
+}
+
+func (s *testServerHandlers) HandleGetResources(c *gin.Context) {
+	api.Success(c, gin.H{"resources": nil})
 }
 
 func (s *testServerHandlers) HandleWebSocket(c *gin.Context) {

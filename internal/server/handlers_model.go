@@ -10,13 +10,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
-	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model/backend"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/types"
+	api "github.com/simonxluo/Shepherd/internal/handler"
+	"github.com/simonxluo/Shepherd/internal/infra/gguf"
+	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/service/model"
+	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // loadedModelInfo 用于 /api/models/loaded 响应的已加载模型信息

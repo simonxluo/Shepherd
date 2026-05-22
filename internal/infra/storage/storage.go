@@ -190,6 +190,32 @@ type TTSHistoryItem struct {
 	CreatedAt time.Time              `json:"createdAt" db:"created_at"`
 }
 
+// DownloadTask represents a persistent download task record
+type DownloadTask struct {
+	ID              string    `json:"id" db:"id"`
+	URL             string    `json:"url" db:"url"`
+	Path            string    `json:"path" db:"path"`
+	FileName        string    `json:"fileName" db:"file_name"`
+	State           string    `json:"state" db:"state"` // idle, preparing, downloading, merging, verifying, completed, failed, paused
+	DownloadedBytes int64     `json:"downloadedBytes" db:"downloaded_bytes"`
+	TotalBytes      int64     `json:"totalBytes" db:"total_bytes"`
+	ETag            string    `json:"etag,omitempty" db:"etag"`
+	RangeSupported  bool      `json:"rangeSupported" db:"range_supported"`
+	FinalURL        string    `json:"finalUrl,omitempty" db:"final_url"`
+	TempFileName    string    `json:"tempFileName,omitempty" db:"temp_file_name"`
+	PartsTotal      int       `json:"partsTotal" db:"parts_total"`
+	PartsCompleted  int       `json:"partsCompleted" db:"parts_completed"`
+	FileType        string    `json:"fileType,omitempty" db:"file_type"`
+	SourceType      string    `json:"sourceType,omitempty" db:"source_type"`
+	RepoID          string    `json:"repoId,omitempty" db:"repo_id"`
+	ErrorMessage    string    `json:"errorMessage,omitempty" db:"error_message"`
+	RetryCount      int       `json:"retryCount" db:"retry_count"`
+	MaxRetries      int       `json:"maxRetries" db:"max_retries"`
+	CreatedAt       time.Time `json:"createdAt" db:"created_at"`
+	StartedAt       time.Time `json:"startedAt,omitempty" db:"started_at"`
+	FinishedAt      time.Time `json:"finishedAt,omitempty" db:"finished_at"`
+}
+
 // Store defines the storage interface
 type Store interface {
 	// Conversation operations
@@ -241,6 +267,14 @@ type Store interface {
 	ListTTSHistory(ctx context.Context, limit, offset int, favouriteOnly *bool) ([]*TTSHistoryItem, error)
 	UpdateTTSHistoryFavourite(ctx context.Context, id string, favourite bool) error
 	DeleteTTSHistory(ctx context.Context, id string) error
+
+	// Download task operations
+	CreateDownloadTask(ctx context.Context, task *DownloadTask) error
+	GetDownloadTask(ctx context.Context, id string) (*DownloadTask, error)
+	ListDownloadTasks(ctx context.Context, limit, offset int) ([]*DownloadTask, error)
+	UpdateDownloadTask(ctx context.Context, task *DownloadTask) error
+	DeleteDownloadTask(ctx context.Context, id string) error
+	ListActiveDownloadTasks(ctx context.Context) ([]*DownloadTask, error)
 
 	// Cleanup
 	Close() error
@@ -308,6 +342,7 @@ var (
 	ErrModelLoadConfigNotFound = &StorageError{Code: "NOT_FOUND", Message: "Model load config not found"}
 	ErrModelMetadataNotFound   = &StorageError{Code: "NOT_FOUND", Message: "Model metadata not found"}
 	ErrTTSHistoryNotFound      = &StorageError{Code: "NOT_FOUND", Message: "TTS history item not found"}
+	ErrDownloadTaskNotFound    = &StorageError{Code: "NOT_FOUND", Message: "Download task not found"}
 )
 
 // StorageError represents a storage error

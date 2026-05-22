@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"os"
 	"path/filepath"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/gguf"
+	"github.com/simonxluo/Shepherd/internal/infra/gguf"
 )
 
 func main() {

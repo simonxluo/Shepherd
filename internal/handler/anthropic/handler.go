@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/compat"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/handler/compat"
+	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
 type Handler struct {

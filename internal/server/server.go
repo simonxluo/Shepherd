@@ -10,27 +10,27 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/config"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/event"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/logger"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
-	api "github.com/shepherd-project/shepherd/Shepherd/internal/handler"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/anthropic"
-	benchmarkapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/benchmark"
-	chatapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/chat"
-	compatibilityapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/compatibility"
-	filesystemapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/filesystem"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/lmstudio"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/ollama"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/openai"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/handler/paths"
-	storageapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/storage"
-	ttsapi "github.com/shepherd-project/shepherd/Shepherd/internal/handler/tts"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/download"
-	modelrepoclient "github.com/shepherd-project/shepherd/Shepherd/internal/infra/modelrepo"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/infra/storage"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/router"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/model"
+	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/event"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
+	api "github.com/simonxluo/Shepherd/internal/handler"
+	"github.com/simonxluo/Shepherd/internal/handler/anthropic"
+	benchmarkapi "github.com/simonxluo/Shepherd/internal/handler/benchmark"
+	chatapi "github.com/simonxluo/Shepherd/internal/handler/chat"
+	compatibilityapi "github.com/simonxluo/Shepherd/internal/handler/compatibility"
+	filesystemapi "github.com/simonxluo/Shepherd/internal/handler/filesystem"
+	"github.com/simonxluo/Shepherd/internal/handler/lmstudio"
+	"github.com/simonxluo/Shepherd/internal/handler/ollama"
+	"github.com/simonxluo/Shepherd/internal/handler/openai"
+	"github.com/simonxluo/Shepherd/internal/handler/paths"
+	storageapi "github.com/simonxluo/Shepherd/internal/handler/storage"
+	ttsapi "github.com/simonxluo/Shepherd/internal/handler/tts"
+	"github.com/simonxluo/Shepherd/internal/infra/download"
+	modelrepoclient "github.com/simonxluo/Shepherd/internal/infra/modelrepo"
+	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/router"
+	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
 // ModelDTO represents a model for API responses
@@ -122,17 +122,28 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	}
 	s.storageMgr = storageMgr
 
-	// Create download manager
-	s.downloadMgr = download.NewManager(download.DownloadConfig{MaxConcurrent: 3})
-
 	// Create WebSocket manager
 	s.wsMgr = event.NewManager(modelMgr)
+
+	// Load application config (used for download, model repo, compatibility, etc.)
+	cfg := config.ConfigMgr.Get()
+
+	// Create download manager with config from YAML
+	dlCfg := cfg.Download
+	s.downloadMgr = download.NewManager(download.DownloadConfig{
+		MaxConcurrent: dlCfg.MaxConcurrent,
+		ChunkSize:     int64(dlCfg.ChunkSize),
+		Timeout:       time.Duration(dlCfg.Timeout) * time.Second,
+		RetryCount:    dlCfg.RetryCount,
+	}, download.ManagerDeps{
+		Store:    storageMgr.GetStore(),
+		EventMgr: s.wsMgr,
+	})
 
 	// Create WebSocket Hub
 	s.wsHub = NewWebSocketHub()
 
 	// Create model repository client with config
-	cfg := config.ConfigMgr.Get()
 	timeout := time.Duration(cfg.ModelRepo.Timeout) * time.Second
 	if timeout <= 0 {
 		timeout = 30 * time.Second
@@ -211,6 +222,9 @@ func (s *Server) Start() error {
 
 	// Start WebSocket manager
 	s.wsMgr.Start()
+
+	// Restore and resume interrupted downloads
+	s.downloadMgr.RestoreAndResume()
 
 	// Start WebSocket Hub (新增)
 	go s.wsHub.Run()

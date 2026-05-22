@@ -26,7 +26,8 @@ export function useDownloads() {
       const data = query.state.data as DownloadTask[] | undefined;
       if (!data || data.length === 0) return false;
       const hasActiveTasks = data.some(task => ACTIVE_DOWNLOAD_STATES.includes(task.state));
-      return hasActiveTasks ? 1000 : false;
+      // SSE now drives real-time updates; polling is a fallback only
+      return hasActiveTasks ? 10000 : false;
     },
   });
 }

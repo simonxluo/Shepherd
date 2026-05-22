@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/shepherd-project/shepherd/Shepherd/internal/cli"
+	"github.com/simonxluo/Shepherd/internal/cli"
 )
 
 var (

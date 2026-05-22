@@ -4,8 +4,8 @@ package cluster
 import (
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/service/node"
+	"github.com/simonxluo/Shepherd/internal/comm/types"
+	"github.com/simonxluo/Shepherd/internal/service/node"
 )
 
 // ClientStatus is an alias for the unified NodeState type

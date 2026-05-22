@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
 )
 
 // LlamaCppBackend implements Backend for llama.cpp (llama-server)

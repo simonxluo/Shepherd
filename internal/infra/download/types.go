@@ -57,7 +57,7 @@ type Task struct {
 
 	Parts          []partDownload
 	PartsTotal     int
-	PartsCompleted int
+	PartsCompleted int32
 
 	CreatedAt  time.Time
 	StartedAt  time.Time

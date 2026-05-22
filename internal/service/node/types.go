@@ -4,8 +4,8 @@ package node
 import (
 	"time"
 
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/gpu"
-	"github.com/shepherd-project/shepherd/Shepherd/internal/comm/types"
+	"github.com/simonxluo/Shepherd/internal/comm/gpu"
+	"github.com/simonxluo/Shepherd/internal/comm/types"
 )
 
 // NodeRole represents the role of a node in the distributed architecture
