@@ -238,6 +238,7 @@ func (s *SQLiteStore) migrateCapabilitiesColumn() error {
 
 		if name == "capabilities" {
 			capabilitiesExists = true
+			rows.Close()
 			break
 		}
 	}
@@ -307,6 +308,7 @@ func (s *SQLiteStore) migrateModelLoadConfigsTable() error {
 			}
 			if name == "name" {
 				nameExists = true
+				rows.Close()
 				break
 			}
 		}

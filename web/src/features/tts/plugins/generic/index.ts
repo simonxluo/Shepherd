@@ -17,6 +17,8 @@ const genericPlugin: TTSPlugin = {
     supportsStreamPcm: false,
     supportsCfgValue: false,
     supportsInferenceTimesteps: false,
+    supportsCfgCutoffRatio: false,
+    supportsSwaySampling: false,
     supportsEmotion: false,
     defaultSampleRate: 24000,
     defaultFormat: 'mp3',
