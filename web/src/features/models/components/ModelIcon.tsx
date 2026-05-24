@@ -9,6 +9,18 @@ const MODEL_ICONS: [string, string][] = [
   ['mistral', '/model-icons/mistral-color.svg'],
   ['gemma', '/model-icons/gemma-color.svg'],
   ['deepseek', '/model-icons/deepseek-color.svg'],
+  ['glm', '/model-icons/glm-color.svg'],
+  ['kimi', '/model-icons/kimi-color.svg'],
+  ['minimax', '/model-icons/minimax-color.svg'],
+  ['hunyuan', '/model-icons/hunyuan-color.svg'],
+  ['nemotron', '/model-icons/nemotron-color.svg'],
+  ['openai', '/model-icons/openai-color.svg'],
+  ['bailingmoe', '/model-icons/bailingmoe-color.svg'],
+  ['bert', '/model-icons/bert-color.svg'],
+  ['lfm', '/model-icons/lfm-color.svg'],
+  ['paddleocr', '/model-icons/paddleocr-color.svg'],
+  ['seed_oss', '/model-icons/seed_oss-color.svg'],
+  ['step35', '/model-icons/step35-color.svg'],
 ];
 
 export function ModelIcon({ architecture, className = '' }: ModelIconProps) {
