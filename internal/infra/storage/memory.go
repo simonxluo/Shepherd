@@ -807,7 +807,3 @@ func (s *MemoryStore) Stats() map[string]interface{} {
 	}
 }
 
-// generateID generates a unique ID with a prefix
-func generateID(prefix string) string {
-	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
-}

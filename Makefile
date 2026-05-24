@@ -1,7 +1,7 @@
 # Shepherd Makefile
 # 快速编译和开发命令
 
-.PHONY: all build build-all test clean release run stop swag
+.PHONY: all build build-all test clean release run stop swag sqlc sqlc-verify
 
 # 默认目标
 all: build
@@ -126,6 +126,18 @@ swag:
 	@$(shell which swag 2>/dev/null || echo swag) init -g cmd/shepherd/main.go -o api-docs --parseDependency --parseInternal --exclude internal/comm/gpu 2>&1
 	@echo "✓ Swagger 文档已生成到 api-docs/"
 
+# 生成 sqlc 代码
+sqlc:
+	@echo "生成 sqlc 代码..."
+	@cd internal/infra/storage && sqlc generate
+	@echo "✓ sqlc 代码已生成到 internal/infra/storage/sqlcgen/"
+
+# 验证 sqlc 代码是否最新
+sqlc-verify:
+	@echo "验证 sqlc 代码..."
+	@cd internal/infra/storage && sqlc generate && git diff --quiet sqlcgen/
+	@echo "✓ sqlc 代码已是最新"
+
 # 帮助信息
 help:
 	@echo "Shepherd Makefile"
@@ -146,6 +158,8 @@ help:
 	@echo "  run           - 编译并启动服务（含前端构建和Web界面）"
 	@echo "  stop          - 停止所有进程"
 	@echo "  swag          - 生成 Swagger API 文档"
+	@echo "  sqlc          - 生成 sqlc 代码"
+	@echo "  sqlc-verify   - 验证 sqlc 代码是否最新"
 	@echo "  install       - 安装到 /usr/local/bin"
 	@echo "  uninstall     - 从 /usr/local/bin 卸载"
 	@echo "  docker-build  - 构建 Docker 镜像"
