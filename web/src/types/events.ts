@@ -17,7 +17,8 @@ export interface SSEEvent<T = Record<string, unknown>> {
     | 'clientRegistered'
     | 'clientDisconnected'
     | 'clientResourcesUpdated'
-    | 'taskUpdate';
+    | 'taskUpdate'
+    | 'benchmarkUpdate';
   timestamp: number;
   data: T;
 }

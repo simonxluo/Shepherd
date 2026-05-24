@@ -510,5 +510,26 @@ export interface CreateBenchmarkResponse {
   error?: string;
 }
 
+/**
+ * Benchmark task status from TaskManager
+ */
+export type BenchmarkTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
-
+/**
+ * Benchmark task from backend TaskManager
+ */
+export interface BenchmarkTask {
+  id: string;
+  type: 'benchmark';
+  status: BenchmarkTaskStatus;
+  name: string;
+  modelId?: string;
+  modelName?: string;
+  command?: string;
+  error?: string;
+  progress?: number;
+  metrics?: Record<string, unknown>;
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+}

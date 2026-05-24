@@ -5,6 +5,7 @@ import type {
   BenchmarkParamsResponse,
   BenchmarkHistoryFile,
   LlamaCppVersion,
+  BenchmarkTask,
 } from '@/types';
 
 /**
@@ -33,5 +34,13 @@ export const benchmarksApi = {
 
   async deleteHistoryFile(fileName: string): Promise<{ success: boolean }> {
     return apiClient.post(`/models/benchmark/delete?fileName=${encodeURIComponent(fileName)}`, {});
+  },
+
+  async listTasks(): Promise<{ success: boolean; data?: { tasks: BenchmarkTask[] } }> {
+    return apiClient.get('/models/benchmark/tasks/list');
+  },
+
+  async cancelTask(taskId: string): Promise<{ success: boolean; error?: string }> {
+    return apiClient.post(`/models/benchmark/tasks/${encodeURIComponent(taskId)}/cancel`);
   },
 };
