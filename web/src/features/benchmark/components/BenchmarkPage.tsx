@@ -8,6 +8,7 @@ import { BenchmarkControlsPanel } from './BenchmarkControlsPanel';
 import { BenchmarkParamsModal } from './BenchmarkParamsModal';
 import { HistoryPanel } from './HistoryPanel';
 import { OutputPanel } from './OutputPanel';
+import { BenchmarkTaskPanel } from './BenchmarkTaskPanel';
 import {
   useBenchmarkState,
   useBenchmarkParams,
@@ -15,6 +16,8 @@ import {
   useBenchmarkHistory,
   useDeleteHistoryFile,
   useCreateBenchmarkTask,
+  useBenchmarkTasks,
+  useCancelBenchmarkTask,
 } from '../hooks/useBenchmarkState';
 import { buildBenchArgs } from '../lib/commandBuilder';
 import { toast } from '@/hooks/useToast';
@@ -35,6 +38,11 @@ export function BenchmarkPage() {
   const { data: historyFiles = [], isLoading: historyLoading } = useBenchmarkHistory(state.selectedModelId);
   const deleteHistoryFile = useDeleteHistoryFile();
   const createBenchmark = useCreateBenchmarkTask();
+
+  // Task status
+  const { data: tasks = [] } = useBenchmarkTasks();
+  const cancelTask = useCancelBenchmarkTask();
+  const hasRunningTask = tasks.some(t => t.status === 'running' || t.status === 'pending');
 
   // Initialize from URL params
   useEffect(() => {
@@ -158,8 +166,12 @@ export function BenchmarkPage() {
             llamaCppVersions={llamaCppVersions}
             onLlamaCppPathChange={state.setLlamaCppPath}
             onRunBenchmark={handleRunBenchmark}
+            onCancelBenchmark={() => {
+              const running = tasks.find(t => t.status === 'running');
+              if (running) cancelTask.mutate(running.id);
+            }}
             onOpenParams={() => state.setIsParamsModalOpen(true)}
-            isRunning={createBenchmark.isPending}
+            isRunning={createBenchmark.isPending || hasRunningTask}
             isDisabled={!state.selectedModel || !state.llamaCppPath || createBenchmark.isPending}
             enabledParamsCount={enabledParamsCount}
             totalParamsCount={benchmarkParams.length}
@@ -169,6 +181,15 @@ export function BenchmarkPage() {
           <div className="flex-1 flex min-h-0">
             {/* History panel */}
             <div className="w-56 flex-shrink-0 border-r border-border overflow-hidden flex flex-col">
+              {/* Task status panel */}
+              {tasks.length > 0 && (
+                <div className="border-b border-border">
+                  <div className="px-3 py-2 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t('benchmark.tasks')} ({tasks.length})
+                  </div>
+                  <BenchmarkTaskPanel tasks={tasks} />
+                </div>
+              )}
               <div className="px-3 py-2 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t('benchmark.history')}
               </div>

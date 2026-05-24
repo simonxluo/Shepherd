@@ -820,6 +820,15 @@
     "loadFailed": "Failed to load file",
     "runSuccess": "Benchmark task started",
     "runFailed": "Failed to start benchmark",
+    "tasks": "Tasks",
+    "noTasks": "No benchmark tasks",
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
     "groups": {
       "basic": "Basic",
       "test_data": "Test Data",

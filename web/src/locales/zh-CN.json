@@ -820,6 +820,15 @@
     "loadFailed": "加载文件失败",
     "runSuccess": "压测任务已启动",
     "runFailed": "启动压测失败",
+    "tasks": "任务",
+    "noTasks": "暂无压测任务",
+    "status": {
+      "pending": "等待中",
+      "running": "运行中",
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消"
+    },
     "groups": {
       "basic": "基础设置",
       "test_data": "测试数据",
