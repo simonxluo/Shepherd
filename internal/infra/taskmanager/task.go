@@ -47,6 +47,12 @@ type Task struct {
 	mu       sync.RWMutex
 }
 
+func (t *Task) Context() context.Context {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.ctx
+}
+
 func (t *Task) GetStatus() TaskStatus {
 	t.mu.RLock()
 	defer t.mu.RUnlock()

@@ -10,15 +10,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
-	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/simonxluo/Shepherd/internal/comm/event"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/infra/taskmanager"
 )
 
 const (
@@ -26,36 +26,29 @@ const (
 	MaxConcurrentBenchmarks = 3
 )
 
-// runningTask 运行中的任务信息
-type runningTask struct {
-	cmd       *exec.Cmd
-	cancel    context.CancelFunc
-	taskID    string
-	startedAt time.Time
-}
-
 // Handler 压测 API 处理器
 type Handler struct {
-	log          *logger.Logger
-	store        storage.Store
-	ctx          context.Context
-	cancelFunc   context.CancelFunc
-	runningTasks map[string]*runningTask
-	taskMutex    sync.RWMutex
-	semaphore    chan struct{} // 用于限制并发数
+	log        *logger.Logger
+	store      storage.Store
+	taskMgr    *taskmanager.Manager
+	eventMgr   *event.Manager
+	ctx        context.Context
+	cancelFunc context.CancelFunc
+	semaphore  chan struct{} // 用于限制并发数
 }
 
 // NewHandler 创建新的压测处理器
-func NewHandler(log *logger.Logger, store storage.Store) *Handler {
+func NewHandler(log *logger.Logger, store storage.Store, taskMgr *taskmanager.Manager, eventMgr *event.Manager) *Handler {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	h := &Handler{
-		log:          log,
-		store:        store,
-		ctx:          ctx,
-		cancelFunc:   cancel,
-		runningTasks: make(map[string]*runningTask),
-		semaphore:    make(chan struct{}, MaxConcurrentBenchmarks),
+		log:        log,
+		store:      store,
+		taskMgr:    taskMgr,
+		eventMgr:   eventMgr,
+		ctx:        ctx,
+		cancelFunc: cancel,
+		semaphore:  make(chan struct{}, MaxConcurrentBenchmarks),
 	}
 
 	// 启动清理 goroutine
@@ -100,15 +93,13 @@ func (h *Handler) cleanupFinishedTasks() {
 		case <-h.ctx.Done():
 			return
 		case <-ticker.C:
-			h.taskMutex.Lock()
-			for taskID, task := range h.runningTasks {
-				// 如果任务运行超过 1 小时，清理它
-				if time.Since(task.startedAt) > time.Hour {
-					h.log.Warnf("Cleaning up stale task %s", taskID)
-					delete(h.runningTasks, taskID)
+			tasks := h.taskMgr.List(taskmanager.TaskTypeBenchmark)
+			for _, t := range tasks {
+				if time.Since(t.CreatedAt) > time.Hour && t.GetStatus() != taskmanager.TaskStatusRunning {
+					h.taskMgr.Remove(t.ID)
+					h.log.Infof("Cleaned up old benchmark task %s", t.ID)
 				}
 			}
-			h.taskMutex.Unlock()
 		}
 	}
 }
@@ -349,9 +340,7 @@ func (h *Handler) GetDevices(c *gin.Context) {
 
 // GetRunningTasksCount 获取当前运行中的任务数量
 func (h *Handler) GetRunningTasksCount() int {
-	h.taskMutex.RLock()
-	defer h.taskMutex.RUnlock()
-	return len(h.runningTasks)
+	return h.taskMgr.RunningCount(taskmanager.TaskTypeBenchmark)
 }
 
 // Create creates a new benchmark task.
@@ -448,8 +437,28 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
+	// 注册到 TaskManager
+	benchTask := &taskmanager.Task{
+		ID:         taskID,
+		Type:       taskmanager.TaskTypeBenchmark,
+		Status:     taskmanager.TaskStatusPending,
+		Name:       fmt.Sprintf("Benchmark: %s", req.ModelName),
+		ModelID:    req.ModelID,
+		ModelName:  req.ModelName,
+		Command:    task.Command,
+		CreatedAt:  time.Now(),
+	}
+	if err := h.taskMgr.Register(benchTask); err != nil {
+		h.log.Errorf("Failed to register benchmark task: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to register benchmark task",
+		})
+		return
+	}
+
 	// 异步执行压测任务
-	go h.runBenchmark(task, benchPath, req.Args)
+	go h.runBenchmark(task, benchTask, benchPath, req.Args)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -460,111 +469,65 @@ func (h *Handler) Create(c *gin.Context) {
 }
 
 // runBenchmark 执行压测任务
-func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string, args []string) {
-
-	// 获取信号量（限制并发）
+func (h *Handler) runBenchmark(task *storage.Benchmark, benchTask *taskmanager.Task, llamaBinPath string, args []string) {
 	select {
 	case h.semaphore <- struct{}{}:
 		defer func() { <-h.semaphore }()
 	case <-h.ctx.Done():
-		task.Status = "cancelled"
-		task.Error = "Handler shutdown"
-		finishedAt := time.Now()
-		task.FinishedAt = &finishedAt
-		if err := h.store.UpdateBenchmark(h.ctx, task); err != nil {
-			h.log.Errorf("Failed to update benchmark: %v", err)
-		}
+		benchTask.Error = "Handler shutdown"
+		benchTask.SetStatus(taskmanager.TaskStatusCancelled)
 		return
 	}
 
 	startedAt := time.Now()
 	task.StartedAt = &startedAt
+	benchTask.SetStatus(taskmanager.TaskStatusRunning)
 
 	h.log.Infof("Starting benchmark task %s: %s", task.ID, task.Command)
 
-	// 创建带取消的上下文
-	taskCtx, cancel := context.WithCancel(h.ctx)
-
-	// 构建命令
 	cmdParts := args
 	if len(cmdParts) == 0 && task.Command != "" {
 		cmdParts = strings.Fields(task.Command)
 	}
 
 	if len(cmdParts) == 0 {
+		benchTask.Error = "Empty command"
+		benchTask.SetStatus(taskmanager.TaskStatusFailed)
+		now := time.Now()
+		task.FinishedAt = &now
 		task.Status = "failed"
 		task.Error = "Empty command"
-		finishedAt := time.Now()
-		task.FinishedAt = &finishedAt
-		if err := h.store.UpdateBenchmark(h.ctx, task); err != nil {
-			h.log.Errorf("Failed to update benchmark: %v", err)
-		}
-		cancel()
+		_ = h.store.UpdateBenchmark(h.ctx, task)
 		return
 	}
 
-	// 构建完整命令（添加 llama.cpp 路径）
-	cmd := exec.CommandContext(taskCtx, llamaBinPath, cmdParts...)
-
-	// 记录运行中的任务
-	h.taskMutex.Lock()
-	h.runningTasks[task.ID] = &runningTask{
-		cmd:       cmd,
-		cancel:    cancel,
-		taskID:    task.ID,
-		startedAt: startedAt,
-	}
-	h.taskMutex.Unlock()
-
-	// 确保清理
-	defer func() {
-		h.taskMutex.Lock()
-		delete(h.runningTasks, task.ID)
-		h.taskMutex.Unlock()
-		cancel()
-	}()
-
-	// 保存启动状态
-	if err := h.store.UpdateBenchmark(h.ctx, task); err != nil {
-		h.log.Warnf("Failed to save benchmark status: %v", err)
-	}
-
-	// 执行并捕获输出
+	cmd := exec.CommandContext(benchTask.Context(), llamaBinPath, cmdParts...)
 	output, err := cmd.CombinedOutput()
 	finishedAt := time.Now()
 	task.FinishedAt = &finishedAt
 
-	// Save output to file
 	h.saveBenchmarkOutput(task.ModelID, string(output))
-
-	// 解析输出提取指标
 	metrics := h.parseBenchmarkOutput(string(output))
+	benchTask.Metrics = metrics
 
-	// 检查是否被取消
-	h.taskMutex.RLock()
-	_, wasRunning := h.runningTasks[task.ID]
-	h.taskMutex.RUnlock()
-
-	if !wasRunning {
-		// 任务被取消
-		task.Status = "cancelled"
-		h.log.Infof("Benchmark task %s was cancelled", task.ID)
-	} else if err != nil {
-		// 检查是否是因为上下文取消导致的错误
-		if taskCtx.Err() != nil {
+	if err != nil {
+		if benchTask.Context().Err() != nil {
+			benchTask.SetStatus(taskmanager.TaskStatusCancelled)
 			task.Status = "cancelled"
 			h.log.Infof("Benchmark task %s was cancelled", task.ID)
 		} else {
 			h.log.Errorf("Benchmark task %s failed: %v", task.ID, err)
+			benchTask.Error = err.Error()
+			benchTask.SetStatus(taskmanager.TaskStatusFailed)
 			task.Status = "failed"
 			task.Error = err.Error()
 		}
 	} else {
 		h.log.Infof("Benchmark task %s completed successfully", task.ID)
+		benchTask.SetStatus(taskmanager.TaskStatusCompleted)
 		task.Status = "completed"
 	}
 
-	// 保存指标到数据库
 	task.Metrics = metrics
 	if err := h.store.UpdateBenchmark(h.ctx, task); err != nil {
 		h.log.Errorf("Failed to save benchmark result: %v", err)
@@ -687,10 +650,8 @@ func (h *Handler) Get(c *gin.Context) {
 func (h *Handler) Cancel(c *gin.Context) {
 	taskID := c.Param("benchmarkId")
 
-	// 获取任务
-	task, err := h.store.GetBenchmark(h.ctx, taskID)
-	if err != nil {
-		h.log.Errorf("Failed to get benchmark: %v", err)
+	// 通过 TaskManager 取消任务
+	if err := h.taskMgr.Cancel(taskID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
 			"error":   "Benchmark not found",
@@ -698,50 +659,17 @@ func (h *Handler) Cancel(c *gin.Context) {
 		return
 	}
 
-	// 检查任务状态
-	if task.Status != "running" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Task is not running",
-		})
-		return
-	}
-
-	// 获取运行中的任务并取消
-	h.taskMutex.Lock()
-	runningTask, exists := h.runningTasks[taskID]
-	if exists && runningTask.cancel != nil {
-		// 取消上下文
-		runningTask.cancel()
-
-		// 尝试终止进程
-		if runningTask.cmd != nil && runningTask.cmd.Process != nil {
-			h.log.Infof("Sending SIGTERM to benchmark process %s", taskID)
-			if err := runningTask.cmd.Process.Signal(syscall.SIGTERM); err != nil {
-				h.log.Warnf("Failed to send SIGTERM, trying SIGKILL: %v", err)
-				_ = runningTask.cmd.Process.Kill()
-			}
-		}
-	}
-	h.taskMutex.Unlock()
-
-	// 更新状态为已取消
-	task.Status = "cancelled"
-	finishedAt := time.Now()
-	task.FinishedAt = &finishedAt
-
-	if err := h.store.UpdateBenchmark(h.ctx, task); err != nil {
-		h.log.Errorf("Failed to cancel benchmark: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to cancel benchmark",
-		})
-		return
+	// 更新存储层状态
+	task, err := h.store.GetBenchmark(h.ctx, taskID)
+	if err == nil {
+		task.Status = "cancelled"
+		now := time.Now()
+		task.FinishedAt = &now
+		_ = h.store.UpdateBenchmark(h.ctx, task)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"data":    task,
 	})
 }
 
@@ -1132,6 +1060,30 @@ func (h *Handler) Delete(c *gin.Context) {
 	})
 }
 
+// ListTasks returns currently tracked benchmark tasks.
+// @Summary      List active benchmark tasks
+// @Description  Returns currently tracked benchmark tasks from the TaskManager
+// @Tags         Benchmark
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/models/benchmark/active-tasks [get]
+func (h *Handler) ListTasks(c *gin.Context) {
+	tasks := h.taskMgr.List(taskmanager.TaskTypeBenchmark)
+	var result []map[string]interface{}
+	for _, t := range tasks {
+		result = append(result, t.ToMap())
+	}
+	if result == nil {
+		result = []map[string]interface{}{}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"tasks": result,
+		},
+	})
+}
+
 // saveBenchmarkOutput saves the benchmark output to a timestamped file
 func (h *Handler) saveBenchmarkOutput(modelId string, output string) {
 	if output == "" {
@@ -1159,28 +1111,6 @@ func (h *Handler) saveBenchmarkOutput(modelId string, output string) {
 
 // Shutdown 优雅关闭处理器
 func (h *Handler) Shutdown() {
-	h.log.Infof("Benchmark handler shutting down, waiting for running tasks to complete...")
-
-	// 取消上下文
+	h.log.Infof("Benchmark handler shutting down...")
 	h.cancelFunc()
-
-	// 等待所有任务完成（最多等待 30 秒）
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			h.log.Warnf("Timeout waiting for tasks to complete, %d tasks still running", h.GetRunningTasksCount())
-			return
-		case <-ticker.C:
-			if h.GetRunningTasksCount() == 0 {
-				h.log.Infof("All benchmark tasks completed")
-				return
-			}
-		}
-	}
 }
