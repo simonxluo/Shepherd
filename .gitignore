@@ -93,7 +93,6 @@ config/*.local.yaml
 config/*.local.yml
 config/server.config.yaml
 /internal/model/config
-/internal/**/config/
 tests/config/
 .playwright-mcp/*
 

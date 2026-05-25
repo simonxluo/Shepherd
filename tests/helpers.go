@@ -56,6 +56,7 @@ func SetupTestServer(t *testing.T) *TestEnv {
 	gin.SetMode(gin.TestMode)
 
 	// Use default config (test-aware: empty model paths, no auto-scan)
+	t.Setenv("SHEPHERD_TEST", "1")
 	cfg := config.DefaultConfig()
 
 	// Create a temporary config file for config manager

@@ -6,10 +6,58 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
+
+// Manager manages configuration loading and saving
+type Manager struct {
+	config           *Config
+	configPath       string
+	modelsConfigPath string
+	launchConfigPath string
+	mu               sync.RWMutex
+	cachedModels     []ModelConfigEntry
+	cachedModelsTime int64
+}
+
+// NewManager creates a new configuration manager
+func NewManager() *Manager {
+	configDir := GetConfigDir()
+	return &Manager{
+		configPath:       filepath.Join(configDir, DefaultConfigFile),
+		modelsConfigPath: filepath.Join(configDir, DefaultModelsConfigFile),
+		launchConfigPath: filepath.Join(configDir, DefaultLaunchConfigFile),
+	}
+}
+
+// NewManagerWithPath creates a new configuration manager with a custom config path
+func NewManagerWithPath(configPath string) *Manager {
+	configDir := filepath.Dir(configPath)
+	modelsDir := filepath.Join(GetConfigDir(), "node")
+	return &Manager{
+		configPath:       configPath,
+		modelsConfigPath: filepath.Join(modelsDir, "models.json"),
+		launchConfigPath: filepath.Join(configDir, DefaultLaunchConfigFile),
+	}
+}
+
+// GetConfigPath returns the main configuration file path
+func (m *Manager) GetConfigPath() string {
+	return m.configPath
+}
+
+// GetModelsConfigPath returns the models configuration file path
+func (m *Manager) GetModelsConfigPath() string {
+	return m.modelsConfigPath
+}
+
+// GetLaunchConfigPath returns the launch configuration file path
+func (m *Manager) GetLaunchConfigPath() string {
+	return m.launchConfigPath
+}
 
 // Load loads the main configuration from file
 // If the file doesn't exist, creates a default config file
