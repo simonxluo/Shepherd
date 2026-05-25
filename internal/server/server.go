@@ -82,8 +82,6 @@ type Server struct {
 type Config struct {
 	WebPort       int
 	AnthropicPort int
-	OllamaPort    int
-	LMStudioPort  int
 	Host          string
 	ReadTimeout   time.Duration
 	WriteTimeout  time.Duration

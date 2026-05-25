@@ -42,8 +42,6 @@ type Config struct {
 type ServerConfig struct {
 	WebPort       int    `mapstructure:"web_port" yaml:"web_port" json:"webPort"`
 	AnthropicPort int    `mapstructure:"anthropic_port" yaml:"anthropic_port" json:"anthropicPort"`
-	OllamaPort    int    `mapstructure:"ollama_port" yaml:"ollama_port" json:"ollamaPort"`
-	LMStudioPort  int    `mapstructure:"lmstudio_port" yaml:"lmstudio_port" json:"lmstudioPort"`
 	Host          string `mapstructure:"host" yaml:"host" json:"host"`
 	ReadTimeout   int    `mapstructure:"read_timeout" yaml:"read_timeout" json:"readTimeout"`    // seconds
 	WriteTimeout  int    `mapstructure:"write_timeout" yaml:"write_timeout" json:"writeTimeout"` // seconds
@@ -293,8 +291,6 @@ func DefaultConfig() *Config {
 		Server: ServerConfig{
 			WebPort:       9190,
 			AnthropicPort: 9170,
-			OllamaPort:    11434,
-			LMStudioPort:  1234,
 			Host:          "0.0.0.0",
 			ReadTimeout:   60,
 			WriteTimeout:  60,
@@ -425,11 +421,13 @@ func (c *Config) Validate() error {
 	if c.Server.AnthropicPort < 1 || c.Server.AnthropicPort > 65535 {
 		return fmt.Errorf("invalid anthropic port: %d", c.Server.AnthropicPort)
 	}
-	if c.Server.OllamaPort < 1 || c.Server.OllamaPort > 65535 {
-		return fmt.Errorf("invalid ollama port: %d", c.Server.OllamaPort)
+
+	// Validate compatibility server ports
+	if c.Compatibility.Ollama.Port < 1 || c.Compatibility.Ollama.Port > 65535 {
+		return fmt.Errorf("invalid ollama compatibility port: %d", c.Compatibility.Ollama.Port)
 	}
-	if c.Server.LMStudioPort < 1 || c.Server.LMStudioPort > 65535 {
-		return fmt.Errorf("invalid lmstudio port: %d", c.Server.LMStudioPort)
+	if c.Compatibility.LMStudio.Port < 1 || c.Compatibility.LMStudio.Port > 65535 {
+		return fmt.Errorf("invalid lmstudio compatibility port: %d", c.Compatibility.LMStudio.Port)
 	}
 
 	// Check for port conflicts
@@ -438,16 +436,16 @@ func (c *Config) Validate() error {
 		c.Server.AnthropicPort: "anthropic",
 	}
 	if c.Compatibility.Ollama.Enabled {
-		if _, exists := ports[c.Server.OllamaPort]; exists {
-			return fmt.Errorf("port conflict: ollama port %d conflicts with another service", c.Server.OllamaPort)
+		if _, exists := ports[c.Compatibility.Ollama.Port]; exists {
+			return fmt.Errorf("port conflict: ollama port %d conflicts with another service", c.Compatibility.Ollama.Port)
 		}
-		ports[c.Server.OllamaPort] = "ollama"
+		ports[c.Compatibility.Ollama.Port] = "ollama"
 	}
 	if c.Compatibility.LMStudio.Enabled {
-		if _, exists := ports[c.Server.LMStudioPort]; exists {
-			return fmt.Errorf("port conflict: lmstudio port %d conflicts with another service", c.Server.LMStudioPort)
+		if _, exists := ports[c.Compatibility.LMStudio.Port]; exists {
+			return fmt.Errorf("port conflict: lmstudio port %d conflicts with another service", c.Compatibility.LMStudio.Port)
 		}
-		ports[c.Server.LMStudioPort] = "lmstudio"
+		ports[c.Compatibility.LMStudio.Port] = "lmstudio"
 	}
 
 	// Validate download settings

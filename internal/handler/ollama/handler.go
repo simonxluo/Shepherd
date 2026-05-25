@@ -96,7 +96,7 @@ func (h *Handler) HandleChat(c *gin.Context) {
 // @Tags         Ollama
 // @Produce      json
 // @Success      200  {object}  map[string]interface{}
-// @Router       /api/tags [post]
+// @Router       /api/tags [get]
 func (h *Handler) HandleTags(c *gin.Context) {
 	c.JSON(http.StatusOK, map[string]interface{}{
 		"models": []interface{}{},

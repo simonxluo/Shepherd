@@ -39,8 +39,8 @@ func (s *Server) HandleServerInfo(c *gin.Context) {
 		"ports": gin.H{
 			"web":       s.config.WebPort,
 			"anthropic": s.config.AnthropicPort,
-			"ollama":    s.config.OllamaPort,
-			"lmstudio":  s.config.LMStudioPort,
+			"ollama":    s.config.ServerCfg.Compatibility.Ollama.Port,
+			"lmstudio":  s.config.ServerCfg.Compatibility.LMStudio.Port,
 		},
 	})
 }
@@ -259,8 +259,8 @@ func (s *Server) HandleGetConfig(c *gin.Context) {
 			"host":           s.config.Host,
 			"web_port":       s.config.WebPort,
 			"anthropic_port": s.config.AnthropicPort,
-			"ollama_port":    s.config.OllamaPort,
-			"lm_studio_port": s.config.LMStudioPort,
+			"ollama_port":    s.config.ServerCfg.Compatibility.Ollama.Port,
+			"lm_studio_port": s.config.ServerCfg.Compatibility.LMStudio.Port,
 		},
 		"storage": gin.H{
 			"type":   cfg.Storage.Type,
