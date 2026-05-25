@@ -1,6 +1,16 @@
 import { useState } from 'react';
-import { Save, Trash2, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { Save, Trash2, ChevronDown, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -13,6 +23,7 @@ interface SaveConfigDialogProps {
   onConfirm: (name: string) => void;
   existingConfigs: ModelLoadConfigEntry[];
   onDeleteConfig: (name: string) => void;
+  onUpdateConfig?: (name: string) => void;
   modelName: string;
   isSaving?: boolean;
 }
@@ -23,12 +34,14 @@ export function SaveConfigDialog({
   onConfirm,
   existingConfigs,
   onDeleteConfig,
+  onUpdateConfig,
   modelName,
   isSaving = false,
 }: SaveConfigDialogProps) {
   const [name, setName] = useState('');
   const [manageOpen, setManageOpen] = useState(false);
   const [deletingName, setDeletingName] = useState<string | null>(null);
+  const [confirmDeleteName, setConfirmDeleteName] = useState<string | null>(null);
 
   const isDuplicate = existingConfigs.some(c => c.name === name.trim());
 
@@ -43,10 +56,13 @@ export function SaveConfigDialog({
     setManageOpen(false);
   };
 
-  const handleDelete = (configName: string) => {
-    setDeletingName(configName);
-    onDeleteConfig(configName);
-    setDeletingName(null);
+  const handleConfirmDelete = () => {
+    if (confirmDeleteName) {
+      setDeletingName(confirmDeleteName);
+      onDeleteConfig(confirmDeleteName);
+      setDeletingName(null);
+      setConfirmDeleteName(null);
+    }
   };
 
   const handleClose = () => {
@@ -56,6 +72,7 @@ export function SaveConfigDialog({
   };
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -102,19 +119,32 @@ export function SaveConfigDialog({
                           {config.updatedAt ? new Date(config.updatedAt).toLocaleString() : ''}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-2 h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(config.name)}
-                        disabled={deletingName === config.name}
-                      >
-                        {deletingName === config.name ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
+                      <div className="flex items-center gap-1 ml-2">
+                        {onUpdateConfig && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-blue-500"
+                            onClick={() => onUpdateConfig(config.name)}
+                            title="更新此配置"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </Button>
                         )}
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => setConfirmDeleteName(config.name)}
+                          disabled={deletingName === config.name}
+                        >
+                          {deletingName === config.name ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -143,5 +173,23 @@ export function SaveConfigDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!confirmDeleteName} onOpenChange={(open) => { if (!open) setConfirmDeleteName(null); }}>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除</AlertDialogTitle>
+          <AlertDialogDescription>
+            确定要删除配置「{confirmDeleteName}」吗？此操作无法撤销。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={handleConfirmDelete}>
+            删除
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

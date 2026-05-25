@@ -3,6 +3,7 @@
 package logger
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -59,6 +60,8 @@ type Logger struct {
 	currentSize int64
 	currentDate string
 	role        string // master, client, hybrid
+	stopCh      chan struct{}
+	stopped     bool
 }
 
 var (
@@ -88,8 +91,9 @@ func NewLogger(cfg *config.LogConfig, role string) (*Logger, error) {
 		maxBackups:  cfg.MaxBackups,
 		maxAge:      cfg.MaxAge,
 		currentSize: 0,
-		currentDate: time.Now().Format("2006-01-02 15-04-05"),
+		currentDate: time.Now().Format("2006-01-02"),
 		role:        role,
+		stopCh:      make(chan struct{}),
 	}
 
 	switch strings.ToLower(cfg.Output) {
@@ -147,14 +151,24 @@ func (l *Logger) rotationChecker() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		l.checkRotation()
+	for {
+		select {
+		case <-l.stopCh:
+			return
+		case <-ticker.C:
+			l.checkRotation()
+		}
 	}
 }
 
 func (l *Logger) checkRotation() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
+	// Sync current file before checking rotation
+	if f, ok := l.fileWriter.(*os.File); ok {
+		_ = f.Sync()
+	}
 
 	now := time.Now()
 	currentDate := now.Format("2006-01-02")
@@ -321,11 +335,20 @@ func (l *Logger) log(level LogLevel, msg string) {
 	var logLine string
 
 	if l.formatJSON {
-		callerStr := ""
-		if caller != "" {
-			callerStr = fmt.Sprintf(`,"caller":"%s"`, caller)
+		entry := map[string]interface{}{
+			"time":  timestamp,
+			"level": level.String(),
+			"msg":   msg,
 		}
-		logLine = fmt.Sprintf(`{"time":"%s"%s,"level":"%s","msg":"%s"}`+"\n", timestamp, callerStr, level, msg)
+		if caller != "" {
+			entry["caller"] = caller
+		}
+		jsonBytes, err := json.Marshal(entry)
+		if err != nil {
+			logLine = fmt.Sprintf(`{"time":"%s","level":"%s","msg":"marshal error"}`+"\n", timestamp, level)
+		} else {
+			logLine = string(jsonBytes) + "\n"
+		}
 	} else {
 		callerStr := ""
 		if caller != "" {
@@ -343,14 +366,8 @@ func (l *Logger) log(level LogLevel, msg string) {
 		if n != len(logLine) {
 			fmt.Fprintf(os.Stderr, "[WARN] 写入不完整: %d/%d\n", n, len(logLine))
 		}
-		if f, ok := w.(*os.File); ok {
-			fileInfo, err := f.Stat()
-			if err == nil && (fileInfo.Mode()&os.ModeType) == 0 {
-				if err := f.Sync(); err != nil {
-					fmt.Fprintf(os.Stderr, "[WARN] 同步文件失败: %v\n", err)
-				}
-				l.currentSize = fileInfo.Size()
-			}
+		if _, ok := w.(*os.File); ok {
+			l.currentSize += int64(n)
 		}
 	}
 }
@@ -360,7 +377,17 @@ func (l *Logger) Close() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	// Signal rotationChecker to stop
+	if !l.stopped {
+		l.stopped = true
+		close(l.stopCh)
+	}
+
 	if l.fileWriter != nil {
+		// Final sync before closing
+		if f, ok := l.fileWriter.(*os.File); ok {
+			_ = f.Sync()
+		}
 		return l.fileWriter.Close()
 	}
 	return nil

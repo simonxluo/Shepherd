@@ -84,7 +84,7 @@ func SetupTestServer(t *testing.T) *TestEnv {
 	t.Cleanup(func() { modelMgr.Close() })
 
 	// Create event manager (needed by some handlers indirectly)
-	_ = event.NewManager(modelMgr)
+	_ = event.NewManager(modelMgr.GetLoadedModelCount)
 
 	// Suppress logger output during tests
 	logger.GetLogger()

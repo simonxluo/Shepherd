@@ -20,6 +20,8 @@ const voxcpm2Plugin: TTSPlugin = {
     supportsStreamPcm: true,
     supportsCfgValue: true,
     supportsInferenceTimesteps: true,
+    supportsCfgCutoffRatio: true,
+    supportsSwaySampling: true,
     supportsEmotion: true,
     defaultSampleRate: 24000,
     defaultFormat: 'pcm',

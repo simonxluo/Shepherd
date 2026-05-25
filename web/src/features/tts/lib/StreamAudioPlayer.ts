@@ -13,6 +13,11 @@ export type StreamState = 'idle' | 'streaming' | 'playing' | 'completed' | 'erro
 export class StreamAudioPlayer {
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | null = null;
+  private scriptProcessorNode: ScriptProcessorNode | null = null;
+  private useWorklet = true;
+  // ScriptProcessor fallback 内部队列
+  private _fallbackQueue: Int16Array[] = [];
+  private _fallbackReadOffset = 0;
   private abortController: AbortController | null = null;
   private sampleRate: number;
   private startTime = 0;
@@ -54,21 +59,85 @@ export class StreamAudioPlayer {
   async init(): Promise<void> {
     this.audioContext = new AudioContext({ sampleRate: this.sampleRate });
 
-    const workletUrl = new URL('/worklets/tts-playback-processor.js', window.location.origin).href;
-    await this.audioContext.audioWorklet.addModule(workletUrl);
+    // 恢复可能被浏览器策略暂停的 AudioContext
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
 
-    this.workletNode = new AudioWorkletNode(this.audioContext, 'tts-playback-processor');
-    this.workletNode.connect(this.audioContext.destination);
+    // 检测 AudioWorklet 支持并加载 worklet 模块
+    if (this.audioContext.audioWorklet) {
+      try {
+        const workletUrl = new URL('/worklets/tts-playback-processor.js', window.location.origin).href;
+        await this.audioContext.audioWorklet.addModule(workletUrl);
+        this.workletNode = new AudioWorkletNode(this.audioContext, 'tts-playback-processor');
+        this.workletNode.connect(this.audioContext.destination);
+        this.useWorklet = true;
+        return;
+      } catch {
+        // worklet 加载失败，降级到 ScriptProcessorNode
+      }
+    }
+
+    // AudioWorklet 不可用，使用 ScriptProcessorNode 降级方案
+    this.useWorklet = false;
+    this.scriptProcessorNode = this.audioContext.createScriptProcessor(4096, 0, 1);
+    this.scriptProcessorNode.onaudioprocess = (event: AudioProcessingEvent) => {
+      const output = event.outputBuffer.getChannelData(0);
+      let written = 0;
+
+      while (written < output.length) {
+        if (this._fallbackQueue.length === 0) break;
+
+        const chunk = this._fallbackQueue[0];
+        const available = chunk.length - this._fallbackReadOffset;
+        const needed = output.length - written;
+        const toCopy = Math.min(available, needed);
+
+        for (let i = 0; i < toCopy; i++) {
+          output[written + i] = chunk[this._fallbackReadOffset + i] / 32768;
+        }
+
+        written += toCopy;
+        this._fallbackReadOffset += toCopy;
+
+        if (this._fallbackReadOffset >= chunk.length) {
+          this._fallbackQueue.shift();
+          this._fallbackReadOffset = 0;
+        }
+      }
+
+      for (let i = written; i < output.length; i++) {
+        output[i] = 0;
+      }
+    };
+    this.scriptProcessorNode.connect(this.audioContext.destination);
+  }
+
+  private sendChunk(pcm: Int16Array): void {
+    if (this.useWorklet && this.workletNode) {
+      this.workletNode.port.postMessage({ pcm });
+    } else {
+      this._fallbackQueue.push(new Int16Array(pcm));
+    }
+  }
+
+  private clearBuffer(): void {
+    if (this.useWorklet && this.workletNode) {
+      this.workletNode.port.postMessage({ type: 'clear' });
+    } else {
+      this._fallbackQueue.length = 0;
+      this._fallbackReadOffset = 0;
+    }
   }
 
   async startStream(url: string, payload: TTSRequest, signal?: AbortSignal): Promise<void> {
-    if (!this.audioContext || !this.workletNode) {
+    if (!this.audioContext || (this.useWorklet && !this.workletNode) || (!this.useWorklet && !this.scriptProcessorNode)) {
       throw new Error('Player not initialized. Call init() first.');
     }
 
     // 清空上一次的数据
     this.pcmChunks.length = 0;
-    this.workletNode.port.postMessage({ type: 'clear' });
+    this.clearBuffer();
     this.updateMetrics({
       ttfp: null, rtf: null, audioDuration: 0,
       speedMultiplier: 0, bytesReceived: 0,
@@ -126,7 +195,7 @@ export class StreamAudioPlayer {
           const pcm = new Int16Array(buffer.buffer, buffer.byteOffset, alignedLength / 2);
           const chunk = new Int16Array(pcm);
           this.pcmChunks.push(chunk);
-          this.workletNode!.port.postMessage({ pcm: chunk });
+          this.sendChunk(chunk);
 
           // 保留未对齐的尾部字节
           const remaining = buffer.length - alignedLength;
@@ -147,7 +216,7 @@ export class StreamAudioPlayer {
         const pcm = new Int16Array(buffer.buffer, buffer.byteOffset, Math.floor(buffer.length / 2));
         const chunk = new Int16Array(pcm);
         this.pcmChunks.push(chunk);
-        this.workletNode!.port.postMessage({ pcm: chunk });
+        this.sendChunk(chunk);
       }
 
       // 计算最终指标
@@ -186,15 +255,20 @@ export class StreamAudioPlayer {
 
   stop(): void {
     this.abortController?.abort();
-    this.workletNode?.port.postMessage({ type: 'clear' });
+    this.clearBuffer();
     this.setState('idle');
   }
 
   destroy(): void {
     this.stop();
-    this.workletNode?.disconnect();
+    if (this.useWorklet) {
+      this.workletNode?.disconnect();
+    } else {
+      this.scriptProcessorNode?.disconnect();
+    }
     this.audioContext?.close();
     this.audioContext = null;
     this.workletNode = null;
+    this.scriptProcessorNode = null;
   }
 }

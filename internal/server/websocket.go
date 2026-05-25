@@ -2,6 +2,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
@@ -29,15 +30,20 @@ type WebSocketHub struct {
 	unregister chan *WebSocketClient
 	broadcast  chan []byte
 	mu         sync.RWMutex
+	ctx        context.Context
+	cancel     context.CancelFunc
 }
 
 // NewWebSocketHub creates a new WebSocket hub
 func NewWebSocketHub() *WebSocketHub {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &WebSocketHub{
 		clients:    make(map[string]*WebSocketClient),
 		register:   make(chan *WebSocketClient),
 		unregister: make(chan *WebSocketClient),
 		broadcast:  make(chan []byte, 256),
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 }
 
@@ -45,6 +51,9 @@ func NewWebSocketHub() *WebSocketHub {
 func (h *WebSocketHub) Run() {
 	for {
 		select {
+		case <-h.ctx.Done():
+			return
+
 		case client := <-h.register:
 			h.mu.Lock()
 			h.clients[client.ID] = client
@@ -59,19 +68,41 @@ func (h *WebSocketHub) Run() {
 			h.mu.Unlock()
 
 		case message := <-h.broadcast:
+			// 先在 RLock 下找出阻塞的客户端
 			h.mu.RLock()
+			var stuck []*WebSocketClient
 			for _, client := range h.clients {
 				select {
 				case client.Send <- message:
 				default:
-					// Client is blocked, close it
-					close(client.Send)
-					delete(h.clients, client.ID)
+					stuck = append(stuck, client)
 				}
 			}
 			h.mu.RUnlock()
+
+			// 在写锁下安全移除阻塞客户端（复用 Unregister 逻辑）
+			for _, client := range stuck {
+				h.mu.Lock()
+				if _, ok := h.clients[client.ID]; ok {
+					delete(h.clients, client.ID)
+					close(client.Send)
+				}
+				h.mu.Unlock()
+			}
 		}
 	}
+}
+
+// Stop 关闭 hub，断开所有客户端连接
+func (h *WebSocketHub) Stop() {
+	h.cancel()
+
+	h.mu.Lock()
+	for id, client := range h.clients {
+		close(client.Send)
+		delete(h.clients, id)
+	}
+	h.mu.Unlock()
 }
 
 // Emit broadcasts an event to all connected clients
