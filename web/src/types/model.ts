@@ -172,44 +172,98 @@ export interface LoadModelParams {
   kvCacheTypeV?: string;          // KV cache type V
 
   // Other parameters
-  directIo?: string;              // DirectIO mode
-  disableJinja?: boolean;         // Disable Jinja templates
-  chatTemplate?: string;          // Built-in chat template
-  contextShift?: boolean;         // Context shift
-  extraArgs?: string;             // Extra CLI arguments
+  directIo?: string;              // --direct-io  (on/off)
+  disableJinja?: boolean;         // --no-jinja
+  chatTemplate?: string;          // --chat-template
+  contextShift?: boolean;         // --context-shift
+  extraArgs?: string;             // Extra CLI arguments (appended verbatim)
 
   // Thread config
-  threadsBatch?: number;          // Batch thread count
+  threadsBatch?: number;          // -tb / --threads-batch
+  threadsHttp?: number;           // --threads-http  (HTTP handler threads)
 
-  // Extended sampling parameters
-  repeatLastN?: number;           // Repeat penalty range
-  typicalP?: number;              // Typical sampling
-  ignoreEos?: boolean;            // Ignore EOS token
+  // Extended sampling: penalties
+  repeatLastN?: number;           // --repeat-last-n
+  typicalP?: number;              // --typical-p
+  ignoreEos?: boolean;            // --ignore-eos
+
+  // Advanced sampling: DRY
+  dryMultiplier?: number;         // --dry-multiplier  (0=disabled)
+  dryBase?: number;               // --dry-base  (default 1.75)
+  dryAllowedLength?: number;      // --dry-allowed-length
+  dryPenaltyLastN?: number;       // --dry-penalty-last-n
+  drySequenceBreakers?: string;   // --dry-sequence-breaker  (comma-separated)
+
+  // Advanced sampling: Mirostat
+  mirostat?: number;              // --mirostat  (0=disabled, 1, 2)
+  mirostatLr?: number;            // --mirostat-lr  eta
+  mirostatEnt?: number;           // --mirostat-ent  tau
+
+  // Advanced sampling: dynamic temperature
+  dynaTempRange?: number;         // --dynatemp-range  (0=disabled)
+  dynaTempExp?: number;           // --dynatemp-exp  (default 1.0)
+
+  // Advanced sampling: XTC
+  xtcProbability?: number;        // --xtc-probability  (0=disabled)
+  xtcThreshold?: number;          // --xtc-threshold  (1=disabled)
+
+  // Sampling: misc
+  topNSigma?: number;             // --top-n-sigma  (-1=disabled)
+  samplers?: string;              // --samplers  semicolon-separated
 
   // Multi-GPU config
-  splitMode?: string;             // GPU split mode (none, layer, row)
-  tensorSplit?: string;           // Tensor split ratio
+  splitMode?: string;             // -sm  (none / layer / row / tensor)
+  tensorSplit?: string;           // -ts  (comma-separated GPU fractions)
+
+  // GPU: MoE CPU override
+  cpuMoe?: boolean;               // --cpu-moe
+  nCpuMoe?: number;               // --n-cpu-moe
+
+  // CPU affinity & NUMA
+  cpuMask?: string;               // --cpu-mask  (hex)
+  cpuRange?: string;              // --cpu-range  (lo-hi)
+  priority?: number;              // --prio  (-1=low … 3=realtime)
+  numaStrategy?: string;          // --numa  (distribute/isolate/numactl)
 
   // Server optimization
-  contBatching?: boolean;         // Continuous batching
-  cachePrompt?: boolean;          // Prompt caching
+  contBatching?: boolean;         // --cont-batching
+  cachePrompt?: boolean;          // --cache-prompt
+  reusePort?: boolean;            // --reuse-port
+  sleepIdleSeconds?: number;      // --sleep-idle-seconds  (-1=disabled)
+  slotPromptSimilarity?: number;  // --slot-prompt-similarity  (0=disabled)
 
   // Structured generation
-  grammar?: string;               // BNF grammar
-  grammarFile?: string;           // Grammar file path
+  grammar?: string;               // --grammar
+  grammarFile?: string;           // --grammar-file
+  jsonSchema?: string;            // -j / --json-schema
+  jsonSchemaFile?: string;        // -jf / --json-schema-file
 
   // LoRA adapters
-  lora?: string;                  // LoRA adapter path
-  loraScaled?: string;            // Scaled LoRA
+  lora?: string;                  // --lora
+  loraScaled?: string;            // --lora-scaled
 
   // Chat template extra parameters
-  chatTemplateKwargs?: string;    // Extra template JSON parameters
+  chatTemplateKwargs?: string;    // --chat-template-kwargs
 
   // RoPE extension
-  ropeScaling?: string;           // RoPE scaling method
-  ropeScale?: number;             // RoPE scaling factor
-  ropeFreqBase?: number;          // RoPE base frequency
-  ropeFreqScale?: number;         // RoPE frequency scaling
+  ropeScaling?: string;           // --rope-scaling  (none/linear/yarn)
+  ropeScale?: number;             // --rope-scale
+  ropeFreqBase?: number;          // --rope-freq-base
+  ropeFreqScale?: number;         // --rope-freq-scale
+
+  // YaRN extended context
+  yarnOrigCtx?: number;           // --yarn-orig-ctx
+  yarnExtFactor?: number;         // --yarn-ext-factor
+  yarnAttnFactor?: number;        // --yarn-attn-factor
+  yarnBetaSlow?: number;          // --yarn-beta-slow
+  yarnBetaFast?: number;          // --yarn-beta-fast
+
+  // KV cache extended
+  kvOffload?: boolean;            // --kv-offload
+  cacheIdleSlots?: boolean;       // --cache-idle-slots
+  cacheReuse?: number;            // --cache-reuse
+  ctxCheckpoints?: number;        // --ctx-checkpoints
+  checkpointMinStep?: number;     // --checkpoint-min-step
 
   draftModelId?: string;   // Deprecated: use specDecoding
   draftMaxTokens?: number;  // Deprecated: use specDecoding
@@ -219,17 +273,19 @@ export interface LoadModelParams {
 
   // Embedding & retrieval
   embedding?: boolean;
+  pooling?: string;               // --pooling  (none/mean/cls/last/rank)
+  embdNormalize?: number;         // --embd-normalize  (-1=none, 0=max, 1=taxicab, 2=euclidean)
 
   // UI options
   noWebUI?: boolean;
 
-  // Reasoning
-  reasoning?: string;
-  reasoningFormat?: string;
-  reasoningBudget?: number;
+  // Reasoning / thinking (DeepSeek-R1, QwQ, etc.)
+  reasoning?: string;             // --reasoning  (auto/on/off)
+  reasoningFormat?: string;       // --reasoning-format  (none/deepseek/deepseek-legacy)
+  reasoningBudget?: number;       // --reasoning-budget  (-1=unlimited)
 
   // Multimedia
-  mmprojOffload?: boolean;
+  mmprojOffload?: boolean;        // --mmproj-offload
 
   // Runtime management
   unloadAfterMinutes?: number;   // Auto-unload idle time (minutes). 0=never, >0=custom
@@ -265,45 +321,85 @@ export interface LoadModelParams {
     batchSize?: boolean;
     threads?: boolean;
     threadsBatch?: boolean;
+    threadsHttp?: boolean;
     gpuLayers?: boolean;
     temperature?: boolean;
     topP?: boolean;
     topK?: boolean;
+    minP?: boolean;
+    topNSigma?: boolean;
     repeatPenalty?: boolean;
     repeatLastN?: boolean;
-    seed?: boolean;
-    nPredict?: boolean;
-
-    // Sampling parameters
-    minP?: boolean;
     typicalP?: boolean;
     presencePenalty?: boolean;
     frequencyPenalty?: boolean;
     ignoreEos?: boolean;
+    seed?: boolean;
+    nPredict?: boolean;
+    samplers?: boolean;
+
+    // DRY sampling
+    dryMultiplier?: boolean;
+    dryBase?: boolean;
+    dryAllowedLength?: boolean;
+    dryPenaltyLastN?: boolean;
+    drySequenceBreakers?: boolean;
+
+    // Mirostat
+    mirostat?: boolean;
+    mirostatLr?: boolean;
+    mirostatEnt?: boolean;
+
+    // Dynamic temperature
+    dynaTempRange?: boolean;
+    dynaTempExp?: boolean;
+
+    // XTC
+    xtcProbability?: boolean;
+    xtcThreshold?: boolean;
 
     // Batch & cache
     uBatchSize?: boolean;
     parallelSlots?: boolean;
     contBatching?: boolean;
     cachePrompt?: boolean;
+    reusePort?: boolean;
+    sleepIdleSeconds?: boolean;
+    slotPromptSimilarity?: boolean;
 
     // KV cache
     kvCacheUnified?: boolean;
     kvCacheTypeK?: boolean;
     kvCacheTypeV?: boolean;
+    kvOffload?: boolean;
+    cacheIdleSlots?: boolean;
+    cacheReuse?: boolean;
+    ctxCheckpoints?: boolean;
+    checkpointMinStep?: boolean;
 
     // Performance options
     flashAttention?: boolean;
     noMmap?: boolean;
     lockMemory?: boolean;
+    directIo?: boolean;
 
     // GPU config
     splitMode?: boolean;
     tensorSplit?: boolean;
+    cpuMoe?: boolean;
+    nCpuMoe?: boolean;
+
+    // CPU affinity & NUMA
+    cpuMask?: boolean;
+    cpuRange?: boolean;
+    priority?: boolean;
+    numaStrategy?: boolean;
 
     // Structured generation
     grammar?: boolean;
     grammarFile?: boolean;
+    jsonSchema?: boolean;
+    jsonSchemaFile?: boolean;
 
     // LoRA
     lora?: boolean;
@@ -320,12 +416,20 @@ export interface LoadModelParams {
     ropeFreqBase?: boolean;
     ropeFreqScale?: boolean;
 
+    // YaRN
+    yarnOrigCtx?: boolean;
+    yarnExtFactor?: boolean;
+    yarnAttnFactor?: boolean;
+    yarnBetaSlow?: boolean;
+    yarnBetaFast?: boolean;
+
     // Other
     contextShift?: boolean;
-    directIo?: boolean;
     extraArgs?: boolean;
     logitsAll?: boolean;
     reranking?: boolean;
+    pooling?: boolean;
+    embdNormalize?: boolean;
     embedding?: boolean;
     timeout?: boolean;
     alias?: boolean;

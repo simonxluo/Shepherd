@@ -171,61 +171,149 @@ type Backend interface {
 	SupportedEndpoints() map[string]bool
 }
 
-// LlamacppLoadParams contains llama.cpp-specific load parameters
+// LlamacppLoadParams contains llama.cpp-specific load parameters.
+// Each field corresponds to a llama-server command-line flag.
 type LlamacppLoadParams struct {
-	BatchSize          int
-	Temperature        float64
-	TopP               float64
-	TopK               int
-	RepeatPenalty      float64
-	Seed               int
-	NPredict           int
-	MainGPU            int
-	CustomCmd          string
-	ExtraParams        string
-	MmprojPath         string
-	EnableVision       bool
-	FlashAttention     bool
-	NoMmap             bool
-	LockMemory         bool
-	NoWebUI            bool
-	EnableMetrics      bool
-	SlotSavePath       string
-	CacheRAM           int
-	ChatTemplateFile   string
-	Timeout            int
-	Alias              string
-	UBatchSize         int
-	ParallelSlots      int
-	KVCacheTypeK       string
-	KVCacheTypeV       string
-	KVCacheUnified     bool
-	LogitsAll          bool
-	Reranking          bool
-	MinP               float64
-	PresencePenalty    float64
-	FrequencyPenalty   float64
-	DirectIo           string
-	DisableJinja       bool
-	ChatTemplate       string
-	ContextShift       bool
-	ThreadsBatch       int
-	RepeatLastN        int
-	TypicalP           float64
-	IgnoreEOS          bool
-	SplitMode          string
-	TensorSplit        string
-	ContBatching       bool
-	CachePrompt        bool
-	Grammar            string
-	GrammarFile        string
-	Lora               string
-	LoraScaled         string
-	ChatTemplateKwargs string
-	RopeScaling        string
-	RopeScale          float64
-	RopeFreqBase       float64
-	RopeFreqScale      float64
+	// ---- Sampling: basic ----
+	Temperature   float64 // --temp
+	TopP          float64 // --top-p
+	TopK          int     // --top-k
+	MinP          float64 // --min-p  (0 = disabled)
+	TopNSigma     float64 // --top-n-sigma  (-1 = disabled)
+	TypicalP      float64 // --typical-p  (1.0 = disabled)
+	Seed          int     // --seed  (-1 = random)
+	NPredict      int     // -n / --n-predict  (-1 = unlimited)
+	Samplers      string  // --samplers  semicolon-separated sampler order
+
+	// ---- Sampling: penalties ----
+	RepeatPenalty    float64 // --repeat-penalty  (1.0 = disabled)
+	RepeatLastN      int     // --repeat-last-n  (-1 = ctx_size)
+	PresencePenalty  float64 // --presence-penalty
+	FrequencyPenalty float64 // --frequency-penalty
+	IgnoreEOS        bool    // --ignore-eos
+
+	// ---- Sampling: DRY (Don't Repeat Yourself) ----
+	DryMultiplier      float64 // --dry-multiplier  (0 = disabled)
+	DryBase            float64 // --dry-base  (default 1.75)
+	DryAllowedLength   int     // --dry-allowed-length  (default 2)
+	DryPenaltyLastN    int     // --dry-penalty-last-n  (-1 = ctx_size)
+	DrySequenceBreakers string // --dry-sequence-breaker  comma-separated
+
+	// ---- Sampling: Mirostat ----
+	Mirostat    int     // --mirostat  (0=disabled, 1, 2)
+	MirostatLR  float64 // --mirostat-lr  eta (default 0.1)
+	MirostatEnt float64 // --mirostat-ent  tau (default 5.0)
+
+	// ---- Sampling: dynamic temperature ----
+	DynaTempRange float64 // --dynatemp-range  (0 = disabled)
+	DynaTempExp   float64 // --dynatemp-exp  (default 1.0)
+
+	// ---- Sampling: XTC ----
+	XTCProbability float64 // --xtc-probability  (0 = disabled)
+	XTCThreshold   float64 // --xtc-threshold  (1 = disabled)
+
+	// ---- Context & batch ----
+	BatchSize  int // -b / --batch-size  (logical max batch)
+	UBatchSize int // --ubatch-size  (physical max batch)
+
+	// ---- Threads ----
+	ThreadsBatch int // -tb / --threads-batch
+	ThreadsHTTP  int // --threads-http  (HTTP handler threads, server-only)
+
+	// ---- GPU ----
+	MainGPU     int    // -mg  (main GPU index when split-mode=none)
+	SplitMode   string // -sm  (none / layer / row / tensor)
+	TensorSplit string // -ts  (comma-separated fractions per GPU)
+	CpuMoe      bool   // --cpu-moe  (keep all MoE weights in CPU)
+	NCpuMoe     int    // --n-cpu-moe  (keep first N layers MoE in CPU)
+
+	// ---- CPU affinity & NUMA ----
+	CpuMask      string // --cpu-mask  (hex affinity mask)
+	CpuRange     string // --cpu-range  (lo-hi range)
+	Priority     int    // --prio  (-1=low … 3=realtime, 0=normal)
+	NumaStrategy string // --numa  (distribute / isolate / numactl)
+
+	// ---- Memory ----
+	NoMmap     bool   // --no-mmap
+	LockMemory bool   // --mlock
+	DirectIO   string // --direct-io / -dio  (on/off; empty = default)
+
+	// ---- Flash Attention ----
+	FlashAttention bool // -fa  (on/off; false = use default)
+
+	// ---- KV cache ----
+	KVCacheTypeK       string  // -ctk  (f32 / f16 / q8_0 / q5_1 / q4_1 / q4_0 / iq4_nl)
+	KVCacheTypeV       string  // -ctv
+	KVCacheUnified     bool    // -kvu  (single unified KV buffer)
+	KVOffload          bool    // -kvo  (offload KV cache to device)
+	CacheIdleSlots     bool    // --cache-idle-slots  (save KV of idle slots; requires -kvu)
+	CacheReuse         int     // --cache-reuse  (min chunk size for KV-shift reuse)
+	CtxCheckpoints     int     // --ctx-checkpoints / -ctxcp  (per-slot SWA checkpoints)
+	CheckpointMinStep  int     // --checkpoint-min-step / -cms
+	SlotPromptSimilarity float64 // --slot-prompt-similarity  (0 = disabled)
+
+	// ---- Server operation ----
+	ParallelSlots int    // --parallel / -np
+	ContBatching  bool   // --cont-batching / -cb  (false → --no-cont-batching)
+	CachePrompt   bool   // --cache-prompt
+	CacheRAM      int    // --cache-ram  (max RAM cache size in MiB; -1=unlimited)
+	SlotSavePath  string // --slot-save-path
+	ReusePort     bool   // --reuse-port
+	SleepIdleSeconds int // --sleep-idle-seconds  (-1 = disabled)
+	Timeout       int    // --timeout
+	Alias         string // --alias
+	NoWebUI       bool   // --no-ui
+	EnableMetrics bool   // --metrics
+
+	// ---- Reasoning / thinking (for DeepSeek-R1 etc.) ----
+	Reasoning       string // --reasoning  (auto / on / off)
+	ReasoningFormat string // --reasoning-format  (none / deepseek / deepseek-legacy)
+	ReasoningBudget int    // --reasoning-budget  (-1 = unlimited)
+
+	// ---- Embedding / reranking ----
+	LogitsAll    bool   // --logits-all  (required for some embedding workflows)
+	Reranking    bool   // --reranking
+	Pooling      string // --pooling  (none / mean / cls / last / rank)
+	EmbdNormalize int   // --embd-normalize  (-1=none, 0=max, 1=taxicab, 2=euclidean)
+
+	// ---- Multimodal ----
+	MmprojPath   string // --mmproj
+	EnableVision bool   // internal flag — triggers mmproj auto-search
+	MmprojOffload bool  // --mmproj-offload
+
+	// ---- Chat template ----
+	ChatTemplateFile   string // --chat-template-file
+	ChatTemplate       string // --chat-template
+	ChatTemplateKwargs string // --chat-template-kwargs
+	DisableJinja       bool   // --no-jinja
+	ContextShift       bool   // --context-shift
+
+	// ---- RoPE scaling ----
+	RopeScaling   string  // --rope-scaling  (none / linear / yarn)
+	RopeScale     float64 // --rope-scale
+	RopeFreqBase  float64 // --rope-freq-base
+	RopeFreqScale float64 // --rope-freq-scale
+
+	// ---- YaRN (extended context) ----
+	YarnOrigCtx    int     // --yarn-orig-ctx
+	YarnExtFactor  float64 // --yarn-ext-factor
+	YarnAttnFactor float64 // --yarn-attn-factor
+	YarnBetaSlow   float64 // --yarn-beta-slow
+	YarnBetaFast   float64 // --yarn-beta-fast
+
+	// ---- Structured generation ----
+	Grammar        string // --grammar
+	GrammarFile    string // --grammar-file
+	JSONSchema     string // -j / --json-schema
+	JSONSchemaFile string // -jf / --json-schema-file
+
+	// ---- LoRA adapters ----
+	Lora       string // --lora
+	LoraScaled string // --lora-scaled
+
+	// ---- Escape hatch ----
+	CustomCmd   string // custom binary path override (replaces llama-server path)
+	ExtraParams string // raw extra CLI arguments appended verbatim
 }
 
 // VLLMLoadParams contains vLLM-specific load parameters

@@ -236,7 +236,7 @@ type LoadRequest struct {
 	ThreadsBatch int `json:"threadsBatch"` // --threads-batch
 
 	// Template and processing
-	DirectIo     string `json:"directIo"`     // --dio
+	DirectIo     string `json:"directIo"`     // --direct-io (on/off)
 	DisableJinja bool   `json:"disableJinja"` // --jinja (false to disable)
 	ChatTemplate string `json:"chatTemplate"` // --chat-template
 	ContextShift bool   `json:"contextShift"` // --context-shift
@@ -245,6 +245,30 @@ type LoadRequest struct {
 	RepeatLastN int     `json:"repeatLastN"` // --repeat-last-n
 	TypicalP    float64 `json:"typicalP"`    // --typical-p
 	IgnoreEOS   bool    `json:"ignoreEos"`   // --ignore-eos
+
+	// Advanced sampling: DRY
+	DryMultiplier       float64 `json:"dryMultiplier"`       // --dry-multiplier  (0=disabled)
+	DryBase             float64 `json:"dryBase"`             // --dry-base  (default 1.75)
+	DryAllowedLength    int     `json:"dryAllowedLength"`    // --dry-allowed-length
+	DryPenaltyLastN     int     `json:"dryPenaltyLastN"`     // --dry-penalty-last-n
+	DrySequenceBreakers string  `json:"drySequenceBreakers"` // --dry-sequence-breaker
+
+	// Advanced sampling: Mirostat
+	Mirostat    int     `json:"mirostat"`    // --mirostat  (0=disabled, 1, 2)
+	MirostatLR  float64 `json:"mirostatLr"`  // --mirostat-lr  (eta)
+	MirostatEnt float64 `json:"mirostatEnt"` // --mirostat-ent  (tau)
+
+	// Advanced sampling: dynamic temperature
+	DynaTempRange float64 `json:"dynaTempRange"` // --dynatemp-range  (0=disabled)
+	DynaTempExp   float64 `json:"dynaTempExp"`   // --dynatemp-exp
+
+	// Advanced sampling: XTC
+	XTCProbability float64 `json:"xtcProbability"` // --xtc-probability  (0=disabled)
+	XTCThreshold   float64 `json:"xtcThreshold"`   // --xtc-threshold  (1=disabled)
+
+	// Sampling: misc
+	TopNSigma float64 `json:"topNSigma"` // --top-n-sigma  (-1=disabled)
+	Samplers  string  `json:"samplers"`  // --samplers  semicolon-separated
 
 	// Multi-GPU configuration
 	SplitMode   string `json:"splitMode"`   // --split-mode (none, layer, row)
@@ -266,10 +290,56 @@ type LoadRequest struct {
 	ChatTemplateKwargs string `json:"chatTemplateKwargs"` // --chat-template-kwargs
 
 	// RoPE scaling (for extended context)
-	RopeScaling   string  `json:"ropeScaling"`   // --rope-scaling
+	RopeScaling   string  `json:"ropeScaling"`   // --rope-scaling  (none/linear/yarn)
 	RopeScale     float64 `json:"ropeScale"`     // --rope-scale
 	RopeFreqBase  float64 `json:"ropeFreqBase"`  // --rope-freq-base
 	RopeFreqScale float64 `json:"ropeFreqScale"` // --rope-freq-scale
+
+	// YaRN extended context
+	YarnOrigCtx    int     `json:"yarnOrigCtx"`    // --yarn-orig-ctx
+	YarnExtFactor  float64 `json:"yarnExtFactor"`  // --yarn-ext-factor
+	YarnAttnFactor float64 `json:"yarnAttnFactor"` // --yarn-attn-factor
+	YarnBetaSlow   float64 `json:"yarnBetaSlow"`   // --yarn-beta-slow
+	YarnBetaFast   float64 `json:"yarnBetaFast"`   // --yarn-beta-fast
+
+	// KV cache extended
+	KVOffload          bool    `json:"kvOffload"`          // --kv-offload
+	CacheIdleSlots     bool    `json:"cacheIdleSlots"`     // --cache-idle-slots
+	CacheReuse         int     `json:"cacheReuse"`         // --cache-reuse
+	CtxCheckpoints     int     `json:"ctxCheckpoints"`     // --ctx-checkpoints
+	CheckpointMinStep  int     `json:"checkpointMinStep"`  // --checkpoint-min-step
+	SlotPromptSimilarity float64 `json:"slotPromptSimilarity"` // --slot-prompt-similarity
+
+	// GPU: MoE CPU override
+	CpuMoe  bool `json:"cpuMoe"`  // --cpu-moe
+	NCpuMoe int  `json:"nCpuMoe"` // --n-cpu-moe
+
+	// CPU affinity & NUMA
+	CpuMask      string `json:"cpuMask"`      // --cpu-mask  (hex)
+	CpuRange     string `json:"cpuRange"`     // --cpu-range  (lo-hi)
+	Priority     int    `json:"priority"`     // --prio  (-1~3)
+	NumaStrategy string `json:"numaStrategy"` // --numa  (distribute/isolate/numactl)
+
+	// Server operation extended
+	ThreadsHTTP      int  `json:"threadsHttp"`      // --threads-http
+	ReusePort        bool `json:"reusePort"`        // --reuse-port
+	SleepIdleSeconds int  `json:"sleepIdleSeconds"` // --sleep-idle-seconds  (-1=disabled)
+
+	// Reasoning / thinking
+	Reasoning       string `json:"reasoning"`       // --reasoning  (auto/on/off)
+	ReasoningFormat string `json:"reasoningFormat"` // --reasoning-format
+	ReasoningBudget int    `json:"reasoningBudget"` // --reasoning-budget  (-1=unlimited)
+
+	// Embedding / reranking extended
+	Pooling       string `json:"pooling"`       // --pooling  (none/mean/cls/last/rank)
+	EmbdNormalize int    `json:"embdNormalize"` // --embd-normalize  (-1~2)
+
+	// Multimodal extended
+	MmprojOffload bool `json:"mmprojOffload"` // --mmproj-offload
+
+	// JSON schema structured generation
+	JSONSchema     string `json:"jsonSchema"`     // -j / --json-schema
+	JSONSchemaFile string `json:"jsonSchemaFile"` // -jf / --json-schema-file
 
 	// Speculative decoding (new unified system)
 	SpecDecoding *SpecDecodingParams `json:"specDecoding,omitempty"`

@@ -135,6 +135,9 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 	if p.MmprojPath != "" {
 		args = append(args, "--mmproj", p.MmprojPath)
 	}
+	if p.MmprojOffload {
+		args = append(args, "--mmproj-offload")
+	}
 
 	// Performance feature flags
 	if p.FlashAttention {
@@ -145,6 +148,9 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 	}
 	if p.LockMemory {
 		args = append(args, "--mlock")
+	}
+	if p.DirectIO != "" {
+		args = append(args, "--direct-io", p.DirectIO)
 	}
 
 	// Server feature flags
@@ -184,6 +190,21 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 	if p.KVCacheUnified {
 		args = append(args, "-kvu")
 	}
+	if p.KVOffload {
+		args = append(args, "--kv-offload")
+	}
+	if p.CacheIdleSlots {
+		args = append(args, "--cache-idle-slots")
+	}
+	if p.CacheReuse > 0 {
+		args = append(args, "--cache-reuse", strconv.Itoa(p.CacheReuse))
+	}
+	if p.CtxCheckpoints > 0 {
+		args = append(args, "--ctx-checkpoints", strconv.Itoa(p.CtxCheckpoints))
+	}
+	if p.CheckpointMinStep > 0 {
+		args = append(args, "--checkpoint-min-step", strconv.Itoa(p.CheckpointMinStep))
+	}
 	// Runtime configuration
 	if p.Timeout > 0 {
 		args = append(args, "--timeout", strconv.Itoa(p.Timeout))
@@ -192,18 +213,24 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		args = append(args, "--alias", p.Alias)
 	}
 
-	// Sampling parameters
+	// Basic sampling
 	if p.Temperature != 0 {
-		args = append(args, "--temp", fmt.Sprintf("%.2f", p.Temperature))
+		args = append(args, "--temp", fmt.Sprintf("%.4f", p.Temperature))
 	}
 	if p.TopP != 0 {
-		args = append(args, "--top-p", fmt.Sprintf("%.2f", p.TopP))
+		args = append(args, "--top-p", fmt.Sprintf("%.4f", p.TopP))
 	}
 	if p.TopK > 0 {
 		args = append(args, "--top-k", strconv.Itoa(p.TopK))
 	}
-	if p.RepeatPenalty != 0 {
-		args = append(args, "--repeat-penalty", fmt.Sprintf("%.2f", p.RepeatPenalty))
+	if p.MinP > 0 {
+		args = append(args, "--min-p", fmt.Sprintf("%.4f", p.MinP))
+	}
+	if p.TopNSigma > 0 {
+		args = append(args, "--top-n-sigma", fmt.Sprintf("%.4f", p.TopNSigma))
+	}
+	if p.TypicalP > 0 && p.TypicalP != 1.0 {
+		args = append(args, "--typical-p", fmt.Sprintf("%.4f", p.TypicalP))
 	}
 	if p.Seed != 0 {
 		args = append(args, "--seed", strconv.Itoa(p.Seed))
@@ -211,41 +238,83 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 	if p.NPredict > 0 {
 		args = append(args, "-n", strconv.Itoa(p.NPredict))
 	}
-
-	// Additional sampling parameters
-	if p.Reranking {
-		args = append(args, "--reranking")
+	if p.Samplers != "" {
+		args = append(args, "--samplers", p.Samplers)
 	}
-	if p.MinP > 0 {
-		args = append(args, "--min-p", fmt.Sprintf("%.2f", p.MinP))
+
+	// Penalties
+	if p.RepeatPenalty != 0 && p.RepeatPenalty != 1.0 {
+		args = append(args, "--repeat-penalty", fmt.Sprintf("%.4f", p.RepeatPenalty))
+	}
+	if p.RepeatLastN != 0 {
+		args = append(args, "--repeat-last-n", strconv.Itoa(p.RepeatLastN))
 	}
 	if p.PresencePenalty != 0 {
-		args = append(args, "--presence-penalty", fmt.Sprintf("%.2f", p.PresencePenalty))
+		args = append(args, "--presence-penalty", fmt.Sprintf("%.4f", p.PresencePenalty))
 	}
 	if p.FrequencyPenalty != 0 {
-		args = append(args, "--frequency-penalty", fmt.Sprintf("%.2f", p.FrequencyPenalty))
+		args = append(args, "--frequency-penalty", fmt.Sprintf("%.4f", p.FrequencyPenalty))
+	}
+	if p.IgnoreEOS {
+		args = append(args, "--ignore-eos")
 	}
 
-	// Template and processing
+	// DRY sampling
+	if p.DryMultiplier > 0 {
+		args = append(args, "--dry-multiplier", fmt.Sprintf("%.4f", p.DryMultiplier))
+		if p.DryBase > 0 {
+			args = append(args, "--dry-base", fmt.Sprintf("%.4f", p.DryBase))
+		}
+		if p.DryAllowedLength > 0 {
+			args = append(args, "--dry-allowed-length", strconv.Itoa(p.DryAllowedLength))
+		}
+		if p.DryPenaltyLastN != 0 {
+			args = append(args, "--dry-penalty-last-n", strconv.Itoa(p.DryPenaltyLastN))
+		}
+		if p.DrySequenceBreakers != "" {
+			args = append(args, "--dry-sequence-breaker", p.DrySequenceBreakers)
+		}
+	}
+
+	// Mirostat sampling
+	if p.Mirostat > 0 {
+		args = append(args, "--mirostat", strconv.Itoa(p.Mirostat))
+		if p.MirostatLR > 0 {
+			args = append(args, "--mirostat-lr", fmt.Sprintf("%.4f", p.MirostatLR))
+		}
+		if p.MirostatEnt > 0 {
+			args = append(args, "--mirostat-ent", fmt.Sprintf("%.4f", p.MirostatEnt))
+		}
+	}
+
+	// Dynamic temperature
+	if p.DynaTempRange > 0 {
+		args = append(args, "--dynatemp-range", fmt.Sprintf("%.4f", p.DynaTempRange))
+		if p.DynaTempExp != 0 && p.DynaTempExp != 1.0 {
+			args = append(args, "--dynatemp-exp", fmt.Sprintf("%.4f", p.DynaTempExp))
+		}
+	}
+
+	// XTC sampling
+	if p.XTCProbability > 0 {
+		args = append(args, "--xtc-probability", fmt.Sprintf("%.4f", p.XTCProbability))
+		if p.XTCThreshold > 0 && p.XTCThreshold != 1.0 {
+			args = append(args, "--xtc-threshold", fmt.Sprintf("%.4f", p.XTCThreshold))
+		}
+	}
+
+	// Chat template
 	if p.DisableJinja {
 		args = append(args, "--no-jinja")
 	}
 	if p.ChatTemplate != "" {
 		args = append(args, "--chat-template", p.ChatTemplate)
 	}
+	if p.ChatTemplateKwargs != "" {
+		args = append(args, "--chat-template-kwargs", p.ChatTemplateKwargs)
+	}
 	if p.ContextShift {
 		args = append(args, "--context-shift")
-	}
-
-	// Extended sampling parameters
-	if p.RepeatLastN != 0 {
-		args = append(args, "--repeat-last-n", strconv.Itoa(p.RepeatLastN))
-	}
-	if p.TypicalP > 0 {
-		args = append(args, "--typical-p", fmt.Sprintf("%.2f", p.TypicalP))
-	}
-	if p.IgnoreEOS {
-		args = append(args, "--ignore-eos")
 	}
 
 	// Server optimization
@@ -257,6 +326,43 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 	if p.CachePrompt {
 		args = append(args, "--cache-prompt")
 	}
+	if p.ReusePort {
+		args = append(args, "--reuse-port")
+	}
+	if p.SleepIdleSeconds != 0 {
+		args = append(args, "--sleep-idle-seconds", strconv.Itoa(p.SleepIdleSeconds))
+	}
+	if p.ThreadsHTTP > 0 {
+		args = append(args, "--threads-http", strconv.Itoa(p.ThreadsHTTP))
+	}
+	if p.SlotPromptSimilarity > 0 {
+		args = append(args, "--slot-prompt-similarity", fmt.Sprintf("%.4f", p.SlotPromptSimilarity))
+	}
+
+	// Reasoning / thinking
+	if p.Reasoning != "" {
+		args = append(args, "--reasoning", p.Reasoning)
+	}
+	if p.ReasoningFormat != "" {
+		args = append(args, "--reasoning-format", p.ReasoningFormat)
+	}
+	if p.ReasoningBudget != 0 {
+		args = append(args, "--reasoning-budget", strconv.Itoa(p.ReasoningBudget))
+	}
+
+	// Embedding / reranking
+	if p.LogitsAll {
+		args = append(args, "--logits-all")
+	}
+	if p.Reranking {
+		args = append(args, "--reranking")
+	}
+	if p.Pooling != "" {
+		args = append(args, "--pooling", p.Pooling)
+	}
+	if p.EmbdNormalize != 0 {
+		args = append(args, "--embd-normalize", strconv.Itoa(p.EmbdNormalize))
+	}
 
 	// Structured generation
 	if p.Grammar != "" {
@@ -265,8 +371,14 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 	if p.GrammarFile != "" {
 		args = append(args, "--grammar-file", p.GrammarFile)
 	}
+	if p.JSONSchema != "" {
+		args = append(args, "--json-schema", p.JSONSchema)
+	}
+	if p.JSONSchemaFile != "" {
+		args = append(args, "--json-schema-file", p.JSONSchemaFile)
+	}
 
-	// LoRA adapter support
+	// LoRA adapters
 	if p.Lora != "" {
 		args = append(args, "--lora", p.Lora)
 	}
@@ -274,23 +386,56 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		args = append(args, "--lora-scaled", p.LoraScaled)
 	}
 
-	// Chat template kwargs
-	if p.ChatTemplateKwargs != "" {
-		args = append(args, "--chat-template-kwargs", p.ChatTemplateKwargs)
-	}
-
 	// RoPE scaling
 	if p.RopeScaling != "" {
 		args = append(args, "--rope-scaling", p.RopeScaling)
 	}
 	if p.RopeScale > 0 {
-		args = append(args, "--rope-scale", fmt.Sprintf("%.2f", p.RopeScale))
+		args = append(args, "--rope-scale", fmt.Sprintf("%.4f", p.RopeScale))
 	}
 	if p.RopeFreqBase > 0 {
-		args = append(args, "--rope-freq-base", fmt.Sprintf("%.2f", p.RopeFreqBase))
+		args = append(args, "--rope-freq-base", fmt.Sprintf("%.4f", p.RopeFreqBase))
 	}
 	if p.RopeFreqScale > 0 {
-		args = append(args, "--rope-freq-scale", fmt.Sprintf("%.2f", p.RopeFreqScale))
+		args = append(args, "--rope-freq-scale", fmt.Sprintf("%.4f", p.RopeFreqScale))
+	}
+
+	// YaRN extended context
+	if p.YarnOrigCtx > 0 {
+		args = append(args, "--yarn-orig-ctx", strconv.Itoa(p.YarnOrigCtx))
+	}
+	if p.YarnExtFactor != 0 {
+		args = append(args, "--yarn-ext-factor", fmt.Sprintf("%.4f", p.YarnExtFactor))
+	}
+	if p.YarnAttnFactor != 0 {
+		args = append(args, "--yarn-attn-factor", fmt.Sprintf("%.4f", p.YarnAttnFactor))
+	}
+	if p.YarnBetaSlow != 0 {
+		args = append(args, "--yarn-beta-slow", fmt.Sprintf("%.4f", p.YarnBetaSlow))
+	}
+	if p.YarnBetaFast != 0 {
+		args = append(args, "--yarn-beta-fast", fmt.Sprintf("%.4f", p.YarnBetaFast))
+	}
+
+	// CPU affinity & NUMA
+	if p.CpuMask != "" {
+		args = append(args, "--cpu-mask", p.CpuMask)
+	}
+	if p.CpuRange != "" {
+		args = append(args, "--cpu-range", p.CpuRange)
+	}
+	if p.Priority != 0 {
+		args = append(args, "--prio", strconv.Itoa(p.Priority))
+	}
+	if p.NumaStrategy != "" {
+		args = append(args, "--numa", p.NumaStrategy)
+	}
+
+	// MoE CPU override
+	if p.CpuMoe {
+		args = append(args, "--cpu-moe")
+	} else if p.NCpuMoe > 0 {
+		args = append(args, "--n-cpu-moe", strconv.Itoa(p.NCpuMoe))
 	}
 
 	// Speculative decoding
