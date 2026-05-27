@@ -1,11 +1,12 @@
 package backend
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +24,67 @@ func NewLlamaCppBackend() *LlamaCppBackend {
 
 func (b *LlamaCppBackend) Type() BackendType { return BackendLlamaCpp }
 
+// LlamaCppProbeResult contains llama.cpp installation probe details.
+type LlamaCppProbeResult struct {
+	Path      string   `json:"path"`
+	Binary    string   `json:"binary"`
+	Version   string   `json:"version"`
+	Warnings  []string `json:"warnings"`
+	Available bool     `json:"available"`
+}
+
+// ProbeLlamaCppInstallation probes a llama.cpp installation path for llama-server.
+func ProbeLlamaCppInstallation(path string) (*LlamaCppProbeResult, error) {
+	result := &LlamaCppProbeResult{
+		Path:     path,
+		Warnings: []string{},
+	}
+
+	serverBin := utils.FindLlamacppBinary(path, "server")
+	if serverBin == "" {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("llama-server not found in path: %s", path))
+		return result, nil
+	}
+
+	info, err := os.Stat(serverBin)
+	if err != nil {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("failed to stat llama-server: %v", err))
+		return result, nil
+	}
+	if !info.Mode().IsRegular() {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("llama-server is not a regular file: %s", serverBin))
+		return result, nil
+	}
+	if info.Mode().Perm()&0111 == 0 {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("llama-server is not executable: %s", serverBin))
+		return result, nil
+	}
+
+	result.Binary = serverBin
+	result.Available = true
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, serverBin, "--version")
+	output, err := cmd.CombinedOutput()
+	if ctx.Err() == context.DeadlineExceeded {
+		result.Warnings = append(result.Warnings, "llama-server --version timed out")
+		return result, nil
+	}
+	if err != nil {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("failed to run llama-server --version: %v", err))
+		return result, nil
+	}
+
+	result.Version = strings.TrimSpace(string(output))
+	if result.Version == "" {
+		result.Warnings = append(result.Warnings, "llama-server --version returned empty output")
+	}
+
+	return result, nil
+}
+
 // Discover validates that llama-server is available at the configured path
 func (b *LlamaCppBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 	info := &BackendInfo{
@@ -36,8 +98,13 @@ func (b *LlamaCppBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 			if p == "" {
 				continue
 			}
-			if bin := utils.FindLlamacppBinary(p, "server"); bin != "" {
+			probe, err := ProbeLlamaCppInstallation(p)
+			if err != nil {
+				return nil, err
+			}
+			if probe.Available {
 				info.BinPath = p
+				info.Version = probe.Version
 				info.Available = true
 				return info, nil
 			}
@@ -49,8 +116,13 @@ func (b *LlamaCppBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 			"./llama.cpp",
 		}
 		for _, p := range commonPaths {
-			if _, err := os.Stat(filepath.Join(p, "llama-server")); err == nil {
+			probe, err := ProbeLlamaCppInstallation(p)
+			if err != nil {
+				return nil, err
+			}
+			if probe.Available {
 				info.BinPath = p
+				info.Version = probe.Version
 				info.Available = true
 				return info, nil
 			}
@@ -59,13 +131,17 @@ func (b *LlamaCppBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 		return info, nil
 	}
 
-	serverBin := utils.FindLlamacppBinary(cfg.BinPath, "server")
-	if serverBin == "" {
+	probe, err := ProbeLlamaCppInstallation(cfg.BinPath)
+	if err != nil {
+		return nil, err
+	}
+	if !probe.Available {
 		info.Available = false
 		return info, nil
 	}
 
 	info.BinPath = cfg.BinPath
+	info.Version = probe.Version
 	info.Available = true
 	return info, nil
 }
@@ -85,7 +161,6 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 	}
 
 	args := []string{
-		serverBin,
 		"-m", req.ModelPath,
 		"--port", strconv.Itoa(req.Port),
 		"--host", "0.0.0.0",
@@ -517,21 +592,17 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		}
 	}
 
-	// Build command string
-	cmd := quoteAndJoin(args)
+	cmdSpec := NewCommandSpec(serverBin, args, nil, "")
 
 	// Append custom command if provided
-	if p.CustomCmd != "" {
-		cmd += " " + strings.TrimSpace(p.CustomCmd)
-	}
+	cmdSpec = cmdSpec.AppendRaw(p.CustomCmd)
 
 	// Append extra params if provided
-	if p.ExtraParams != "" {
-		cmd += " " + strings.TrimSpace(p.ExtraParams)
-	}
+	cmdSpec = cmdSpec.AppendRaw(p.ExtraParams)
 
 	return &StartConfig{
-		Command:     cmd,
+		Command:     cmdSpec.RedactedPreview,
+		CommandSpec: &cmdSpec,
 		BinPath:     info.BinPath,
 		BackendType: BackendLlamaCpp,
 	}, nil

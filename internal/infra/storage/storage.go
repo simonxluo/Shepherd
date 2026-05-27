@@ -160,6 +160,20 @@ type ModelLoadConfig struct {
 	UpdatedAt time.Time              `json:"updatedAt" db:"updated_at"`
 }
 
+// LaunchProfile represents a reusable backend launch configuration.
+type LaunchProfile struct {
+	ID             string                 `json:"id" db:"id"`
+	Name           string                 `json:"name" db:"name"`
+	BackendType    string                 `json:"backendType" db:"backend_type"`
+	InstallationID string                 `json:"installationId,omitempty" db:"installation_id"`
+	ModelScope     string                 `json:"modelScope,omitempty" db:"model_scope"`
+	Params         map[string]interface{} `json:"params" db:"params"`
+	Env            []string               `json:"env,omitempty" db:"env"`
+	ExtraArgs      string                 `json:"extraArgs,omitempty" db:"extra_args"`
+	CreatedAt      time.Time              `json:"createdAt" db:"created_at"`
+	UpdatedAt      time.Time              `json:"updatedAt" db:"updated_at"`
+}
+
 // ModelMetadata represents user-defined metadata for a model
 type ModelMetadata struct {
 	ModelID      string        `json:"modelId" db:"model_id"`                    // Model ID (primary key)
@@ -253,6 +267,13 @@ type Store interface {
 	ListModelLoadConfigs(ctx context.Context, nodeID, modelID string) ([]*ModelLoadConfig, error)
 	SaveNamedModelLoadConfig(ctx context.Context, config *ModelLoadConfig) error
 	DeleteNamedModelLoadConfig(ctx context.Context, nodeID, modelID, name string) error
+
+	// LaunchProfile operations
+	CreateLaunchProfile(ctx context.Context, profile *LaunchProfile) error
+	GetLaunchProfile(ctx context.Context, id string) (*LaunchProfile, error)
+	ListLaunchProfiles(ctx context.Context, backendType, modelScope string) ([]*LaunchProfile, error)
+	UpdateLaunchProfile(ctx context.Context, profile *LaunchProfile) error
+	DeleteLaunchProfile(ctx context.Context, id string) error
 
 	// ModelMetadata operations - 用户设置的模型元数据
 	SaveModelMetadata(ctx context.Context, metadata *ModelMetadata) error

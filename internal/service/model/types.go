@@ -54,6 +54,7 @@ type Model struct {
 
 type ModelStatus struct {
 	ID          string
+	InstanceID  string
 	Name        string
 	State       LoadState
 	ProcessID   string
@@ -137,6 +138,23 @@ func isValidTransition(from, to LoadState) bool {
 	return false
 }
 
+// RuntimeInstance represents a model runtime process instance.
+type RuntimeInstance struct {
+	InstanceID     string    `json:"instanceId"`
+	ModelID        string    `json:"modelId"`
+	ModelName      string    `json:"modelName"`
+	ProfileID      string    `json:"profileId,omitempty"`
+	InstallationID string    `json:"installationId,omitempty"`
+	ProcessID      string    `json:"processId,omitempty"`
+	Port           int       `json:"port,omitempty"`
+	State          string    `json:"state"`
+	BackendType    string    `json:"backendType,omitempty"`
+	CommandPreview string    `json:"commandPreview,omitempty"`
+	LastError      string    `json:"lastError,omitempty"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
+}
+
 // ScanResult represents the result of a scan operation
 type ScanResult struct {
 	Models       []*Model
@@ -172,6 +190,7 @@ func (p *SpecDecodingParams) ToBackend() *backend.SpecDecodingParams {
 // LoadRequest contains parameters for loading a model
 type LoadRequest struct {
 	ModelID       string  `json:"modelId"`
+	InstanceID    string  `json:"instanceId,omitempty"`
 	NodeID        string  `json:"nodeId"` // 指定运行节点 ID，为空表示自动调度
 	CtxSize       int     `json:"ctxSize"`
 	BatchSize     int     `json:"batchSize"`
@@ -189,6 +208,7 @@ type LoadRequest struct {
 
 	// Backend selection
 	BackendType string `json:"backendType,omitempty"` // Explicit backend: "llamacpp", "vllm", "vllm_omni"
+	ProfileID   string `json:"profileId,omitempty"`   // Reusable launch profile ID
 
 	// Custom command configuration
 	CustomCmd   string `json:"llamaCppPath"` // Custom llama.cpp binary path override (frontend uses llamaCppPath)
@@ -303,11 +323,11 @@ type LoadRequest struct {
 	YarnBetaFast   float64 `json:"yarnBetaFast"`   // --yarn-beta-fast
 
 	// KV cache extended
-	KVOffload          bool    `json:"kvOffload"`          // --kv-offload
-	CacheIdleSlots     bool    `json:"cacheIdleSlots"`     // --cache-idle-slots
-	CacheReuse         int     `json:"cacheReuse"`         // --cache-reuse
-	CtxCheckpoints     int     `json:"ctxCheckpoints"`     // --ctx-checkpoints
-	CheckpointMinStep  int     `json:"checkpointMinStep"`  // --checkpoint-min-step
+	KVOffload            bool    `json:"kvOffload"`            // --kv-offload
+	CacheIdleSlots       bool    `json:"cacheIdleSlots"`       // --cache-idle-slots
+	CacheReuse           int     `json:"cacheReuse"`           // --cache-reuse
+	CtxCheckpoints       int     `json:"ctxCheckpoints"`       // --ctx-checkpoints
+	CheckpointMinStep    int     `json:"checkpointMinStep"`    // --checkpoint-min-step
 	SlotPromptSimilarity float64 `json:"slotPromptSimilarity"` // --slot-prompt-similarity
 
 	// GPU: MoE CPU override
@@ -376,6 +396,7 @@ type LoadRequest struct {
 type LoadResult struct {
 	Success       bool
 	ModelID       string
+	InstanceID    string
 	Port          int
 	CtxSize       int
 	Error         error

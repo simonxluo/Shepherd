@@ -157,6 +157,46 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 
 	req.ModelID = id
 
+	if req.ProfileID != "" {
+		profile, err := s.storageMgr.GetStore().GetLaunchProfile(c.Request.Context(), req.ProfileID)
+		if err != nil {
+			api.NotFound(c, "Launch profile")
+			return
+		}
+		applyLaunchProfileToLoadRequest(&req, profile)
+	}
+
+	validation := backend.ValidateLlamaCppParamMap(map[string]any{
+		"ctxSize":        req.CtxSize,
+		"batchSize":      req.BatchSize,
+		"threads":        req.Threads,
+		"gpuLayers":      req.GPULayers,
+		"devices":        req.Devices,
+		"mainGpu":        req.MainGPU,
+		"splitMode":      req.SplitMode,
+		"tensorSplit":    req.TensorSplit,
+		"kvCacheTypeK":   req.KVCacheTypeK,
+		"kvCacheTypeV":   req.KVCacheTypeV,
+		"parallelSlots":  req.ParallelSlots,
+		"threadsHttp":    req.ThreadsHTTP,
+		"timeout":        req.Timeout,
+		"temperature":    req.Temperature,
+		"topP":           req.TopP,
+		"topK":           req.TopK,
+		"minP":           req.MinP,
+		"repeatPenalty":  req.RepeatPenalty,
+		"seed":           req.Seed,
+		"nPredict":       req.NPredict,
+		"mmprojPath":     req.MmprojPath,
+		"flashAttention": req.FlashAttention,
+		"noMmap":         req.NoMmap,
+		"lockMemory":     req.LockMemory,
+	})
+	if !validation.Valid {
+		api.ErrorWithDetails(c, types.ErrInvalidRequest, "无效的 llama.cpp 参数", strings.Join(validation.Errors, "; "))
+		return
+	}
+
 	// Validate draft model if SpecDecoding is set with draft type
 	if req.SpecDecoding != nil && (req.SpecDecoding.SpecType == "draft" || req.SpecDecoding.SpecType == "eagle3") && req.SpecDecoding.SpecDraftModelID != "" {
 		if req.SpecDecoding.SpecDraftModelID == id {
@@ -233,8 +273,9 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	}
 
 	respData := gin.H{
-		"id":     id,
-		"status": "loading",
+		"id":         id,
+		"instanceId": result.InstanceID,
+		"status":     "loading",
 	}
 
 	if result.AlreadyLoaded {

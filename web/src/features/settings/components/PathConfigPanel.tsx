@@ -169,7 +169,8 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
       }
 
       if (response.success && response.data?.valid) {
-        toast.success(t('settings.pathConfig.testSuccess'), response.data.message || t('settings.pathConfig.testSuccessDesc'));
+        const details = [response.data.message || t('settings.pathConfig.testSuccessDesc'), response.data.version].filter(Boolean).join('\n');
+        toast.success(t('settings.pathConfig.testSuccess'), details);
       } else {
         toast.error(t('settings.pathConfig.testFailed'), response.data?.error || t('common.unknownError'));
       }

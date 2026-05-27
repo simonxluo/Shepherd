@@ -133,6 +133,19 @@ export interface LlamaCppPathConfig {
   description: string;
 }
 
+export interface LlamaCppInstallationConfig {
+  id: string;
+  name: string;
+  path: string;
+  serverBin?: string;
+  version?: string;
+  enabled?: boolean;
+  priority?: number;
+  lastCheck?: string;
+  warnings?: string[];
+  description?: string;
+}
+
 /**
  * Model path configuration
  */

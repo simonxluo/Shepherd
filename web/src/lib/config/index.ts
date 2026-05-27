@@ -1,5 +1,6 @@
 export type {
   LlamaCppPathConfig,
+  LlamaCppInstallationConfig,
   ModelPathConfig,
   BackendPathConfig,
   MultimodalPathConfig,

@@ -1,6 +1,8 @@
 package backend
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -224,6 +226,45 @@ func TestLlamaCppBackend_BuildStartConfig(t *testing.T) {
 	}
 	if cfg.Command == "" {
 		t.Error("expected non-empty command")
+	}
+}
+
+func TestLlamaCppBackend_BuildStartConfigCommandSpec(t *testing.T) {
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "llama-server")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\necho llama-server mock\n"), 0o755); err != nil {
+		t.Fatalf("failed to create mock llama-server: %v", err)
+	}
+
+	cfg, err := NewLlamaCppBackend().BuildStartConfig(&BackendInfo{
+		Type:      BackendLlamaCpp,
+		BinPath:   dir,
+		Available: true,
+	}, &LoadRequest{
+		ModelPath: "/models/test model.gguf",
+		Port:      8081,
+		CtxSize:   4096,
+		GPULayers: 99,
+		LlamacppParams: &LlamacppLoadParams{
+			BatchSize:      512,
+			FlashAttention: true,
+			ParallelSlots:  2,
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildStartConfig returned error: %v", err)
+	}
+	if cfg.CommandSpec == nil {
+		t.Fatal("expected command spec")
+	}
+	if cfg.CommandSpec.Binary != bin {
+		t.Fatalf("binary = %q, want %q", cfg.CommandSpec.Binary, bin)
+	}
+	if !containsAll(cfg.Command, bin, "-m", "--port", "8081", "-c", "4096", "-ngl", "99", "-b", "512", "-fa", "--parallel", "2") {
+		t.Fatalf("command missing expected flags: %s", cfg.Command)
+	}
+	if !strings.Contains(cfg.Command, `"/models/test model.gguf"`) {
+		t.Fatalf("command should quote model path with spaces: %s", cfg.Command)
 	}
 }
 

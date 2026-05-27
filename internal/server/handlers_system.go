@@ -16,6 +16,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	api "github.com/simonxluo/Shepherd/internal/handler"
+	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // gpuMemRe 预编译 GPU 内存信息正则，避免每次请求重新编译
@@ -234,6 +235,57 @@ func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 		"backends":          backends,
 		"inferenceBackends": inferenceBackends,
 		"count":             len(backends),
+	})
+}
+
+// HandleGetLlamacppParamSchema returns the llama.cpp launch parameter schema.
+// @Summary      Get llama.cpp parameter schema
+// @Description  Returns schema metadata used to validate and render llama.cpp launch parameters
+// @Tags         System
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/backends/llamacpp/schema [get]
+func (s *Server) HandleGetLlamacppParamSchema(c *gin.Context) {
+	api.Success(c, backend.LlamaCppParamRegistry())
+}
+
+// HandlePreviewLlamacppCommand returns the resolved llama.cpp launch command without starting a process.
+// @Summary      Preview llama.cpp command
+// @Description  Builds and returns the llama.cpp command line for a request without launching it
+// @Tags         System
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/backends/llamacpp/preview [post]
+func (s *Server) HandlePreviewLlamacppCommand(c *gin.Context) {
+	var req struct {
+		BinPath string `json:"binPath"`
+		backend.LoadRequest
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		api.BadRequest(c, "Invalid request body")
+		return
+	}
+
+	binPath := req.BinPath
+	if binPath == "" && s.config != nil && s.config.ServerCfg != nil && len(s.config.ServerCfg.Llamacpp.Paths) > 0 {
+		binPath = s.config.ServerCfg.Llamacpp.Paths[0].Path
+	}
+	if binPath == "" {
+		api.BadRequest(c, "llama.cpp binary path is required")
+		return
+	}
+
+	info := &backend.BackendInfo{Type: backend.BackendLlamaCpp, Name: "LlamaCpp", BinPath: binPath, Available: true}
+	startCfg, err := backend.NewLlamaCppBackend().BuildStartConfig(info, &req.LoadRequest)
+	if err != nil {
+		api.ErrorWithDetails(c, types.ErrInvalidRequest, "Failed to build command", err.Error())
+		return
+	}
+
+	api.Success(c, gin.H{
+		"command": startCfg.Command,
+		"spec":    startCfg.CommandSpec,
 	})
 }
 

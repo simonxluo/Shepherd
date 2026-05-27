@@ -127,6 +127,7 @@ export interface LoadModelParams {
   // Basic parameters
   modelId: string;
   nodeId?: string;              // Target node ID; undefined = auto-schedule
+  profileId?: string;           // Reusable launch profile ID
   ctxSize?: number;
   batchSize?: number;
   threads?: number;

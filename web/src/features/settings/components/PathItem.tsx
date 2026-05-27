@@ -1,9 +1,9 @@
 import { Bug, FolderOpen, Edit, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import type { LlamaCppPathConfig, ModelPathConfig, BackendPathConfig, MultimodalPathConfig } from '@/lib/config';
+import type { LlamaCppPathConfig, LlamaCppInstallationConfig, ModelPathConfig, BackendPathConfig, MultimodalPathConfig } from '@/lib/config';
 
-type AnyPathConfig = LlamaCppPathConfig | ModelPathConfig | BackendPathConfig | MultimodalPathConfig;
+type AnyPathConfig = LlamaCppPathConfig | LlamaCppInstallationConfig | ModelPathConfig | BackendPathConfig | MultimodalPathConfig;
 
 interface PathItemProps {
   path: AnyPathConfig;
@@ -20,6 +20,8 @@ export function PathItem({
 }: PathItemProps) {
   const { t } = useTranslation();
   const displayName = path.name || path.path;
+  const version = 'version' in path ? path.version : undefined;
+  const serverBin = 'serverBin' in path ? path.serverBin : undefined;
 
   return (
     <div className="group flex items-start gap-3 p-3 rounded-lg border bg-card hover:border-border/80 transition-all">
@@ -34,6 +36,8 @@ export function PathItem({
           <h4 className="text-sm font-medium truncate">{displayName}</h4>
         </div>
         <p className="text-xs text-muted-foreground truncate mt-0.5">{path.path}</p>
+        {serverBin && <p className="text-xs text-muted-foreground truncate mt-0.5">{serverBin}</p>}
+        {version && <p className="text-xs text-muted-foreground mt-1">{version}</p>}
         {path.description && (
           <p className="text-xs text-muted-foreground mt-1">{path.description}</p>
         )}

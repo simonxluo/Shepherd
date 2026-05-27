@@ -100,6 +100,10 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 
 // LoadAsync 异步加载模型（立即返回，后台加载）
 func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
+	if req.InstanceID == "" {
+		req.InstanceID = generateRuntimeInstanceID(req.ModelID)
+	}
+
 	// Get model
 	model, exists := m.GetModel(req.ModelID)
 	if !exists {
@@ -115,6 +119,7 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 			return &LoadResult{
 				Success:       true,
 				ModelID:       req.ModelID,
+				InstanceID:    existing.InstanceID,
 				Port:          existing.Port,
 				Async:         true,
 				AlreadyLoaded: true,
@@ -123,21 +128,33 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 		if existing.State == StateLoading {
 			m.mu.Unlock()
 			return &LoadResult{
-				Success: true,
-				ModelID: req.ModelID,
-				Async:   true,
-				Loading: true,
+				Success:    true,
+				ModelID:    req.ModelID,
+				InstanceID: existing.InstanceID,
+				Async:      true,
+				Loading:    true,
 			}, nil
 		}
 	}
 
 	status := &ModelStatus{
-		ID:   req.ModelID,
-		Name: model.Name,
+		ID:         req.ModelID,
+		InstanceID: req.InstanceID,
+		Name:       model.Name,
 	}
 	applyRuntimeConfig(status, req.UnloadAfterMinutes, req.ConcurrencyLimit)
 	status.LoadWait.Add(1)
 	m.statuses[req.ModelID] = status
+	m.instances[req.InstanceID] = &RuntimeInstance{
+		InstanceID: req.InstanceID,
+		ModelID:    req.ModelID,
+		ModelName:  model.Name,
+		ProfileID:  req.ProfileID,
+		State:      StateLoading.String(),
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+	m.modelInstances[req.ModelID] = append(m.modelInstances[req.ModelID], req.InstanceID)
 	m.bumpVersion()
 	m.mu.Unlock()
 
@@ -154,10 +171,11 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 	go m.loadModelAsync(req, status, model)
 
 	return &LoadResult{
-		Success: true,
-		ModelID: req.ModelID,
-		Async:   true,
-		Loading: true,
+		Success:    true,
+		ModelID:    req.ModelID,
+		InstanceID: req.InstanceID,
+		Async:      true,
+		Loading:    true,
 	}, nil
 }
 
@@ -264,6 +282,13 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		status.Port = port
 		status.LoadedAt = time.Now()
 		status.BackendType = b.Type().String()
+		if inst := m.instances[req.InstanceID]; inst != nil {
+			inst.ProcessID = proc.ID
+			inst.Port = port
+			inst.State = StateLoaded.String()
+			inst.BackendType = b.Type().String()
+			inst.UpdatedAt = time.Now()
+		}
 		m.bumpVersion()
 		m.mu.Unlock()
 		status.LoadWait.Done()
@@ -275,6 +300,11 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		m.mu.Lock()
 		status.transitionTo(StateError)
 		status.Error = err
+		if inst := m.instances[req.InstanceID]; inst != nil {
+			inst.State = StateError.String()
+			inst.LastError = err.Error()
+			inst.UpdatedAt = time.Now()
+		}
 		m.mu.Unlock()
 		status.LoadWait.Done()
 		logger.Errorf("异步模型加载失败: modelId=%s, error=%v", req.ModelID, err)
@@ -286,6 +316,11 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		m.mu.Lock()
 		status.transitionTo(StateError)
 		status.Error = fmt.Errorf("模型加载超时 (%v)", timeout)
+		if inst := m.instances[req.InstanceID]; inst != nil {
+			inst.State = StateError.String()
+			inst.LastError = status.Error.Error()
+			inst.UpdatedAt = time.Now()
+		}
 		m.mu.Unlock()
 		status.LoadWait.Done()
 		logger.Errorf("异步模型加载超时: modelId=%s, timeout=%s", req.ModelID, timeout)
@@ -345,6 +380,12 @@ func (m *Manager) Unload(modelID string) error {
 	status.transitionTo(StateUnloaded)
 	status.ProcessID = ""
 	status.Port = 0
+	if inst := m.instances[status.InstanceID]; inst != nil {
+		inst.State = StateUnloaded.String()
+		inst.Port = 0
+		inst.ProcessID = ""
+		inst.UpdatedAt = time.Now()
+	}
 	m.bumpVersion()
 
 	logger.Infof("模型卸载成功: modelId=%s, modelName=%s", modelID, status.Name)
@@ -379,54 +420,54 @@ func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port 
 	default:
 		// Default: map to llama.cpp params (backward compatible)
 		br.LlamacppParams = &backend.LlamacppLoadParams{
-			BatchSize:            req.BatchSize,
-			Temperature:          req.Temperature,
-			TopP:                 req.TopP,
-			TopK:                 req.TopK,
-			MinP:                 req.MinP,
-			TopNSigma:            req.TopNSigma,
-			TypicalP:             req.TypicalP,
-			RepeatPenalty:        req.RepeatPenalty,
-			RepeatLastN:          req.RepeatLastN,
-			PresencePenalty:      req.PresencePenalty,
-			FrequencyPenalty:     req.FrequencyPenalty,
-			IgnoreEOS:            req.IgnoreEOS,
-			Seed:                 req.Seed,
-			NPredict:             req.NPredict,
-			Samplers:             req.Samplers,
+			BatchSize:        req.BatchSize,
+			Temperature:      req.Temperature,
+			TopP:             req.TopP,
+			TopK:             req.TopK,
+			MinP:             req.MinP,
+			TopNSigma:        req.TopNSigma,
+			TypicalP:         req.TypicalP,
+			RepeatPenalty:    req.RepeatPenalty,
+			RepeatLastN:      req.RepeatLastN,
+			PresencePenalty:  req.PresencePenalty,
+			FrequencyPenalty: req.FrequencyPenalty,
+			IgnoreEOS:        req.IgnoreEOS,
+			Seed:             req.Seed,
+			NPredict:         req.NPredict,
+			Samplers:         req.Samplers,
 			// DRY sampling
-			DryMultiplier:        req.DryMultiplier,
-			DryBase:              req.DryBase,
-			DryAllowedLength:     req.DryAllowedLength,
-			DryPenaltyLastN:      req.DryPenaltyLastN,
-			DrySequenceBreakers:  req.DrySequenceBreakers,
+			DryMultiplier:       req.DryMultiplier,
+			DryBase:             req.DryBase,
+			DryAllowedLength:    req.DryAllowedLength,
+			DryPenaltyLastN:     req.DryPenaltyLastN,
+			DrySequenceBreakers: req.DrySequenceBreakers,
 			// Mirostat
-			Mirostat:             req.Mirostat,
-			MirostatLR:           req.MirostatLR,
-			MirostatEnt:          req.MirostatEnt,
+			Mirostat:    req.Mirostat,
+			MirostatLR:  req.MirostatLR,
+			MirostatEnt: req.MirostatEnt,
 			// Dynamic temperature
-			DynaTempRange:        req.DynaTempRange,
-			DynaTempExp:          req.DynaTempExp,
+			DynaTempRange: req.DynaTempRange,
+			DynaTempExp:   req.DynaTempExp,
 			// XTC
-			XTCProbability:       req.XTCProbability,
-			XTCThreshold:         req.XTCThreshold,
+			XTCProbability: req.XTCProbability,
+			XTCThreshold:   req.XTCThreshold,
 			// GPU
-			MainGPU:              req.MainGPU,
-			SplitMode:            req.SplitMode,
-			TensorSplit:          req.TensorSplit,
-			CpuMoe:               req.CpuMoe,
-			NCpuMoe:              req.NCpuMoe,
+			MainGPU:     req.MainGPU,
+			SplitMode:   req.SplitMode,
+			TensorSplit: req.TensorSplit,
+			CpuMoe:      req.CpuMoe,
+			NCpuMoe:     req.NCpuMoe,
 			// CPU affinity & NUMA
-			CpuMask:              req.CpuMask,
-			CpuRange:             req.CpuRange,
-			Priority:             req.Priority,
-			NumaStrategy:         req.NumaStrategy,
+			CpuMask:      req.CpuMask,
+			CpuRange:     req.CpuRange,
+			Priority:     req.Priority,
+			NumaStrategy: req.NumaStrategy,
 			// Memory
-			NoMmap:               req.NoMmap,
-			LockMemory:           req.LockMemory,
-			DirectIO:             req.DirectIo,
+			NoMmap:     req.NoMmap,
+			LockMemory: req.LockMemory,
+			DirectIO:   req.DirectIo,
 			// Flash attention
-			FlashAttention:       req.FlashAttention,
+			FlashAttention: req.FlashAttention,
 			// KV cache
 			KVCacheTypeK:         req.KVCacheTypeK,
 			KVCacheTypeV:         req.KVCacheTypeV,
@@ -438,63 +479,63 @@ func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port 
 			CheckpointMinStep:    req.CheckpointMinStep,
 			SlotPromptSimilarity: req.SlotPromptSimilarity,
 			// Batch & parallelism
-			UBatchSize:           req.UBatchSize,
-			ParallelSlots:        req.ParallelSlots,
-			ContBatching:         req.ContBatching,
-			CachePrompt:          req.CachePrompt,
+			UBatchSize:    req.UBatchSize,
+			ParallelSlots: req.ParallelSlots,
+			ContBatching:  req.ContBatching,
+			CachePrompt:   req.CachePrompt,
 			// Threads
-			ThreadsBatch:         req.ThreadsBatch,
-			ThreadsHTTP:          req.ThreadsHTTP,
+			ThreadsBatch: req.ThreadsBatch,
+			ThreadsHTTP:  req.ThreadsHTTP,
 			// Server operation
-			NoWebUI:              req.NoWebUI,
-			EnableMetrics:        req.EnableMetrics,
-			SlotSavePath:         req.SlotSavePath,
-			CacheRAM:             req.CacheRAM,
-			ReusePort:            req.ReusePort,
-			SleepIdleSeconds:     req.SleepIdleSeconds,
-			Timeout:              req.Timeout,
-			Alias:                req.Alias,
+			NoWebUI:          req.NoWebUI,
+			EnableMetrics:    req.EnableMetrics,
+			SlotSavePath:     req.SlotSavePath,
+			CacheRAM:         req.CacheRAM,
+			ReusePort:        req.ReusePort,
+			SleepIdleSeconds: req.SleepIdleSeconds,
+			Timeout:          req.Timeout,
+			Alias:            req.Alias,
 			// Reasoning
-			Reasoning:            req.Reasoning,
-			ReasoningFormat:      req.ReasoningFormat,
-			ReasoningBudget:      req.ReasoningBudget,
+			Reasoning:       req.Reasoning,
+			ReasoningFormat: req.ReasoningFormat,
+			ReasoningBudget: req.ReasoningBudget,
 			// Embedding / reranking
-			LogitsAll:            req.LogitsAll,
-			Reranking:            req.Reranking,
-			Pooling:              req.Pooling,
-			EmbdNormalize:        req.EmbdNormalize,
+			LogitsAll:     req.LogitsAll,
+			Reranking:     req.Reranking,
+			Pooling:       req.Pooling,
+			EmbdNormalize: req.EmbdNormalize,
 			// Multimodal
-			MmprojPath:           req.MmprojPath,
-			EnableVision:         req.EnableVision,
-			MmprojOffload:        req.MmprojOffload,
+			MmprojPath:    req.MmprojPath,
+			EnableVision:  req.EnableVision,
+			MmprojOffload: req.MmprojOffload,
 			// Chat template
-			ChatTemplateFile:     req.ChatTemplateFile,
-			ChatTemplate:         req.ChatTemplate,
-			ChatTemplateKwargs:   req.ChatTemplateKwargs,
-			DisableJinja:         req.DisableJinja,
-			ContextShift:         req.ContextShift,
+			ChatTemplateFile:   req.ChatTemplateFile,
+			ChatTemplate:       req.ChatTemplate,
+			ChatTemplateKwargs: req.ChatTemplateKwargs,
+			DisableJinja:       req.DisableJinja,
+			ContextShift:       req.ContextShift,
 			// RoPE
-			RopeScaling:          req.RopeScaling,
-			RopeScale:            req.RopeScale,
-			RopeFreqBase:         req.RopeFreqBase,
-			RopeFreqScale:        req.RopeFreqScale,
+			RopeScaling:   req.RopeScaling,
+			RopeScale:     req.RopeScale,
+			RopeFreqBase:  req.RopeFreqBase,
+			RopeFreqScale: req.RopeFreqScale,
 			// YaRN
-			YarnOrigCtx:          req.YarnOrigCtx,
-			YarnExtFactor:        req.YarnExtFactor,
-			YarnAttnFactor:       req.YarnAttnFactor,
-			YarnBetaSlow:         req.YarnBetaSlow,
-			YarnBetaFast:         req.YarnBetaFast,
+			YarnOrigCtx:    req.YarnOrigCtx,
+			YarnExtFactor:  req.YarnExtFactor,
+			YarnAttnFactor: req.YarnAttnFactor,
+			YarnBetaSlow:   req.YarnBetaSlow,
+			YarnBetaFast:   req.YarnBetaFast,
 			// Structured generation
-			Grammar:              req.Grammar,
-			GrammarFile:          req.GrammarFile,
-			JSONSchema:           req.JSONSchema,
-			JSONSchemaFile:       req.JSONSchemaFile,
+			Grammar:        req.Grammar,
+			GrammarFile:    req.GrammarFile,
+			JSONSchema:     req.JSONSchema,
+			JSONSchemaFile: req.JSONSchemaFile,
 			// LoRA
-			Lora:                 req.Lora,
-			LoraScaled:           req.LoraScaled,
+			Lora:       req.Lora,
+			LoraScaled: req.LoraScaled,
 			// Escape hatch
-			CustomCmd:            req.CustomCmd,
-			ExtraParams:          req.ExtraParams,
+			CustomCmd:   req.CustomCmd,
+			ExtraParams: req.ExtraParams,
 		}
 	}
 
@@ -520,6 +561,36 @@ func (m *Manager) buildVLLMParams(req *LoadRequest) *backend.VLLMLoadParams {
 		EnforceEager:         req.EnforceEager,
 		ExtraArgs:            req.ExtraParams,
 	}
+}
+
+// ListRuntimeInstances returns all known runtime instances.
+func (m *Manager) ListRuntimeInstances() []*RuntimeInstance {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	instances := make([]*RuntimeInstance, 0, len(m.instances))
+	for _, inst := range m.instances {
+		copy := *inst
+		instances = append(instances, &copy)
+	}
+	return instances
+}
+
+// GetRuntimeInstance returns a runtime instance by ID.
+func (m *Manager) GetRuntimeInstance(instanceID string) (*RuntimeInstance, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	inst, ok := m.instances[instanceID]
+	if !ok {
+		return nil, false
+	}
+	copy := *inst
+	return &copy, true
+}
+
+func generateRuntimeInstanceID(modelID string) string {
+	return fmt.Sprintf("inst_%s_%d", modelID, time.Now().UnixNano())
 }
 
 func applyRuntimeConfig(status *ModelStatus, unloadAfterMinutes, concurrencyLimit int) {

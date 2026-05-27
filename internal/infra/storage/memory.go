@@ -17,6 +17,7 @@ type MemoryStore struct {
 	benchmarks       map[string]*Benchmark
 	benchmarkConfigs map[string]*BenchmarkConfig
 	modelLoadConfigs map[string]*ModelLoadConfig // key: "nodeID:modelID:name"
+	launchProfiles   map[string]*LaunchProfile   // key: id
 	modelMetadata    map[string]*ModelMetadata   // key: modelID
 	ttsHistory       map[string]*TTSHistoryItem  // key: id
 	downloadTasks    map[string]*DownloadTask    // key: id
@@ -31,6 +32,7 @@ func NewMemoryStore() (*MemoryStore, error) {
 		benchmarks:       make(map[string]*Benchmark),
 		benchmarkConfigs: make(map[string]*BenchmarkConfig),
 		modelLoadConfigs: make(map[string]*ModelLoadConfig),
+		launchProfiles:   make(map[string]*LaunchProfile),
 		modelMetadata:    make(map[string]*ModelMetadata),
 		ttsHistory:       make(map[string]*TTSHistoryItem),
 		downloadTasks:    make(map[string]*DownloadTask),
@@ -475,6 +477,83 @@ func (s *MemoryStore) DeleteNamedModelLoadConfig(ctx context.Context, nodeID, mo
 	return nil
 }
 
+// CreateLaunchProfile creates a launch profile.
+func (s *MemoryStore) CreateLaunchProfile(ctx context.Context, profile *LaunchProfile) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if profile.ID == "" {
+		profile.ID = generateID("lprof")
+	}
+	if profile.CreatedAt.IsZero() {
+		profile.CreatedAt = time.Now()
+	}
+	profile.UpdatedAt = profile.CreatedAt
+	s.launchProfiles[profile.ID] = profile
+	return nil
+}
+
+// GetLaunchProfile returns a launch profile by ID.
+func (s *MemoryStore) GetLaunchProfile(ctx context.Context, id string) (*LaunchProfile, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	profile, exists := s.launchProfiles[id]
+	if !exists {
+		return nil, ErrModelLoadConfigNotFound
+	}
+	copy := *profile
+	return &copy, nil
+}
+
+// ListLaunchProfiles returns launch profiles filtered by backend type and model scope.
+func (s *MemoryStore) ListLaunchProfiles(ctx context.Context, backendType, modelScope string) ([]*LaunchProfile, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	result := []*LaunchProfile{}
+	for _, profile := range s.launchProfiles {
+		if backendType != "" && profile.BackendType != backendType {
+			continue
+		}
+		if modelScope != "" && profile.ModelScope != "" && profile.ModelScope != modelScope {
+			continue
+		}
+		copy := *profile
+		result = append(result, &copy)
+	}
+	return result, nil
+}
+
+// UpdateLaunchProfile updates an existing launch profile.
+func (s *MemoryStore) UpdateLaunchProfile(ctx context.Context, profile *LaunchProfile) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	existing, exists := s.launchProfiles[profile.ID]
+	if !exists {
+		return ErrModelLoadConfigNotFound
+	}
+	if profile.CreatedAt.IsZero() {
+		profile.CreatedAt = existing.CreatedAt
+	}
+	profile.UpdatedAt = time.Now()
+	s.launchProfiles[profile.ID] = profile
+	return nil
+}
+
+// DeleteLaunchProfile deletes a launch profile.
+func (s *MemoryStore) DeleteLaunchProfile(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.launchProfiles[id]; !exists {
+		return ErrModelLoadConfigNotFound
+	}
+	delete(s.launchProfiles, id)
+	return nil
+}
+
 // ModelMetadata operations
 
 // SaveModelMetadata saves or updates model metadata
@@ -556,7 +635,7 @@ func (s *MemoryStore) GetAllModelMetadata(ctx context.Context) (map[string]*Mode
 	return result, nil
 }
 
-//  TTS History Operations 
+//  TTS History Operations
 
 // CreateTTSHistory creates a new TTS history record
 func (s *MemoryStore) CreateTTSHistory(ctx context.Context, item *TTSHistoryItem) error {

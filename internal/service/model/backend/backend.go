@@ -71,6 +71,7 @@ type BackendInfo struct {
 // StartConfig contains the command and metadata needed to start a backend process
 type StartConfig struct {
 	Command           string // Full command string to execute
+	CommandSpec       *CommandSpec
 	BinPath           string // Binary/library path for the process manager
 	BackendType       BackendType
 	SkipLDLibraryPath bool     // If true, skip setting LD_LIBRARY_PATH (for conda-based backends)
@@ -175,15 +176,15 @@ type Backend interface {
 // Each field corresponds to a llama-server command-line flag.
 type LlamacppLoadParams struct {
 	// ---- Sampling: basic ----
-	Temperature   float64 // --temp
-	TopP          float64 // --top-p
-	TopK          int     // --top-k
-	MinP          float64 // --min-p  (0 = disabled)
-	TopNSigma     float64 // --top-n-sigma  (-1 = disabled)
-	TypicalP      float64 // --typical-p  (1.0 = disabled)
-	Seed          int     // --seed  (-1 = random)
-	NPredict      int     // -n / --n-predict  (-1 = unlimited)
-	Samplers      string  // --samplers  semicolon-separated sampler order
+	Temperature float64 // --temp
+	TopP        float64 // --top-p
+	TopK        int     // --top-k
+	MinP        float64 // --min-p  (0 = disabled)
+	TopNSigma   float64 // --top-n-sigma  (-1 = disabled)
+	TypicalP    float64 // --typical-p  (1.0 = disabled)
+	Seed        int     // --seed  (-1 = random)
+	NPredict    int     // -n / --n-predict  (-1 = unlimited)
+	Samplers    string  // --samplers  semicolon-separated sampler order
 
 	// ---- Sampling: penalties ----
 	RepeatPenalty    float64 // --repeat-penalty  (1.0 = disabled)
@@ -193,11 +194,11 @@ type LlamacppLoadParams struct {
 	IgnoreEOS        bool    // --ignore-eos
 
 	// ---- Sampling: DRY (Don't Repeat Yourself) ----
-	DryMultiplier      float64 // --dry-multiplier  (0 = disabled)
-	DryBase            float64 // --dry-base  (default 1.75)
-	DryAllowedLength   int     // --dry-allowed-length  (default 2)
-	DryPenaltyLastN    int     // --dry-penalty-last-n  (-1 = ctx_size)
-	DrySequenceBreakers string // --dry-sequence-breaker  comma-separated
+	DryMultiplier       float64 // --dry-multiplier  (0 = disabled)
+	DryBase             float64 // --dry-base  (default 1.75)
+	DryAllowedLength    int     // --dry-allowed-length  (default 2)
+	DryPenaltyLastN     int     // --dry-penalty-last-n  (-1 = ctx_size)
+	DrySequenceBreakers string  // --dry-sequence-breaker  comma-separated
 
 	// ---- Sampling: Mirostat ----
 	Mirostat    int     // --mirostat  (0=disabled, 1, 2)
@@ -242,28 +243,28 @@ type LlamacppLoadParams struct {
 	FlashAttention bool // -fa  (on/off; false = use default)
 
 	// ---- KV cache ----
-	KVCacheTypeK       string  // -ctk  (f32 / f16 / q8_0 / q5_1 / q4_1 / q4_0 / iq4_nl)
-	KVCacheTypeV       string  // -ctv
-	KVCacheUnified     bool    // -kvu  (single unified KV buffer)
-	KVOffload          bool    // -kvo  (offload KV cache to device)
-	CacheIdleSlots     bool    // --cache-idle-slots  (save KV of idle slots; requires -kvu)
-	CacheReuse         int     // --cache-reuse  (min chunk size for KV-shift reuse)
-	CtxCheckpoints     int     // --ctx-checkpoints / -ctxcp  (per-slot SWA checkpoints)
-	CheckpointMinStep  int     // --checkpoint-min-step / -cms
+	KVCacheTypeK         string  // -ctk  (f32 / f16 / q8_0 / q5_1 / q4_1 / q4_0 / iq4_nl)
+	KVCacheTypeV         string  // -ctv
+	KVCacheUnified       bool    // -kvu  (single unified KV buffer)
+	KVOffload            bool    // -kvo  (offload KV cache to device)
+	CacheIdleSlots       bool    // --cache-idle-slots  (save KV of idle slots; requires -kvu)
+	CacheReuse           int     // --cache-reuse  (min chunk size for KV-shift reuse)
+	CtxCheckpoints       int     // --ctx-checkpoints / -ctxcp  (per-slot SWA checkpoints)
+	CheckpointMinStep    int     // --checkpoint-min-step / -cms
 	SlotPromptSimilarity float64 // --slot-prompt-similarity  (0 = disabled)
 
 	// ---- Server operation ----
-	ParallelSlots int    // --parallel / -np
-	ContBatching  bool   // --cont-batching / -cb  (false → --no-cont-batching)
-	CachePrompt   bool   // --cache-prompt
-	CacheRAM      int    // --cache-ram  (max RAM cache size in MiB; -1=unlimited)
-	SlotSavePath  string // --slot-save-path
-	ReusePort     bool   // --reuse-port
-	SleepIdleSeconds int // --sleep-idle-seconds  (-1 = disabled)
-	Timeout       int    // --timeout
-	Alias         string // --alias
-	NoWebUI       bool   // --no-ui
-	EnableMetrics bool   // --metrics
+	ParallelSlots    int    // --parallel / -np
+	ContBatching     bool   // --cont-batching / -cb  (false → --no-cont-batching)
+	CachePrompt      bool   // --cache-prompt
+	CacheRAM         int    // --cache-ram  (max RAM cache size in MiB; -1=unlimited)
+	SlotSavePath     string // --slot-save-path
+	ReusePort        bool   // --reuse-port
+	SleepIdleSeconds int    // --sleep-idle-seconds  (-1 = disabled)
+	Timeout          int    // --timeout
+	Alias            string // --alias
+	NoWebUI          bool   // --no-ui
+	EnableMetrics    bool   // --metrics
 
 	// ---- Reasoning / thinking (for DeepSeek-R1 etc.) ----
 	Reasoning       string // --reasoning  (auto / on / off)
@@ -271,15 +272,15 @@ type LlamacppLoadParams struct {
 	ReasoningBudget int    // --reasoning-budget  (-1 = unlimited)
 
 	// ---- Embedding / reranking ----
-	LogitsAll    bool   // --logits-all  (required for some embedding workflows)
-	Reranking    bool   // --reranking
-	Pooling      string // --pooling  (none / mean / cls / last / rank)
-	EmbdNormalize int   // --embd-normalize  (-1=none, 0=max, 1=taxicab, 2=euclidean)
+	LogitsAll     bool   // --logits-all  (required for some embedding workflows)
+	Reranking     bool   // --reranking
+	Pooling       string // --pooling  (none / mean / cls / last / rank)
+	EmbdNormalize int    // --embd-normalize  (-1=none, 0=max, 1=taxicab, 2=euclidean)
 
 	// ---- Multimodal ----
-	MmprojPath   string // --mmproj
-	EnableVision bool   // internal flag — triggers mmproj auto-search
-	MmprojOffload bool  // --mmproj-offload
+	MmprojPath    string // --mmproj
+	EnableVision  bool   // internal flag — triggers mmproj auto-search
+	MmprojOffload bool   // --mmproj-offload
 
 	// ---- Chat template ----
 	ChatTemplateFile   string // --chat-template-file

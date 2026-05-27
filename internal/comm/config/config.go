@@ -66,14 +66,30 @@ type ModelGroupDef struct {
 
 // LlamacppConfig contains llama.cpp binary paths configuration
 type LlamacppConfig struct {
-	Paths []LlamacppPath `mapstructure:"paths" yaml:"paths" json:"paths"`
+	Paths         []LlamacppPath         `mapstructure:"paths" yaml:"paths" json:"paths"`
+	Installations []LlamaCppInstallation `mapstructure:"installations" yaml:"installations" json:"installations"`
 }
 
-// LlamacppPath represents a llama.cpp binary path with metadata
+// LlamacppPath represents a llama.cpp binary path with metadata.
+// Deprecated: use LlamaCppInstallation for managed installation metadata.
 type LlamacppPath struct {
 	Path        string `mapstructure:"path" yaml:"path" json:"path"`
 	Name        string `mapstructure:"name" yaml:"name" json:"name"`
 	Description string `mapstructure:"description" yaml:"description" json:"description,omitempty"`
+}
+
+// LlamaCppInstallation represents a managed llama.cpp installation.
+type LlamaCppInstallation struct {
+	ID          string   `mapstructure:"id" yaml:"id" json:"id"`
+	Name        string   `mapstructure:"name" yaml:"name" json:"name"`
+	Path        string   `mapstructure:"path" yaml:"path" json:"path"`
+	ServerBin   string   `mapstructure:"server_bin" yaml:"server_bin" json:"serverBin"`
+	Version     string   `mapstructure:"version" yaml:"version" json:"version"`
+	Enabled     bool     `mapstructure:"enabled" yaml:"enabled" json:"enabled"`
+	Priority    int      `mapstructure:"priority" yaml:"priority" json:"priority"`
+	LastCheck   string   `mapstructure:"last_check" yaml:"last_check" json:"lastCheck"`
+	Warnings    []string `mapstructure:"warnings" yaml:"warnings" json:"warnings"`
+	Description string   `mapstructure:"description" yaml:"description" json:"description,omitempty"`
 }
 
 // ModelPath represents a model directory path with metadata

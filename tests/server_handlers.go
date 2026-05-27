@@ -16,12 +16,12 @@ import (
 // testServerHandlers implements router.ServerHandlers for testing.
 // It provides real handler implementations that work against in-memory stores.
 type testServerHandlers struct {
-	config     *config.Config
-	configMgr  *config.Manager
-	modelMgr   *model.Manager
-	storageMgr *storage.Manager
+	config      *config.Config
+	configMgr   *config.Manager
+	modelMgr    *model.Manager
+	storageMgr  *storage.Manager
 	downloadMgr *download.Manager
-	handlers   *router.Handlers
+	handlers    *router.Handlers
 }
 
 // Verify interface implementation at compile time.
@@ -88,6 +88,14 @@ func (s *testServerHandlers) HandleGetLlamacppBackends(c *gin.Context) {
 		"inferenceBackends": []gin.H{},
 		"count":             0,
 	})
+}
+
+func (s *testServerHandlers) HandleGetLlamacppParamSchema(c *gin.Context) {
+	api.Success(c, gin.H{"backend": "llamacpp", "params": []interface{}{}})
+}
+
+func (s *testServerHandlers) HandlePreviewLlamacppCommand(c *gin.Context) {
+	api.Success(c, gin.H{"command": "", "spec": nil})
 }
 
 func (s *testServerHandlers) HandleGetConfig(c *gin.Context) {
@@ -233,6 +241,38 @@ func (s *testServerHandlers) HandleSaveNamedModelLoadConfig(c *gin.Context) {
 
 func (s *testServerHandlers) HandleDeleteNamedModelLoadConfig(c *gin.Context) {
 	api.Success(c, gin.H{"message": "named config deleted"})
+}
+
+func (s *testServerHandlers) HandleListLaunchProfiles(c *gin.Context) {
+	api.Success(c, gin.H{"profiles": []interface{}{}, "count": 0})
+}
+
+func (s *testServerHandlers) HandleCreateLaunchProfile(c *gin.Context) {
+	api.Success(c, gin.H{"profile": nil})
+}
+
+func (s *testServerHandlers) HandleGetLaunchProfile(c *gin.Context) {
+	api.NotFound(c, "Launch profile")
+}
+
+func (s *testServerHandlers) HandleUpdateLaunchProfile(c *gin.Context) {
+	api.Success(c, gin.H{"profile": nil})
+}
+
+func (s *testServerHandlers) HandleDeleteLaunchProfile(c *gin.Context) {
+	api.Success(c, gin.H{"message": "launch profile deleted"})
+}
+
+func (s *testServerHandlers) HandleListRuntimeInstances(c *gin.Context) {
+	api.Success(c, gin.H{"instances": []interface{}{}, "count": 0})
+}
+
+func (s *testServerHandlers) HandleGetRuntimeInstance(c *gin.Context) {
+	api.NotFound(c, "Runtime instance")
+}
+
+func (s *testServerHandlers) HandleStopRuntimeInstance(c *gin.Context) {
+	api.Success(c, gin.H{"message": "runtime instance stopped"})
 }
 
 func (s *testServerHandlers) HandleScanModels(c *gin.Context) {

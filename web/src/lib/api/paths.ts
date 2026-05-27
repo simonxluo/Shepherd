@@ -35,6 +35,10 @@ interface PathTestResponse {
     valid: boolean;
     message?: string;
     error?: string;
+    binary?: string;
+    version?: string;
+    warnings?: string[];
+    path?: string;
   };
 }
 

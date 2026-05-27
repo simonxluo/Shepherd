@@ -54,6 +54,8 @@ type ServerHandlers interface {
 	HandleServerInfo(c *gin.Context)
 	HandleGetGPUs(c *gin.Context)
 	HandleGetLlamacppBackends(c *gin.Context)
+	HandleGetLlamacppParamSchema(c *gin.Context)
+	HandlePreviewLlamacppCommand(c *gin.Context)
 	HandleGetResources(c *gin.Context)
 	HandleGetConfig(c *gin.Context)
 	HandleUpdateConfig(c *gin.Context)
@@ -74,6 +76,14 @@ type ServerHandlers interface {
 	HandleListModelLoadConfigs(c *gin.Context)
 	HandleSaveNamedModelLoadConfig(c *gin.Context)
 	HandleDeleteNamedModelLoadConfig(c *gin.Context)
+	HandleListLaunchProfiles(c *gin.Context)
+	HandleCreateLaunchProfile(c *gin.Context)
+	HandleGetLaunchProfile(c *gin.Context)
+	HandleUpdateLaunchProfile(c *gin.Context)
+	HandleDeleteLaunchProfile(c *gin.Context)
+	HandleListRuntimeInstances(c *gin.Context)
+	HandleGetRuntimeInstance(c *gin.Context)
+	HandleStopRuntimeInstance(c *gin.Context)
 	HandleScanModels(c *gin.Context)
 	HandleGetScanStatus(c *gin.Context)
 	HandleListDownloads(c *gin.Context)
@@ -156,12 +166,16 @@ func registerRoutes(
 		apiGroup.GET("/info", sh.HandleServerInfo)
 		apiGroup.GET("/system/gpus", sh.HandleGetGPUs)
 		apiGroup.GET("/system/llamacpp-backends", sh.HandleGetLlamacppBackends)
+		apiGroup.GET("/backends/llamacpp/schema", sh.HandleGetLlamacppParamSchema)
+		apiGroup.POST("/backends/llamacpp/preview", sh.HandlePreviewLlamacppCommand)
 		apiGroup.GET("/system/resources", sh.HandleGetResources)
 
 		registerConfigRoutes(apiGroup, h, sh)
 		registerConversationRoutes(apiGroup, h)
 		registerModelRoutes(apiGroup, sh, h)
 		registerModelScanRoutes(apiGroup, sh)
+		registerLaunchProfileRoutes(apiGroup, sh)
+		registerRuntimeInstanceRoutes(apiGroup, sh)
 		registerDownloadRoutes(apiGroup, sh)
 		registerRepoRoutes(apiGroup, sh)
 		registerProcessRoutes(apiGroup, sh)
@@ -310,6 +324,26 @@ func registerModelScanRoutes(apiGroup *gin.RouterGroup, sh ServerHandlers) {
 	{
 		modelScan.POST("", sh.HandleScanModels)
 		modelScan.GET("/status", sh.HandleGetScanStatus)
+	}
+}
+
+func registerLaunchProfileRoutes(apiGroup *gin.RouterGroup, sh ServerHandlers) {
+	profiles := apiGroup.Group("/launch-profiles")
+	{
+		profiles.GET("", sh.HandleListLaunchProfiles)
+		profiles.POST("", sh.HandleCreateLaunchProfile)
+		profiles.GET("/:id", sh.HandleGetLaunchProfile)
+		profiles.PUT("/:id", sh.HandleUpdateLaunchProfile)
+		profiles.DELETE("/:id", sh.HandleDeleteLaunchProfile)
+	}
+}
+
+func registerRuntimeInstanceRoutes(apiGroup *gin.RouterGroup, sh ServerHandlers) {
+	instances := apiGroup.Group("/instances")
+	{
+		instances.GET("", sh.HandleListRuntimeInstances)
+		instances.GET("/:id", sh.HandleGetRuntimeInstance)
+		instances.POST("/:id/stop", sh.HandleStopRuntimeInstance)
 	}
 }
 

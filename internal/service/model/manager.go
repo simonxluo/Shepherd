@@ -25,10 +25,12 @@ type Manager struct {
 	// Backend registry for multi-backend support
 	backendRegistry *backend.Registry
 
-	models     map[string]*Model
-	statuses   map[string]*ModelStatus
-	scanStatus *ScanStatus
-	groups     map[string]*ModelGroup
+	models         map[string]*Model
+	statuses       map[string]*ModelStatus
+	instances      map[string]*RuntimeInstance
+	modelInstances map[string][]string
+	scanStatus     *ScanStatus
+	groups         map[string]*ModelGroup
 
 	// version is incremented on every models/statuses map mutation.
 	// Used by ModelLookupIndex to avoid full rebuilds on every request.
@@ -67,6 +69,8 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 		backendRegistry: backendRegistry,
 		models:          make(map[string]*Model),
 		statuses:        make(map[string]*ModelStatus),
+		instances:       make(map[string]*RuntimeInstance),
+		modelInstances:  make(map[string][]string),
 		scanStatus:      &ScanStatus{},
 		groups:          make(map[string]*ModelGroup),
 		ctx:             ctx,

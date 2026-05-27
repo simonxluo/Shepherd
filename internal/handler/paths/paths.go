@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
-	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"github.com/simonxluo/Shepherd/internal/handler"
+	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // pathCRUD provides generic CRUD operations for path configuration slices.
@@ -297,17 +297,39 @@ func (h *Handler) TestLlamaCppPath(c *gin.Context) {
 		handler.Success(c, gin.H{"valid": false, "error": err.Error()})
 		return
 	}
-	// Check if llama-server binary is findable at this path
-	serverBin := utils.FindLlamacppBinary(normalizedPath, "server")
-	if serverBin == "" {
+	probe, err := backend.ProbeLlamaCppInstallation(normalizedPath)
+	if err != nil {
 		handler.Success(c, gin.H{
-			"valid":   false,
-			"error":   fmt.Sprintf("llama-server not found in path: %s (looked for llama-server, server in the directory and bin/, build/bin/ subdirectories)", normalizedPath),
-			"path":    normalizedPath,
+			"valid":    false,
+			"error":    err.Error(),
+			"path":     normalizedPath,
+			"warnings": []string{err.Error()},
 		})
 		return
 	}
-	handler.Success(c, gin.H{"valid": true, "message": "Path is valid", "binary": serverBin, "path": normalizedPath})
+	if !probe.Available {
+		errorMessage := fmt.Sprintf("llama-server not found in path: %s (looked for llama-server, server in the directory and bin/, build/bin/ subdirectories)", normalizedPath)
+		if len(probe.Warnings) > 0 {
+			errorMessage = probe.Warnings[0]
+		}
+		handler.Success(c, gin.H{
+			"valid":    false,
+			"error":    errorMessage,
+			"path":     normalizedPath,
+			"binary":   probe.Binary,
+			"version":  probe.Version,
+			"warnings": probe.Warnings,
+		})
+		return
+	}
+	handler.Success(c, gin.H{
+		"valid":    true,
+		"message":  "Path is valid",
+		"binary":   probe.Binary,
+		"version":  probe.Version,
+		"warnings": probe.Warnings,
+		"path":     normalizedPath,
+	})
 }
 
 // --- Model paths ---

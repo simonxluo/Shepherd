@@ -126,6 +126,19 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 		name TEXT NOT NULL DEFAULT ''
 	);
 
+	CREATE TABLE IF NOT EXISTS launch_profiles (
+		id TEXT PRIMARY KEY,
+		name TEXT NOT NULL,
+		backend_type TEXT NOT NULL,
+		installation_id TEXT,
+		model_scope TEXT,
+		params TEXT NOT NULL,
+		env TEXT,
+		extra_args TEXT,
+		created_at INTEGER NOT NULL,
+		updated_at INTEGER NOT NULL
+	);
+
 	CREATE TABLE IF NOT EXISTS model_metadata (
 		model_id TEXT PRIMARY KEY,
 		node_id TEXT,
@@ -149,6 +162,8 @@ func (s *SQLiteStore) initSchema(config *SQLiteConfig) error {
 	CREATE INDEX IF NOT EXISTS idx_benchmarks_status ON benchmarks(status);
 	CREATE INDEX IF NOT EXISTS idx_benchmarks_created ON benchmarks(created_at);
 	CREATE INDEX IF NOT EXISTS idx_model_load_configs_node_model ON model_load_configs(node_id, model_id);
+	CREATE INDEX IF NOT EXISTS idx_launch_profiles_backend ON launch_profiles(backend_type);
+	CREATE INDEX IF NOT EXISTS idx_launch_profiles_model_scope ON launch_profiles(model_scope);
 
 	CREATE TABLE IF NOT EXISTS tts_history (
 		id TEXT PRIMARY KEY,
@@ -1200,6 +1215,163 @@ func (s *SQLiteStore) DeleteNamedModelLoadConfig(ctx context.Context, nodeID, mo
 	return nil
 }
 
+// CreateLaunchProfile creates a launch profile.
+func (s *SQLiteStore) CreateLaunchProfile(ctx context.Context, profile *LaunchProfile) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if profile.ID == "" {
+		profile.ID = generateID("lprof")
+	}
+	now := timeNow()
+	if profile.CreatedAt.IsZero() {
+		profile.CreatedAt = now
+	}
+	profile.UpdatedAt = now
+
+	paramsJSON, err := json.Marshal(profile.Params)
+	if err != nil {
+		return fmt.Errorf("failed to marshal launch profile params: %w", err)
+	}
+	envJSON, err := json.Marshal(profile.Env)
+	if err != nil {
+		return fmt.Errorf("failed to marshal launch profile env: %w", err)
+	}
+
+	_, err = s.db.ExecContext(ctx, `
+		INSERT INTO launch_profiles (id, name, backend_type, installation_id, model_scope, params, env, extra_args, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, profile.ID, profile.Name, profile.BackendType, profile.InstallationID, profile.ModelScope, string(paramsJSON), string(envJSON), profile.ExtraArgs, profile.CreatedAt.Unix(), profile.UpdatedAt.Unix())
+	return err
+}
+
+// GetLaunchProfile returns a launch profile by ID.
+func (s *SQLiteStore) GetLaunchProfile(ctx context.Context, id string) (*LaunchProfile, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	profile, err := s.scanLaunchProfile(s.db.QueryRowContext(ctx, `
+		SELECT id, name, backend_type, installation_id, model_scope, params, env, extra_args, created_at, updated_at
+		FROM launch_profiles WHERE id = ?
+	`, id))
+	if err == sql.ErrNoRows {
+		return nil, ErrModelLoadConfigNotFound
+	}
+	return profile, err
+}
+
+// ListLaunchProfiles returns launch profiles filtered by backend type and model scope.
+func (s *SQLiteStore) ListLaunchProfiles(ctx context.Context, backendType, modelScope string) ([]*LaunchProfile, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	query := `SELECT id, name, backend_type, installation_id, model_scope, params, env, extra_args, created_at, updated_at FROM launch_profiles WHERE 1=1`
+	args := []interface{}{}
+	if backendType != "" {
+		query += " AND backend_type = ?"
+		args = append(args, backendType)
+	}
+	if modelScope != "" {
+		query += " AND (model_scope = '' OR model_scope = ?)"
+		args = append(args, modelScope)
+	}
+	query += " ORDER BY name ASC"
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer utils.CloseQuietly(rows)
+
+	profiles := []*LaunchProfile{}
+	for rows.Next() {
+		profile, err := scanLaunchProfileRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		profiles = append(profiles, profile)
+	}
+	return profiles, rows.Err()
+}
+
+// UpdateLaunchProfile updates a launch profile.
+func (s *SQLiteStore) UpdateLaunchProfile(ctx context.Context, profile *LaunchProfile) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	paramsJSON, err := json.Marshal(profile.Params)
+	if err != nil {
+		return fmt.Errorf("failed to marshal launch profile params: %w", err)
+	}
+	envJSON, err := json.Marshal(profile.Env)
+	if err != nil {
+		return fmt.Errorf("failed to marshal launch profile env: %w", err)
+	}
+	profile.UpdatedAt = timeNow()
+
+	result, err := s.db.ExecContext(ctx, `
+		UPDATE launch_profiles
+		SET name = ?, backend_type = ?, installation_id = ?, model_scope = ?, params = ?, env = ?, extra_args = ?, updated_at = ?
+		WHERE id = ?
+	`, profile.Name, profile.BackendType, profile.InstallationID, profile.ModelScope, string(paramsJSON), string(envJSON), profile.ExtraArgs, profile.UpdatedAt.Unix(), profile.ID)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrModelLoadConfigNotFound
+	}
+	return nil
+}
+
+// DeleteLaunchProfile deletes a launch profile.
+func (s *SQLiteStore) DeleteLaunchProfile(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result, err := s.db.ExecContext(ctx, "DELETE FROM launch_profiles WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrModelLoadConfigNotFound
+	}
+	return nil
+}
+
+type launchProfileScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func (s *SQLiteStore) scanLaunchProfile(row launchProfileScanner) (*LaunchProfile, error) {
+	return scanLaunchProfile(row)
+}
+
+func scanLaunchProfileRows(rows *sql.Rows) (*LaunchProfile, error) {
+	return scanLaunchProfile(rows)
+}
+
+func scanLaunchProfile(scanner launchProfileScanner) (*LaunchProfile, error) {
+	var profile LaunchProfile
+	var paramsJSON, envJSON string
+	var createdAt, updatedAt int64
+	if err := scanner.Scan(&profile.ID, &profile.Name, &profile.BackendType, &profile.InstallationID, &profile.ModelScope, &paramsJSON, &envJSON, &profile.ExtraArgs, &createdAt, &updatedAt); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal([]byte(paramsJSON), &profile.Params); err != nil {
+		return nil, err
+	}
+	if envJSON != "" {
+		if err := json.Unmarshal([]byte(envJSON), &profile.Env); err != nil {
+			return nil, err
+		}
+	}
+	profile.CreatedAt = time.Unix(createdAt, 0)
+	profile.UpdatedAt = time.Unix(updatedAt, 0)
+	return &profile, nil
+}
+
 // ModelMetadata Operations
 
 // SaveModelMetadata saves or updates model metadata
@@ -1223,10 +1395,10 @@ func (s *SQLiteStore) SaveModelMetadata(ctx context.Context, metadata *ModelMeta
 		tagsJSON, _ := json.Marshal(metadata.Tags)
 		capsJSON, _ := json.Marshal(metadata.Capabilities)
 
-			var lastLoaded interface{}
-			if metadata.LastLoaded != nil {
-				lastLoaded = metadata.LastLoaded.Unix()
-			}
+		var lastLoaded interface{}
+		if metadata.LastLoaded != nil {
+			lastLoaded = metadata.LastLoaded.Unix()
+		}
 		query := `
 		INSERT INTO model_metadata (model_id, node_id, storage_path, alias, favourite, tags, description,
 			load_count, last_loaded, total_tokens, capabilities, created_at, updated_at)
