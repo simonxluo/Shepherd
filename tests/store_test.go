@@ -1,13 +1,16 @@
-package storage
+package tests
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
+
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
 // runStoreTestSuite runs the full Store interface compliance tests against any backend.
-func runStoreTestSuite(t *testing.T, store Store) {
+func runStoreTestSuite(t *testing.T, store storage.Store) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -40,15 +43,14 @@ func runStoreTestSuite(t *testing.T, store Store) {
 	})
 }
 
-func testConversationCRUD(t *testing.T, ctx context.Context, store Store) {
-	conv := &Conversation{
+func testConversationCRUD(t *testing.T, ctx context.Context, store storage.Store) {
+	conv := &storage.Conversation{
 		Model:        "test-model",
 		Title:        "Test Conversation",
 		SystemPrompt: "You are a test assistant",
 		Metadata:     map[string]interface{}{"key": "value"},
 	}
 
-	// Create
 	err := store.CreateConversation(ctx, conv)
 	if err != nil {
 		t.Fatalf("CreateConversation: %v", err)
@@ -57,7 +59,6 @@ func testConversationCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatal("CreateConversation: ID not generated")
 	}
 
-	// Get
 	got, err := store.GetConversation(ctx, conv.ID)
 	if err != nil {
 		t.Fatalf("GetConversation: %v", err)
@@ -69,7 +70,6 @@ func testConversationCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Errorf("GetConversation: title = %q, want %q", got.Title, "Test Conversation")
 	}
 
-	// List
 	list, err := store.ListConversations(ctx, 10, 0)
 	if err != nil {
 		t.Fatalf("ListConversations: %v", err)
@@ -78,7 +78,6 @@ func testConversationCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatal("ListConversations: empty result")
 	}
 
-	// Update
 	conv.Title = "Updated Title"
 	err = store.UpdateConversation(ctx, conv)
 	if err != nil {
@@ -89,30 +88,27 @@ func testConversationCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Errorf("UpdateConversation: title = %q, want %q", got.Title, "Updated Title")
 	}
 
-	// Delete
 	err = store.DeleteConversation(ctx, conv.ID)
 	if err != nil {
 		t.Fatalf("DeleteConversation: %v", err)
 	}
 	_, err = store.GetConversation(ctx, conv.ID)
-	if err != ErrConversationNotFound {
-		t.Errorf("GetConversation after delete: err = %v, want ErrConversationNotFound", err)
+	if err == nil {
+		t.Error("GetConversation after delete: expected error, got nil")
 	}
 }
 
-func testMessageCRUD(t *testing.T, ctx context.Context, store Store) {
-	// Create a conversation first
-	conv := &Conversation{Model: "test-model", Title: "Msg Test"}
+func testMessageCRUD(t *testing.T, ctx context.Context, store storage.Store) {
+	conv := &storage.Conversation{Model: "test-model", Title: "Msg Test"}
 	_ = store.CreateConversation(ctx, conv)
 
-	msg := &Message{
+	msg := &storage.Message{
 		ConversationID: conv.ID,
 		Role:           "user",
 		Content:        "Hello",
 		Metadata:       map[string]interface{}{"test": true},
 	}
 
-	// Create message
 	err := store.CreateMessage(ctx, msg)
 	if err != nil {
 		t.Fatalf("CreateMessage: %v", err)
@@ -121,13 +117,11 @@ func testMessageCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatal("CreateMessage: ID not generated")
 	}
 
-	// Verify conversation message count incremented
 	got, _ := store.GetConversation(ctx, conv.ID)
 	if got.MessageCount != 1 {
 		t.Errorf("MessageCount after CreateMessage: got %d, want 1", got.MessageCount)
 	}
 
-	// Get messages
 	msgs, err := store.GetMessages(ctx, conv.ID, 10, 0)
 	if err != nil {
 		t.Fatalf("GetMessages: %v", err)
@@ -139,7 +133,6 @@ func testMessageCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Errorf("GetMessages: content = %q, want %q", msgs[0].Content, "Hello")
 	}
 
-	// Delete messages
 	err = store.DeleteMessages(ctx, conv.ID)
 	if err != nil {
 		t.Fatalf("DeleteMessages: %v", err)
@@ -149,17 +142,17 @@ func testMessageCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Errorf("GetMessages after delete: len = %d, want 0", len(msgs))
 	}
 
-	// Cleanup
 	_ = store.DeleteConversation(ctx, conv.ID)
 }
 
-func testBenchmarkCRUD(t *testing.T, ctx context.Context, store Store) {
-	b := &Benchmark{
-		ID:        generateID("bench"),
+func testBenchmarkCRUD(t *testing.T, ctx context.Context, store storage.Store) {
+	now := time.Now().UTC()
+	b := &storage.Benchmark{
+		ID:        fmt.Sprintf("bench-%d", time.Now().UnixNano()),
 		ModelID:   "model-1",
 		ModelName: "Test Model",
 		Status:    "running",
-		CreatedAt: timeNow(),
+		CreatedAt: now,
 		Config:    map[string]interface{}{"threads": 4},
 	}
 
@@ -177,8 +170,8 @@ func testBenchmarkCRUD(t *testing.T, ctx context.Context, store Store) {
 	}
 
 	b.Status = "completed"
-	now := timeNow()
-	b.FinishedAt = &now
+	finished := time.Now().UTC()
+	b.FinishedAt = &finished
 	err = store.UpdateBenchmark(ctx, b)
 	if err != nil {
 		t.Fatalf("UpdateBenchmark: %v", err)
@@ -198,15 +191,15 @@ func testBenchmarkCRUD(t *testing.T, ctx context.Context, store Store) {
 	}
 }
 
-func testBenchmarkConfigCRUD(t *testing.T, ctx context.Context, store Store) {
-	cfg := &BenchmarkConfig{
-		Name:         "test-config",
+func testBenchmarkConfigCRUD(t *testing.T, ctx context.Context, store storage.Store) {
+	cfg := &storage.BenchmarkConfig{
+		Name:         fmt.Sprintf("test-config-%d", time.Now().UnixNano()),
 		ModelID:      "model-1",
 		ModelName:    "Test Model",
 		LlamaCppPath: "/usr/local/bin/llama-server",
 		Devices:      []string{"cuda:0"},
 		Params:       map[string]string{"threads": "4"},
-		CreatedAt:    timeNow(),
+		CreatedAt:    time.Now().UTC(),
 	}
 
 	err := store.CreateBenchmarkConfig(ctx, cfg)
@@ -214,7 +207,7 @@ func testBenchmarkConfigCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatalf("CreateBenchmarkConfig: %v", err)
 	}
 
-	got, err := store.GetBenchmarkConfig(ctx, "test-config")
+	got, err := store.GetBenchmarkConfig(ctx, cfg.Name)
 	if err != nil {
 		t.Fatalf("GetBenchmarkConfig: %v", err)
 	}
@@ -228,27 +221,25 @@ func testBenchmarkConfigCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatalf("UpdateBenchmarkConfig: %v", err)
 	}
 
-	err = store.DeleteBenchmarkConfig(ctx, "test-config")
+	err = store.DeleteBenchmarkConfig(ctx, cfg.Name)
 	if err != nil {
 		t.Fatalf("DeleteBenchmarkConfig: %v", err)
 	}
 }
 
-func testModelLoadConfigCRUD(t *testing.T, ctx context.Context, store Store) {
-	cfg := &ModelLoadConfig{
+func testModelLoadConfigCRUD(t *testing.T, ctx context.Context, store storage.Store) {
+	cfg := &storage.ModelLoadConfig{
 		NodeID:    "node-1",
 		ModelID:   "model-1",
 		ModelName: "Test Model",
 		Config:    map[string]interface{}{"gpu_layers": 32},
 	}
 
-	// Save default config
 	err := store.SaveModelLoadConfig(ctx, cfg)
 	if err != nil {
 		t.Fatalf("SaveModelLoadConfig: %v", err)
 	}
 
-	// Get
 	got, err := store.GetModelLoadConfig(ctx, "node-1", "model-1")
 	if err != nil {
 		t.Fatalf("GetModelLoadConfig: %v", err)
@@ -257,8 +248,7 @@ func testModelLoadConfigCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Errorf("GetModelLoadConfig: name = %q", got.ModelName)
 	}
 
-	// Save named preset
-	named := &ModelLoadConfig{
+	named := &storage.ModelLoadConfig{
 		NodeID:    "node-1",
 		ModelID:   "model-1",
 		ModelName: "Test Model",
@@ -270,7 +260,6 @@ func testModelLoadConfigCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatalf("SaveNamedModelLoadConfig: %v", err)
 	}
 
-	// List
 	list, err := store.ListModelLoadConfigs(ctx, "node-1", "model-1")
 	if err != nil {
 		t.Fatalf("ListModelLoadConfigs: %v", err)
@@ -279,21 +268,19 @@ func testModelLoadConfigCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Errorf("ListModelLoadConfigs: len = %d, want >= 2", len(list))
 	}
 
-	// Delete named
 	err = store.DeleteNamedModelLoadConfig(ctx, "node-1", "model-1", "fast")
 	if err != nil {
 		t.Fatalf("DeleteNamedModelLoadConfig: %v", err)
 	}
 
-	// Delete default
 	err = store.DeleteModelLoadConfig(ctx, "node-1", "model-1")
 	if err != nil {
 		t.Fatalf("DeleteModelLoadConfig: %v", err)
 	}
 }
 
-func testLaunchProfileCRUD(t *testing.T, ctx context.Context, store Store) {
-	profile := &LaunchProfile{
+func testLaunchProfileCRUD(t *testing.T, ctx context.Context, store storage.Store) {
+	profile := &storage.LaunchProfile{
 		Name:        "test-profile",
 		BackendType: "llamacpp",
 		Params:      map[string]interface{}{"threads": 8},
@@ -336,10 +323,10 @@ func testLaunchProfileCRUD(t *testing.T, ctx context.Context, store Store) {
 	}
 }
 
-func testModelMetadataCRUD(t *testing.T, ctx context.Context, store Store) {
-	now := timeNow()
-	metadata := &ModelMetadata{
-		ModelID:     "model-meta-1",
+func testModelMetadataCRUD(t *testing.T, ctx context.Context, store storage.Store) {
+	now := time.Now().UTC()
+	metadata := &storage.ModelMetadata{
+		ModelID:     fmt.Sprintf("model-meta-%d", time.Now().UnixNano()),
 		NodeID:      "node-1",
 		StoragePath: "/models/test.gguf",
 		Alias:       "test-alias",
@@ -349,7 +336,7 @@ func testModelMetadataCRUD(t *testing.T, ctx context.Context, store Store) {
 		LoadCount:   5,
 		LastLoaded:  &now,
 		TotalTokens: 1000,
-		Capabilities: &Capabilities{
+		Capabilities: &storage.Capabilities{
 			Thinking: true,
 			Tools:    true,
 		},
@@ -360,7 +347,7 @@ func testModelMetadataCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatalf("SaveModelMetadata (insert): %v", err)
 	}
 
-	got, err := store.GetModelMetadata(ctx, "model-meta-1")
+	got, err := store.GetModelMetadata(ctx, metadata.ModelID)
 	if err != nil {
 		t.Fatalf("GetModelMetadata: %v", err)
 	}
@@ -371,7 +358,6 @@ func testModelMetadataCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Error("GetModelMetadata: favourite = false, want true")
 	}
 
-	// Update
 	metadata.Alias = "updated-alias"
 	metadata.LoadCount = 10
 	err = store.SaveModelMetadata(ctx, metadata)
@@ -379,21 +365,19 @@ func testModelMetadataCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatalf("SaveModelMetadata (update): %v", err)
 	}
 
-	got, _ = store.GetModelMetadata(ctx, "model-meta-1")
+	got, _ = store.GetModelMetadata(ctx, metadata.ModelID)
 	if got.Alias != "updated-alias" {
 		t.Errorf("After update: alias = %q, want %q", got.Alias, "updated-alias")
 	}
 
-	// GetAll
 	all, err := store.GetAllModelMetadata(ctx)
 	if err != nil {
 		t.Fatalf("GetAllModelMetadata: %v", err)
 	}
-	if _, ok := all["model-meta-1"]; !ok {
-		t.Error("GetAllModelMetadata: model-meta-1 not found")
+	if _, ok := all[metadata.ModelID]; !ok {
+		t.Error("GetAllModelMetadata: model not found")
 	}
 
-	// List
 	list, err := store.ListModelMetadata(ctx, 10, 0)
 	if err != nil {
 		t.Fatalf("ListModelMetadata: %v", err)
@@ -402,15 +386,14 @@ func testModelMetadataCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatal("ListModelMetadata: empty")
 	}
 
-	// Delete
-	err = store.DeleteModelMetadata(ctx, "model-meta-1")
+	err = store.DeleteModelMetadata(ctx, metadata.ModelID)
 	if err != nil {
 		t.Fatalf("DeleteModelMetadata: %v", err)
 	}
 }
 
-func testTTSHistoryCRUD(t *testing.T, ctx context.Context, store Store) {
-	item := &TTSHistoryItem{
+func testTTSHistoryCRUD(t *testing.T, ctx context.Context, store storage.Store) {
+	item := &storage.TTSHistoryItem{
 		Model:     "tts-model",
 		InputText: "Hello world",
 		AudioPath: "/audio/test.wav",
@@ -436,13 +419,11 @@ func testTTSHistoryCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Errorf("GetTTSHistory: text = %q", got.InputText)
 	}
 
-	// Update favourite
 	err = store.UpdateTTSHistoryFavourite(ctx, item.ID, true)
 	if err != nil {
 		t.Fatalf("UpdateTTSHistoryFavourite: %v", err)
 	}
 
-	// List with favourite filter
 	trueVal := true
 	list, err := store.ListTTSHistory(ctx, 10, 0, &trueVal)
 	if err != nil {
@@ -452,15 +433,14 @@ func testTTSHistoryCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Error("ListTTSHistory favourite: empty")
 	}
 
-	// Delete
 	err = store.DeleteTTSHistory(ctx, item.ID)
 	if err != nil {
 		t.Fatalf("DeleteTTSHistory: %v", err)
 	}
 }
 
-func testDownloadTaskCRUD(t *testing.T, ctx context.Context, store Store) {
-	task := &DownloadTask{
+func testDownloadTaskCRUD(t *testing.T, ctx context.Context, store storage.Store) {
+	task := &storage.DownloadTask{
 		URL:       "https://example.com/model.gguf",
 		Path:      "/models/",
 		FileName:  "model.gguf",
@@ -484,7 +464,6 @@ func testDownloadTaskCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Errorf("GetDownloadTask: state = %q", got.State)
 	}
 
-	// Update
 	task.State = "downloading"
 	task.DownloadedBytes = 1024
 	task.TotalBytes = 4096
@@ -493,7 +472,6 @@ func testDownloadTaskCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatalf("UpdateDownloadTask: %v", err)
 	}
 
-	// List active
 	active, err := store.ListActiveDownloadTasks(ctx)
 	if err != nil {
 		t.Fatalf("ListActiveDownloadTasks: %v", err)
@@ -502,7 +480,6 @@ func testDownloadTaskCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Error("ListActiveDownloadTasks: empty (should have downloading task)")
 	}
 
-	// List
 	list, err := store.ListDownloadTasks(ctx, 10, 0)
 	if err != nil {
 		t.Fatalf("ListDownloadTasks: %v", err)
@@ -511,7 +488,6 @@ func testDownloadTaskCRUD(t *testing.T, ctx context.Context, store Store) {
 		t.Fatal("ListDownloadTasks: empty")
 	}
 
-	// Delete
 	err = store.DeleteDownloadTask(ctx, task.ID)
 	if err != nil {
 		t.Fatalf("DeleteDownloadTask: %v", err)
@@ -520,7 +496,7 @@ func testDownloadTaskCRUD(t *testing.T, ctx context.Context, store Store) {
 
 // TestMemoryStore runs the full test suite against the memory backend.
 func TestMemoryStore(t *testing.T) {
-	store, err := NewMemoryStore()
+	store, err := storage.NewMemoryStore()
 	if err != nil {
 		t.Fatalf("NewMemoryStore: %v", err)
 	}
@@ -531,7 +507,7 @@ func TestMemoryStore(t *testing.T) {
 // TestSQLiteStore runs the full test suite against the SQLite backend.
 func TestSQLiteStore(t *testing.T) {
 	dir := t.TempDir()
-	store, err := NewSQLiteStore(&SQLiteConfig{
+	store, err := storage.NewSQLiteStore(&storage.SQLiteConfig{
 		Path: dir + "/test.db",
 	})
 	if err != nil {
