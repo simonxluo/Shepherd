@@ -78,13 +78,13 @@ func ParseLlamacppDeviceList(output string) []string {
 	return devices
 }
 
+// devicePrefixRe matches known llama.cpp device prefixes: CUDA0, ROCm0, Vulkan0, Metal0, SYCL0, CPU0, etc.
+var devicePrefixRe = regexp.MustCompile(`^(CUDA|ROCm|Vulkan|Metal|SYCL|CPU)[0-9]*$`)
+
 // isValidLlamacppDevicePrefix 验证设备前缀是否有效
-// 有效的前缀格式: ROCm, CUDA, Vulkan, Metal 后跟数字
+// 有效的前缀格式: CUDA, ROCm, Vulkan, Metal, SYCL, CPU 后跟可选数字
 func isValidLlamacppDevicePrefix(prefix string) bool {
-	// 匹配格式: ROCm0, CUDA0, Vulkan0, Metal0 等
-	// 格式: 字母开头 + 可选的数字结尾
-	matched, _ := regexp.MatchString(`^[A-Za-z]+[0-9]*$`, prefix)
-	return matched && len(prefix) > 0
+	return devicePrefixRe.MatchString(prefix)
 }
 
 // GetLlamacppDeviceList 使用 llama-bench 获取设备列表
