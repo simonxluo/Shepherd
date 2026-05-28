@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
 func TestStorageConversationCRUD(t *testing.T) {

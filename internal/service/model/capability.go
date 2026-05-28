@@ -5,7 +5,7 @@ import (
 
 	"github.com/simonxluo/Shepherd/internal/infra/gguf"
 	"github.com/simonxluo/Shepherd/internal/infra/huggingface"
-	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
 // 能力检测关键词常量

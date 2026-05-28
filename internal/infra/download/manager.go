@@ -13,7 +13,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/event"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
-	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
 // ManagerDeps holds optional dependencies for the download manager

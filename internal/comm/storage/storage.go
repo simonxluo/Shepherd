@@ -13,7 +13,8 @@ type StorageType string
 const (
 	StorageTypeMemory     StorageType = "memory"     // In-memory storage (ephemeral)
 	StorageTypeSQLite     StorageType = "sqlite"     // SQLite file-based storage
-	StorageTypePostgreSQL StorageType = "postgresql" // PostgreSQL storage (future)
+	StorageTypePostgreSQL StorageType = "postgresql" // PostgreSQL storage
+	StorageTypeMySQL      StorageType = "mysql"      // MySQL storage
 )
 
 // StorageConfig represents storage configuration
@@ -21,6 +22,7 @@ type StorageConfig struct {
 	Type       StorageType       `mapstructure:"type" yaml:"type" json:"type"`
 	SQLite     *SQLiteConfig     `mapstructure:"sqlite" yaml:"sqlite" json:"sqlite,omitempty"`
 	PostgreSQL *PostgreSQLConfig `mapstructure:"postgresql" yaml:"postgresql" json:"postgresql,omitempty"`
+	MySQL      *MySQLConfig      `mapstructure:"mysql" yaml:"mysql" json:"mysql,omitempty"`
 }
 
 // SQLiteConfig contains SQLite-specific configuration
@@ -38,6 +40,16 @@ type PostgreSQLConfig struct {
 	Username string `mapstructure:"username" yaml:"username" json:"username"`
 	Password string `mapstructure:"password" yaml:"password" json:"password"`
 	SSLMode  string `mapstructure:"sslmode" yaml:"sslmode" json:"sslmode"` // disable, require, verify-ca, verify-full
+}
+
+// MySQLConfig contains MySQL-specific configuration
+type MySQLConfig struct {
+	Host     string `mapstructure:"host" yaml:"host" json:"host"`
+	Port     int    `mapstructure:"port" yaml:"port" json:"port"`
+	Database string `mapstructure:"database" yaml:"database" json:"database"`
+	Username string `mapstructure:"username" yaml:"username" json:"username"`
+	Password string `mapstructure:"password" yaml:"password" json:"password"`
+	Params   string `mapstructure:"params" yaml:"params" json:"params,omitempty"` // Additional DSN params (e.g. parseTime=true&charset=utf8mb4)
 }
 
 // Capabilities represents model capabilities configuration
@@ -309,33 +321,15 @@ type Manager struct {
 
 // NewManager creates a new storage manager
 func NewManager(config *StorageConfig) (*Manager, error) {
-	mgr := &Manager{
-		config: config,
-	}
-
-	var store Store
-	var err error
-
-	switch config.Type {
-	case StorageTypeMemory:
-		store, err = NewMemoryStore()
-	case StorageTypeSQLite:
-		if config.SQLite == nil {
-			return nil, ErrMissingSQLiteConfig
-		}
-		store, err = NewSQLiteStore(config.SQLite)
-	case StorageTypePostgreSQL:
-		return nil, ErrPostgreSQLNotSupported
-	default:
-		return nil, ErrInvalidStorageType
-	}
-
+	store, err := createStore(config)
 	if err != nil {
 		return nil, err
 	}
 
-	mgr.store = store
-	return mgr, nil
+	return &Manager{
+		store:  store,
+		config: config,
+	}, nil
 }
 
 // GetStore returns the underlying store
@@ -355,7 +349,8 @@ func (m *Manager) Close() error {
 var (
 	ErrInvalidStorageType      = &StorageError{Code: "INVALID_TYPE", Message: "Invalid storage type"}
 	ErrMissingSQLiteConfig     = &StorageError{Code: "MISSING_CONFIG", Message: "Missing SQLite configuration"}
-	ErrPostgreSQLNotSupported  = &StorageError{Code: "NOT_SUPPORTED", Message: "PostgreSQL support is not yet implemented"}
+	ErrMissingPostgreSQLConfig = &StorageError{Code: "MISSING_CONFIG", Message: "Missing PostgreSQL configuration"}
+	ErrMissingMySQLConfig      = &StorageError{Code: "MISSING_CONFIG", Message: "Missing MySQL configuration"}
 	ErrConversationNotFound    = &StorageError{Code: "NOT_FOUND", Message: "Conversation not found"}
 	ErrMessageNotFound         = &StorageError{Code: "NOT_FOUND", Message: "Message not found"}
 	ErrBenchmarkNotFound       = &StorageError{Code: "NOT_FOUND", Message: "Benchmark not found"}

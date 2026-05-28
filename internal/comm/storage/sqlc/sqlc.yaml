@@ -1,0 +1,31 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "sqlite/queries/"
+    schema: "sqlite/schema.sql"
+    gen:
+      go:
+        package: "sqlitedb"
+        out: "sqlite/db"
+        emit_json_tags: true
+        emit_empty_slices: true
+
+  - engine: "postgresql"
+    queries: "postgres/queries/"
+    schema: "postgres/schema.sql"
+    gen:
+      go:
+        package: "pgdb"
+        out: "postgres/db"
+        emit_json_tags: true
+        emit_empty_slices: true
+
+  - engine: "mysql"
+    queries: "mysql/queries/"
+    schema: "mysql/schema.sql"
+    gen:
+      go:
+        package: "mysqldb"
+        out: "mysql/db"
+        emit_json_tags: true
+        emit_empty_slices: true

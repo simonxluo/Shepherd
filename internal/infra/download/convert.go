@@ -3,7 +3,7 @@ package download
 import (
 	"fmt"
 
-	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
 // taskToStorageModel converts an in-memory Task to a storage DownloadTask

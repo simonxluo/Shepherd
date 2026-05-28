@@ -14,7 +14,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	api "github.com/simonxluo/Shepherd/internal/handler"
 	"github.com/simonxluo/Shepherd/internal/infra/gguf"
-	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/service/model"
 	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )

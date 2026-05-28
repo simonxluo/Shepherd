@@ -18,7 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
-	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
 const (

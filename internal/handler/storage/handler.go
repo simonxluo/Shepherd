@@ -9,7 +9,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	"github.com/simonxluo/Shepherd/internal/handler"
-	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
 // Handler handles storage API requests

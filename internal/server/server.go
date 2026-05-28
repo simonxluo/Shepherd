@@ -28,7 +28,7 @@ import (
 	ttsapi "github.com/simonxluo/Shepherd/internal/handler/tts"
 	"github.com/simonxluo/Shepherd/internal/infra/download"
 	modelrepoclient "github.com/simonxluo/Shepherd/internal/infra/modelrepo"
-	"github.com/simonxluo/Shepherd/internal/infra/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/router"
 	"github.com/simonxluo/Shepherd/internal/service/model"
 )
