@@ -360,6 +360,7 @@
     "inputPlaceholder": "Enter text to convert to speech...",
     "voiceLabel": "Voice",
     "selectVoice": "Select voice",
+    "voiceDefault": "Default",
     "enterVoice": "Enter voice name (e.g., alloy)",
     "formatLabel": "Output Format",
     "speedLabel": "Speed",

@@ -51,7 +51,7 @@ export function getTTSModelFeatures(model: LoadedModel): TTSModelFeatures {
 
   if (isVoxCPM || isOmniBackend) {
     return {
-      supportsVoiceSelection: false,
+      supportsVoiceSelection: true,
       supportsInstructions: true,
       supportsRefAudio: true,
       supportsUltimateCloning: isVoxCPM,
@@ -102,8 +102,20 @@ export function useTTS() {
   });
 }
 
+export interface VoiceOption {
+  id: string;
+  name: string;
+  description?: string;
+  isUploaded?: boolean;
+}
+
 interface VoicesResponse {
-  voices?: Array<{ id: string; name?: string }>;
+  voices?: string[];
+  uploaded_voices?: Array<{
+    name: string;
+    speaker_description?: string;
+    ref_text?: string;
+  }>;
 }
 
 export function useVoices(model?: string) {
@@ -112,7 +124,20 @@ export function useVoices(model?: string) {
     queryFn: async () => {
       if (!model) return [];
       const res = await v1Client.get<VoicesResponse>('/audio/voices', { model });
-      return res.voices ?? [];
+
+      // vLLM-Omni 返回 voices: string[] 和 uploaded_voices: Array<{name, ...}>
+      const presetVoices: VoiceOption[] = (res.voices ?? []).map(v => ({
+        id: v,
+        name: v,
+      }));
+      const uploadedVoices: VoiceOption[] = (res.uploaded_voices ?? []).map(v => ({
+        id: v.name,
+        name: v.name,
+        description: v.speaker_description,
+        isUploaded: true,
+      }));
+
+      return [...presetVoices, ...uploadedVoices];
     },
     enabled: !!model,
   });

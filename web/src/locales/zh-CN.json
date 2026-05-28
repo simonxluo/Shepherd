@@ -360,6 +360,7 @@
     "inputPlaceholder": "输入要转换为语音的文本...",
     "voiceLabel": "语音 (Voice)",
     "selectVoice": "选择语音",
+    "voiceDefault": "默认",
     "enterVoice": "输入语音名称 (如: alloy)",
     "formatLabel": "输出格式",
     "speedLabel": "语速",

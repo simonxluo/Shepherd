@@ -4,7 +4,7 @@ import { Volume2, Loader2, Settings2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -17,13 +17,12 @@ import {
   getTTSModelFeatures,
   type TTSRequest,
   type TTSConfig,
+  type VoiceOption,
 } from '../hooks';
 import { RefAudioInput } from './RefAudioInput';
 import { ConfigManager } from './ConfigManager';
 import { toast } from '@/hooks/useToast';
 import type { TTSPluginPanelProps } from '../types';
-
-const FALLBACK_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
 
 const AUDIO_FORMATS: Array<{ value: string; label: string; i18nKey?: string }> = [
   { value: 'mp3', label: 'MP3' },
@@ -240,19 +239,25 @@ export function GenericTTSPanel({
             </label>
             <Select value={voice} onValueChange={setVoice}>
               <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-                <SelectValue placeholder={voices.length > 0 ? t('tts.selectVoice', 'Select voice') : t('tts.enterVoice', 'Enter voice name')} />
+                <SelectValue placeholder={t('tts.selectVoice', 'Select voice')} />
               </SelectTrigger>
               <SelectContent>
-                {voices.length > 0
-                  ? voices.map((v) => (
+                <SelectItem value="default">{t('tts.voiceDefault', 'Default')}</SelectItem>
+                {voices.filter(v => !v.isUploaded).map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.name}
+                  </SelectItem>
+                ))}
+                {voices.some(v => v.isUploaded) && (
+                  <>
+                    <SelectSeparator />
+                    {voices.filter(v => v.isUploaded).map(v => (
                       <SelectItem key={v.id} value={v.id}>
-                        {v.name || v.id}
+                        {v.name}{v.description ? ` (${v.description})` : ''}
                       </SelectItem>
-                    ))
-                  : FALLBACK_VOICES.map((v) => (
-                      <SelectItem key={v} value={v}>{v}</SelectItem>
-                    ))
-                }
+                    ))}
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>

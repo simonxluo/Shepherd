@@ -13,7 +13,7 @@ const voxcpm2Plugin: TTSPlugin = {
   },
   component: VoxCPM2Panel,
   features: {
-    supportsVoiceSelection: false,
+    supportsVoiceSelection: true,
     supportsInstructions: true,
     supportsRefAudio: true,
     supportsUltimateCloning: true,

@@ -13,6 +13,7 @@ import { ModelSelect } from '@/features/creative/ModelSelect';
 import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import { useAvailableModels, BACKEND_LABELS } from '@/features/creative/hooks';
 import {
+  useVoices,
   useTTSConfig,
   getTTSModelFeatures,
   type TTSRequest,
@@ -98,6 +99,7 @@ export function VoxCPM2Panel({
   const isModelError = modelStatus === 'error';
 
   const [input, setInput] = useState('');
+  const [voice, setVoice] = useState('default');
   const [instructions, setInstructions] = useState('');
   const [refAudio, setRefAudio] = useState('');
   const [refText, setRefText] = useState('');
@@ -120,6 +122,8 @@ export function VoxCPM2Panel({
     [selectedModel]
   );
 
+  const { data: voices = [] } = useVoices(modelName);
+
   const { ttsConfig, saveConfig, deleteConfig } = useTTSConfig(modelIdForConfig);
 
   const backendLabel = selectedModel?.backendType
@@ -132,6 +136,7 @@ export function VoxCPM2Panel({
   useEffect(() => {
     if (ttsConfig) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (ttsConfig.voice !== undefined) setVoice(ttsConfig.voice);
       if (ttsConfig.instructions !== undefined) setInstructions(ttsConfig.instructions);
       if (ttsConfig.refAudio !== undefined) setRefAudio(ttsConfig.refAudio);
       if (ttsConfig.refText !== undefined) setRefText(ttsConfig.refText);
@@ -157,6 +162,7 @@ export function VoxCPM2Panel({
   }, [refAudioOverride]);
 
   const getCurrentConfig = useCallback((): TTSConfig => ({
+    voice: voice !== 'default' ? voice : undefined,
     stream: true,
     responseFormat: 'pcm',
     instructions: instructions || undefined,
@@ -173,7 +179,7 @@ export function VoxCPM2Panel({
     inferenceTimesteps: inferenceTimesteps || undefined,
     cfgCutoffRatio: cfgCutoffRatio !== '1' ? cfgCutoffRatio : undefined,
     swaySamplingCoef: swaySamplingCoef !== '1' ? swaySamplingCoef : undefined,
-  }), [instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
+  }), [voice, instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
        seed, maxNewTokens, language, emotion, cfgValue, inferenceTimesteps,
        cfgCutoffRatio, swaySamplingCoef]);
 
@@ -192,6 +198,7 @@ export function VoxCPM2Panel({
   }, [modelIdForConfig, deleteConfig, t]);
 
   const handleLoadConfig = useCallback((cfg: TTSConfig) => {
+    if (cfg.voice !== undefined) setVoice(cfg.voice);
     if (cfg.instructions !== undefined) setInstructions(cfg.instructions);
     if (cfg.refAudio !== undefined) setRefAudio(cfg.refAudio);
     if (cfg.refText !== undefined) setRefText(cfg.refText);
@@ -238,7 +245,7 @@ export function VoxCPM2Panel({
     const payload: TTSRequest = {
       model: modelName,
       input: ultimateCloning ? (promptText || '') : input.trim(),
-      voice: 'default',
+      voice: voice || 'default',
       response_format: 'pcm',
       stream: true,
     };
@@ -282,7 +289,7 @@ export function VoxCPM2Panel({
     }
 
     onGenerate(payload);
-  }, [modelName, input, instructions, refAudio, refText, promptAudio, promptText,
+  }, [modelName, input, voice, instructions, refAudio, refText, promptAudio, promptText,
       ultimateCloning, seed, maxNewTokens, language, cfgValue, inferenceTimesteps,
       cfgCutoffRatio, swaySamplingCoef,
       isModelStopped, isModelLoading, isModelError,
@@ -310,6 +317,7 @@ export function VoxCPM2Panel({
             setUltimateCloning(false);
             setRefAudio('');
             setPromptAudio('');
+            setVoice('default');
           }}
           placeholder={t('tts.selectModel', 'Select TTS model')}
           label={t('tts.modelLabel', 'TTS Model')}
@@ -379,6 +387,36 @@ export function VoxCPM2Panel({
           className="bg-background"
         />
       </div>
+
+      {/* Voice selection */}
+      {features?.supportsVoiceSelection && (
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            {t('tts.voiceLabel', 'Voice')}
+          </label>
+          <Select value={voice} onValueChange={setVoice}>
+            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+              <SelectValue placeholder={t('tts.selectVoice', 'Select voice')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">{t('tts.voiceDefault', 'Default')}</SelectItem>
+              {voices.length > 0 && voices.filter(v => !v.isUploaded).map(v => (
+                <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+              ))}
+              {voices.some(v => v.isUploaded) && (
+                <>
+                  <SelectSeparator />
+                  {voices.filter(v => v.isUploaded).map(v => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.name}{v.description ? ` (${v.description})` : ''}
+                    </SelectItem>
+                  ))}
+                </>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Language */}
       <div>
