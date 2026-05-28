@@ -163,6 +163,11 @@ export function BenchmarkPage() {
             isDisabled={!state.selectedModel || !state.llamaCppPath || createBenchmark.isPending}
             enabledParamsCount={enabledParamsCount}
             totalParamsCount={benchmarkParams.length}
+            availableDevices={state.availableDevices}
+            selectedDeviceIndices={state.selectedDeviceIndices}
+            mainGpu={state.mainGpu}
+            onDeviceSelectionChange={state.setSelectedDeviceIndices}
+            onMainGpuChange={state.setMainGpu}
           />
 
           {/* Results area */}
