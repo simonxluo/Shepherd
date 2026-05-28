@@ -1,8 +1,6 @@
 server:
     web_port: 9190
     anthropic_port: 9170
-    ollama_port: 11434
-    lmstudio_port: 1234
     host: 0.0.0.0
     read_timeout: 60
     write_timeout: 60

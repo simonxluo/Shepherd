@@ -33,8 +33,6 @@ type ServerConfig struct {
 	Host          string `json:"host"`
 	WebPort       int    `json:"web_port"`
 	AnthropicPort int    `json:"anthropic_port"`
-	OllamaPort    int    `json:"ollama_port"`
-	LMStudioPort  int    `json:"lm_studio_port"`
 }
 
 type StorageInfo struct {

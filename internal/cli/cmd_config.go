@@ -47,8 +47,6 @@ var configShowCmd = &cobra.Command{
 			{Key: "Host", Value: cfg.Server.Host},
 			{Key: "Web Port", Value: fmt.Sprintf("%d", cfg.Server.WebPort)},
 			{Key: "Anthropic Port", Value: fmt.Sprintf("%d", cfg.Server.AnthropicPort)},
-			{Key: "Ollama Port", Value: fmt.Sprintf("%d", cfg.Server.OllamaPort)},
-			{Key: "LM Studio Port", Value: fmt.Sprintf("%d", cfg.Server.LMStudioPort)},
 		})
 
 		fmt.Println("\n[Node]")

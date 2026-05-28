@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
-	"testing"
 
 	"github.com/simonxluo/Shepherd/internal/infra/storage"
 )
@@ -42,8 +40,6 @@ type Config struct {
 type ServerConfig struct {
 	WebPort       int    `mapstructure:"web_port" yaml:"web_port" json:"webPort"`
 	AnthropicPort int    `mapstructure:"anthropic_port" yaml:"anthropic_port" json:"anthropicPort"`
-	OllamaPort    int    `mapstructure:"ollama_port" yaml:"ollama_port" json:"ollamaPort"`
-	LMStudioPort  int    `mapstructure:"lmstudio_port" yaml:"lmstudio_port" json:"lmstudioPort"`
 	Host          string `mapstructure:"host" yaml:"host" json:"host"`
 	ReadTimeout   int    `mapstructure:"read_timeout" yaml:"read_timeout" json:"readTimeout"`    // seconds
 	WriteTimeout  int    `mapstructure:"write_timeout" yaml:"write_timeout" json:"writeTimeout"` // seconds
@@ -220,52 +216,6 @@ type NodeCapabilitiesConfig struct {
 	CondaEnvironments map[string]string `mapstructure:"conda_environments" yaml:"conda_environments" json:"condaEnvironments"`
 }
 
-// ModelConfigEntry represents a model configuration entry in models.json
-type ModelConfigEntry struct {
-	ModelID   string `json:"modelId"`
-	Path      string `json:"path,omitempty"`
-	Size      int64  `json:"size,omitempty"`
-	Alias     string `json:"alias,omitempty"`
-	Favourite bool   `json:"favourite"`
-	// 分卷模型相关字段
-	TotalSize    int64             `json:"totalSize,omitempty"`  // 所有分卷的总大小
-	ShardCount   int               `json:"shardCount,omitempty"` // 分卷数量
-	ShardFiles   []string          `json:"shardFiles,omitempty"` // 所有分卷文件路径
-	PrimaryModel *PrimaryModelInfo `json:"primaryModel,omitempty"`
-	Mmproj       *MmprojInfo       `json:"mmproj,omitempty"`
-}
-
-// PrimaryModelInfo contains information about the primary model
-type PrimaryModelInfo struct {
-	FileName        string `json:"fileName"`
-	Name            string `json:"name,omitempty"`
-	Architecture    string `json:"architecture,omitempty"`
-	ContextLength   int    `json:"contextLength,omitempty"`
-	EmbeddingLength int    `json:"embeddingLength,omitempty"`
-}
-
-// MmprojInfo contains information about the multimodal projector
-type MmprojInfo struct {
-	FileName     string `json:"fileName"`
-	Size         int64  `json:"size,omitempty"` // mmproj 文件大小（字节）
-	Name         string `json:"name,omitempty"`
-	Architecture string `json:"architecture,omitempty"`
-}
-
-// LaunchConfig represents model launch parameters
-type LaunchConfig struct {
-	CtxSize       int     `mapstructure:"ctx_size" yaml:"ctx_size" json:"ctxSize"`
-	BatchSize     int     `mapstructure:"batch_size" yaml:"batch_size" json:"batchSize"`
-	Threads       int     `mapstructure:"threads" yaml:"threads" json:"threads"`
-	GPULayers     int     `mapstructure:"gpu_layers" yaml:"gpu_layers" json:"gpuLayers"`
-	Temperature   float64 `mapstructure:"temperature" yaml:"temperature" json:"temperature"`
-	TopP          float64 `mapstructure:"top_p" yaml:"top_p" json:"topP"`
-	TopK          int     `mapstructure:"top_k" yaml:"top_k" json:"topK"`
-	RepeatPenalty float64 `mapstructure:"repeat_penalty" yaml:"repeat_penalty" json:"repeatPenalty"`
-	Seed          int     `mapstructure:"seed" yaml:"seed" json:"seed"`
-	NPredict      int     `mapstructure:"n_predict" yaml:"n_predict" json:"nPredict"`
-}
-
 // DefaultConfig returns a default configuration
 func DefaultConfig() *Config {
 	// Get current working directory or use default
@@ -273,15 +223,14 @@ func DefaultConfig() *Config {
 	downloadDir := filepath.Join(cwd, "downloads")
 	logDir := filepath.Join(cwd, "logs")
 
-	// 🔧 FIX: 在测试环境中使用空路径,避免扫描模型文件导致超时
 	var modelPaths []string
 	autoScan := true
-	if testing.Testing() {
-		// 测试环境:使用空路径,禁用自动扫描
+	if os.Getenv("SHEPHERD_TEST") == "1" {
+		// 测试环境：使用空路径，禁用自动扫描
 		modelPaths = []string{}
 		autoScan = false
 	} else {
-		// 生产环境:使用默认路径,启用自动扫描
+		// 生产环境：使用默认路径，启用自动扫描
 		modelPaths = []string{
 			filepath.Join(cwd, "models"),
 			filepath.Join(os.Getenv("HOME"), ".cache/huggingface/hub"),
@@ -293,8 +242,6 @@ func DefaultConfig() *Config {
 		Server: ServerConfig{
 			WebPort:       9190,
 			AnthropicPort: 9170,
-			OllamaPort:    11434,
-			LMStudioPort:  1234,
 			Host:          "0.0.0.0",
 			ReadTimeout:   60,
 			WriteTimeout:  60,
@@ -400,22 +347,6 @@ func DefaultConfig() *Config {
 	}
 }
 
-// DefaultLaunchConfig returns default launch parameters
-func DefaultLaunchConfig() *LaunchConfig {
-	return &LaunchConfig{
-		CtxSize:       4096,
-		BatchSize:     512,
-		Threads:       -1, // Auto-detect
-		GPULayers:     99,
-		Temperature:   0.7,
-		TopP:          0.9,
-		TopK:          40,
-		RepeatPenalty: 1.1,
-		Seed:          -1, // Random
-		NPredict:      -1, // Unlimited
-	}
-}
-
 // Validate validates the configuration
 func (c *Config) Validate() error {
 	// Validate server ports
@@ -425,11 +356,13 @@ func (c *Config) Validate() error {
 	if c.Server.AnthropicPort < 1 || c.Server.AnthropicPort > 65535 {
 		return fmt.Errorf("invalid anthropic port: %d", c.Server.AnthropicPort)
 	}
-	if c.Server.OllamaPort < 1 || c.Server.OllamaPort > 65535 {
-		return fmt.Errorf("invalid ollama port: %d", c.Server.OllamaPort)
+
+	// Validate compatibility server ports
+	if c.Compatibility.Ollama.Port < 1 || c.Compatibility.Ollama.Port > 65535 {
+		return fmt.Errorf("invalid ollama compatibility port: %d", c.Compatibility.Ollama.Port)
 	}
-	if c.Server.LMStudioPort < 1 || c.Server.LMStudioPort > 65535 {
-		return fmt.Errorf("invalid lmstudio port: %d", c.Server.LMStudioPort)
+	if c.Compatibility.LMStudio.Port < 1 || c.Compatibility.LMStudio.Port > 65535 {
+		return fmt.Errorf("invalid lmstudio compatibility port: %d", c.Compatibility.LMStudio.Port)
 	}
 
 	// Check for port conflicts
@@ -438,16 +371,16 @@ func (c *Config) Validate() error {
 		c.Server.AnthropicPort: "anthropic",
 	}
 	if c.Compatibility.Ollama.Enabled {
-		if _, exists := ports[c.Server.OllamaPort]; exists {
-			return fmt.Errorf("port conflict: ollama port %d conflicts with another service", c.Server.OllamaPort)
+		if _, exists := ports[c.Compatibility.Ollama.Port]; exists {
+			return fmt.Errorf("port conflict: ollama port %d conflicts with another service", c.Compatibility.Ollama.Port)
 		}
-		ports[c.Server.OllamaPort] = "ollama"
+		ports[c.Compatibility.Ollama.Port] = "ollama"
 	}
 	if c.Compatibility.LMStudio.Enabled {
-		if _, exists := ports[c.Server.LMStudioPort]; exists {
-			return fmt.Errorf("port conflict: lmstudio port %d conflicts with another service", c.Server.LMStudioPort)
+		if _, exists := ports[c.Compatibility.LMStudio.Port]; exists {
+			return fmt.Errorf("port conflict: lmstudio port %d conflicts with another service", c.Compatibility.LMStudio.Port)
 		}
-		ports[c.Server.LMStudioPort] = "lmstudio"
+		ports[c.Compatibility.LMStudio.Port] = "lmstudio"
 	}
 
 	// Validate download settings
@@ -516,51 +449,4 @@ func EnsureConfigDir() error {
 		}
 	}
 	return nil
-}
-
-// Manager manages configuration loading and saving
-type Manager struct {
-	config           *Config
-	configPath       string
-	modelsConfigPath string
-	launchConfigPath string
-	mu               sync.RWMutex
-	cachedModels     []ModelConfigEntry
-	cachedModelsTime int64
-}
-
-// NewManager creates a new configuration manager
-func NewManager() *Manager {
-	configDir := GetConfigDir()
-	return &Manager{
-		configPath:       filepath.Join(configDir, DefaultConfigFile),
-		modelsConfigPath: filepath.Join(configDir, DefaultModelsConfigFile),
-		launchConfigPath: filepath.Join(configDir, DefaultLaunchConfigFile),
-	}
-}
-
-// NewManagerWithPath creates a new configuration manager with a custom config path
-func NewManagerWithPath(configPath string) *Manager {
-	configDir := filepath.Dir(configPath)
-	modelsDir := filepath.Join(GetConfigDir(), "node")
-	return &Manager{
-		configPath:       configPath,
-		modelsConfigPath: filepath.Join(modelsDir, "models.json"),
-		launchConfigPath: filepath.Join(configDir, DefaultLaunchConfigFile),
-	}
-}
-
-// GetConfigPath returns the main configuration file path
-func (m *Manager) GetConfigPath() string {
-	return m.configPath
-}
-
-// GetModelsConfigPath returns the models configuration file path
-func (m *Manager) GetModelsConfigPath() string {
-	return m.modelsConfigPath
-}
-
-// GetLaunchConfigPath returns the launch configuration file path
-func (m *Manager) GetLaunchConfigPath() string {
-	return m.launchConfigPath
 }

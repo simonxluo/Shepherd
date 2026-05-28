@@ -165,8 +165,6 @@ func (app *App) Initialize(configPath string) error {
 	serverCfg := &server.Config{
 		WebPort:       cfg.Server.WebPort,
 		AnthropicPort: cfg.Server.AnthropicPort,
-		OllamaPort:    cfg.Server.OllamaPort,
-		LMStudioPort:  cfg.Server.LMStudioPort,
 		Host:          cfg.Server.Host,
 		ReadTimeout:   time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout:  time.Duration(cfg.Server.WriteTimeout) * time.Second,
