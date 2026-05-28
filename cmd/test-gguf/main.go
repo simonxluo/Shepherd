@@ -62,7 +62,7 @@ func main() {
 		fmt.Printf("\n📐 模型参数:\n")
 		fmt.Printf("  上下文长度: %d\n", meta.ContextLength)
 		fmt.Printf("  嵌入维度: %d\n", meta.EmbeddingLength)
-		fmt.Printf("  块数量: %d\n", meta.BlockSize)
+		fmt.Printf("  块数量: %d\n", meta.BlockCount)
 		fmt.Printf("  前馈维度: %d\n", meta.FeedForwardLength)
 		fmt.Printf("  注意力头数: %d\n", meta.HeadCount)
 		fmt.Printf("  KV 注意力头数: %d\n", meta.HeadCountKV)

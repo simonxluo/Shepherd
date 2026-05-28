@@ -979,23 +979,44 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 
 	if m.Metadata != nil {
 		dto.Metadata = map[string]interface{}{
+			// Basic
 			"architecture":       m.Metadata.Architecture,
 			"quantization":       m.Metadata.GetQuantizationString(),
-			"contextLength":      m.Metadata.ContextLength,
 			"parameters":         m.Metadata.Parameters,
 			"fileTypeDescriptor": m.Metadata.FileTypeDescriptor,
 			"url":                m.Metadata.URL,
 			"author":             m.Metadata.Author,
-			"embeddingLength":    m.Metadata.EmbeddingLength,
-			"layerCount":         m.Metadata.BlockSize,
-			"headCount":          m.Metadata.HeadCount,
 			"license":            m.Metadata.License,
-			"bitsPerWeight":      m.Metadata.BitsPerWeight,
-			"fileSize":           m.Metadata.FileSize,
-			"modelSize":          m.Metadata.ModelSize,
-			"headCountKV":        m.Metadata.HeadCountKV,
-			"tokenCount":         m.Metadata.TokenCount,
-			"poolingType":        m.Metadata.PoolingType,
+
+			// Model structure
+			"contextLength":     m.Metadata.ContextLength,
+			"embeddingLength":   m.Metadata.EmbeddingLength,
+			"feedForwardLength": m.Metadata.FeedForwardLength,
+			"blockCount":        m.Metadata.BlockCount,
+			"headCount":         m.Metadata.HeadCount,
+			"headCountKV":       m.Metadata.HeadCountKV,
+			"layerNormRmsEps":   m.Metadata.LayerNormRMS_EPS,
+
+			// Tokenizer
+			"tokenCount":     m.Metadata.TokenCount,
+			"tokenizerModel": m.Metadata.TokenizerModel,
+			"bosTokenId":     m.Metadata.BosTokenID,
+			"eosTokenId":     m.Metadata.EosTokenID,
+			"padTokenId":     m.Metadata.PadTokenID,
+			"uncTokenId":     m.Metadata.UncTokenID,
+
+			// RoPE
+			"ropeDim":       m.Metadata.RopeDim,
+			"ropeFreqBase":  m.Metadata.RopeFreqBase,
+			"ropeFreqScale": m.Metadata.RopeFreqScale,
+
+			// File info
+			"bitsPerWeight": m.Metadata.BitsPerWeight,
+			"fileSize":      m.Metadata.FileSize,
+			"modelSize":     m.Metadata.ModelSize,
+			"poolingType":   m.Metadata.PoolingType,
+			"littleEndian":  m.Metadata.LittleEndian,
+			"chatTemplate":  m.Metadata.ChatTemplate,
 		}
 	}
 

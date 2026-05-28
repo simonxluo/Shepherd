@@ -25,13 +25,33 @@ export interface ModelMetadata {
   alignment?: number;
   fileSize?: number;
   modelSize?: number;
+  littleEndian?: boolean;
 
-  // Model architecture parameters (may be 0)
+  // Model structure
   contextLength?: number;
   embeddingLength?: number;
-  layerCount?: number;
+  feedForwardLength?: number;
+  blockCount?: number;       // Layer/block count
   headCount?: number;
+  headCountKV?: number;
+  layerNormRmsEps?: number;
 
+  // Tokenizer
+  tokenCount?: number;
+  tokenizerModel?: string;
+  bosTokenId?: number;
+  eosTokenId?: number;
+  padTokenId?: number;
+  uncTokenId?: number;
+
+  // RoPE configuration
+  ropeDim?: number;
+  ropeFreqBase?: number;
+  ropeFreqScale?: number;
+
+  // Other
+  poolingType?: number;
+  chatTemplate?: string;
 }
 
 /**

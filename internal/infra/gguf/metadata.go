@@ -74,7 +74,7 @@ type Metadata struct {
 
 	FeedForwardLength int
 
-	BlockSize int
+	BlockCount int
 
 	HeadCount int
 

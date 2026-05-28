@@ -486,3 +486,26 @@ func (s *testServerHandlers) HandleCreateMusic(c *gin.Context) {
 func (s *testServerHandlers) HandleListVoices(c *gin.Context) {
 	s.handlers.Audio.HandleListVoices(c)
 }
+
+// Model proxy stubs
+func (s *testServerHandlers) HandleModelTokenize(c *gin.Context)      { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleModelApplyTemplate(c *gin.Context) { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleModelSlots(c *gin.Context)         { c.JSON(200, gin.H{}) }
+
+// Chat template stubs
+func (s *testServerHandlers) HandleGetChatTemplate(c *gin.Context)        { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleSaveChatTemplate(c *gin.Context)       { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleDeleteChatTemplate(c *gin.Context)     { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleGetDefaultChatTemplate(c *gin.Context) { c.JSON(200, gin.H{}) }
+
+// Chat template kwargs stubs
+func (s *testServerHandlers) HandleGetChatTemplateKwargs(c *gin.Context)    { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleSaveChatTemplateKwargs(c *gin.Context)   { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleDeleteChatTemplateKwargs(c *gin.Context) { c.JSON(200, gin.H{}) }
+
+// Sampling config stubs
+func (s *testServerHandlers) HandleListSamplingConfigs(c *gin.Context)  { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleSaveSamplingConfig(c *gin.Context)   { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleDeleteSamplingConfig(c *gin.Context) { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleGetSamplingSelection(c *gin.Context) { c.JSON(200, gin.H{}) }
+func (s *testServerHandlers) HandleSetSamplingSelection(c *gin.Context) { c.JSON(200, gin.H{}) }

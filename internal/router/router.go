@@ -119,6 +119,29 @@ type ServerHandlers interface {
 	HandleCreateImage(c *gin.Context)
 	HandleCreateMusic(c *gin.Context)
 	HandleListVoices(c *gin.Context)
+
+	// Model proxy (forward to running llama.cpp)
+	HandleModelTokenize(c *gin.Context)
+	HandleModelApplyTemplate(c *gin.Context)
+	HandleModelSlots(c *gin.Context)
+
+	// Chat template CRUD
+	HandleGetChatTemplate(c *gin.Context)
+	HandleSaveChatTemplate(c *gin.Context)
+	HandleDeleteChatTemplate(c *gin.Context)
+	HandleGetDefaultChatTemplate(c *gin.Context)
+
+	// Chat template kwargs
+	HandleGetChatTemplateKwargs(c *gin.Context)
+	HandleSaveChatTemplateKwargs(c *gin.Context)
+	HandleDeleteChatTemplateKwargs(c *gin.Context)
+
+	// Sampling config management
+	HandleListSamplingConfigs(c *gin.Context)
+	HandleSaveSamplingConfig(c *gin.Context)
+	HandleDeleteSamplingConfig(c *gin.Context)
+	HandleGetSamplingSelection(c *gin.Context)
+	HandleSetSamplingSelection(c *gin.Context)
 }
 
 // Config holds router-level configuration.
@@ -322,6 +345,29 @@ func registerModelRoutes(apiGroup *gin.RouterGroup, sh ServerHandlers, h *Handle
 		models.GET("/:id/load-configs", sh.HandleListModelLoadConfigs)
 		models.PUT("/:id/load-configs/:name", sh.HandleSaveNamedModelLoadConfig)
 		models.DELETE("/:id/load-configs/:name", sh.HandleDeleteNamedModelLoadConfig)
+
+		// Model proxy (forward to running llama.cpp)
+		models.POST("/:id/tokenize", sh.HandleModelTokenize)
+		models.POST("/:id/apply-template", sh.HandleModelApplyTemplate)
+		models.GET("/:id/slots", sh.HandleModelSlots)
+
+		// Chat template
+		models.GET("/:id/chat-template", sh.HandleGetChatTemplate)
+		models.POST("/:id/chat-template", sh.HandleSaveChatTemplate)
+		models.DELETE("/:id/chat-template", sh.HandleDeleteChatTemplate)
+		models.GET("/:id/chat-template/default", sh.HandleGetDefaultChatTemplate)
+
+		// Chat template kwargs
+		models.GET("/:id/chat-template-kwargs", sh.HandleGetChatTemplateKwargs)
+		models.POST("/:id/chat-template-kwargs", sh.HandleSaveChatTemplateKwargs)
+		models.DELETE("/:id/chat-template-kwargs", sh.HandleDeleteChatTemplateKwargs)
+
+		// Sampling config
+		models.GET("/sampling/configs", sh.HandleListSamplingConfigs)
+		models.POST("/sampling/configs", sh.HandleSaveSamplingConfig)
+		models.DELETE("/sampling/configs/:name", sh.HandleDeleteSamplingConfig)
+		models.GET("/:id/sampling/selection", sh.HandleGetSamplingSelection)
+		models.POST("/:id/sampling/selection", sh.HandleSetSamplingSelection)
 	}
 }
 

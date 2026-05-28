@@ -118,7 +118,7 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 	}{
 		{"context_length", func(v int) { meta.ContextLength = v }, nil},
 		{"embedding_length", func(v int) { meta.EmbeddingLength = v }, nil},
-		{"block_count", func(v int) { meta.BlockSize = v }, nil},
+		{"block_count", func(v int) { meta.BlockCount = v }, nil},
 		{"feed_forward_length", func(v int) { meta.FeedForwardLength = v }, nil},
 		{"attention.head_count", func(v int) { meta.HeadCount = v }, nil},
 		{"attention.head_count_kv", func(v int) { meta.HeadCountKV = v }, nil},
