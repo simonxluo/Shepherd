@@ -454,7 +454,13 @@
     "toggleFavourite": "切换收藏",
     "delete": "删除",
     "useAsRef": "用作参考",
-    "refAudioSet": "已从历史记录设置参考音频"
+    "refAudioSet": "已从历史记录设置参考音频",
+    "cancel": "取消",
+    "autoPlay": "自动播放",
+    "refreshVoices": "刷新语音列表",
+    "noModelsTitle": "没有已加载的 TTS 模型",
+    "noModelsDescription": "加载一个支持 TTS 的模型来开始生成语音。可用模型如下所示。",
+    "autoSaved": "已自动保存"
   },
   "asr": {
     "title": "语音识别 (ASR)",
@@ -700,7 +706,30 @@
     },
     "mcp": {
       "title": "MCP 管理",
-      "inDevelopment": "MCP (Model Context Protocol) 管理功能开发中..."
+      "description": "管理 MCP (Model Context Protocol) 工具服务器",
+      "servers": "服务器",
+      "tools": "工具",
+      "addServer": "添加服务器",
+      "editServer": "编辑服务器",
+      "removeServer": "删除服务器",
+      "refreshTools": "刷新工具",
+      "serverName": "服务器名称",
+      "serverUrl": "服务器地址",
+      "transportType": "传输协议",
+      "headers": "自定义请求头",
+      "active": "启用",
+      "noServers": "未配置任何 MCP 服务器",
+      "noTools": "暂无可用工具",
+      "toolCount": "{{count}} 个工具",
+      "callTimeout": "调用超时 (秒)",
+      "readyTimeout": "就绪超时 (秒)",
+      "serverMode": "MCP 服务器模式",
+      "serverModeDesc": "将已加载的模型暴露为 MCP 工具，供外部客户端调用",
+      "exposeTts": "暴露 TTS",
+      "exposeAsr": "暴露 ASR",
+      "exposeChat": "暴露 Chat",
+      "importConfig": "导入配置",
+      "importConfigDesc": "粘贴 MCP 服务器配置 JSON"
     },
     "about": {
       "description": "高性能轻量级 llama.cpp 模型管理系统",

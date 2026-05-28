@@ -12,6 +12,8 @@ export interface TTSPluginPanelProps {
   matchedModels: LoadedModel[];
   /** Trigger speech generation */
   onGenerate: (payload: TTSRequest) => void;
+  /** Cancel in-progress generation */
+  onCancel?: () => void;
   /** Whether generation is currently in progress */
   isGenerating: boolean;
   /** Current stream playback state */

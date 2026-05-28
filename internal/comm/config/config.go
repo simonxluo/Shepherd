@@ -30,6 +30,7 @@ type Config struct {
 	ModelRepo     ModelRepoConfig       `mapstructure:"model_repo" yaml:"model_repo" json:"modelRepo"`
 	Security      SecurityConfig        `mapstructure:"security" yaml:"security" json:"security"`
 	Compatibility CompatibilityConfig   `mapstructure:"compatibility" yaml:"compatibility" json:"compatibility"`
+	MCP           MCPConfig             `mapstructure:"mcp" yaml:"mcp" json:"mcp"`
 	Log           LogConfig             `mapstructure:"log" yaml:"log" json:"log"`
 	Storage       storage.StorageConfig `mapstructure:"storage" yaml:"storage" json:"storage"`
 	Node          NodeConfig            `mapstructure:"node" yaml:"node" json:"node"`
@@ -151,6 +152,27 @@ type OllamaConfig struct {
 type LMStudioConfig struct {
 	Enabled bool `mapstructure:"enabled" yaml:"enabled" json:"enabled"`
 	Port    int  `mapstructure:"port" yaml:"port" json:"port"`
+}
+
+// MCPConfig contains MCP (Model Context Protocol) configuration
+type MCPConfig struct {
+	Client MCPClientConfig `mapstructure:"client" yaml:"client" json:"client"`
+	Server MCPServerConfig `mapstructure:"server" yaml:"server" json:"server"`
+}
+
+// MCPClientConfig contains MCP client settings
+type MCPClientConfig struct {
+	Enabled      bool `mapstructure:"enabled" yaml:"enabled" json:"enabled"`
+	CallTimeout  int  `mapstructure:"call_timeout" yaml:"call_timeout" json:"callTimeout"`    // seconds, default 120
+	ReadyTimeout int  `mapstructure:"ready_timeout" yaml:"ready_timeout" json:"readyTimeout"` // seconds, default 30
+}
+
+// MCPServerConfig contains MCP server settings (expose local models as tools)
+type MCPServerConfig struct {
+	Enabled    bool `mapstructure:"enabled" yaml:"enabled" json:"enabled"`
+	ExposeTTS  bool `mapstructure:"expose_tts" yaml:"expose_tts" json:"exposeTts"`
+	ExposeASR  bool `mapstructure:"expose_asr" yaml:"expose_asr" json:"exposeAsr"`
+	ExposeChat bool `mapstructure:"expose_chat" yaml:"expose_chat" json:"exposeChat"`
 }
 
 // BackendsConfig contains backend configuration for different inference engines
@@ -295,6 +317,19 @@ func DefaultConfig() *Config {
 			LMStudio: LMStudioConfig{
 				Enabled: false,
 				Port:    1234,
+			},
+		},
+		MCP: MCPConfig{
+			Client: MCPClientConfig{
+				Enabled:      true,
+				CallTimeout:  120,
+				ReadyTimeout: 30,
+			},
+			Server: MCPServerConfig{
+				Enabled:    false,
+				ExposeTTS:  true,
+				ExposeASR:  false,
+				ExposeChat: false,
 			},
 		},
 		Log: LogConfig{

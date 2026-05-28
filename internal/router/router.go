@@ -13,6 +13,7 @@ import (
 	compatibilityapi "github.com/simonxluo/Shepherd/internal/handler/compatibility"
 	filesystemapi "github.com/simonxluo/Shepherd/internal/handler/filesystem"
 	"github.com/simonxluo/Shepherd/internal/handler/lmstudio"
+	mcpapi "github.com/simonxluo/Shepherd/internal/handler/mcp"
 	"github.com/simonxluo/Shepherd/internal/handler/ollama"
 	"github.com/simonxluo/Shepherd/internal/handler/openai"
 	"github.com/simonxluo/Shepherd/internal/handler/paths"
@@ -43,6 +44,7 @@ type Handlers struct {
 	Benchmark     *benchmarkapi.Handler
 	Chat          *chatapi.Handler
 	TTS           *ttsapi.Handler
+	MCP           *mcpapi.Handler
 }
 
 // ServerHandlers defines the interface for server-owned handler methods
@@ -182,6 +184,7 @@ func registerRoutes(
 		registerLogRoutes(apiGroup, sh)
 		registerSystemRoutes(apiGroup, h)
 		registerTTSRoutes(apiGroup, h)
+		registerMCPRoutes(apiGroup, h)
 
 		apiGroup.GET("/model/device/list", h.Benchmark.GetDevices)
 		apiGroup.GET("/models/param/benchmark/list", h.Benchmark.GetParams)
@@ -189,6 +192,9 @@ func registerRoutes(
 	}
 
 	registerCompatibilityRoutes(engine, sh)
+
+	// MCP Server protocol endpoints (for external MCP clients)
+	registerMCPServerProtocolRoutes(engine, h)
 
 	if nodeAdapter != nil {
 		nodeAdapter.RegisterRoutes(apiGroup)
@@ -443,6 +449,38 @@ func registerCompatibilityRoutes(engine *gin.Engine, sh ServerHandlers) {
 			v1.POST("/completions", sh.HandleLMStudioComplete)
 			v1.POST("/embeddings", sh.HandleLMStudioEmbeddings)
 		}
+	}
+}
+
+func registerMCPRoutes(apiGroup *gin.RouterGroup, h *Handlers) {
+	if h.MCP == nil {
+		return
+	}
+	mcp := apiGroup.Group("/mcp")
+	{
+		mcp.GET("/servers", h.MCP.ListServers)
+		mcp.POST("/servers", h.MCP.AddServer)
+		mcp.PUT("/servers/:id", h.MCP.UpdateServer)
+		mcp.DELETE("/servers/:id", h.MCP.RemoveServer)
+		mcp.POST("/servers/:id/refresh", h.MCP.RefreshServer)
+		mcp.GET("/servers/:id/tools", h.MCP.GetServerTools)
+		mcp.GET("/tools", h.MCP.ListAllTools)
+		mcp.POST("/tools/call", h.MCP.CallTool)
+		mcp.GET("/config", h.MCP.GetConfig)
+		mcp.PUT("/config", h.MCP.UpdateConfig)
+	}
+}
+
+func registerMCPServerProtocolRoutes(engine *gin.Engine, h *Handlers) {
+	if h.MCP == nil {
+		return
+	}
+	mcpServer := engine.Group("/mcp")
+	{
+		mcpServer.GET("/sse", h.MCP.HandleMCPSSE)
+		mcpServer.POST("/message", h.MCP.HandleMCPMessage)
+		mcpServer.POST("", h.MCP.HandleMCPStreamable)
+		mcpServer.DELETE("", h.MCP.HandleMCPSessionDelete)
 	}
 }
 

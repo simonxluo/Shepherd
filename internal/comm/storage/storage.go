@@ -242,6 +242,32 @@ type DownloadTask struct {
 	FinishedAt      time.Time `json:"finishedAt,omitempty" db:"finished_at"`
 }
 
+// MCPServer represents a configured MCP server stored in the database
+type MCPServer struct {
+	ID          string    `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description,omitempty" db:"description"`
+	URL         string    `json:"url" db:"url"`
+	Type        string    `json:"type" db:"type"`         // "sse" or "streamable-http"
+	IsActive    bool      `json:"isActive" db:"is_active"`
+	Headers     string    `json:"headers,omitempty" db:"headers"` // JSON-encoded map[string]string
+	Status      string    `json:"status,omitempty" db:"status"`   // "connected", "error", "inactive"
+	Error       string    `json:"error,omitempty" db:"error"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// MCPTool represents a discovered MCP tool stored in the database
+type MCPTool struct {
+	ID          string    `json:"id" db:"id"`
+	ServerID    string    `json:"serverId" db:"server_id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description,omitempty" db:"description"`
+	InputSchema string    `json:"inputSchema,omitempty" db:"input_schema"` // JSON-encoded schema
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+}
+
 // Store defines the storage interface
 type Store interface {
 	// Conversation operations
@@ -308,6 +334,18 @@ type Store interface {
 	UpdateDownloadTask(ctx context.Context, task *DownloadTask) error
 	DeleteDownloadTask(ctx context.Context, id string) error
 	ListActiveDownloadTasks(ctx context.Context) ([]*DownloadTask, error)
+
+	// MCP Server operations
+	CreateMCPServer(ctx context.Context, server *MCPServer) error
+	GetMCPServer(ctx context.Context, id string) (*MCPServer, error)
+	ListMCPServers(ctx context.Context) ([]*MCPServer, error)
+	UpdateMCPServer(ctx context.Context, server *MCPServer) error
+	DeleteMCPServer(ctx context.Context, id string) error
+
+	// MCP Tool operations
+	CreateMCPTool(ctx context.Context, tool *MCPTool) error
+	ListMCPToolsByServer(ctx context.Context, serverID string) ([]*MCPTool, error)
+	DeleteMCPToolsByServer(ctx context.Context, serverID string) error
 
 	// Cleanup
 	Close() error

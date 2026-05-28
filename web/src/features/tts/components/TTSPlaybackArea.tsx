@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, Pause, Download, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,12 @@ interface TTSPlaybackAreaProps {
   audioUrl: string | null;
   /** Response format for download file extension */
   responseFormat: string;
+  /** Voice name used for download filename */
+  voice?: string;
+  /** Auto-play toggle state */
+  autoPlay?: boolean;
+  /** Auto-play change callback */
+  onAutoPlayChange?: (value: boolean) => void;
 }
 
 export function TTSPlaybackArea({
@@ -30,12 +36,23 @@ export function TTSPlaybackArea({
   onStopStream,
   audioUrl,
   responseFormat,
+  voice,
+  autoPlay,
+  onAutoPlayChange,
 }: TTSPlaybackAreaProps) {
   const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
   const isStreamActive = streamState === 'streaming' || streamState === 'playing';
+
+  // Auto-play non-stream audio when URL changes
+  useEffect(() => {
+    if (audioUrl && autoPlay && audioRef.current) {
+      audioRef.current.load();
+      audioRef.current.play().catch(() => {});
+    }
+  }, [audioUrl, autoPlay]);
 
   const handlePlayPause = () => {
     if (!audioRef.current) return;
@@ -50,10 +67,17 @@ export function TTSPlaybackArea({
   const handleDownload = () => {
     if (!audioUrl) return;
     const ext = responseFormat === 'pcm' ? 'wav' : (responseFormat || 'mp3');
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const voiceName = voice || 'speech';
+    const filename = `${voiceName}-${timestamp}.${ext}`;
+
     const a = document.createElement('a');
     a.href = audioUrl;
-    a.download = `tts_${Date.now()}.${ext}`;
+    a.download = filename;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
   };
 
   return (
@@ -72,10 +96,21 @@ export function TTSPlaybackArea({
         <div className="border rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium">{t('tts.result', 'Result')}</h3>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <CheckCircle2 className="w-3 h-3 text-green-500" />
-              {t('tts.autoSaved', 'Auto-saved')}
-            </span>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoPlay ?? false}
+                  onChange={(e) => onAutoPlayChange?.(e.target.checked)}
+                  className="cursor-pointer"
+                />
+                {t('tts.autoPlay', 'Auto-play')}
+              </label>
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                {t('tts.autoSaved', 'Auto-saved')}
+              </span>
+            </div>
           </div>
           <audio
             ref={audioRef}
@@ -91,6 +126,9 @@ export function TTSPlaybackArea({
             <Button variant="outline" size="icon" onClick={handleDownload} title={t('tts.download', 'Download audio')}>
               <Download className="w-4 h-4" />
             </Button>
+            {voice && (
+              <span className="text-xs text-muted-foreground ml-2">{voice}</span>
+            )}
           </div>
         </div>
       )}

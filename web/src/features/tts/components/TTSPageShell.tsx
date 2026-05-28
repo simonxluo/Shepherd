@@ -49,6 +49,9 @@ export function TTSPageShell() {
   // Stream player ref
   const playerRef = useRef<StreamAudioPlayer | null>(null);
 
+  // AbortController for non-stream cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Stream state
   const [streamState, setStreamState] = useState<StreamState>('idle');
   const [streamMetrics, setStreamMetrics] = useState<TTSStreamMetrics>({
@@ -56,13 +59,35 @@ export function TTSPageShell() {
   });
   const [pcmChunks, setPcmChunks] = useState<Int16Array[]>([]);
 
-  // Non-stream audio
+  // Non-stream audio (with ref for safe cleanup)
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+
+  const setAudioUrlSafe = useCallback((url: string | null) => {
+    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+    audioUrlRef.current = url;
+    setAudioUrl(url);
+  }, []);
+
+  // Last used voice (for download naming)
+  const [lastVoice, setLastVoice] = useState<string>('');
+
+  // Auto-play toggle with localStorage persistence
+  const [autoPlay, setAutoPlay] = useState(() => {
+    try { return localStorage.getItem('shepherd-tts-autoplay') === 'true'; }
+    catch { return false; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('shepherd-tts-autoplay', String(autoPlay)); }
+    catch { /* silent */ }
+  }, [autoPlay]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       playerRef.current?.destroy();
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
     };
   }, []);
 
@@ -107,6 +132,12 @@ export function TTSPageShell() {
     playerRef.current?.stop();
   }, []);
 
+  const handleCancel = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    playerRef.current?.stop();
+  }, []);
+
   // Get features for current model (for sample rate)
   const currentFeatures = useMemo(
     () => (selectedModel ? getTTSModelFeatures(selectedModel) : { defaultSampleRate: 24000, defaultFormat: 'mp3', supportsStreamPcm: false, supportsRefAudio: false }),
@@ -135,6 +166,7 @@ export function TTSPageShell() {
   const handleGenerate = useCallback(async (payload: TTSRequest) => {
     const isStreamRequest = payload.stream === true;
     lastPayloadRef.current = payload;
+    setLastVoice(payload.voice || '');
 
     if (isStreamRequest) {
       try {
@@ -173,25 +205,38 @@ export function TTSPageShell() {
         toast.error(t('tts.generateFailed', 'Initialization failed'), (err as Error).message);
       }
     } else {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      setAudioUrlSafe(null);
 
-      tts.mutate(payload, {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      tts.mutate({ ...payload, signal: controller.signal }, {
         onSuccess: ({ blob, contentType }) => {
           const typedBlob = new Blob([blob], { type: contentType });
           const url = URL.createObjectURL(typedBlob);
-          setAudioUrl(url);
+          setAudioUrlSafe(url);
           toast.success(t('tts.generateSuccess', 'Speech synthesis complete'));
+
+          // Auto-play if enabled
+          if (autoPlay) {
+            const audio = new Audio(url);
+            audio.play().catch(() => {});
+          }
 
           // Auto-save to history
           const format = payload.response_format || 'mp3';
           saveToHistory(typedBlob, payload, format);
         },
         onError: (error) => {
+          if (error.name === 'AbortError') return; // silent cancel
           toast.error(t('tts.generateFailed', 'Speech synthesis failed'), error.message);
+        },
+        onSettled: () => {
+          abortControllerRef.current = null;
         },
       });
     }
-  }, [currentFeatures.defaultSampleRate, audioUrl, tts, t, saveToHistory]);
+  }, [currentFeatures.defaultSampleRate, tts, t, saveToHistory, setAudioUrlSafe, autoPlay]);
 
   const isStreamActive = streamState === 'streaming' || streamState === 'playing';
   const isGenerating = tts.isPending || isStreamActive;
@@ -212,6 +257,7 @@ export function TTSPageShell() {
     model: selectedModel,
     matchedModels,
     onGenerate: handleGenerate,
+    onCancel: handleCancel,
     isGenerating,
     streamState,
     streamMetrics,
@@ -271,6 +317,9 @@ export function TTSPageShell() {
                 onStopStream={handleStopStream}
                 audioUrl={audioUrl}
                 responseFormat={currentFeatures.defaultFormat}
+                voice={lastVoice}
+                autoPlay={autoPlay}
+                onAutoPlayChange={setAutoPlay}
               />
             </div>
           </div>

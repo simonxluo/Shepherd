@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Volume2, Loader2, Settings2, ChevronDown } from 'lucide-react';
+import { Volume2, Settings2, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -73,6 +73,7 @@ export function VoxCPM2Panel({
   model: selectedModel,
   matchedModels,
   onGenerate,
+  onCancel,
   isGenerating,
   streamState,
   onModelChange,
@@ -112,8 +113,6 @@ export function VoxCPM2Panel({
   const backendLabel = selectedModel?.backendType
     ? BACKEND_LABELS[selectedModel.backendType] || selectedModel.backendType
     : '';
-
-  const isStreamActive = streamState === 'streaming' || streamState === 'playing';
 
   // Restore config from server
   useEffect(() => {
@@ -556,24 +555,26 @@ export function VoxCPM2Panel({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Generate button */}
-      <Button
-        onClick={handleGenerate}
-        disabled={isGenerating || !modelName || (!input.trim() && !ultimateCloning)}
-        className="w-full"
-      >
-        {isGenerating ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            {isStreamActive ? t('tts.streamingInProgress', 'Streaming...') : t('tts.generating', 'Generating...')}
-          </>
-        ) : (
-          <>
-            <Volume2 className="w-4 h-4 mr-2" />
-            {t('tts.generate', 'Generate Speech')}
-          </>
-        )}
-      </Button>
+      {/* Generate / Cancel button */}
+      {isGenerating ? (
+        <Button
+          onClick={onCancel}
+          variant="destructive"
+          className="w-full"
+        >
+          <X className="w-4 h-4 mr-2" />
+          {t('tts.cancel', 'Cancel')}
+        </Button>
+      ) : (
+        <Button
+          onClick={handleGenerate}
+          disabled={!modelName || (!input.trim() && !ultimateCloning)}
+          className="w-full"
+        >
+          <Volume2 className="w-4 h-4 mr-2" />
+          {t('tts.generate', 'Generate Speech')}
+        </Button>
+      )}
 
       {/* Config management */}
       {modelName && (

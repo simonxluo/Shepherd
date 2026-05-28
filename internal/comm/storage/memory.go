@@ -21,6 +21,8 @@ type MemoryStore struct {
 	modelMetadata    map[string]*ModelMetadata   // key: modelID
 	ttsHistory       map[string]*TTSHistoryItem  // key: id
 	downloadTasks    map[string]*DownloadTask    // key: id
+	mcpServers       map[string]*MCPServer       // key: id
+	mcpTools         map[string]*MCPTool         // key: id
 }
 
 // NewMemoryStore creates a new in-memory store
@@ -36,6 +38,8 @@ func NewMemoryStore() (*MemoryStore, error) {
 		modelMetadata:    make(map[string]*ModelMetadata),
 		ttsHistory:       make(map[string]*TTSHistoryItem),
 		downloadTasks:    make(map[string]*DownloadTask),
+		mcpServers:       make(map[string]*MCPServer),
+		mcpTools:         make(map[string]*MCPTool),
 	}, nil
 }
 
@@ -884,6 +888,118 @@ func (s *MemoryStore) Stats() map[string]interface{} {
 		"messages":      totalMessages,
 		"type":          "memory",
 	}
+}
+
+// --- MCP Server operations ---
+
+func (s *MemoryStore) CreateMCPServer(_ context.Context, server *MCPServer) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if server.ID == "" {
+		server.ID = generateID("mcp")
+	}
+	now := time.Now()
+	if server.CreatedAt.IsZero() {
+		server.CreatedAt = now
+	}
+	server.UpdatedAt = now
+	s.mcpServers[server.ID] = server
+	return nil
+}
+
+func (s *MemoryStore) GetMCPServer(_ context.Context, id string) (*MCPServer, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	server, ok := s.mcpServers[id]
+	if !ok {
+		return nil, fmt.Errorf("MCP server not found: %s", id)
+	}
+	copy := *server
+	return &copy, nil
+}
+
+func (s *MemoryStore) ListMCPServers(_ context.Context) ([]*MCPServer, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	result := make([]*MCPServer, 0, len(s.mcpServers))
+	for _, server := range s.mcpServers {
+		copy := *server
+		result = append(result, &copy)
+	}
+	return result, nil
+}
+
+func (s *MemoryStore) UpdateMCPServer(_ context.Context, server *MCPServer) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.mcpServers[server.ID]; !ok {
+		return fmt.Errorf("MCP server not found: %s", server.ID)
+	}
+	server.UpdatedAt = time.Now()
+	s.mcpServers[server.ID] = server
+	return nil
+}
+
+func (s *MemoryStore) DeleteMCPServer(_ context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	delete(s.mcpServers, id)
+	// Also delete associated tools
+	for toolID, tool := range s.mcpTools {
+		if tool.ServerID == id {
+			delete(s.mcpTools, toolID)
+		}
+	}
+	return nil
+}
+
+// --- MCP Tool operations ---
+
+func (s *MemoryStore) CreateMCPTool(_ context.Context, tool *MCPTool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if tool.ID == "" {
+		tool.ID = generateID("mcptool")
+	}
+	now := time.Now()
+	if tool.CreatedAt.IsZero() {
+		tool.CreatedAt = now
+	}
+	tool.UpdatedAt = now
+	s.mcpTools[tool.ID] = tool
+	return nil
+}
+
+func (s *MemoryStore) ListMCPToolsByServer(_ context.Context, serverID string) ([]*MCPTool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var result []*MCPTool
+	for _, tool := range s.mcpTools {
+		if tool.ServerID == serverID {
+			copy := *tool
+			result = append(result, &copy)
+		}
+	}
+	return result, nil
+}
+
+func (s *MemoryStore) DeleteMCPToolsByServer(_ context.Context, serverID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for id, tool := range s.mcpTools {
+		if tool.ServerID == serverID {
+			delete(s.mcpTools, id)
+		}
+	}
+	return nil
 }
 
 // generateID generates a unique ID with a prefix

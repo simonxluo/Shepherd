@@ -454,7 +454,13 @@
     "toggleFavourite": "Toggle favourite",
     "delete": "Delete",
     "useAsRef": "Use as reference",
-    "refAudioSet": "Reference audio set from history"
+    "refAudioSet": "Reference audio set from history",
+    "cancel": "Cancel",
+    "autoPlay": "Auto-play",
+    "refreshVoices": "Refresh voices",
+    "noModelsTitle": "No TTS Models Loaded",
+    "noModelsDescription": "Load a TTS-capable model to start generating speech. Available models are shown below.",
+    "autoSaved": "Auto-saved"
   },
   "asr": {
     "title": "Speech Recognition (ASR)",
@@ -700,7 +706,30 @@
     },
     "mcp": {
       "title": "MCP Management",
-      "inDevelopment": "MCP (Model Context Protocol) management feature is under development..."
+      "description": "Manage MCP (Model Context Protocol) tool servers",
+      "servers": "Servers",
+      "tools": "Tools",
+      "addServer": "Add Server",
+      "editServer": "Edit Server",
+      "removeServer": "Remove Server",
+      "refreshTools": "Refresh Tools",
+      "serverName": "Server Name",
+      "serverUrl": "Server URL",
+      "transportType": "Transport",
+      "headers": "Custom Headers",
+      "active": "Active",
+      "noServers": "No MCP servers configured",
+      "noTools": "No tools available",
+      "toolCount": "{{count}} tools",
+      "callTimeout": "Call Timeout (s)",
+      "readyTimeout": "Ready Timeout (s)",
+      "serverMode": "MCP Server Mode",
+      "serverModeDesc": "Expose loaded models as MCP tools for external clients",
+      "exposeTts": "Expose TTS",
+      "exposeAsr": "Expose ASR",
+      "exposeChat": "Expose Chat",
+      "importConfig": "Import Config",
+      "importConfigDesc": "Paste MCP server configuration JSON"
     },
     "about": {
       "description": "High-performance lightweight llama.cpp model management system",

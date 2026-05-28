@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Volume2, Loader2, Settings2, ChevronDown } from 'lucide-react';
+import { Volume2, Settings2, ChevronDown, X, RefreshCw } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -37,11 +38,13 @@ export function GenericTTSPanel({
   model: selectedModel,
   matchedModels,
   onGenerate,
+  onCancel,
   isGenerating,
   onModelChange,
   refAudioOverride,
 }: TTSPluginPanelProps) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const availableModels = useAvailableModels('tts');
 
   const modelName = selectedModel ? (selectedModel.alias || selectedModel.name) : '';
@@ -70,6 +73,13 @@ export function GenericTTSPanel({
   const backendLabel = selectedModel?.backendType
     ? BACKEND_LABELS[selectedModel.backendType] || selectedModel.backendType
     : '';
+
+  // Voice refresh handler
+  const handleRefreshVoices = useCallback(() => {
+    if (modelName) {
+      queryClient.invalidateQueries({ queryKey: ['voices', modelName] });
+    }
+  }, [queryClient, modelName]);
 
   // Restore config from server
   useEffect(() => {
@@ -183,11 +193,20 @@ export function GenericTTSPanel({
 
   if (matchedModels.length === 0) {
     return (
-      <AvailableModelList
-        models={availableModels}
-        emptyText={t('creative.noScannedModels')}
-        emptyHint={t('creative.noScannedModelsHint')}
-      />
+      <div className="space-y-4">
+        <div className="text-center py-6">
+          <Volume2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+          <h3 className="text-lg font-medium mb-1">{t('tts.noModelsTitle', 'No TTS Models Loaded')}</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {t('tts.noModelsDescription', 'Load a TTS-capable model to start generating speech. Available models are shown below.')}
+          </p>
+        </div>
+        <AvailableModelList
+          models={availableModels}
+          emptyText={t('creative.noScannedModels')}
+          emptyHint={t('creative.noScannedModelsHint')}
+        />
+      </div>
     );
   }
 
@@ -238,23 +257,34 @@ export function GenericTTSPanel({
             <label className="block text-sm font-medium mb-1.5">
               {t('tts.voiceLabel', 'Voice')}
             </label>
-            <Select value={voice} onValueChange={setVoice}>
-              <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-                <SelectValue placeholder={voices.length > 0 ? t('tts.selectVoice', 'Select voice') : t('tts.enterVoice', 'Enter voice name')} />
-              </SelectTrigger>
-              <SelectContent>
-                {voices.length > 0
-                  ? voices.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.name || v.id}
-                      </SelectItem>
-                    ))
-                  : FALLBACK_VOICES.map((v) => (
-                      <SelectItem key={v} value={v}>{v}</SelectItem>
-                    ))
-                }
-              </SelectContent>
-            </Select>
+            <div className="flex gap-1.5">
+              <Select value={voice} onValueChange={setVoice}>
+                <SelectTrigger className="flex-1 px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                  <SelectValue placeholder={voices.length > 0 ? t('tts.selectVoice', 'Select voice') : t('tts.enterVoice', 'Enter voice name')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {voices.length > 0
+                    ? voices.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.name || v.id}
+                        </SelectItem>
+                      ))
+                    : FALLBACK_VOICES.map((v) => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))
+                  }
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleRefreshVoices}
+                title={t('tts.refreshVoices', 'Refresh voices')}
+                className="shrink-0"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         )}
         <div className={supportsVoiceSelection ? '' : 'col-span-2'}>
@@ -379,24 +409,26 @@ export function GenericTTSPanel({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Generate button */}
-      <Button
-        onClick={handleGenerate}
-        disabled={isGenerating || !modelName || !input.trim()}
-        className="w-full"
-      >
-        {isGenerating ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            {t('tts.generating', 'Generating...')}
-          </>
-        ) : (
-          <>
-            <Volume2 className="w-4 h-4 mr-2" />
-            {t('tts.generate', 'Generate Speech')}
-          </>
-        )}
-      </Button>
+      {/* Generate / Cancel button */}
+      {isGenerating ? (
+        <Button
+          onClick={onCancel}
+          variant="destructive"
+          className="w-full"
+        >
+          <X className="w-4 h-4 mr-2" />
+          {t('tts.cancel', 'Cancel')}
+        </Button>
+      ) : (
+        <Button
+          onClick={handleGenerate}
+          disabled={!modelName || !input.trim()}
+          className="w-full"
+        >
+          <Volume2 className="w-4 h-4 mr-2" />
+          {t('tts.generate', 'Generate Speech')}
+        </Button>
+      )}
 
       {/* Config management */}
       {modelName && (

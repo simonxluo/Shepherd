@@ -84,11 +84,13 @@ export function getTTSModelFeatures(model: LoadedModel): TTSModelFeatures {
 
 export function useTTS() {
   return useMutation({
-    mutationFn: async (params: TTSRequest) => {
+    mutationFn: async (params: TTSRequest & { signal?: AbortSignal }) => {
+      const { signal, ...body } = params;
       const response = await fetch(`${v1Client.getBaseUrl()}/audio/speech`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
+        body: JSON.stringify(body),
+        signal,
       });
 
       if (!response.ok) {
@@ -106,15 +108,45 @@ interface VoicesResponse {
   voices?: Array<{ id: string; name?: string }>;
 }
 
+const VOICES_CACHE_KEY = 'shepherd-tts-voices-cache';
+
+function getVoicesCache(): Record<string, Array<{ id: string; name?: string }>> {
+  try {
+    const saved = localStorage.getItem(VOICES_CACHE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveVoicesCache(cache: Record<string, Array<{ id: string; name?: string }>>) {
+  try {
+    localStorage.setItem(VOICES_CACHE_KEY, JSON.stringify(cache));
+  } catch { /* silent */ }
+}
+
 export function useVoices(model?: string) {
   return useQuery({
     queryKey: ['voices', model],
     queryFn: async () => {
       if (!model) return [];
       const res = await v1Client.get<VoicesResponse>('/audio/voices', { model });
-      return res.voices ?? [];
+      const voices = res.voices ?? [];
+      // Save to localStorage cache on success
+      if (voices.length > 0) {
+        const cache = getVoicesCache();
+        cache[model] = voices;
+        saveVoicesCache(cache);
+      }
+      return voices;
     },
     enabled: !!model,
+    placeholderData: () => {
+      if (!model) return [];
+      const cache = getVoicesCache();
+      return cache[model] ?? [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 

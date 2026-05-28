@@ -71,6 +71,16 @@ compatibility:
     lmstudio:
         enabled: false
         port: 1234
+mcp:
+    client:
+        enabled: true
+        call_timeout: 120
+        ready_timeout: 30
+    server:
+        enabled: false
+        expose_tts: true
+        expose_asr: false
+        expose_chat: false
 log:
     level: info
     format: json

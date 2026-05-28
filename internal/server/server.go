@@ -21,6 +21,7 @@ import (
 	compatibilityapi "github.com/simonxluo/Shepherd/internal/handler/compatibility"
 	filesystemapi "github.com/simonxluo/Shepherd/internal/handler/filesystem"
 	"github.com/simonxluo/Shepherd/internal/handler/lmstudio"
+	mcpapi "github.com/simonxluo/Shepherd/internal/handler/mcp"
 	"github.com/simonxluo/Shepherd/internal/handler/ollama"
 	"github.com/simonxluo/Shepherd/internal/handler/openai"
 	"github.com/simonxluo/Shepherd/internal/handler/paths"
@@ -30,6 +31,7 @@ import (
 	modelrepoclient "github.com/simonxluo/Shepherd/internal/infra/modelrepo"
 	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/router"
+	"github.com/simonxluo/Shepherd/internal/service/mcp"
 	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
@@ -69,6 +71,7 @@ type Server struct {
 	nodeAdapter *api.NodeAdapter
 	repoClient  *modelrepoclient.Client
 	compatMgr   *compatibilityapi.ServerManager
+	mcpService  *mcp.Service
 
 	wsHub *WebSocketHub
 
@@ -167,6 +170,14 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.Benchmark = benchmarkapi.NewHandler(logger.GetLogger(), storageMgr.GetStore())
 	s.handlers.Chat = chatapi.NewHandler(modelMgr)
 	s.handlers.TTS = ttsapi.NewHandler(storageMgr, "./data/tts")
+
+	// Initialize MCP service
+	mcpSvc := mcp.NewService(config.ConfigMgr, modelMgr, storageMgr.GetStore())
+	if err := mcpSvc.Initialize(); err != nil {
+		logger.Warnf("MCP service initialization failed: %v", err)
+	}
+	s.mcpService = mcpSvc
+	s.handlers.MCP = mcpapi.NewHandler(config.ConfigMgr, mcpSvc)
 
 	// Auto-start compatibility servers if config says enabled
 	if cfg.Compatibility.Ollama.Enabled {
@@ -313,6 +324,13 @@ func (s *Server) Stop() error {
 		_ = s.compatMgr.StopOllamaServer()
 		_ = s.compatMgr.StopLMStudioServer()
 		logger.Info("兼容性服务器已停止")
+	}
+
+	// Step 5.5: Stop MCP service
+	if s.mcpService != nil {
+		logger.Info("停止 MCP 服务...")
+		s.mcpService.Stop()
+		logger.Info("MCP 服务已停止")
 	}
 
 	// 注意：storage manager 的关闭由 run_server.go 的 shutdown hook 统一管理，不在此处关闭

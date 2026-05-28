@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import { PathConfigPanel } from '@/features/settings/components/PathConfigPanel';
 import { ApiConfigCard, type ApiConfig } from '@/features/settings/components/ApiConfigCard';
+import { McpSettingsPanel } from '@/features/settings/components/McpSettingsPanel';
 import { compatibilityApi } from '@/lib/api/compatibility';
 import { useServerInfo } from '@/hooks/useServerInfo';
 import { toast } from '@/hooks/useToast';
@@ -324,18 +325,7 @@ function BenchmarkPanel() {
  * MCP management panel
  */
 function McpPanel() {
-  const { t } = useTranslation();
-  return (
-    <div className="flex h-full items-center justify-center text-foreground">
-      <div className="text-center">
-        <Toolbox size={48} className="mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-lg font-semibold">{t('settings.mcp.title')}</h3>
-        <p className="text-sm text-muted-foreground mt-2">
-          {t('settings.mcp.inDevelopment')}
-        </p>
-      </div>
-    </div>
-  );
+  return <McpSettingsPanel />;
 }
 
 /**
