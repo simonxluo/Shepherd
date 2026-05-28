@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PanelLeftOpen } from 'lucide-react';
 import { useLoadedModels } from '@/features/creative/hooks';
+import { useModels } from '@/features/models';
 import { Button } from '@/components/ui/button';
 import { useTTS, getTTSModelFeatures, type TTSRequest } from '../hooks';
 import { StreamAudioPlayer, type StreamState, type TTSStreamMetrics } from '../lib/StreamAudioPlayer';
@@ -21,6 +22,7 @@ import '../plugins/voxcpm2';
 export function TTSPageShell() {
   const { t } = useTranslation();
   const { data: allModels = [] } = useLoadedModels();
+  const { data: fullModelsList = [] } = useModels();
 
   // Filter to TTS-capable models only
   const ttsModels = useMemo(
@@ -82,6 +84,12 @@ export function TTSPageShell() {
   const selectedModel = useMemo(
     () => matchedModels.find((m) => (m.alias || m.name) === currentModelName) || matchedModels[0] || null,
     [matchedModels, currentModelName]
+  );
+
+  // 查找选中模型在完整模型列表中的状态
+  const fullModel = useMemo(
+    () => selectedModel ? fullModelsList.find((m) => m.id === selectedModel.id) : undefined,
+    [selectedModel, fullModelsList]
   );
 
   // Auto-select first matched model if none selected
@@ -218,6 +226,8 @@ export function TTSPageShell() {
     audioUrl,
     onModelChange: handleModelChange,
     refAudioOverride,
+    modelStatus: fullModel?.status,
+    fullModelId: fullModel?.id,
   };
 
   const PanelComponent = activePlugin?.component;

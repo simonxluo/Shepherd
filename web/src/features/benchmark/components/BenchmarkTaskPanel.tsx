@@ -8,13 +8,13 @@ interface BenchmarkTaskPanelProps {
   tasks: BenchmarkTask[];
 }
 
-const statusConfig: Record<BenchmarkTaskStatus, { icon: typeof Loader2; color: string; labelKey: string }> = {
-  pending:   { icon: Clock,        color: 'text-yellow-500', labelKey: 'benchmark.status.pending' },
-  running:   { icon: Loader2,      color: 'text-blue-500',   labelKey: 'benchmark.status.running' },
-  completed: { icon: CheckCircle2, color: 'text-green-500',  labelKey: 'benchmark.status.completed' },
-  failed:    { icon: XCircle,      color: 'text-red-500',    labelKey: 'benchmark.status.failed' },
-  cancelled: { icon: Ban,          color: 'text-gray-400',   labelKey: 'benchmark.status.cancelled' },
-};
+const statusConfig = {
+  pending:   { icon: Clock,        color: 'text-yellow-500', labelKey: 'benchmark.status.pending' as const },
+  running:   { icon: Loader2,      color: 'text-blue-500',   labelKey: 'benchmark.status.running' as const },
+  completed: { icon: CheckCircle2, color: 'text-green-500',  labelKey: 'benchmark.status.completed' as const },
+  failed:    { icon: XCircle,      color: 'text-red-500',    labelKey: 'benchmark.status.failed' as const },
+  cancelled: { icon: Ban,          color: 'text-gray-400',   labelKey: 'benchmark.status.cancelled' as const },
+} satisfies Record<BenchmarkTaskStatus, { icon: typeof Loader2; color: string; labelKey: string }>;
 
 export function BenchmarkTaskPanel({ tasks }: BenchmarkTaskPanelProps) {
   const { t } = useTranslation();

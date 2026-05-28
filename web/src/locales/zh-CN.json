@@ -431,6 +431,12 @@
     "configDeleted": "配置已删除",
     "deleteFailed": "删除失败",
     "streamingInProgress": "流式生成中...",
+    "modelLoading": "模型加载中，请稍候...",
+    "modelStopped": "模型已停止",
+    "modelError": "模型遇到错误",
+    "modelNotLoaded": "模型未加载",
+    "loadModel": "加载模型",
+    "loadModelToGenerate": "加载模型并生成",
     "streamStatus": {
       "streaming": "流式中",
       "playing": "播放中",

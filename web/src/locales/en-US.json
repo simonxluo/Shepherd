@@ -431,6 +431,12 @@
     "configDeleted": "Config deleted",
     "deleteFailed": "Delete failed",
     "streamingInProgress": "Streaming...",
+    "modelLoading": "Model is loading, please wait...",
+    "modelStopped": "Model stopped",
+    "modelError": "Model encountered an error",
+    "modelNotLoaded": "Model not loaded",
+    "loadModel": "Load Model",
+    "loadModelToGenerate": "Load Model & Generate",
     "streamStatus": {
       "streaming": "Streaming",
       "playing": "Playing",
