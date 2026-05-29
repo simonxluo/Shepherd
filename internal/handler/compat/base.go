@@ -24,7 +24,7 @@ type BaseHandler struct {
 	ModelIndex *ModelLookupIndex
 }
 
-// maxResponseSize 限制代理响应体的最大大小为 1GB
+// maxResponseSize limits the proxied response body to a maximum of 1GB
 const maxResponseSize = 1 << 30
 
 func NewBaseHandler(modelMgr *model.Manager) *BaseHandler {
@@ -54,8 +54,8 @@ func (b *BaseHandler) FindModel(modelName string) (string, error) {
 	return FindModelForAPI(b.ModelMgr, b.ModelIndex, modelName)
 }
 
-// GetServedModelName 返回后端服务识别的模型名称。
-// vLLM 后端使用模型路径作为标识，llama.cpp 使用模型名。
+// GetServedModelName returns the model name recognized by the backend service.
+// vLLM backends use the model path as identifier, llama.cpp uses the model name.
 func (b *BaseHandler) GetServedModelName(modelID string) string {
 	if m, ok := b.ModelMgr.GetModel(modelID); ok && m != nil {
 		status, exists := b.ModelMgr.GetStatus(modelID)
@@ -67,7 +67,7 @@ func (b *BaseHandler) GetServedModelName(modelID string) string {
 	return modelID
 }
 
-// replaceModelField 替换请求体中的 model 字段为后端识别的模型名
+// replaceModelField replaces the model field in request body with the backend-recognized model name.
 func replaceModelField(reqBody []byte, servedModelName string) []byte {
 	var payload map[string]interface{}
 	if err := json.Unmarshal(reqBody, &payload); err != nil {
@@ -440,7 +440,6 @@ func (b *BaseHandler) ForwardMultipartRequest(c *gin.Context, port int, path str
 	utils.WriteQuietly(c.Writer, respBody)
 }
 
-// ForwardGetRequest 代理 GET 请求到后端模型服务
 // SendOpenAIError sends an error response in OpenAI API format.
 func (b *BaseHandler) SendOpenAIError(c *gin.Context, status int, errType, msg, param string) {
 	response := NewErrorResponse(msg, errType, param, status)
@@ -472,6 +471,7 @@ func (b *BaseHandler) ListLoadedModels(ownedBy string) *ModelsResponse {
 	return NewModelsResponse(result)
 }
 
+// ForwardGetRequest proxies a GET request to the backend model service.
 func (b *BaseHandler) ForwardGetRequest(c *gin.Context, port int, path string) {
 	reqURL := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
 

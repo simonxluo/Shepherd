@@ -157,7 +157,7 @@ func (n *Node) setStatusLocked(newStatus NodeStatus) error {
 	return nil
 }
 
-// Start 启动节点
+// Start starts the node and initializes all subsystems.
 func (n *Node) Start() error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -189,7 +189,7 @@ func (n *Node) Start() error {
 	return nil
 }
 
-// Stop 停止节点
+// Stop stops the node and shuts down all subsystems.
 func (n *Node) Stop() error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -219,7 +219,7 @@ func (n *Node) ID() string {
 	return n.id
 }
 
-// GetID 获取节点ID（向后兼容）
+// GetID returns the node ID (backward-compatible wrapper).
 func (n *Node) GetID() string {
 	return n.ID()
 }
@@ -329,56 +329,56 @@ func (n *Node) UpdateConfig(config *NodeConfig) error {
 	return nil
 }
 
-// GetName 获取节点名称
+// GetName returns the node name.
 func (n *Node) GetName() string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.name
 }
 
-// GetRole 获取节点角色
+// GetRole returns the node role.
 func (n *Node) GetRole() NodeRole {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.role
 }
 
-// GetStatus 获取节点状态
+// GetStatus returns the node status.
 func (n *Node) GetStatus() NodeStatus {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.status
 }
 
-// GetAddress 获取节点地址
+// GetAddress returns the node address.
 func (n *Node) GetAddress() string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.address
 }
 
-// GetPort 获取节点端口
+// GetPort returns the node port.
 func (n *Node) GetPort() int {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.port
 }
 
-// GetVersion 获取节点版本
+// GetVersion returns the node version.
 func (n *Node) GetVersion() string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.version
 }
 
-// GetTags 获取节点标签
+// GetTags returns the node tags.
 func (n *Node) GetTags() []string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return append([]string{}, n.tags...)
 }
 
-// GetMetadata 获取节点元数据
+// GetMetadata returns the node metadata.
 func (n *Node) GetMetadata() map[string]string {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -390,7 +390,7 @@ func (n *Node) GetMetadata() map[string]string {
 	return metadata
 }
 
-// GetCapabilities 获取节点能力
+// GetCapabilities returns the node capabilities.
 func (n *Node) GetCapabilities() *NodeCapabilities {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -404,7 +404,7 @@ func (n *Node) GetCapabilities() *NodeCapabilities {
 	return &cap
 }
 
-// GetResources 获取节点资源信息
+// GetResources returns the node resource information.
 func (n *Node) GetResources() *NodeResources {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -418,7 +418,7 @@ func (n *Node) GetResources() *NodeResources {
 	return &res
 }
 
-// SetResources 设置节点资源信息
+// SetResources sets the node resource information.
 func (n *Node) SetResources(resources *NodeResources) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -433,7 +433,7 @@ func (n *Node) SetResources(resources *NodeResources) {
 	n.updatedAt = time.Now()
 }
 
-// GetConfig 获取节点配置
+// GetConfig returns the node configuration.
 func (n *Node) GetConfig() *NodeConfig {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -447,42 +447,42 @@ func (n *Node) GetConfig() *NodeConfig {
 	return &cfg
 }
 
-// IsRunning 检查节点是否正在运行
+// IsRunning checks whether the node is currently running.
 func (n *Node) IsRunning() bool {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.running
 }
 
-// GetCreatedAt 获取节点创建时间
+// GetCreatedAt returns the node creation time.
 func (n *Node) GetCreatedAt() time.Time {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.createdAt
 }
 
-// GetUpdatedAt 获取节点更新时间
+// GetUpdatedAt returns the last update time of the node.
 func (n *Node) GetUpdatedAt() time.Time {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.updatedAt
 }
 
-// GetLastSeen 获取节点最后活跃时间
+// GetLastSeen returns the last time the node was seen active.
 func (n *Node) GetLastSeen() time.Time {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.lastSeen
 }
 
-// UpdateLastSeen 更新节点最后活跃时间
+// UpdateLastSeen updates the node's last seen timestamp to now.
 func (n *Node) UpdateLastSeen() {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.lastSeen = time.Now()
 }
 
-// GetUptime 获取节点运行时长
+// GetUptime returns how long the node has been running.
 func (n *Node) GetUptime() time.Duration {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -498,102 +498,102 @@ func (n *Node) GetUptime() time.Duration {
 	return time.Since(*n.startedAt)
 }
 
-// String 返回节点的字符串表示
+// String returns a string representation of the node.
 func (n *Node) String() string {
 	return fmt.Sprintf("Node{id:%s, name:%s, role:%s, status:%s, address:%s:%d}",
 		n.GetID(), n.GetName(), n.GetRole(), n.GetStatus(), n.GetAddress(), n.GetPort())
 }
 
-// initSubsystems 初始化子系统
+// initSubsystems initializes node subsystems based on the node's role.
 func (n *Node) initSubsystems() error {
-	// 创建子系统管理器
+	// Create subsystem manager
 	n.subsystemManager = NewSubsystemManager()
 
-	// 初始化资源监控器
+	// Initialize resource monitor
 	resourceConfig := &ResourceMonitorConfig{
 		Interval: 5 * time.Second,
 		Callback: func(resources *NodeResources) {
-			// 当资源信息更新时，自动更新节点的资源信息
+			// Automatically update node resources when monitor reports new data
 			n.SetResources(resources)
 		},
 	}
 	n.resource = NewResourceMonitor(resourceConfig)
 
-	// 根据节点角色初始化子系统
+	// Initialize subsystems based on node role
 	switch n.role {
 	case NodeRoleClient:
-		// 客户端节点需要注册子系统和心跳子系统
+		// Client nodes need registration and heartbeat subsystems
 		registrationSubsystem := NewRegistrationSubsystem(n)
 		if err := n.subsystemManager.Register(registrationSubsystem); err != nil {
-			return fmt.Errorf("注册注册子系统失败: %w", err)
+			return fmt.Errorf("failed to register registration subsystem: %w", err)
 		}
 
 		heartbeatSubsystem := NewHeartbeatSubsystem(n, 30*time.Second)
 		if err := n.subsystemManager.Register(heartbeatSubsystem); err != nil {
-			return fmt.Errorf("注册心跳子系统失败: %w", err)
+			return fmt.Errorf("failed to register heartbeat subsystem: %w", err)
 		}
 
 	case NodeRoleHybrid:
-		// Hybrid 节点需要注册、心跳和命令管理子系统
+		// Hybrid nodes need registration, heartbeat, and command management subsystems
 		registrationSubsystem := NewRegistrationSubsystem(n)
 		if err := n.subsystemManager.Register(registrationSubsystem); err != nil {
-			return fmt.Errorf("注册注册子系统失败: %w", err)
+			return fmt.Errorf("failed to register registration subsystem: %w", err)
 		}
 
 		heartbeatSubsystem := NewHeartbeatSubsystem(n, 30*time.Second)
 		if err := n.subsystemManager.Register(heartbeatSubsystem); err != nil {
-			return fmt.Errorf("注册心跳子系统失败: %w", err)
+			return fmt.Errorf("failed to register heartbeat subsystem: %w", err)
 		}
 
 		commandSubsystem := NewCommandSubsystem(n)
 		if err := n.subsystemManager.Register(commandSubsystem); err != nil {
-			return fmt.Errorf("注册命令子系统失败: %w", err)
+			return fmt.Errorf("failed to register command subsystem: %w", err)
 		}
 
 	case NodeRoleMaster:
-		// Master 节点需要命令管理子系统
+		// Master nodes need command management subsystem
 		commandSubsystem := NewCommandSubsystem(n)
 		if err := n.subsystemManager.Register(commandSubsystem); err != nil {
-			return fmt.Errorf("注册命令子系统失败: %w", err)
+			return fmt.Errorf("failed to register command subsystem: %w", err)
 		}
 	}
 
 	return nil
 }
 
-// startSubsystems 启动子系统
+// startSubsystems starts the resource monitor and all registered subsystems.
 func (n *Node) startSubsystems() error {
-	// 启动资源监控器
+	// Start resource monitor
 	if n.resource != nil {
 		if err := n.resource.Start(); err != nil {
-			return fmt.Errorf("启动资源监控器失败: %w", err)
+			return fmt.Errorf("failed to start resource monitor: %w", err)
 		}
 	}
 
-	// 启动其他子系统
+	// Start other subsystems
 	if n.subsystemManager != nil {
 		if err := n.subsystemManager.Start(); err != nil {
-			// 停止已启动的资源监控器
+			// Stop already-started resource monitor
 			if n.resource != nil {
 				n.resource.Stop() //errcheck:ignore
 			}
-			return fmt.Errorf("启动子系统失败: %w", err)
+			return fmt.Errorf("failed to start subsystems: %w", err)
 		}
 	}
 
 	return nil
 }
 
-// stopSubsystems 停止子系统
+// stopSubsystems stops all subsystems and the resource monitor.
 func (n *Node) stopSubsystems() {
-	// 停止子系统管理器
+	// Stop subsystem manager
 	if n.subsystemManager != nil {
 		if err := n.subsystemManager.Stop(); err != nil {
 			logger.Warnf("停止子系统管理器失败: %v", err)
 		}
 	}
 
-	// 停止资源监控器
+	// Stop resource monitor
 	if n.resource != nil {
 		if err := n.resource.Stop(); err != nil {
 			logger.Warnf("停止资源监控失败: %v", err)
@@ -601,19 +601,19 @@ func (n *Node) stopSubsystems() {
 	}
 }
 
-// Context 获取节点上下文
+// Context returns the node's context.
 func (n *Node) Context() context.Context {
 	return n.ctx
 }
 
-// GetResourceMonitor 获取资源监控器
+// GetResourceMonitor returns the resource monitor instance.
 func (n *Node) GetResourceMonitor() *ResourceMonitor {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.resource
 }
 
-// GetResourceSnapshot 获取当前资源快照（便捷方法）
+// GetResourceSnapshot returns the current resource snapshot (convenience method).
 func (n *Node) GetResourceSnapshot() *NodeResources {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -625,7 +625,7 @@ func (n *Node) GetResourceSnapshot() *NodeResources {
 	return n.resource.GetSnapshot()
 }
 
-// GetGPUInfo 获取GPU信息（便捷方法）
+// GetGPUInfo returns GPU information (convenience method).
 func (n *Node) GetGPUInfo() []gpu.Info {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -637,7 +637,7 @@ func (n *Node) GetGPUInfo() []gpu.Info {
 	return n.resource.GetGPUInfo()
 }
 
-// GetLlamacppInfo 获取llama.cpp信息（便捷方法）
+// GetLlamacppInfo returns llama.cpp information (convenience method).
 func (n *Node) GetLlamacppInfo() *LlamacppInfo {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -649,16 +649,16 @@ func (n *Node) GetLlamacppInfo() *LlamacppInfo {
 	return n.resource.GetLlamacppInfo()
 }
 
-// Master 功能：客户端管理
-// 以下方法供 Master 角色使用
+// Master functionality: client management
+// The following methods are used by nodes in the Master role.
 
-// clients 存储已注册的客户端节点
+// clientRegistry stores registered client nodes.
 type clientRegistry struct {
 	clients map[string]*NodeInfo // nodeID -> NodeInfo
 	mu      sync.RWMutex
 }
 
-// RegisterClient 注册一个新的客户端节点
+// RegisterClient registers a new client node.
 func (n *Node) RegisterClient(info *NodeInfo) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -688,7 +688,7 @@ func (n *Node) RegisterClient(info *NodeInfo) error {
 	return nil
 }
 
-// UnregisterClient 注销客户端节点
+// UnregisterClient unregisters a client node.
 func (n *Node) UnregisterClient(nodeID string) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -710,7 +710,7 @@ func (n *Node) UnregisterClient(nodeID string) error {
 	return nil
 }
 
-// GetClient 获取指定客户端信息
+// GetClient returns the specified client's information.
 func (n *Node) GetClient(nodeID string) (*NodeInfo, error) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -732,7 +732,7 @@ func (n *Node) GetClient(nodeID string) (*NodeInfo, error) {
 	return &clientCopy, nil
 }
 
-// ListClients 列出所有已注册的客户端
+// ListClients returns all registered clients.
 func (n *Node) ListClients() []*NodeInfo {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -753,7 +753,7 @@ func (n *Node) ListClients() []*NodeInfo {
 	return clients
 }
 
-// HandleHeartbeat 处理客户端心跳
+// HandleHeartbeat processes a client heartbeat message.
 func (n *Node) HandleHeartbeat(nodeID string, heartbeat *HeartbeatMessage) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -790,7 +790,7 @@ func (n *Node) HandleHeartbeat(nodeID string, heartbeat *HeartbeatMessage) error
 	return nil
 }
 
-// GetClientCount 获取客户端数量统计
+// GetClientCount returns client count statistics (total, online, offline, busy).
 func (n *Node) GetClientCount() (total, online, offline, busy int) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -817,22 +817,22 @@ func (n *Node) GetClientCount() (total, online, offline, busy int) {
 	return total, online, offline, busy
 }
 
-// Client 功能：命令管理
-// 以下方法供 Client 角色使用
+// Client functionality: command management
+// The following methods are used by nodes in the Client role.
 
-// pendingCommands 存储待执行的命令
+// commandQueue stores pending commands for client nodes.
 type commandQueue struct {
 	commands map[string][]*Command // nodeID -> commands
 	mu       sync.RWMutex
 }
 
-// commandResults 存储命令执行结果
+// commandResultStore stores command execution results.
 type commandResultStore struct {
 	results map[string]*CommandResult // commandID -> result
 	mu      sync.RWMutex
 }
 
-// QueueCommand 为客户端节点添加待执行命令
+// QueueCommand queues a command for a client node to execute.
 func (n *Node) QueueCommand(nodeID string, cmd *Command) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -856,7 +856,7 @@ func (n *Node) QueueCommand(nodeID string, cmd *Command) error {
 	return nil
 }
 
-// GetPendingCommands 获取指定节点的待执行命令
+// GetPendingCommands retrieves and clears pending commands for the specified node.
 func (n *Node) GetPendingCommands(nodeID string) []*Command {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -881,9 +881,9 @@ func (n *Node) GetPendingCommands(nodeID string) []*Command {
 	return result
 }
 
-// 命令结果存储
+// Command result storage
 
-// StoreCommandResult 存储命令执行结果
+// StoreCommandResult stores a command execution result.
 func (n *Node) StoreCommandResult(result *CommandResult) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
@@ -905,7 +905,7 @@ func (n *Node) StoreCommandResult(result *CommandResult) error {
 	return nil
 }
 
-// CleanOldCommandResults 清理旧的命令结果（保留最近 N 条）
+// CleanOldCommandResults removes old command results, keeping only the most recent N.
 func (n *Node) CleanOldCommandResults(keepCount int) int {
 	n.mu.Lock()
 	defer n.mu.Unlock()

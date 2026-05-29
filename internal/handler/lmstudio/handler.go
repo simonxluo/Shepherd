@@ -19,7 +19,7 @@ func NewHandler(modelMgr *model.Manager) *Handler {
 }
 
 // @Summary      LM Studio Chat Completions
-// @Description  LM Studio 兼容的聊天补全接口，支持流式和非流式响应
+// @Description  LM Studio-compatible chat completions endpoint, supports streaming and non-streaming responses
 // @Tags         LMStudio
 // @Accept       json
 // @Produce      json
@@ -66,7 +66,7 @@ func (h *Handler) HandleChatCompletions(c *gin.Context) {
 }
 
 // @Summary      LM Studio Completions
-// @Description  LM Studio 兼容的文本补全接口
+// @Description  LM Studio-compatible text completions endpoint
 // @Tags         LMStudio
 // @Accept       json
 // @Produce      json
@@ -115,7 +115,7 @@ func (h *Handler) HandleCompletions(c *gin.Context) {
 }
 
 // @Summary      List Models
-// @Description  获取已加载的模型列表（LM Studio 格式）
+// @Description  List loaded models in LM Studio format
 // @Tags         LMStudio
 // @Produce      json
 // @Success      200  {object}  compat.ModelsResponse
@@ -126,7 +126,7 @@ func (h *Handler) HandleModels(c *gin.Context) {
 }
 
 // @Summary      LM Studio Embeddings
-// @Description  LM Studio 兼容的嵌入接口，内部转发到 llama.cpp
+// @Description  LM Studio-compatible embeddings endpoint, proxied to llama.cpp backend
 // @Tags         LMStudio
 // @Accept       json
 // @Produce      json

@@ -10,7 +10,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/storage/sqlcgen"
 )
 
-// sqlcModelLoadConfigToDomain 将 sqlc 生成的 ModelLoadConfig 转换为领域类型
+// sqlcModelLoadConfigToDomain converts a sqlc-generated ModelLoadConfig to the domain type.
 func sqlcModelLoadConfigToDomain(row *sqlcgen.ModelLoadConfig) *ModelLoadConfig {
 	c := &ModelLoadConfig{
 		ID:        row.ID,

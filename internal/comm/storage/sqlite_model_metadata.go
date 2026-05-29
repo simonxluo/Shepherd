@@ -11,7 +11,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/storage/sqlcgen"
 )
 
-// sqlcModelMetadataToDomain 将 sqlc 生成的 ModelMetadatum 转换为领域类型
+// sqlcModelMetadataToDomain converts a sqlc-generated ModelMetadatum to the domain type.
 func sqlcModelMetadataToDomain(row *sqlcgen.ModelMetadatum) *ModelMetadata {
 	m := &ModelMetadata{
 		ModelID:     row.ModelID,

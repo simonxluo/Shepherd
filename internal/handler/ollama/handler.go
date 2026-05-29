@@ -49,7 +49,7 @@ type ChatResponse struct {
 }
 
 // @Summary      Ollama Chat
-// @Description  Ollama 兼容的聊天接口，内部转换为 OpenAI 格式转发
+// @Description  Ollama-compatible chat endpoint, internally converts to OpenAI format for forwarding
 // @Tags         Ollama
 // @Accept       json
 // @Produce      json
@@ -92,7 +92,7 @@ func (h *Handler) HandleChat(c *gin.Context) {
 }
 
 // @Summary      Ollama Tags
-// @Description  获取模型标签列表（Ollama 格式）
+// @Description  List model tags in Ollama format
 // @Tags         Ollama
 // @Produce      json
 // @Success      200  {object}  map[string]interface{}

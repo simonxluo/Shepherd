@@ -47,12 +47,12 @@ type Store interface {
 	UpdateLaunchProfile(ctx context.Context, profile *LaunchProfile) error
 	DeleteLaunchProfile(ctx context.Context, id string) error
 
-	// ModelMetadata operations - 用户设置的模型元数据
+	// ModelMetadata operations - user-defined model metadata
 	SaveModelMetadata(ctx context.Context, metadata *ModelMetadata) error
 	GetModelMetadata(ctx context.Context, modelID string) (*ModelMetadata, error)
 	ListModelMetadata(ctx context.Context, limit, offset int) ([]*ModelMetadata, error)
 	DeleteModelMetadata(ctx context.Context, modelID string) error
-	GetAllModelMetadata(ctx context.Context) (map[string]*ModelMetadata, error) // 批量获取所有模型元数据
+	GetAllModelMetadata(ctx context.Context) (map[string]*ModelMetadata, error) // batch fetch all model metadata
 
 	// TTS History operations
 	CreateTTSHistory(ctx context.Context, item *TTSHistoryItem) error
@@ -151,5 +151,5 @@ func (e *StorageError) Unwrap() error {
 	return e.Err
 }
 
-// 确保 StorageError 实现 error 接口
+// Ensure StorageError implements the error interface.
 var _ error = (*StorageError)(nil)

@@ -10,7 +10,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/storage/sqlcgen"
 )
 
-// sqlcBenchmarkConfigToDomain 将 sqlc 生成的 BenchmarkConfig 转换为领域类型
+// sqlcBenchmarkConfigToDomain converts a sqlc-generated BenchmarkConfig to the domain type.
 func sqlcBenchmarkConfigToDomain(row *sqlcgen.BenchmarkConfig) *BenchmarkConfig {
 	c := &BenchmarkConfig{
 		Name:         row.Name,

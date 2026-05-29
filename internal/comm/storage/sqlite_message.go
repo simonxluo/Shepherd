@@ -10,7 +10,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/storage/sqlcgen"
 )
 
-// sqlcMsgToDomain 将 sqlc 生成的 Message 转换为领域类型
+// sqlcMsgToDomain converts a sqlc-generated Message to the domain type.
 func sqlcMsgToDomain(row *sqlcgen.Message) *Message {
 	msg := &Message{
 		ID:             row.ID,

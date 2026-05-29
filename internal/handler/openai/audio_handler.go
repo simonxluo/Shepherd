@@ -168,7 +168,7 @@ func (h *AudioHandler) HandleCreateTranslation(c *gin.Context) {
 	h.ForwardMultipartRequest(c, port, "/v1/audio/translations", actualModelID, formFields)
 }
 
-// HandleListVoices 代理 GET /v1/audio/voices 到后端，返回可用语音列表
+// HandleListVoices proxies GET /v1/audio/voices to the backend, returning available voices.
 func (h *AudioHandler) HandleListVoices(c *gin.Context) {
 	modelName := c.Query("model")
 	if modelName == "" {

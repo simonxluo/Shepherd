@@ -8,11 +8,10 @@ import (
 	"github.com/simonxluo/Shepherd/internal/service/node"
 )
 
-// ClientStatus is an alias for the unified NodeState type
-// ClientStatus 是统一 NodeState 类型的别名，保持向后兼容
+// ClientStatus is an alias for the unified NodeState type, kept for backward compatibility.
 type ClientStatus = types.NodeState
 
-// ClientStatus constants - 使用统一的 NodeState 常量
+// ClientStatus constants using the unified NodeState values.
 const (
 	ClientStatusOffline ClientStatus = types.StateOffline
 	ClientStatusOnline  ClientStatus = types.StateOnline

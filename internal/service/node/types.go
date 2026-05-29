@@ -17,11 +17,10 @@ const (
 	NodeRoleHybrid NodeRole = "hybrid"
 )
 
-// NodeStatus is an alias for the unified NodeState type
-// NodeStatus 是统一 NodeState 类型的别名，保持向后兼容
+// NodeStatus is an alias for the unified NodeState type, kept for backward compatibility.
 type NodeStatus = types.NodeState
 
-// NodeStatus constants - 使用统一的 NodeState 常量
+// NodeStatus constants using the unified NodeState values.
 const (
 	NodeStatusOffline NodeStatus = types.StateOffline
 	NodeStatusOnline  NodeStatus = types.StateOnline
@@ -29,7 +28,7 @@ const (
 	NodeStatusError   NodeStatus = types.StateError
 )
 
-// 向后兼容：旧的代码可以继续使用 NodeStatus，实际上使用的是统一的 NodeState
+// Backward compatible: existing code can continue using NodeStatus, which maps to the unified NodeState.
 
 // validNodeTransitions defines allowed state transitions for Node
 var validNodeTransitions = map[NodeStatus][]NodeStatus{
@@ -186,7 +185,7 @@ type NodeInfo struct {
 	CreatedAt    time.Time         `json:"createdAt"`
 	UpdatedAt    time.Time         `json:"updatedAt"`
 	LastSeen     time.Time         `json:"lastSeen"`
-	RegisteredAt time.Time         `json:"registeredAt"` // 注册时间（客户端）
+	RegisteredAt time.Time         `json:"registeredAt"` // Registration time (for client nodes)
 }
 
 // NodeConfig contains configuration for a node
@@ -209,8 +208,8 @@ type NodeConfig struct {
 	MaxMemoryUsage      int64             `json:"maxMemoryUsage"` // bytes
 	MaxCPUUsage         float64           `json:"maxCPUUsage"`    // percentage
 	MaxGpuMemory        int64             `json:"maxGpuMemory"`   // bytes
-	Tags                []string          `json:"tags"`           // 节点标签
-	Metadata            map[string]string `json:"metadata"`       // 节点元数据
-	Capabilities        *NodeCapabilities `json:"capabilities"`   // 节点能力
+	Tags                []string          `json:"tags"`           // Node tags
+	Metadata            map[string]string `json:"metadata"`       // Node metadata
+	Capabilities        *NodeCapabilities `json:"capabilities"`   // Node capabilities
 	Version             string            `json:"version"`
 }

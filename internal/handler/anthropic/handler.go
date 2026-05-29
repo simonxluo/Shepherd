@@ -67,7 +67,7 @@ type ErrorDetail struct {
 }
 
 // @Summary      Anthropic Messages
-// @Description  Anthropic 兼容的消息接口，内部转换为 OpenAI 格式转发并转换响应
+// @Description  Anthropic-compatible messages endpoint, internally converts to OpenAI format for forwarding
 // @Tags         Anthropic
 // @Accept       json
 // @Produce      json

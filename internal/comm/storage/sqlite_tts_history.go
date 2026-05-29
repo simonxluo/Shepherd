@@ -10,7 +10,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/storage/sqlcgen"
 )
 
-// sqlcTTSItemToDomain 将 sqlc 生成的 TtsHistory 转换为领域类型
+// sqlcTTSItemToDomain converts a sqlc-generated TtsHistory to the domain type.
 func sqlcTTSItemToDomain(row *sqlcgen.TtsHistory) *TTSHistoryItem {
 	item := &TTSHistoryItem{
 		ID:        row.ID,

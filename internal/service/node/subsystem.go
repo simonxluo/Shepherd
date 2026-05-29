@@ -186,7 +186,7 @@ func (sm *SubsystemManager) IsRunning() bool {
 	return sm.running
 }
 
-// 内置子系统实现
+// Built-in subsystem implementations
 
 // HeartbeatSubsystem manages heartbeats for client nodes
 type HeartbeatSubsystem struct {
@@ -260,7 +260,7 @@ func (hs *HeartbeatSubsystem) heartbeatLoop(ctx context.Context) {
 	}
 }
 
-// sendHeartbeatToMaster 发送心跳到 Master 节点
+// sendHeartbeatToMaster sends a heartbeat to the Master node.
 func (hs *HeartbeatSubsystem) sendHeartbeatToMaster() {
 	// 构建心跳消息
 	heartbeat := &HeartbeatMessage{
@@ -424,7 +424,7 @@ func (rs *RegistrationSubsystem) IsRunning() bool {
 	return rs.running
 }
 
-// registerWithMaster 向 Master 注册当前节点
+// registerWithMaster registers the current node with the Master.
 func (rs *RegistrationSubsystem) registerWithMaster(ctx context.Context) {
 	// 检查是否配置了 Master 地址
 	if rs.node.config == nil || rs.node.config.MasterAddress == "" {

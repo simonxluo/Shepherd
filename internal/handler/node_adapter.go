@@ -1,5 +1,5 @@
-// Package api provides Node API adapter for backward compatibility
-// 这个包提供了 API 适配层，确保向后兼容性
+// Package api provides Node API adapter for backward compatibility.
+// This package provides an API adapter layer ensuring backward compatibility.
 package handler
 
 import (
@@ -16,21 +16,21 @@ import (
 	"github.com/simonxluo/Shepherd/internal/service/node"
 )
 
-// NodeAdapter 将 API 调用适配到 Node 和 Scheduler
+// NodeAdapter adapts API calls to the Node and Scheduler.
 type NodeAdapter struct {
 	node          *node.Node
 	log           *logger.Logger
 	scanner       *scanner.Scanner
 	scheduler     *scheduler.Scheduler
-	eventCallback func(eventType string, data interface{}) // 事件回调函数，用于 WebSocket/SSE 广播
+	eventCallback func(eventType string, data interface{}) // Event callback for WebSocket/SSE broadcasting
 }
 
-// NewNodeAdapter 创建一个新的 Node API 适配器
+// NewNodeAdapter creates a new Node API adapter.
 func NewNodeAdapter(n *node.Node, log *logger.Logger, schedulerCfg *config.SchedulerConfig) *NodeAdapter {
-	// 创建 scheduler.ClientManager 适配器，将 Node 适配到 Scheduler 的接口
+	// Create scheduler.ClientManager adapter, adapting Node to the Scheduler interface
 	clientMgr := &nodeClientManager{node: n}
 
-	// 创建 Scheduler
+	// Create Scheduler
 	sched := scheduler.NewScheduler(schedulerCfg, clientMgr)
 
 	return &NodeAdapter{
@@ -41,17 +41,17 @@ func NewNodeAdapter(n *node.Node, log *logger.Logger, schedulerCfg *config.Sched
 	}
 }
 
-// SetEventCallback 设置事件回调函数
+// SetEventCallback sets the event callback function.
 func (a *NodeAdapter) SetEventCallback(callback func(eventType string, data interface{})) {
 	a.eventCallback = callback
 }
 
-// nodeClientManager 将 node.Node 适配为 scheduler.ClientManager 接口
+// nodeClientManager adapts node.Node to the scheduler.ClientManager interface.
 type nodeClientManager struct {
 	node *node.Node
 }
 
-// GetOnlineClients 返回所有在线客户端
+// GetOnlineClients returns all online clients.
 func (m *nodeClientManager) GetOnlineClients() []*cluster.Client {
 	clients := m.node.ListClients()
 	result := make([]*cluster.Client, 0, len(clients))
@@ -61,7 +61,7 @@ func (m *nodeClientManager) GetOnlineClients() []*cluster.Client {
 	return result
 }
 
-// GetClient 根据ID获取客户端
+// GetClient retrieves a client by ID.
 func (m *nodeClientManager) GetClient(clientID string) (*cluster.Client, bool) {
 	info, err := m.node.GetClient(clientID)
 	if err != nil {
@@ -89,9 +89,9 @@ func nodeInfoToClusterClient(info *node.NodeInfo) *cluster.Client {
 	return client
 }
 
-// SendCommand 向客户端发送命令
+// SendCommand sends a command to a client.
 func (m *nodeClientManager) SendCommand(clientID string, command *node.Command) (map[string]interface{}, error) {
-	// 将命令加入队列
+	// Queue the command for execution
 	if err := m.node.QueueCommand(clientID, command); err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (m *nodeClientManager) SendCommand(clientID string, command *node.Command) 
 	}, nil
 }
 
-// 节点管理 API
+// Node management API
 
 // RegisterNode registers a new node in the cluster.
 // @Summary      Register a node
@@ -214,7 +214,7 @@ func (a *NodeAdapter) GetNode(c *gin.Context) {
 	})
 }
 
-// convertNodeToFrontendFormat 将NodeInfo转换为前端期望的格式
+// convertNodeToFrontendFormat converts NodeInfo to the frontend expected format.
 func (a *NodeAdapter) convertNodeToFrontendFormat(client *node.NodeInfo) gin.H {
 	// 计算 GPU 相关信息
 	var gpuMemoryTotal int64 = 0
@@ -331,7 +331,7 @@ func (a *NodeAdapter) UnregisterNode(c *gin.Context) {
 	})
 }
 
-// 心跳管理 API
+// Heartbeat management API
 
 // HandleHeartbeat processes a heartbeat from a node.
 // @Summary      Process node heartbeat
@@ -385,7 +385,7 @@ func (a *NodeAdapter) HandleHeartbeat(c *gin.Context) {
 	})
 }
 
-// 命令管理 API
+// Command management API
 
 // SendCommand sends a command to a specific node.
 // @Summary      Send command to node
@@ -465,7 +465,7 @@ func (a *NodeAdapter) GetCommands(c *gin.Context) {
 	})
 }
 
-// ReportCommandResult 上报命令执行结果
+// ReportCommandResult reports command execution results.
 // POST /api/master/command/result
 func (a *NodeAdapter) ReportCommandResult(c *gin.Context) {
 	var req struct {
@@ -542,9 +542,9 @@ func (a *NodeAdapter) ReportCommandResult(c *gin.Context) {
 	SuccessWithMessage(c, "命令结果已记录")
 }
 
-// 路由注册
+// Route registration
 
-// RegisterRoutes 注册所有 API 路由（统一版本）
+// RegisterRoutes registers all API routes (unified version).
 func (a *NodeAdapter) RegisterRoutes(router *gin.RouterGroup) {
 	// 主路由：/api/nodes/*
 	nodes := router.Group("/nodes")
@@ -584,7 +584,7 @@ func (a *NodeAdapter) RegisterRoutes(router *gin.RouterGroup) {
 	a.log.Infof("Node API 适配器路由已注册")
 }
 
-// registerDeprecatedRoutes 注册废弃的兼容性路由
+// registerDeprecatedRoutes registers deprecated compatibility routes.
 func (a *NodeAdapter) registerDeprecatedRoutes(router *gin.RouterGroup) {
 	master := router.Group("/master")
 	deprecatedMiddleware := a.deprecationWarningMiddleware()
@@ -634,7 +634,7 @@ func (a *NodeAdapter) registerDeprecatedRoutes(router *gin.RouterGroup) {
 	master.POST("/tasks/:id/retry", deprecatedMiddleware, a.RetryTask)
 }
 
-// deprecationWarningMiddleware 废弃路由警告中间件
+// deprecationWarningMiddleware is middleware that warns about deprecated routes.
 func (a *NodeAdapter) deprecationWarningMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 添加响应头警告
@@ -648,7 +648,7 @@ func (a *NodeAdapter) deprecationWarningMiddleware() gin.HandlerFunc {
 	}
 }
 
-// 辅助方法
+// Helper methods
 
 // HandleScanClients initiates a network scan for client nodes.
 // @Summary      Scan for clients
@@ -691,7 +691,7 @@ func (a *NodeAdapter) GetClientScanStatus(c *gin.Context) {
 	Success(c, status)
 }
 
-// 任务管理 API
+// Task management API
 
 // ListTasks returns all scheduled tasks.
 // @Summary      List tasks
@@ -820,7 +820,7 @@ func (a *NodeAdapter) RetryTask(c *gin.Context) {
 	})
 }
 
-// 兼容性 API 方法
+// Compatibility API methods
 
 // ListClients returns the client list in frontend-expected format.
 // @Summary      List clients

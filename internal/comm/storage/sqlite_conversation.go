@@ -11,7 +11,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/storage/sqlcgen"
 )
 
-// sqlcConvToDomain 将 sqlc 生成的 Conversation 转换为领域类型
+// sqlcConvToDomain converts a sqlc-generated Conversation to the domain type.
 func sqlcConvToDomain(row *sqlcgen.Conversation) *Conversation {
 	conv := &Conversation{
 		ID:        row.ID,

@@ -9,7 +9,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/storage/sqlcgen"
 )
 
-// sqlcTaskToDomain 将 sqlc 生成的 DownloadTask 转换为领域类型
+// sqlcTaskToDomain converts a sqlc-generated DownloadTask to the domain type.
 func sqlcTaskToDomain(row *sqlcgen.DownloadTask) *DownloadTask {
 	return &DownloadTask{
 		ID:              row.ID,

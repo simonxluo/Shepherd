@@ -79,8 +79,8 @@ func (s *Scheduler) Stop() {
 	s.wg.Wait()
 }
 
-// SubmitTask submits a new task for scheduling
-// nodeID 参数可选，如果指定则任务将发送到该节点；为空字符串时使用调度策略自动选择
+// SubmitTask submits a new task for scheduling.
+// The nodeID parameter is optional; if specified the task is sent to that node, otherwise the scheduling strategy selects one.
 func (s *Scheduler) SubmitTask(taskType cluster.TaskType, payload map[string]interface{}, nodeID ...string) (*cluster.Task, error) {
 	task := &cluster.Task{
 		ID:        uuid.New().String(),

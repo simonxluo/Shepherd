@@ -93,7 +93,7 @@ func (h *WebSocketHub) Run() {
 	}
 }
 
-// Stop 关闭 hub，断开所有客户端连接
+// Stop closes the hub and disconnects all client connections.
 func (h *WebSocketHub) Stop() {
 	h.cancel()
 

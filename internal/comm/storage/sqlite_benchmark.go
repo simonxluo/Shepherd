@@ -10,7 +10,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/storage/sqlcgen"
 )
 
-// sqlcBenchmarkToDomain 将 sqlc 生成的 Benchmark 转换为领域类型
+// sqlcBenchmarkToDomain converts a sqlc-generated Benchmark to the domain type.
 func sqlcBenchmarkToDomain(row *sqlcgen.Benchmark) *Benchmark {
 	b := &Benchmark{
 		ID:        row.ID,

@@ -19,7 +19,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
-// gpuMemRe 预编译 GPU 内存信息正则，避免每次请求重新编译
+// gpuMemRe is a pre-compiled regex for GPU memory info, avoiding recompilation per request
 var gpuMemRe = regexp.MustCompile(`^(.+?)\s*\((\d+)\s+MiB(?:,\s*(\d+)\s+MiB\s+free)?\)`)
 
 // HandleServerInfo returns server information including version, ports, and status.

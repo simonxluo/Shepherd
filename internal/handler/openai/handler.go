@@ -19,7 +19,7 @@ func NewHandler(modelMgr *model.Manager) *Handler {
 }
 
 // @Summary      OpenAI Chat Completions
-// @Description  OpenAI 兼容的聊天补全接口，支持流式和非流式响应
+// @Description  OpenAI-compatible chat completions endpoint, supports streaming and non-streaming responses
 // @Tags         OpenAI
 // @Accept       json
 // @Produce      json
@@ -66,7 +66,7 @@ func (h *Handler) HandleChatCompletions(c *gin.Context) {
 }
 
 // @Summary      OpenAI Completions
-// @Description  OpenAI 兼容的文本补全接口
+// @Description  OpenAI-compatible text completions endpoint
 // @Tags         OpenAI
 // @Accept       json
 // @Produce      json
@@ -115,7 +115,7 @@ func (h *Handler) HandleCompletions(c *gin.Context) {
 }
 
 // @Summary      List Models
-// @Description  获取已加载的模型列表（OpenAI 格式）
+// @Description  List loaded models in OpenAI format
 // @Tags         OpenAI
 // @Produce      json
 // @Success      200  {object}  ModelsResponse

@@ -19,14 +19,14 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-// ResourceMonitor 负责收集节点的资源信息
+// ResourceMonitor is responsible for collecting node resource information.
 type ResourceMonitor struct {
-	// 配置参数
-	interval      time.Duration        // 采样间隔
-	llamacppPaths []string             // llama.cpp 可执行文件路径
-	callback      func(*NodeResources) // 资源更新回调函数
+	// Configuration
+	interval      time.Duration        // Sampling interval
+	llamacppPaths []string             // llama.cpp executable paths
+	callback      func(*NodeResources) // Resource update callback
 
-	// 运行时状态
+	// Runtime state
 	ctx        context.Context
 	cancel     context.CancelFunc
 	wg         sync.WaitGroup
@@ -35,27 +35,27 @@ type ResourceMonitor struct {
 	lastUpdate time.Time
 	startTime  time.Time
 
-	// 资源数据
+	// Resource data
 	resources    *NodeResources
 	gpuInfo      []gpu.Info
 	llamacppInfo *LlamacppInfo
 
-	// GPU检测器 (使用新的gpu包)
+	// GPU detector (using the gpu package)
 	gpuDetector *gpu.Detector
 
-	// 日志
+	// Logger
 	log *logger.Logger
 }
 
-// ResourceMonitorConfig 资源监控器配置
+// ResourceMonitorConfig holds configuration for the resource monitor.
 type ResourceMonitorConfig struct {
-	Interval      time.Duration        // 采样间隔，默认5秒
-	LlamacppPaths []string             // llama.cpp 可执行文件路径
-	Callback      func(*NodeResources) // 资源更新回调
+	Interval      time.Duration        // Sampling interval, default 5s
+	LlamacppPaths []string             // llama.cpp executable paths
+	Callback      func(*NodeResources) // Resource update callback
 	Logger        *logger.Logger
 }
 
-// NewResourceMonitor 创建新的资源监控器
+// NewResourceMonitor creates a new resource monitor.
 func NewResourceMonitor(config *ResourceMonitorConfig) *ResourceMonitor {
 	if config == nil {
 		config = &ResourceMonitorConfig{}
@@ -67,11 +67,11 @@ func NewResourceMonitor(config *ResourceMonitorConfig) *ResourceMonitor {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// 初始化资源数据
+	// Initialize resource data
 	resources := &NodeResources{
-		CPUTotal:    int64(runtime.NumCPU()) * 1000, // 转换为 millicores
-		MemoryTotal: 0,                              // 将在初始化时设置
-		DiskTotal:   0,                              // 将在初始化时设置
+		CPUTotal:    int64(runtime.NumCPU()) * 1000, // convert to millicores
+		MemoryTotal: 0,                              // will be set during initialization
+		DiskTotal:   0,                              // will be set during initialization
 		GPUInfo:     make([]gpu.Info, 0),
 		LoadAverage: make([]float64, 3),
 	}
@@ -93,7 +93,7 @@ func NewResourceMonitor(config *ResourceMonitorConfig) *ResourceMonitor {
 	return rm
 }
 
-// Start 启动资源监控
+// Start starts the resource monitor.
 func (rm *ResourceMonitor) Start() error {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
@@ -105,10 +105,10 @@ func (rm *ResourceMonitor) Start() error {
 	rm.running = true
 	rm.lastUpdate = time.Time{}
 
-	// 初始化资源信息
+	// Initialize resource information
 	if err := rm.initializeResources(); err != nil {
 		rm.log.Errorf("初始化资源信息失败: %v", err)
-		// 不返回错误，继续运行
+		// Don't return error, continue running
 	}
 
 	rm.wg.Add(1)
@@ -120,7 +120,7 @@ func (rm *ResourceMonitor) Start() error {
 	return nil
 }
 
-// Stop 停止资源监控
+// Stop stops the resource monitor.
 func (rm *ResourceMonitor) Stop() error {
 	rm.mu.Lock()
 	if !rm.running {
@@ -131,7 +131,7 @@ func (rm *ResourceMonitor) Stop() error {
 	rm.running = false
 	rm.mu.Unlock()
 
-	// 先取消context，让monitorLoop能够退出
+	// Cancel context first so monitorLoop can exit
 	rm.cancel()
 	rm.wg.Wait()
 
@@ -144,12 +144,12 @@ func (rm *ResourceMonitor) Stop() error {
 	return nil
 }
 
-// GetSnapshot 获取当前资源快照
+// GetSnapshot returns the current resource snapshot.
 func (rm *ResourceMonitor) GetSnapshot() *NodeResources {
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
 
-	// 返回资源数据的副本
+	// Return a copy of the resource data
 	if rm.resources == nil {
 		return nil
 	}
@@ -163,7 +163,7 @@ func (rm *ResourceMonitor) GetSnapshot() *NodeResources {
 	return &snapshot
 }
 
-// GetGPUInfo 获取GPU信息
+// GetGPUInfo returns GPU information.
 func (rm *ResourceMonitor) GetGPUInfo() []gpu.Info {
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
@@ -173,7 +173,7 @@ func (rm *ResourceMonitor) GetGPUInfo() []gpu.Info {
 	return gpuInfo
 }
 
-// GetLlamacppInfo 获取llama.cpp信息
+// GetLlamacppInfo returns llama.cpp installation information.
 func (rm *ResourceMonitor) GetLlamacppInfo() *LlamacppInfo {
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
@@ -186,9 +186,9 @@ func (rm *ResourceMonitor) GetLlamacppInfo() *LlamacppInfo {
 	return &info
 }
 
-// initializeResources 初始化资源信息
+// initializeResources initializes resource information.
 func (rm *ResourceMonitor) initializeResources() error {
-	// 获取内存总量
+	// Get total memory
 	if vmStat, err := mem.VirtualMemory(); err == nil {
 		rm.resources.MemoryTotal = int64(vmStat.Total)
 	} else {
@@ -197,7 +197,7 @@ func (rm *ResourceMonitor) initializeResources() error {
 		}
 	}
 
-	// 获取磁盘总量（根目录）
+	// Get total disk (root partition)
 	if diskStat, err := disk.Usage("/"); err == nil {
 		rm.resources.DiskTotal = int64(diskStat.Total)
 	} else {
@@ -206,41 +206,41 @@ func (rm *ResourceMonitor) initializeResources() error {
 		}
 	}
 
-	// 获取CPU型号
+	// Get CPU model
 	if cpuInfos, err := cpu.Info(); err == nil && len(cpuInfos) > 0 {
 		rm.resources.CPUModel = cpuInfos[0].ModelName
 	}
 
-	// 获取平台信息
+	// Get platform information
 	rm.resources.Platform = runtime.GOOS
 	rm.resources.Arch = runtime.GOARCH
 	if hostname, err := os.Hostname(); err == nil {
 		rm.resources.Hostname = hostname
 	}
 
-	// 获取主机IP
+	// Get host IP
 	rm.resources.HostIP = rm.detectHostIP()
 
-	// 检测GPU
+	// Detect GPUs
 	rm.detectGPUs()
 
-	// 检测ROCm版本
+	// Detect ROCm version
 	rm.resources.ROCmVersion = rm.detectROCmVersion()
 
-	// 检测内核版本
+	// Detect kernel version
 	rm.resources.KernelVersion = rm.detectKernelVersion()
 
-	// 检测llama.cpp
+	// Detect llama.cpp
 	rm.detectLlamacpp()
 
 	return nil
 }
 
-// monitorLoop 监控循环
+// monitorLoop is the main monitoring loop.
 func (rm *ResourceMonitor) monitorLoop() {
 	defer rm.wg.Done()
 
-	// 立即执行一次更新
+	// Execute an update immediately
 	rm.updateResources()
 
 	ticker := time.NewTicker(rm.interval)
@@ -256,9 +256,9 @@ func (rm *ResourceMonitor) monitorLoop() {
 	}
 }
 
-// updateResources 更新资源信息
+// updateResources updates resource information.
 func (rm *ResourceMonitor) updateResources() {
-	// 检查context是否已取消
+	// Check if context has been cancelled
 	select {
 	case <-rm.ctx.Done():
 		return
@@ -273,25 +273,25 @@ func (rm *ResourceMonitor) updateResources() {
 
 		rm.lastUpdate = time.Now()
 
-		// 更新CPU使用率
+		// Update CPU usage
 		rm.updateCPUUsage()
 
-		// 更新内存使用情况
+		// Update memory usage
 		rm.updateMemoryUsage()
 
-		// 更新磁盘使用情况
+		// Update disk usage
 		rm.updateDiskUsage()
 
-		// 更新GPU信息
+		// Update GPU information
 		rm.updateGPUInfo()
 
-		// 更新系统负载
+		// Update system load average
 		rm.updateLoadAverage()
 
-		// 更新运行时间
+		// Update uptime
 		rm.resources.Uptime = int64(time.Since(rm.startTime).Seconds())
 
-		// 创建副本避免并发访问问题
+		// Create a copy to avoid concurrent access issues
 		if rm.callback != nil {
 			resourcesCopy = &NodeResources{}
 			*resourcesCopy = *rm.resources
@@ -307,7 +307,7 @@ func (rm *ResourceMonitor) updateResources() {
 	}
 }
 
-// updateCPUUsage 更新CPU使用率
+// updateCPUUsage updates CPU usage metrics.
 func (rm *ResourceMonitor) updateCPUUsage() {
 	if cpuPercent, err := cpu.Percent(0, false); err == nil && len(cpuPercent) > 0 {
 		// 转换为 millicores
@@ -320,7 +320,7 @@ func (rm *ResourceMonitor) updateCPUUsage() {
 	}
 }
 
-// updateMemoryUsage 更新内存使用情况
+// updateMemoryUsage updates memory usage metrics.
 func (rm *ResourceMonitor) updateMemoryUsage() {
 	if vmStat, err := mem.VirtualMemory(); err == nil {
 		rm.resources.MemoryUsed = int64(vmStat.Used)
@@ -332,7 +332,7 @@ func (rm *ResourceMonitor) updateMemoryUsage() {
 	}
 }
 
-// updateDiskUsage 更新磁盘使用情况
+// updateDiskUsage updates disk usage metrics.
 func (rm *ResourceMonitor) updateDiskUsage() {
 	if diskStat, err := disk.Usage("/"); err == nil {
 		rm.resources.DiskUsed = int64(diskStat.Used)
@@ -344,7 +344,7 @@ func (rm *ResourceMonitor) updateDiskUsage() {
 	}
 }
 
-// updateGPUInfo 更新GPU信息 (使用新的gpu包)
+// updateGPUInfo updates GPU information (using the gpu package).
 func (rm *ResourceMonitor) updateGPUInfo() {
 	if rm.gpuDetector == nil {
 		return
@@ -365,7 +365,7 @@ func (rm *ResourceMonitor) updateGPUInfo() {
 	}
 }
 
-// updateLoadAverage 更新系统负载
+// updateLoadAverage updates system load average.
 func (rm *ResourceMonitor) updateLoadAverage() {
 	if loadStat, err := load.Avg(); err == nil {
 		rm.resources.LoadAverage = []float64{loadStat.Load1, loadStat.Load5, loadStat.Load15}
@@ -377,7 +377,7 @@ func (rm *ResourceMonitor) updateLoadAverage() {
 	}
 }
 
-// detectGPUs 检测GPU (使用新的gpu包)
+// detectGPUs detects GPUs (using the gpu package).
 func (rm *ResourceMonitor) detectGPUs() {
 	if rm.gpuDetector == nil {
 		return
@@ -394,7 +394,7 @@ func (rm *ResourceMonitor) detectGPUs() {
 	rm.gpuInfo = gpus
 }
 
-// detectLlamacpp 检测llama.cpp
+// detectLlamacpp detects llama.cpp installation.
 func (rm *ResourceMonitor) detectLlamacpp() {
 	rm.llamacppInfo = nil
 
@@ -413,7 +413,7 @@ func (rm *ResourceMonitor) detectLlamacpp() {
 	}
 }
 
-// testLlamacppPath 测试llama.cpp路径
+// testLlamacppPath tests a llama.cpp binary path.
 func (rm *ResourceMonitor) testLlamacppPath(path string) *LlamacppInfo {
 	// 检查文件是否存在且可执行
 	cmd := exec.Command("test", "-x", path)
@@ -471,7 +471,7 @@ func (rm *ResourceMonitor) testLlamacppPath(path string) *LlamacppInfo {
 	return info
 }
 
-// detectROCmVersion 检测ROCm版本
+// detectROCmVersion detects the ROCm version.
 func (rm *ResourceMonitor) detectROCmVersion() string {
 	// 检测优先级：version文件 > hipcc路径 > rocm-smi-lib版本 > rocm-smi工具版本
 
@@ -549,7 +549,7 @@ func (rm *ResourceMonitor) detectROCmVersion() string {
 	return ""
 }
 
-// isValidROCmVersion 检查字符串是否是有效的版本号
+// isValidROCmVersion checks if a string is a valid version number.
 func isValidROCmVersion(s string) bool {
 	// 必须包含至少一个点 (例如 "7.2.0")
 	if !strings.Contains(s, ".") {
@@ -562,7 +562,7 @@ func isValidROCmVersion(s string) bool {
 	return true
 }
 
-// detectKernelVersion 检测Linux内核版本
+// detectKernelVersion detects the Linux kernel version.
 func (rm *ResourceMonitor) detectKernelVersion() string {
 	if hostStat, err := host.Info(); err == nil {
 		return hostStat.KernelVersion

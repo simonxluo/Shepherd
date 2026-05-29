@@ -16,7 +16,7 @@ func timeNow() time.Time {
 	return time.Now().UTC()
 }
 
-// derefInt64 安全解引用 *int64，如果为 nil 返回默认值
+// derefInt64 safely dereferences *int64, returning def if nil.
 func derefInt64(p *int64, def int64) int64 {
 	if p == nil {
 		return def
@@ -24,7 +24,7 @@ func derefInt64(p *int64, def int64) int64 {
 	return *p
 }
 
-// derefString 安全解引用 *string，如果为 nil 返回默认值
+// derefString safely dereferences *string, returning def if nil.
 func derefString(p *string, def string) string {
 	if p == nil {
 		return def
@@ -32,7 +32,7 @@ func derefString(p *string, def string) string {
 	return *p
 }
 
-// derefFloat64 安全解引用 *float64，如果为 nil 返回默认值
+// derefFloat64 safely dereferences *float64, returning def if nil.
 func derefFloat64(p *float64, def float64) float64 {
 	if p == nil {
 		return def
@@ -40,12 +40,12 @@ func derefFloat64(p *float64, def float64) float64 {
 	return *p
 }
 
-// int64Ptr 从 int64 创建指针
+// int64Ptr creates a pointer from an int64 value.
 func int64Ptr(v int64) *int64 {
 	return &v
 }
 
-// stringPtr 从 string 创建指针（仅在非空时）
+// stringPtr creates a pointer from a string value (nil if empty).
 func stringPtr(v string) *string {
 	if v == "" {
 		return nil
@@ -53,7 +53,7 @@ func stringPtr(v string) *string {
 	return &v
 }
 
-// timeToUnixPtr 将 *time.Time 转换为 *int64（Unix 时间戳）
+// timeToUnixPtr converts *time.Time to *int64 (Unix timestamp).
 func timeToUnixPtr(t *time.Time) *int64 {
 	if t == nil {
 		return nil
