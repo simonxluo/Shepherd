@@ -8,6 +8,7 @@ import type {
   BenchmarkV2Request,
   BenchmarkV2Response,
   BenchmarkV2Record,
+  BenchmarkTask,
 } from '@/types';
 
 /**
@@ -57,5 +58,13 @@ export const benchmarksApi = {
 
   async deleteV2(modelId: string, lineNumber: number, nodeId?: string): Promise<{ success: boolean }> {
     return apiClient.post('/models/benchmark/v2/delete', { modelId, lineNumber, nodeId });
+  },
+
+  async listTasks(): Promise<{ success: boolean; data?: { tasks: BenchmarkTask[] } }> {
+    return apiClient.get('/models/benchmark/tasks/list');
+  },
+
+  async cancelTask(taskId: string): Promise<{ success: boolean; error?: string }> {
+    return apiClient.post(`/models/benchmark/tasks/${encodeURIComponent(taskId)}/cancel`);
   },
 };

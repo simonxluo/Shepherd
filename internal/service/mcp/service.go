@@ -209,7 +209,7 @@ func (s *Service) indexActiveServers() {
 	}
 }
 
-// --- Database persistence helpers ---
+// Database persistence helpers
 
 // loadFromDatabase loads MCP servers and tools from the storage layer into the registry.
 func (s *Service) loadFromDatabase() error {
@@ -303,7 +303,7 @@ func (s *Service) persistToolsToDB(serverID string, tools []Tool) {
 	}
 }
 
-// --- Conversion helpers ---
+// Conversion helpers
 
 func dbServerToInfo(db *storage.MCPServer) *ServerInfo {
 	headers := make(map[string]string)

@@ -27,7 +27,7 @@ func NewHandler(configMgr *config.Manager, mcpService *mcpservice.Service) *Hand
 	}
 }
 
-// --- Client Management API ---
+// Client Management API
 
 // ListServers returns all configured MCP servers.
 // GET /api/mcp/servers
@@ -202,7 +202,7 @@ func (h *Handler) UpdateConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// --- MCP Server Protocol Endpoints ---
+// MCP Server Protocol Endpoints
 
 // HandleMCPSSE handles SSE connections from external MCP clients.
 // GET /mcp/sse

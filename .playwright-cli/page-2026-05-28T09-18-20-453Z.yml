@@ -1,0 +1,227 @@
+- generic:
+  - generic:
+    - generic:
+      - complementary:
+        - generic:
+          - link:
+            - /url: /
+            - generic: 🐏
+            - generic: Shepherd
+          - button:
+            - img
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - img
+                - generic: Dashboard
+            - listitem:
+              - link:
+                - /url: /models
+                - img
+                - generic: Models
+            - listitem:
+              - link:
+                - /url: /benchmark
+                - img
+                - generic: Benchmark
+            - listitem:
+              - link:
+                - /url: /downloads
+                - img
+                - generic: Downloads
+            - listitem:
+              - link:
+                - /url: /cluster
+                - img
+                - generic: Cluster
+            - listitem:
+              - link:
+                - /url: /chat
+                - img
+                - generic: Chat
+            - listitem:
+              - link:
+                - /url: /tts
+                - img
+                - generic: TTS
+            - listitem:
+              - link:
+                - /url: /asr
+                - img
+                - generic: ASR
+            - listitem:
+              - link:
+                - /url: /image-gen
+                - img
+                - generic: Image Gen
+            - listitem:
+              - link:
+                - /url: /music-gen
+                - img
+                - generic: Music Gen
+            - listitem:
+              - link:
+                - /url: /logs
+                - img
+                - generic: Logs
+            - listitem:
+              - link:
+                - /url: /settings
+                - img
+                - generic: Settings
+        - generic:
+          - button:
+            - generic:
+              - img
+            - generic:
+              - paragraph: Guest
+              - paragraph: User
+            - img
+          - generic:
+            - generic: Shepherd dev
+            - generic: © 2026 Shepherd Project
+      - generic:
+        - banner:
+          - generic:
+            - button:
+              - img
+              - img
+            - button:
+              - img
+              - img
+            - button:
+              - img
+              - img
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: Model Management
+                - paragraph: 2 models, 0 loaded
+              - generic:
+                - button:
+                  - img
+                  - text: Scan Models
+            - generic:
+              - button:
+                - img
+                - text: All
+                - generic: "2"
+              - button:
+                - img
+                - text: Chat
+                - generic: "2"
+              - button:
+                - img
+                - text: TTS
+                - generic: "0"
+              - button:
+                - img
+                - text: ASR
+                - generic: "0"
+              - button:
+                - img
+                - text: Image
+                - generic: "0"
+              - button:
+                - img
+                - text: Music
+                - generic: "0"
+              - button:
+                - img
+                - text: Embedding
+                - generic: "0"
+              - button:
+                - img
+                - text: Rerank
+                - generic: "0"
+              - button:
+                - img
+                - text: Favourites Only
+              - generic:
+                - button:
+                  - img
+                - button:
+                  - img
+            - generic:
+              - generic:
+                - img
+                - textbox:
+                  - /placeholder: Search model name, architecture...
+              - generic:
+                - button: All
+                - button: Running
+                - button: Stopped
+                - button: Loading
+                - button: Error
+            - generic:
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                  - button:
+                    - img
+                  - generic: "|"
+                  - generic: "|"
+                  - generic: 469.79 MB
+                  - generic: Thinking
+                  - generic: Tools
+                - generic:
+                  - generic:
+                    - generic: Stopped
+                  - button:
+                    - img
+                    - generic: Start
+                  - generic:
+                    - button:
+                      - img
+                    - button:
+                      - img
+              - generic:
+                - generic:
+                  - button:
+                    - img
+                  - button:
+                    - img
+                  - generic: "|"
+                  - generic: "|"
+                  - generic: 2.02 GB
+                - generic:
+                  - generic:
+                    - generic: Stopped
+                  - button:
+                    - img
+                    - generic: Start
+                  - generic:
+                    - button:
+                      - img
+                    - button:
+                      - img
+    - region "Notifications alt+T"
+  - dialog "Qwen3.5-0.8B" [ref=e420]:
+    - generic [ref=e422]:
+      - heading "Qwen3.5-0.8B" [level=2] [ref=e423]
+      - generic [ref=e424]: stopped
+    - generic [ref=e425]:
+      - tablist [ref=e426]:
+        - tab "Overview" [ref=e427]
+        - tab "Sampling" [active] [selected] [ref=e428]
+        - tab "Chat Template" [ref=e429]
+        - tab "Token Calc" [ref=e430]
+        - tab "Kwargs" [ref=e431]
+        - tab "Slots" [ref=e432]
+      - tabpanel "Sampling" [ref=e569]:
+        - generic [ref=e570]:
+          - paragraph [ref=e571]: When enabled, forces the specified sampling config, ignoring other client settings.
+          - generic [ref=e572]:
+            - combobox [ref=e573]:
+              - option "Disabled" [selected]
+            - button "Add" [ref=e574]
+            - button "Save" [disabled]
+            - button "Delete" [disabled]
+    - button "Close" [ref=e566]
+    - button "Close" [ref=e567]:
+      - img
+      - generic [ref=e568]: Close

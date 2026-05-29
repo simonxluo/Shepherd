@@ -456,7 +456,7 @@ func (m *Manager) Close() error {
 	}
 }
 
-// --- Persistence helpers ---
+// Persistence helpers
 
 func (m *Manager) persistNewTask(task *Task) {
 	if m.deps.Store == nil {
@@ -503,7 +503,7 @@ func (m *Manager) deletePersistedTask(taskID string) {
 	}
 }
 
-// --- SSE broadcasting helpers ---
+// SSE broadcasting helpers
 
 func (m *Manager) broadcastStatus(task *Task) {
 	if m.deps.EventMgr == nil {

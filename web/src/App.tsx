@@ -68,6 +68,10 @@ function AppContent() {
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
           queryClient.invalidateQueries({ queryKey: ['cluster'] });
           break;
+        case 'benchmarkUpdate':
+          queryClient.invalidateQueries({ queryKey: ['benchmark', 'tasks'] });
+          queryClient.invalidateQueries({ queryKey: ['benchmark', 'history'] });
+          break;
         case 'systemStatus':
           queryClient.invalidateQueries({ queryKey: ['system'] });
           break;
@@ -86,6 +90,7 @@ function AppContent() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['system'] });
       queryClient.invalidateQueries({ queryKey: ['nodes'] });
+      queryClient.invalidateQueries({ queryKey: ['benchmark', 'tasks'] });
     }
   }, []);
 

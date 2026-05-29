@@ -22,6 +22,7 @@ const (
 	EventTypeDownloadProgress EventType = "download_progress"
 	EventTypeScanProgress     EventType = "scan_progress"
 	EventTypeScanComplete     EventType = "scan_complete"
+	EventTypeBenchmarkUpdate  EventType = "benchmarkUpdate"
 )
 
 // Event represents a WebSocket event
@@ -191,5 +192,15 @@ func NewScanCompleteEvent(foundModels int, duration time.Duration) *Event {
 		"foundModels": foundModels,
 		"duration":    duration.Milliseconds(),
 	}
+	return event
+}
+
+// NewBenchmarkUpdateEvent 创建压测任务状态更新事件
+func NewBenchmarkUpdateEvent(taskID, modelID, status string, data interface{}) *Event {
+	event := NewEvent(EventTypeBenchmarkUpdate)
+	event.TaskID = taskID
+	event.ModelID = modelID
+	event.State = status
+	event.Data = data
 	return event
 }

@@ -80,7 +80,7 @@ type ContentBlock struct {
 	MimeType string `json:"mimeType,omitempty"` // MIME type for binary data
 }
 
-// --- JSON-RPC Protocol Types ---
+// JSON-RPC Protocol Types
 
 // JsonRpcRequest represents a JSON-RPC 2.0 request.
 type JsonRpcRequest struct {
@@ -105,7 +105,7 @@ type JsonRpcError struct {
 	Data    any    `json:"data,omitempty"`
 }
 
-// --- MCP Protocol Message Params ---
+// MCP Protocol Message Params
 
 // InitializeParams is sent by the client during handshake.
 type InitializeParams struct {
@@ -165,7 +165,7 @@ type ToolsCallResult struct {
 	IsError bool           `json:"isError,omitempty"`
 }
 
-// --- Registry File Format ---
+// Registry File Format
 
 // RegistryFile represents the persisted mcp-tools.json structure.
 type RegistryFile struct {

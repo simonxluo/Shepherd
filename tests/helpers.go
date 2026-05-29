@@ -17,6 +17,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/event"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/infra/taskmanager"
 	benchmarkapi "github.com/simonxluo/Shepherd/internal/handler/benchmark"
 	chatapi "github.com/simonxluo/Shepherd/internal/handler/chat"
 	compatibilityapi "github.com/simonxluo/Shepherd/internal/handler/compatibility"
@@ -106,7 +107,7 @@ func SetupTestServer(t *testing.T) *TestEnv {
 		Storage:       storageapi.NewHandler(cfgMgr, storageMgr),
 		Compatibility: compatibilityapi.NewHandler(cfgMgr, compatServerManager),
 		Filesystem:    filesystemapi.NewHandler(),
-		Benchmark:     benchmarkapi.NewHandler(logger.GetLogger(), store, modelMgr),
+		Benchmark:     benchmarkapi.NewHandler(logger.GetLogger(), store, modelMgr, taskmanager.NewManager(nil), event.NewManager(nil)),
 		Chat:          chatapi.NewHandler(modelMgr),
 		TTS:           ttsapi.NewHandler(storageMgr, filepath.Join(tmpDir, "tts")),
 	}

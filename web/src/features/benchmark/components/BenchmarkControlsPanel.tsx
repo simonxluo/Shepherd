@@ -96,7 +96,7 @@ export function BenchmarkControlsPanel({
               <SelectValue placeholder={t('benchmark.llamaCppVersion')} />
             </SelectTrigger>
             <SelectContent>
-              {llamaCppVersions.map((version) => (
+              {llamaCppVersions.filter((v) => v.path !== '').map((version) => (
                 <SelectItem key={version.path} value={version.path}>
                   {version.name || version.path}
                   {version.description && ` (${version.description})`}

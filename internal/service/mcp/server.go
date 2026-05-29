@@ -173,7 +173,7 @@ func (s *MCPServer) DispatchRequest(req *JsonRpcRequest) *JsonRpcResponse {
 	}
 }
 
-// --- Tool Execution ---
+// Tool Execution
 
 func (s *MCPServer) executeTTS(args map[string]any) (*ToolsCallResult, error) {
 	modelName, _ := args["model"].(string)
@@ -344,7 +344,7 @@ func (s *MCPServer) forwardToBackend(port int, path string, reqBody map[string]a
 	return data, contentType, nil
 }
 
-// --- Tool Definitions ---
+// Tool Definitions
 
 var ttsTool = Tool{
 	Name:        "text_to_speech",

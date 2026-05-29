@@ -890,7 +890,7 @@ func (s *MemoryStore) Stats() map[string]interface{} {
 	}
 }
 
-// --- MCP Server operations ---
+// MCP Server operations
 
 func (s *MemoryStore) CreateMCPServer(_ context.Context, server *MCPServer) error {
 	s.mu.Lock()
@@ -958,7 +958,7 @@ func (s *MemoryStore) DeleteMCPServer(_ context.Context, id string) error {
 	return nil
 }
 
-// --- MCP Tool operations ---
+// MCP Tool operations
 
 func (s *MemoryStore) CreateMCPTool(_ context.Context, tool *MCPTool) error {
 	s.mu.Lock()
@@ -1000,9 +1000,4 @@ func (s *MemoryStore) DeleteMCPToolsByServer(_ context.Context, serverID string)
 		}
 	}
 	return nil
-}
-
-// generateID generates a unique ID with a prefix
-func generateID(prefix string) string {
-	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
 }

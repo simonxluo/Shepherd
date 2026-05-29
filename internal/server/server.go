@@ -30,6 +30,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/infra/download"
 	modelrepoclient "github.com/simonxluo/Shepherd/internal/infra/modelrepo"
 	"github.com/simonxluo/Shepherd/internal/comm/storage"
+	"github.com/simonxluo/Shepherd/internal/infra/taskmanager"
 	"github.com/simonxluo/Shepherd/internal/router"
 	"github.com/simonxluo/Shepherd/internal/service/mcp"
 	"github.com/simonxluo/Shepherd/internal/service/model"
@@ -72,6 +73,7 @@ type Server struct {
 	repoClient  *modelrepoclient.Client
 	compatMgr   *compatibilityapi.ServerManager
 	mcpService  *mcp.Service
+	taskMgr     *taskmanager.Manager
 
 	wsHub *WebSocketHub
 
@@ -167,7 +169,20 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.Storage = storageapi.NewHandler(config.ConfigMgr, storageMgr)
 	s.handlers.Compatibility = compatibilityapi.NewHandler(config.ConfigMgr, s.compatMgr)
 	s.handlers.Filesystem = filesystemapi.NewHandler()
-	s.handlers.Benchmark = benchmarkapi.NewHandler(logger.GetLogger(), storageMgr.GetStore(), modelMgr)
+
+	// Create task manager with SSE broadcast callback
+	s.taskMgr = taskmanager.NewManager(func(task *taskmanager.Task) {
+		if s.wsMgr != nil {
+			s.wsMgr.Broadcast(event.NewBenchmarkUpdateEvent(
+				task.ID,
+				task.ModelID,
+				string(task.Status),
+				task.ToMap(),
+			))
+		}
+	})
+
+	s.handlers.Benchmark = benchmarkapi.NewHandler(logger.GetLogger(), storageMgr.GetStore(), modelMgr, s.taskMgr, s.wsMgr)
 	s.handlers.Chat = chatapi.NewHandler(modelMgr)
 	s.handlers.TTS = ttsapi.NewHandler(storageMgr, "./data/tts")
 
@@ -316,6 +331,13 @@ func (s *Server) Stop() error {
 		} else {
 			logger.Info("下载管理器已停止")
 		}
+	}
+
+	// Step 4.6: Stop task manager (benchmarks, etc.)
+	if s.taskMgr != nil {
+		logger.Info("停止任务管理器...")
+		s.taskMgr.Shutdown()
+		logger.Info("任务管理器已停止")
 	}
 
 	// Step 5: Stop compatibility servers (Ollama/LM Studio)

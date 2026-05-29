@@ -29,7 +29,7 @@ func nextRequestID() int64 {
 	return requestIDCounter.Add(1)
 }
 
-// --- SSE Transport ---
+// SSE Transport
 
 // SSETransport implements the MCP SSE transport.
 // Flow: GET /sse → receive endpoint event → POST JSON-RPC to that endpoint.
@@ -280,7 +280,7 @@ func (t *SSETransport) postNotification(ctx context.Context, endpoint, method st
 	return nil
 }
 
-// --- Streamable HTTP Transport ---
+// Streamable HTTP Transport
 
 // StreamableHTTPTransport implements the MCP Streamable HTTP transport.
 type StreamableHTTPTransport struct {
@@ -482,7 +482,7 @@ func (t *StreamableHTTPTransport) deleteSession(ctx context.Context, url, sessio
 	resp.Body.Close()
 }
 
-// --- Helpers ---
+// Helpers
 
 func extractBaseURL(fullURL string) string {
 	// Extract scheme + host from URL

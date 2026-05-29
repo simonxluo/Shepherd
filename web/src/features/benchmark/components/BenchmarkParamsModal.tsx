@@ -192,7 +192,7 @@ function BenchmarkParamsModalContent({
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-foreground">
-              {param.name}
+              {t(param.name as any, param.name)}
             </span>
             {param.abbreviation && (
               <span className="text-xs text-muted-foreground">
@@ -202,7 +202,7 @@ function BenchmarkParamsModalContent({
             {param.description && (
               <span
                 className="text-xs text-muted-foreground cursor-help"
-                title={param.description}
+                title={t(param.description as any, param.description)}
               >
                 ?
               </span>

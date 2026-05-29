@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Volume2, Settings2, ChevronDown, X } from 'lucide-react';
+import { Volume2, Loader2, Settings2, ChevronDown, AlertCircle, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { ModelSelect } from '@/features/creative/ModelSelect';
 import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import { useAvailableModels, BACKEND_LABELS } from '@/features/creative/hooks';
 import {
+  useVoices,
   useTTSConfig,
   getTTSModelFeatures,
   type TTSRequest,
@@ -21,15 +22,18 @@ import {
 import { RefAudioInput } from '../../components/RefAudioInput';
 import { ConfigManager } from '../../components/ConfigManager';
 import { toast } from '@/hooks/useToast';
+import { useLoadModel } from '@/features/models';
+import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
+import { cn } from '@/lib/utils';
 import type { TTSPluginPanelProps } from '../../types';
 
 const VOXCPM2_LANGUAGES = [
   // Auto detect
-  { value: '', group: 'auto', label: 'tts.languageAuto', fallback: 'Auto Detect' },
+  { value: 'auto', group: 'auto', label: 'tts.languageAuto', fallback: 'Auto Detect' },
   // 30 official languages (alphabetical)
   { value: 'Arabic', group: 'official', label: 'Arabic' },
   { value: 'Burmese', group: 'official', label: 'Burmese' },
-  { value: 'Chinese', group: 'official', label: 'Chinese' },
+  { value: 'Chinese', group: 'official', label: 'Chinese (普通话)' },
   { value: 'Danish', group: 'official', label: 'Danish' },
   { value: 'Dutch', group: 'official', label: 'Dutch' },
   { value: 'English', group: 'official', label: 'English' },
@@ -78,14 +82,25 @@ export function VoxCPM2Panel({
   streamState,
   onModelChange,
   refAudioOverride,
+  modelStatus,
+  fullModelId,
 }: TTSPluginPanelProps) {
   const { t } = useTranslation();
   const availableModels = useAvailableModels('tts');
+  const loadModel = useLoadModel();
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
 
   const modelName = selectedModel ? (selectedModel.alias || selectedModel.name) : '';
   const modelIdForConfig = selectedModel?.id || '';
 
+  // 模型状态派生
+  const isModelRunning = !modelStatus || modelStatus === 'running';
+  const isModelLoading = modelStatus === 'loading' || modelStatus === 'unloading';
+  const isModelStopped = modelStatus === 'stopped';
+  const isModelError = modelStatus === 'error';
+
   const [input, setInput] = useState('');
+  const [voice, setVoice] = useState('default');
   const [instructions, setInstructions] = useState('');
   const [refAudio, setRefAudio] = useState('');
   const [refText, setRefText] = useState('');
@@ -96,7 +111,7 @@ export function VoxCPM2Panel({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [seed, setSeed] = useState('');
   const [maxNewTokens, setMaxNewTokens] = useState('');
-  const [language, setLanguage] = useState('');
+  const [language, setLanguage] = useState('auto');
   const [emotion, setEmotion] = useState('default');
   const [cfgValue, setCfgValue] = useState('2');
   const [inferenceTimesteps, setInferenceTimesteps] = useState('10');
@@ -108,6 +123,8 @@ export function VoxCPM2Panel({
     [selectedModel]
   );
 
+  const { data: voices = [] } = useVoices(modelName);
+
   const { ttsConfig, saveConfig, deleteConfig } = useTTSConfig(modelIdForConfig);
 
   const backendLabel = selectedModel?.backendType
@@ -118,6 +135,7 @@ export function VoxCPM2Panel({
   useEffect(() => {
     if (ttsConfig) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (ttsConfig.voice !== undefined) setVoice(ttsConfig.voice);
       if (ttsConfig.instructions !== undefined) setInstructions(ttsConfig.instructions);
       if (ttsConfig.refAudio !== undefined) setRefAudio(ttsConfig.refAudio);
       if (ttsConfig.refText !== undefined) setRefText(ttsConfig.refText);
@@ -126,7 +144,7 @@ export function VoxCPM2Panel({
       if (ttsConfig.ultimateCloning !== undefined) setUltimateCloning(ttsConfig.ultimateCloning);
       if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
       if (ttsConfig.maxNewTokens !== undefined) setMaxNewTokens(ttsConfig.maxNewTokens);
-      if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language);
+      if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language || 'auto');
       if (ttsConfig.emotion !== undefined) setEmotion(ttsConfig.emotion);
       if (ttsConfig.cfgValue !== undefined) setCfgValue(ttsConfig.cfgValue);
       if (ttsConfig.inferenceTimesteps !== undefined) setInferenceTimesteps(ttsConfig.inferenceTimesteps);
@@ -143,6 +161,7 @@ export function VoxCPM2Panel({
   }, [refAudioOverride]);
 
   const getCurrentConfig = useCallback((): TTSConfig => ({
+    voice: voice !== 'default' ? voice : undefined,
     stream: true,
     responseFormat: 'pcm',
     instructions: instructions || undefined,
@@ -153,13 +172,13 @@ export function VoxCPM2Panel({
     ultimateCloning: ultimateCloning || undefined,
     seed: seed || undefined,
     maxNewTokens: maxNewTokens || undefined,
-    language: language || undefined,
+    language: language === 'auto' ? undefined : language || undefined,
     emotion: emotion === 'default' ? undefined : emotion,
     cfgValue: cfgValue || undefined,
     inferenceTimesteps: inferenceTimesteps || undefined,
     cfgCutoffRatio: cfgCutoffRatio !== '1' ? cfgCutoffRatio : undefined,
     swaySamplingCoef: swaySamplingCoef !== '1' ? swaySamplingCoef : undefined,
-  }), [instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
+  }), [voice, instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
        seed, maxNewTokens, language, emotion, cfgValue, inferenceTimesteps,
        cfgCutoffRatio, swaySamplingCoef]);
 
@@ -178,6 +197,7 @@ export function VoxCPM2Panel({
   }, [modelIdForConfig, deleteConfig, t]);
 
   const handleLoadConfig = useCallback((cfg: TTSConfig) => {
+    if (cfg.voice !== undefined) setVoice(cfg.voice);
     if (cfg.instructions !== undefined) setInstructions(cfg.instructions);
     if (cfg.refAudio !== undefined) setRefAudio(cfg.refAudio);
     if (cfg.refText !== undefined) setRefText(cfg.refText);
@@ -186,7 +206,7 @@ export function VoxCPM2Panel({
     if (cfg.ultimateCloning !== undefined) setUltimateCloning(cfg.ultimateCloning);
     if (cfg.seed !== undefined) setSeed(cfg.seed);
     if (cfg.maxNewTokens !== undefined) setMaxNewTokens(cfg.maxNewTokens);
-    if (cfg.language !== undefined) setLanguage(cfg.language);
+    if (cfg.language !== undefined) setLanguage(cfg.language || 'auto');
     if (cfg.emotion !== undefined) setEmotion(cfg.emotion);
     if (cfg.cfgValue !== undefined) setCfgValue(cfg.cfgValue);
     if (cfg.inferenceTimesteps !== undefined) setInferenceTimesteps(cfg.inferenceTimesteps);
@@ -197,6 +217,19 @@ export function VoxCPM2Panel({
   const handleGenerate = useCallback(() => {
     if (!modelName) {
       toast.warning(t('tts.selectModelWarning', 'Please select a model'));
+      return;
+    }
+    // 模型状态守卫
+    if (isModelStopped) {
+      setShowLoadDialog(true);
+      return;
+    }
+    if (isModelLoading) {
+      toast.info(t('tts.modelLoading', 'Model is loading, please wait...'));
+      return;
+    }
+    if (isModelError) {
+      toast.error(t('tts.modelError', 'Model encountered an error, please check model status'));
       return;
     }
     if (!input.trim() && !ultimateCloning) {
@@ -211,6 +244,7 @@ export function VoxCPM2Panel({
     const payload: TTSRequest = {
       model: modelName,
       input: ultimateCloning ? (promptText || '') : input.trim(),
+      voice: voice || 'default',
       response_format: 'pcm',
       stream: true,
     };
@@ -229,20 +263,18 @@ export function VoxCPM2Panel({
 
     if (seed) payload.seed = parseInt(seed, 10) || undefined;
     if (maxNewTokens) payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
-    if (language) payload.language = language;
-    if (emotion && emotion !== 'default') payload.emotion = emotion;
+    if (language && language !== 'auto') payload.language = language;
 
+    // extra_params: vLLM-Omni 不识别的顶层参数通过 extra_params 传递
+    const extraParams: Record<string, unknown> = {};
     if (cfgValue) {
       const val = parseFloat(cfgValue);
-      if (!isNaN(val)) payload.cfg_value = val;
+      if (!isNaN(val) && val !== 2.0) extraParams.cfg_value = val;
     }
     if (inferenceTimesteps) {
       const val = parseInt(inferenceTimesteps, 10);
-      if (!isNaN(val)) payload.inference_timesteps = val;
+      if (!isNaN(val) && val !== 10) extraParams.inference_timesteps = val;
     }
-
-    // extra_params for cfg_cutoff_ratio and sway_sampling_coef
-    const extraParams: Record<string, unknown> = {};
     if (cfgCutoffRatio) {
       const val = parseFloat(cfgCutoffRatio);
       if (!isNaN(val) && val !== 1.0) extraParams.cfg_cutoff_ratio = val;
@@ -256,9 +288,10 @@ export function VoxCPM2Panel({
     }
 
     onGenerate(payload);
-  }, [modelName, input, instructions, refAudio, refText, promptAudio, promptText,
-      ultimateCloning, seed, maxNewTokens, language, emotion, cfgValue, inferenceTimesteps,
+  }, [modelName, input, voice, instructions, refAudio, refText, promptAudio, promptText,
+      ultimateCloning, seed, maxNewTokens, language, cfgValue, inferenceTimesteps,
       cfgCutoffRatio, swaySamplingCoef,
+      isModelStopped, isModelLoading, isModelError,
       onGenerate, t]);
 
   if (matchedModels.length === 0) {
@@ -283,6 +316,7 @@ export function VoxCPM2Panel({
             setUltimateCloning(false);
             setRefAudio('');
             setPromptAudio('');
+            setVoice('default');
           }}
           placeholder={t('tts.selectModel', 'Select TTS model')}
           label={t('tts.modelLabel', 'TTS Model')}
@@ -292,6 +326,35 @@ export function VoxCPM2Panel({
           <p className="text-xs text-muted-foreground mt-1">
             {t('tts.backend', 'Backend')}: {backendLabel}
           </p>
+        )}
+        {/* 模型状态指示条 */}
+        {modelName && !isModelRunning && (
+          <div className={cn(
+            'flex items-center gap-2 mt-2 px-3 py-2 rounded-md text-sm',
+            isModelLoading && 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+            isModelStopped && 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+            isModelError && 'bg-red-500/10 text-red-600 dark:text-red-400',
+          )}>
+            {isModelLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isModelStopped && <AlertCircle className="w-4 h-4" />}
+            {isModelError && <AlertCircle className="w-4 h-4" />}
+            <span>
+              {isModelLoading && t('tts.modelLoading', 'Model is loading, please wait...')}
+              {isModelStopped && t('tts.modelNotLoaded', 'Model not loaded')}
+              {isModelError && t('tts.modelError', 'Model encountered an error')}
+            </span>
+            {isModelStopped && fullModelId && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-auto h-7 text-xs gap-1"
+                onClick={() => setShowLoadDialog(true)}
+              >
+                <Play className="w-3 h-3" />
+                {t('tts.loadModel', 'Load Model')}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -324,6 +387,36 @@ export function VoxCPM2Panel({
         />
       </div>
 
+      {/* Voice selection */}
+      {features?.supportsVoiceSelection && (
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            {t('tts.voiceLabel', 'Voice')}
+          </label>
+          <Select value={voice} onValueChange={setVoice}>
+            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+              <SelectValue placeholder={t('tts.selectVoice', 'Select voice')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">{t('tts.voiceDefault', 'Default')}</SelectItem>
+              {voices.length > 0 && voices.filter(v => !v.isUploaded).map(v => (
+                <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+              ))}
+              {voices.some(v => v.isUploaded) && (
+                <>
+                  <SelectSeparator />
+                  {voices.filter(v => v.isUploaded).map(v => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.name}{v.description ? ` (${v.description})` : ''}
+                    </SelectItem>
+                  ))}
+                </>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Language */}
       <div>
         <label className="block text-sm font-medium mb-1.5">
@@ -333,8 +426,8 @@ export function VoxCPM2Panel({
           <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
             <SelectValue placeholder={t('tts.languageAuto', 'Auto Detect')} />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">{t('tts.languageAuto', 'Auto Detect')}</SelectItem>
+          <SelectContent position="popper" className="!max-h-[300px]">
+            <SelectItem value="auto">{t('tts.languageAuto', 'Auto Detect')}</SelectItem>
             <SelectSeparator />
             <SelectGroup>
               <SelectLabel>{t('tts.languageOfficial', 'Official Languages')}</SelectLabel>
@@ -555,26 +648,39 @@ export function VoxCPM2Panel({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Generate / Cancel button */}
-      {isGenerating ? (
-        <Button
-          onClick={onCancel}
-          variant="destructive"
-          className="w-full"
-        >
-          <X className="w-4 h-4 mr-2" />
-          {t('tts.cancel', 'Cancel')}
-        </Button>
-      ) : (
-        <Button
-          onClick={handleGenerate}
-          disabled={!modelName || (!input.trim() && !ultimateCloning)}
-          className="w-full"
-        >
-          <Volume2 className="w-4 h-4 mr-2" />
-          {t('tts.generate', 'Generate Speech')}
-        </Button>
-      )}
+      {/* Generate button */}
+      <Button
+        onClick={handleGenerate}
+        disabled={isGenerating || !modelName || (!input.trim() && !ultimateCloning) || isModelLoading || isModelError}
+        className="w-full"
+      >
+        {isGenerating ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            {isStreamActive ? t('tts.streamingInProgress', 'Streaming...') : t('tts.generating', 'Generating...')}
+          </>
+        ) : isModelLoading ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            {t('tts.modelLoading', 'Model is loading...')}
+          </>
+        ) : isModelStopped ? (
+          <>
+            <Volume2 className="w-4 h-4 mr-2" />
+            {t('tts.loadModelToGenerate', 'Load Model & Generate')}
+          </>
+        ) : isModelError ? (
+          <>
+            <AlertCircle className="w-4 h-4 mr-2" />
+            {t('tts.modelError', 'Model error')}
+          </>
+        ) : (
+          <>
+            <Volume2 className="w-4 h-4 mr-2" />
+            {t('tts.generate', 'Generate Speech')}
+          </>
+        )}
+      </Button>
 
       {/* Config management */}
       {modelName && (
@@ -586,6 +692,21 @@ export function VoxCPM2Panel({
           onSaveToServer={handleSaveToServer}
           onDeleteFromServer={handleDeleteFromServer}
           hasServerConfig={!!ttsConfig}
+        />
+      )}
+
+      {/* 加载模型对话框 */}
+      {showLoadDialog && fullModelId && (
+        <LoadModelDialog
+          modelId={fullModelId}
+          modelName={modelName}
+          backendType={selectedModel?.backendType}
+          isOpen={showLoadDialog}
+          onClose={() => setShowLoadDialog(false)}
+          onConfirm={(params) => {
+            loadModel.mutate({ modelId: fullModelId, ...params });
+            setShowLoadDialog(false);
+          }}
         />
       )}
     </div>

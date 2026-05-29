@@ -190,7 +190,7 @@ func NewHandler(configManager *config.Manager) *Handler {
 	return h
 }
 
-// --- LlamaCpp paths ---
+// LlamaCpp paths
 
 func (h *Handler) GetLlamaCppPaths(c *gin.Context) { h.llamacpp.list(c) }
 func (h *Handler) RemoveLlamaCppPath(c *gin.Context) {
@@ -332,7 +332,7 @@ func (h *Handler) TestLlamaCppPath(c *gin.Context) {
 	})
 }
 
-// --- Model paths ---
+// Model paths
 
 func (h *Handler) GetModelPaths(c *gin.Context)   { h.model.list(c) }
 func (h *Handler) RemoveModelPath(c *gin.Context) { h.model.remove(c, h.validateAndNormalizePath) }
@@ -411,7 +411,7 @@ func (h *Handler) UpdateModelPath(c *gin.Context) {
 	handler.Success(c, gin.H{"message": "Model path updated successfully", "updated": cfg.Model.PathConfigs[updatedIndex]})
 }
 
-// --- Multimodal paths ---
+// Multimodal paths
 
 func (h *Handler) GetMultimodalPaths(c *gin.Context) { h.multimodal.list(c) }
 func (h *Handler) RemoveMultimodalPath(c *gin.Context) {
@@ -488,7 +488,7 @@ func (h *Handler) UpdateMultimodalPath(c *gin.Context) {
 	handler.Success(c, gin.H{"message": "Multimodal path updated successfully", "updated": cfg.Backends.MultimodalPaths[updatedIndex]})
 }
 
-// --- vLLM paths ---
+// vLLM paths
 
 func (h *Handler) GetVLLMPaths(c *gin.Context)   { h.vllm.list(c) }
 func (h *Handler) RemoveVLLMPath(c *gin.Context) { h.vllm.remove(c, h.validateAndNormalizeBinaryPath) }
@@ -591,7 +591,7 @@ func (h *Handler) TestVLLMPath(c *gin.Context) {
 	handler.Success(c, gin.H{"valid": true, "message": "Path is valid", "binary": binary, "path": normalizedPath})
 }
 
-// --- vLLM-Omni paths ---
+// vLLM-Omni paths
 
 func (h *Handler) GetVLLMOmniPaths(c *gin.Context) { h.vllmOmni.list(c) }
 func (h *Handler) RemoveVLLMOmniPath(c *gin.Context) {
@@ -696,7 +696,7 @@ func (h *Handler) TestVLLMOmniPath(c *gin.Context) {
 	handler.Success(c, gin.H{"valid": true, "message": "Path is valid", "binary": binary, "path": normalizedPath})
 }
 
-// --- Shared helpers ---
+// Shared helpers
 
 // validateAndNormalizePath validates and normalizes a directory path.
 // Used for model paths and multimodal paths that must be directories.

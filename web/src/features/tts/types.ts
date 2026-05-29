@@ -1,6 +1,7 @@
 import type { LoadedModel } from '@/features/creative/hooks';
 import type { TTSRequest, TTSModelFeatures, TTSConfig } from './hooks';
 import type { StreamState, TTSStreamMetrics } from './lib/StreamAudioPlayer';
+import type { ModelStatus } from '@/types';
 
 /**
  * Props passed to every TTS plugin panel component.
@@ -26,6 +27,10 @@ export interface TTSPluginPanelProps {
   onModelChange: (modelName: string) => void;
   /** External ref audio override (e.g., from history "Use as reference") */
   refAudioOverride?: string;
+  /** 模型实时状态（来自 useModels 全量列表） */
+  modelStatus?: ModelStatus;
+  /** 完整模型 ID（用于加载操作） */
+  fullModelId?: string;
 }
 
 /**

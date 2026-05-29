@@ -65,7 +65,7 @@ func NewPostgreSQLStore(config *PostgreSQLConfig) (*PostgreSQLStore, error) {
 	return store, nil
 }
 
-// --- Conversation operations ---
+// Conversation operations
 
 func (s *PostgreSQLStore) CreateConversation(ctx context.Context, conv *Conversation) error {
 	if conv.ID == "" {
@@ -186,7 +186,7 @@ func (s *PostgreSQLStore) DeleteConversation(ctx context.Context, id string) err
 	return nil
 }
 
-// --- Message operations ---
+// Message operations
 
 func (s *PostgreSQLStore) CreateMessage(ctx context.Context, msg *Message) error {
 	if msg.ID == "" {
@@ -276,7 +276,7 @@ func (s *PostgreSQLStore) DeleteMessages(ctx context.Context, conversationID str
 	})
 }
 
-// --- Benchmark operations ---
+// Benchmark operations
 
 func (s *PostgreSQLStore) CreateBenchmark(ctx context.Context, benchmark *Benchmark) error {
 	configJSON, err := json.Marshal(benchmark.Config)
@@ -374,7 +374,7 @@ func (s *PostgreSQLStore) DeleteBenchmark(ctx context.Context, id string) error 
 	return s.queries.DeleteBenchmark(ctx, id)
 }
 
-// --- BenchmarkConfig operations ---
+// BenchmarkConfig operations
 
 func (s *PostgreSQLStore) CreateBenchmarkConfig(ctx context.Context, config *BenchmarkConfig) error {
 	devicesJSON, _ := json.Marshal(config.Devices)
@@ -437,7 +437,7 @@ func (s *PostgreSQLStore) DeleteBenchmarkConfig(ctx context.Context, name string
 	return s.queries.DeleteBenchmarkConfig(ctx, name)
 }
 
-// --- ModelLoadConfig operations ---
+// ModelLoadConfig operations
 
 func (s *PostgreSQLStore) SaveModelLoadConfig(ctx context.Context, config *ModelLoadConfig) error {
 	if config.ID == "" {
@@ -566,7 +566,7 @@ func (s *PostgreSQLStore) DeleteNamedModelLoadConfig(ctx context.Context, nodeID
 	return nil
 }
 
-// --- LaunchProfile operations ---
+// LaunchProfile operations
 
 func (s *PostgreSQLStore) CreateLaunchProfile(ctx context.Context, profile *LaunchProfile) error {
 	if profile.ID == "" {
@@ -671,7 +671,7 @@ func (s *PostgreSQLStore) DeleteLaunchProfile(ctx context.Context, id string) er
 	return nil
 }
 
-// --- ModelMetadata operations ---
+// ModelMetadata operations
 
 func (s *PostgreSQLStore) SaveModelMetadata(ctx context.Context, metadata *ModelMetadata) error {
 	now := timeNow()
@@ -784,7 +784,7 @@ func (s *PostgreSQLStore) GetAllModelMetadata(ctx context.Context) (map[string]*
 	return result, nil
 }
 
-// --- TTS History operations ---
+// TTS History operations
 
 func (s *PostgreSQLStore) CreateTTSHistory(ctx context.Context, item *TTSHistoryItem) error {
 	if item.ID == "" {
@@ -877,7 +877,7 @@ func (s *PostgreSQLStore) DeleteTTSHistory(ctx context.Context, id string) error
 	return nil
 }
 
-// --- Download Task operations ---
+// Download Task operations
 
 func (s *PostgreSQLStore) CreateDownloadTask(ctx context.Context, task *DownloadTask) error {
 	if task.ID == "" {
@@ -995,7 +995,7 @@ func (s *PostgreSQLStore) ListActiveDownloadTasks(ctx context.Context) ([]*Downl
 	return tasks, nil
 }
 
-// --- Close and Stats ---
+// Close and Stats
 
 func (s *PostgreSQLStore) Close() error {
 	return s.db.Close()
@@ -1020,7 +1020,7 @@ func (s *PostgreSQLStore) Stats() (map[string]interface{}, error) {
 	return stats, nil
 }
 
-// --- Helper functions ---
+// Helper functions
 
 func boolToNullInt32(b bool) sql.NullInt32 {
 	if b {
@@ -1029,7 +1029,7 @@ func boolToNullInt32(b bool) sql.NullInt32 {
 	return sql.NullInt32{Int32: 0, Valid: true}
 }
 
-// --- Row conversion helpers ---
+// Row conversion helpers
 
 func pgBenchmarkFromRow(row pgdb.Benchmark) *Benchmark {
 	b := &Benchmark{

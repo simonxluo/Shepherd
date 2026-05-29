@@ -1,0 +1,155 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - link "🐏 Shepherd" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e7]: 🐏
+          - generic [ref=e8]: Shepherd
+        - button "Collapse sidebar" [ref=e9]:
+          - img [ref=e10]
+      - navigation [ref=e12]:
+        - list [ref=e13]:
+          - listitem [ref=e14]:
+            - link "Dashboard" [ref=e15] [cursor=pointer]:
+              - /url: /
+              - img [ref=e17]
+              - generic [ref=e22]: Dashboard
+          - listitem [ref=e23]:
+            - link "Models" [ref=e24] [cursor=pointer]:
+              - /url: /models
+              - img [ref=e25]
+              - generic [ref=e29]: Models
+          - listitem [ref=e30]:
+            - link "Benchmark" [ref=e31] [cursor=pointer]:
+              - /url: /benchmark
+              - img [ref=e32]
+              - generic [ref=e35]: Benchmark
+          - listitem [ref=e36]:
+            - link "Downloads" [ref=e37] [cursor=pointer]:
+              - /url: /downloads
+              - img [ref=e38]
+              - generic [ref=e41]: Downloads
+          - listitem [ref=e42]:
+            - link "Cluster" [ref=e43] [cursor=pointer]:
+              - /url: /cluster
+              - img [ref=e44]
+              - generic [ref=e49]: Cluster
+          - listitem [ref=e50]:
+            - link "Chat" [ref=e51] [cursor=pointer]:
+              - /url: /chat
+              - img [ref=e52]
+              - generic [ref=e54]: Chat
+          - listitem [ref=e55]:
+            - link "TTS" [ref=e56] [cursor=pointer]:
+              - /url: /tts
+              - img [ref=e57]
+              - generic [ref=e61]: TTS
+          - listitem [ref=e62]:
+            - link "ASR" [ref=e63] [cursor=pointer]:
+              - /url: /asr
+              - img [ref=e64]
+              - generic [ref=e67]: ASR
+          - listitem [ref=e68]:
+            - link "Image Gen" [ref=e69] [cursor=pointer]:
+              - /url: /image-gen
+              - img [ref=e70]
+              - generic [ref=e74]: Image Gen
+          - listitem [ref=e75]:
+            - link "Music Gen" [ref=e76] [cursor=pointer]:
+              - /url: /music-gen
+              - img [ref=e77]
+              - generic [ref=e81]: Music Gen
+          - listitem [ref=e82]:
+            - link "Logs" [ref=e83] [cursor=pointer]:
+              - /url: /logs
+              - img [ref=e84]
+              - generic [ref=e87]: Logs
+          - listitem [ref=e88]:
+            - link "Settings" [active] [ref=e89] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e90]
+              - generic [ref=e93]: Settings
+      - generic [ref=e94]:
+        - button "Guest User" [ref=e95]:
+          - img [ref=e97]
+          - generic [ref=e100]:
+            - paragraph [ref=e101]: Guest
+            - paragraph [ref=e102]: User
+          - img [ref=e103]
+        - generic [ref=e105]:
+          - generic [ref=e106]: Shepherd dev
+          - generic [ref=e107]: © 2026 Shepherd Project
+    - generic [ref=e108]:
+      - banner [ref=e109]:
+        - generic [ref=e110]:
+          - 'button "Select language (Current: English)" [ref=e111]':
+            - img [ref=e112]
+            - img [ref=e116]
+          - button "System" [ref=e118]:
+            - img [ref=e119]
+            - img [ref=e121]
+          - button "Notifications On" [ref=e123]:
+            - img [ref=e124]
+            - img [ref=e127]
+      - main [ref=e129]:
+        - generic [ref=e248]:
+          - heading "Settings" [level=1] [ref=e250]
+          - generic [ref=e251]:
+            - tablist "Settings menu" [ref=e253]:
+              - tab "General" [selected] [ref=e254]:
+                - img [ref=e255]
+                - generic [ref=e258]: General
+              - tab "Paths" [ref=e259]:
+                - img [ref=e260]
+                - generic [ref=e262]: Paths
+              - tab "Benchmark" [ref=e263]:
+                - img [ref=e264]
+                - generic [ref=e266]: Benchmark
+              - tab "MCP Management" [ref=e267]:
+                - img [ref=e268]
+                - generic [ref=e271]: MCP Management
+              - tab "About" [ref=e272]:
+                - img [ref=e273]
+                - generic [ref=e275]: About
+            - generic [ref=e277]:
+              - generic [ref=e278]:
+                - heading "API Compatibility Settings" [level=2] [ref=e279]
+                - paragraph [ref=e280]: Configure Ollama and LM Studio API compatibility layer ports
+              - generic [ref=e281]:
+                - generic [ref=e282]:
+                  - generic [ref=e283]:
+                    - img [ref=e285]
+                    - generic [ref=e287]:
+                      - generic [ref=e288]:
+                        - heading "Ollama API" [level=3] [ref=e289]
+                        - generic [ref=e290]:
+                          - img [ref=e291]
+                          - text: Running
+                      - paragraph [ref=e294]: Service running on port 11434
+                  - button "Enabled" [ref=e295]:
+                    - img [ref=e296]
+                    - generic [ref=e298]: Enabled
+                    - img [ref=e299]
+                - generic [ref=e303]:
+                  - generic [ref=e304]:
+                    - generic [ref=e305]: Service Port
+                    - spinbutton [ref=e306]: "11434"
+                  - generic [ref=e307]:
+                    - img [ref=e308]
+                    - generic [ref=e311]: http://localhost:11434
+              - generic [ref=e313]:
+                - generic [ref=e314]:
+                  - generic [ref=e315]:
+                    - img [ref=e317]
+                    - generic [ref=e319]:
+                      - heading "LM Studio API" [level=3] [ref=e321]
+                      - paragraph [ref=e322]: Click to enable service
+                  - button "Pending" [ref=e323]:
+                    - img [ref=e324]
+                    - generic [ref=e326]: Pending
+                - generic [ref=e329]:
+                  - generic [ref=e330]: Service Port
+                  - spinbutton [ref=e331]: "1234"
+              - paragraph [ref=e334]: Config will auto-save
+  - region "Notifications alt+T"

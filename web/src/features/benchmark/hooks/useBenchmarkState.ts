@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { benchmarksApi } from '@/lib/api/benchmarks';
-import type { BenchmarkParam, BenchmarkHistoryFile, Model } from '@/types';
+import type { BenchmarkParam, BenchmarkHistoryFile, BenchmarkTask, Model } from '@/types';
 import { getFieldName } from '../lib/commandBuilder';
 
 /**
@@ -83,6 +83,40 @@ export function useCreateBenchmarkTask() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['benchmark', 'history'] });
+    },
+  });
+}
+
+/**
+ * Fetch running benchmark tasks with smart polling
+ */
+export function useBenchmarkTasks() {
+  return useQuery<BenchmarkTask[]>({
+    queryKey: ['benchmark', 'tasks'],
+    queryFn: async () => {
+      const response = await benchmarksApi.listTasks();
+      return response.data?.tasks || [];
+    },
+    refetchInterval: (query) => {
+      const tasks = query.state.data;
+      const hasRunning = tasks?.some(t => t.status === 'running' || t.status === 'pending');
+      return hasRunning ? 3000 : false;
+    },
+    staleTime: 1000,
+  });
+}
+
+/**
+ * Cancel a benchmark task
+ */
+export function useCancelBenchmarkTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      return benchmarksApi.cancelTask(taskId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['benchmark', 'tasks'] });
     },
   });
 }

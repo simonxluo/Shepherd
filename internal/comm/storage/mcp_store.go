@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// --- SQLite MCP Server operations ---
+// SQLite MCP Server operations
 
 func (s *SQLiteStore) CreateMCPServer(ctx context.Context, server *MCPServer) error {
 	s.mu.Lock()
@@ -106,7 +106,7 @@ func (s *SQLiteStore) DeleteMCPToolsByServer(ctx context.Context, serverID strin
 	return err
 }
 
-// --- PostgreSQL MCP operations ---
+// PostgreSQL MCP operations
 
 func (s *PostgreSQLStore) CreateMCPServer(ctx context.Context, server *MCPServer) error {
 	if server.ID == "" {
@@ -175,7 +175,7 @@ func (s *PostgreSQLStore) DeleteMCPToolsByServer(ctx context.Context, serverID s
 	return err
 }
 
-// --- MySQL MCP operations ---
+// MySQL MCP operations
 
 func (s *MySQLStore) CreateMCPServer(ctx context.Context, server *MCPServer) error {
 	if server.ID == "" {
@@ -254,7 +254,7 @@ func (s *MySQLStore) DeleteMCPToolsByServer(ctx context.Context, serverID string
 	return err
 }
 
-// --- Shared SQL helpers ---
+// Shared SQL helpers
 
 func createMCPToolSQL(ctx context.Context, db *sql.DB, tool *MCPTool, placeholder string) error {
 	if tool.ID == "" {

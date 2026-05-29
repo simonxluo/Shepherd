@@ -15,8 +15,7 @@ var modelCmd = &cobra.Command{
 	Long:  `List, inspect, load, unload, and scan models on the Shepherd server.`,
 }
 
-// --- model list ---
-
+// model list
 var modelListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all available models",
@@ -80,8 +79,7 @@ var modelListCmd = &cobra.Command{
 	},
 }
 
-// --- model loaded ---
-
+// model loaded
 var modelLoadedCmd = &cobra.Command{
 	Use:   "loaded",
 	Short: "List loaded models",
@@ -143,8 +141,7 @@ var modelLoadedCmd = &cobra.Command{
 	},
 }
 
-// --- model info ---
-
+// model info
 var modelInfoCmd = &cobra.Command{
 	Use:   "info <id>",
 	Short: "Show model details",
@@ -222,8 +219,7 @@ var modelInfoCmd = &cobra.Command{
 	},
 }
 
-// --- model load ---
-
+// model load
 var (
 	modelLoadConfigName string
 	modelLoadCtxSize    int
@@ -278,8 +274,7 @@ var modelLoadCmd = &cobra.Command{
 	},
 }
 
-// --- model unload ---
-
+// model unload
 var modelUnloadCmd = &cobra.Command{
 	Use:   "unload <id>",
 	Short: "Unload a model",
@@ -311,8 +306,7 @@ var modelUnloadCmd = &cobra.Command{
 	},
 }
 
-// --- model scan ---
-
+// model scan
 var modelScanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Trigger model scan",

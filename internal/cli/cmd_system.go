@@ -14,8 +14,7 @@ var systemCmd = &cobra.Command{
 	Long:  `Display system-level information such as GPUs, backends, and resource usage.`,
 }
 
-// --- system gpus ---
-
+// system gpus
 var systemGPUsCmd = &cobra.Command{
 	Use:   "gpus",
 	Short: "Show GPU information",
@@ -81,8 +80,7 @@ var systemGPUsCmd = &cobra.Command{
 	},
 }
 
-// --- system backends ---
-
+// system backends
 var systemBackendsCmd = &cobra.Command{
 	Use:   "backends",
 	Short: "Show inference backends",
@@ -169,8 +167,7 @@ var systemBackendsCmd = &cobra.Command{
 	},
 }
 
-// --- system resources ---
-
+// system resources
 var systemResourcesCmd = &cobra.Command{
 	Use:   "resources",
 	Short: "Show system resource usage",

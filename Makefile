@@ -1,7 +1,7 @@
 # Shepherd Makefile
 # 快速编译和开发命令
 
-.PHONY: all build build-all test clean release run stop swag sqlc
+.PHONY: all build build-all test clean release run stop swag sqlc sqlc-verify
 
 # 默认目标
 all: build
@@ -129,8 +129,14 @@ swag:
 # 生成 sqlc 代码
 sqlc:
 	@echo "生成 sqlc 代码..."
-	@cd internal/comm/storage/sqlc && sqlc generate
-	@echo "✓ sqlc 代码已生成"
+	@cd internal/comm/storage && sqlc generate
+	@echo "✓ sqlc 代码已生成到 internal/comm/storage/sqlcgen/"
+
+# 验证 sqlc 代码是否最新
+sqlc-verify:
+	@echo "验证 sqlc 代码..."
+	@cd internal/comm/storage && sqlc generate && git diff --quiet sqlcgen/
+	@echo "✓ sqlc 代码已是最新"
 
 # 帮助信息
 help:
@@ -153,6 +159,7 @@ help:
 	@echo "  stop          - 停止所有进程"
 	@echo "  swag          - 生成 Swagger API 文档"
 	@echo "  sqlc          - 生成 sqlc 类型安全数据库代码"
+	@echo "  sqlc-verify   - 验证 sqlc 代码是否最新"
 	@echo "  install       - 安装到 /usr/local/bin"
 	@echo "  uninstall     - 从 /usr/local/bin 卸载"
 	@echo "  docker-build  - 构建 Docker 镜像"

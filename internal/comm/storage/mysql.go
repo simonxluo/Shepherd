@@ -65,7 +65,7 @@ func NewMySQLStore(config *MySQLConfig) (*MySQLStore, error) {
 	return store, nil
 }
 
-// --- Conversation operations ---
+// Conversation operations
 
 func (s *MySQLStore) CreateConversation(ctx context.Context, conv *Conversation) error {
 	if conv.ID == "" {
@@ -186,7 +186,7 @@ func (s *MySQLStore) DeleteConversation(ctx context.Context, id string) error {
 	return nil
 }
 
-// --- Message operations ---
+// Message operations
 
 func (s *MySQLStore) CreateMessage(ctx context.Context, msg *Message) error {
 	if msg.ID == "" {
@@ -276,7 +276,7 @@ func (s *MySQLStore) DeleteMessages(ctx context.Context, conversationID string) 
 	})
 }
 
-// --- Benchmark operations ---
+// Benchmark operations
 
 func (s *MySQLStore) CreateBenchmark(ctx context.Context, benchmark *Benchmark) error {
 	configJSON, err := json.Marshal(benchmark.Config)
@@ -374,7 +374,7 @@ func (s *MySQLStore) DeleteBenchmark(ctx context.Context, id string) error {
 	return s.queries.DeleteBenchmark(ctx, id)
 }
 
-// --- BenchmarkConfig operations ---
+// BenchmarkConfig operations
 
 func (s *MySQLStore) CreateBenchmarkConfig(ctx context.Context, config *BenchmarkConfig) error {
 	devicesJSON, _ := json.Marshal(config.Devices)
@@ -437,7 +437,7 @@ func (s *MySQLStore) DeleteBenchmarkConfig(ctx context.Context, name string) err
 	return s.queries.DeleteBenchmarkConfig(ctx, name)
 }
 
-// --- ModelLoadConfig operations ---
+// ModelLoadConfig operations
 
 func (s *MySQLStore) SaveModelLoadConfig(ctx context.Context, config *ModelLoadConfig) error {
 	if config.ID == "" {
@@ -566,7 +566,7 @@ func (s *MySQLStore) DeleteNamedModelLoadConfig(ctx context.Context, nodeID, mod
 	return nil
 }
 
-// --- LaunchProfile operations ---
+// LaunchProfile operations
 
 func (s *MySQLStore) CreateLaunchProfile(ctx context.Context, profile *LaunchProfile) error {
 	if profile.ID == "" {
@@ -671,7 +671,7 @@ func (s *MySQLStore) DeleteLaunchProfile(ctx context.Context, id string) error {
 	return nil
 }
 
-// --- ModelMetadata operations ---
+// ModelMetadata operations
 
 func (s *MySQLStore) SaveModelMetadata(ctx context.Context, metadata *ModelMetadata) error {
 	now := timeNow()
@@ -784,7 +784,7 @@ func (s *MySQLStore) GetAllModelMetadata(ctx context.Context) (map[string]*Model
 	return result, nil
 }
 
-// --- TTS History operations ---
+// TTS History operations
 
 func (s *MySQLStore) CreateTTSHistory(ctx context.Context, item *TTSHistoryItem) error {
 	if item.ID == "" {
@@ -877,7 +877,7 @@ func (s *MySQLStore) DeleteTTSHistory(ctx context.Context, id string) error {
 	return nil
 }
 
-// --- Download Task operations ---
+// Download Task operations
 
 func (s *MySQLStore) CreateDownloadTask(ctx context.Context, task *DownloadTask) error {
 	if task.ID == "" {
@@ -995,7 +995,7 @@ func (s *MySQLStore) ListActiveDownloadTasks(ctx context.Context) ([]*DownloadTa
 	return tasks, nil
 }
 
-// --- Close and Stats ---
+// Close and Stats
 
 func (s *MySQLStore) Close() error {
 	return s.db.Close()
@@ -1020,7 +1020,7 @@ func (s *MySQLStore) Stats() (map[string]interface{}, error) {
 	return stats, nil
 }
 
-// --- Helper functions ---
+// Helper functions
 
 func boolToNullInt16(b bool) sql.NullInt16 {
 	if b {
@@ -1029,7 +1029,7 @@ func boolToNullInt16(b bool) sql.NullInt16 {
 	return sql.NullInt16{Int16: 0, Valid: true}
 }
 
-// --- Row conversion helpers ---
+// Row conversion helpers
 
 func myBenchmarkFromRow(row mysqldb.Benchmark) *Benchmark {
 	b := &Benchmark{

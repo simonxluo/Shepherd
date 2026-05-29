@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -18,13 +18,12 @@ import {
   getTTSModelFeatures,
   type TTSRequest,
   type TTSConfig,
+  type VoiceOption,
 } from '../hooks';
 import { RefAudioInput } from './RefAudioInput';
 import { ConfigManager } from './ConfigManager';
 import { toast } from '@/hooks/useToast';
 import type { TTSPluginPanelProps } from '../types';
-
-const FALLBACK_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'];
 
 const AUDIO_FORMATS: Array<{ value: string; label: string; i18nKey?: string }> = [
   { value: 'mp3', label: 'MP3' },
@@ -257,34 +256,29 @@ export function GenericTTSPanel({
             <label className="block text-sm font-medium mb-1.5">
               {t('tts.voiceLabel', 'Voice')}
             </label>
-            <div className="flex gap-1.5">
-              <Select value={voice} onValueChange={setVoice}>
-                <SelectTrigger className="flex-1 px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-                  <SelectValue placeholder={voices.length > 0 ? t('tts.selectVoice', 'Select voice') : t('tts.enterVoice', 'Enter voice name')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {voices.length > 0
-                    ? voices.map((v) => (
-                        <SelectItem key={v.id} value={v.id}>
-                          {v.name || v.id}
-                        </SelectItem>
-                      ))
-                    : FALLBACK_VOICES.map((v) => (
-                        <SelectItem key={v} value={v}>{v}</SelectItem>
-                      ))
-                  }
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleRefreshVoices}
-                title={t('tts.refreshVoices', 'Refresh voices')}
-                className="shrink-0"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </Button>
-            </div>
+            <Select value={voice} onValueChange={setVoice}>
+              <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
+                <SelectValue placeholder={t('tts.selectVoice', 'Select voice')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">{t('tts.voiceDefault', 'Default')}</SelectItem>
+                {voices.filter(v => !v.isUploaded).map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.name}
+                  </SelectItem>
+                ))}
+                {voices.some(v => v.isUploaded) && (
+                  <>
+                    <SelectSeparator />
+                    {voices.filter(v => v.isUploaded).map(v => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}{v.description ? ` (${v.description})` : ''}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
           </div>
         )}
         <div className={supportsVoiceSelection ? '' : 'col-span-2'}>
