@@ -104,6 +104,13 @@ func (m *Manager) Close() error {
 	return nil
 }
 
+// SyncBackendRegistry re-syncs backend configurations from the app config.
+// Call this after config changes (e.g., model_bind_host update) to ensure
+// new model loads use the updated settings.
+func (m *Manager) SyncBackendRegistry(cfg *config.Config) {
+	m.backendRegistry.SyncFromConfig(cfg)
+}
+
 // Version returns the current models version counter.
 // This is incremented whenever models or statuses are mutated.
 func (m *Manager) Version() int64 {

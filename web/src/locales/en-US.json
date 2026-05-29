@@ -797,6 +797,15 @@
     "loadingConfig": "Loading config...",
     "apiCompatibility": "API Compatibility Settings",
     "apiCompatibilityDesc": "Configure Ollama and LM Studio API compatibility layer ports",
+    "bindHost": {
+      "title": "Model Service Bind Address",
+      "description": "Choose the network interface for model backend processes. Affects newly loaded models only.",
+      "allInterfaces": "All network interfaces (allow remote access)",
+      "localhostOnly": "Localhost only (more secure)",
+      "saveSuccess": "Bind address updated",
+      "saveFailed": "Failed to update bind address",
+      "restartHint": "New models will use the updated address. Reload running models to apply."
+    },
     "benchmark": {
       "title": "Benchmark",
       "inDevelopment": "Benchmark feature is under development..."

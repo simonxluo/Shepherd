@@ -53,8 +53,10 @@ type BackendConfig struct {
 	CondaPath   string   // Path to conda executable
 	ServeBin    string   // Custom path to the serve binary (e.g., vllm)
 	ExtraArgs   string   // Additional CLI arguments from config
-	DefaultPort int      // Default port from config
+	DefaultPort int      // Default port from config (currently unused — port is allocated dynamically by portAllocator)
 	EnvVars     []string // Additional environment variables (e.g., "KEY=VALUE")
+	// Shared
+	BindHost string // Bind address for model processes (e.g., "0.0.0.0" or "127.0.0.1")
 }
 
 // BackendInfo contains discovered information about a backend
@@ -66,6 +68,7 @@ type BackendInfo struct {
 	Available bool   // Whether the backend is usable
 	CondaEnv  string // Conda env name (if applicable)
 	CondaPath string // Conda 可执行文件路径 (if applicable)
+	ExtraArgs string // Global extra CLI arguments from config (passed through to BuildStartConfig)
 }
 
 // StartConfig contains the command and metadata needed to start a backend process
@@ -134,6 +137,7 @@ type LoadRequest struct {
 	GPULayers int
 	Threads   int
 	Devices   []string // GPU devices (e.g., ["cuda:0", "cuda:1"])
+	BindHost  string   // Bind address for model process (e.g., "0.0.0.0" or "127.0.0.1")
 
 	// Speculative decoding
 	SpecDecoding *SpecDecodingParams
@@ -423,6 +427,9 @@ func discoverVLLMVariant(cfg *BackendConfig, backendType BackendType, name, bina
 		return info, nil
 	}
 
+	// Carry global ExtraArgs through to BuildStartConfig
+	info.ExtraArgs = cfg.ExtraArgs
+
 	env := buildEnvWithVars(cfg.EnvVars)
 
 	// 优先检查 ServeBin（直接指定二进制路径）
@@ -435,6 +442,8 @@ func discoverVLLMVariant(cfg *BackendConfig, backendType BackendType, name, bina
 			info.BinPath = cfg.ServeBin
 			return info, nil
 		}
+		// ServeBin specified but failed — do NOT use it as BinPath later
+		logger.Warnf("%s ServeBin not available: path=%s", name, cfg.ServeBin)
 	}
 
 	// 检查 BinPaths 配置的路径中是否有二进制
@@ -489,10 +498,8 @@ func discoverVLLMVariant(cfg *BackendConfig, backendType BackendType, name, bina
 	info.Available = true
 	info.CondaEnv = cfg.CondaEnv
 	info.CondaPath = cfg.CondaPath
-
-	if cfg.ServeBin != "" {
-		info.BinPath = cfg.ServeBin
-	}
+	// Do NOT set info.BinPath from ServeBin here — if ServeBin was available
+	// it would have been returned above. Conda mode should not inherit a failed ServeBin.
 
 	return info, nil
 }

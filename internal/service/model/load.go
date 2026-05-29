@@ -69,7 +69,7 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 	}
 
 	// Build command via backend interface
-	backendReq := m.toBackendLoadRequest(req, modelPath, allocatedPort)
+	backendReq := m.toBackendLoadRequest(req, modelPath, allocatedPort, bcfg)
 	startCfg, err := b.BuildStartConfig(info, backendReq)
 	if err != nil {
 		m.portAllocator.Release(allocatedPort)
@@ -78,9 +78,10 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 		return nil, 0, nil, err
 	}
 
-	// 合并环境变量：全局后端配置 + 模型级别配置
-	// 模型级别配置优先级高于全局配置
-	envVars := make([]string, 0, len(bcfg.EnvVars)+len(req.EnvVars))
+	// 合并环境变量：StartConfig 自带 + 全局后端配置 + 模型级别配置
+	// 优先级从低到高：startCfg.EnvVars < bcfg.EnvVars < req.EnvVars
+	envVars := make([]string, 0, len(startCfg.EnvVars)+len(bcfg.EnvVars)+len(req.EnvVars))
+	envVars = append(envVars, startCfg.EnvVars...)
 	envVars = append(envVars, bcfg.EnvVars...)
 	envVars = append(envVars, req.EnvVars...)
 	if len(envVars) > 0 {
@@ -394,7 +395,13 @@ func (m *Manager) Unload(modelID string) error {
 }
 
 // toBackendLoadRequest converts model.LoadRequest to backend.LoadRequest
-func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port int) *backend.LoadRequest {
+func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port int, bcfg *backend.BackendConfig) *backend.LoadRequest {
+	// Resolve bind host from backend config
+	bindHost := "0.0.0.0"
+	if bcfg != nil && bcfg.BindHost != "" {
+		bindHost = bcfg.BindHost
+	}
+
 	br := &backend.LoadRequest{
 		ModelPath:    modelPath,
 		Port:         port,
@@ -402,6 +409,7 @@ func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port 
 		GPULayers:    req.GPULayers,
 		Threads:      req.Threads,
 		Devices:      req.Devices,
+		BindHost:     bindHost,
 		SpecDecoding: req.SpecDecoding.ToBackend(),
 	}
 

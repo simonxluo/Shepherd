@@ -160,10 +160,15 @@ func (b *LlamaCppBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		return nil, fmt.Errorf("llama-server not found in path: %s", info.BinPath)
 	}
 
+	bindHost := req.BindHost
+	if bindHost == "" {
+		bindHost = "0.0.0.0"
+	}
+
 	args := []string{
 		"-m", req.ModelPath,
 		"--port", strconv.Itoa(req.Port),
-		"--host", "0.0.0.0",
+		"--host", bindHost,
 	}
 
 	p := req.LlamacppParams

@@ -797,6 +797,15 @@
     "loadingConfig": "加载配置中...",
     "apiCompatibility": "API 兼容性设置",
     "apiCompatibilityDesc": "配置 Ollama 和 LM Studio API 兼容层端口",
+    "bindHost": {
+      "title": "模型服务绑定地址",
+      "description": "选择模型后端进程的网络接口。仅影响新加载的模型。",
+      "allInterfaces": "所有网络接口（允许远程访问）",
+      "localhostOnly": "仅本地访问（更安全）",
+      "saveSuccess": "绑定地址已更新",
+      "saveFailed": "更新绑定地址失败",
+      "restartHint": "新加载的模型将使用更新后的地址。重新加载运行中的模型以应用。"
+    },
     "benchmark": {
       "title": "性能压测",
       "inDevelopment": "性能压测功能开发中..."

@@ -216,7 +216,10 @@ func (p *Process) Start() error {
 	return nil
 }
 
-// setupEnvironment configures the process environment
+// setupEnvironment configures the process environment.
+// Note: The env var merge logic here mirrors backend.buildEnvWithVars() in
+// internal/service/model/backend/backend.go. If modifying this logic, keep
+// both implementations in sync.
 func (p *Process) setupEnvironment(cmd *exec.Cmd, binPath string) error {
 	// Get current environment
 	env := os.Environ()

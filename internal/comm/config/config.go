@@ -42,8 +42,9 @@ type ServerConfig struct {
 	WebPort       int    `mapstructure:"web_port" yaml:"web_port" json:"webPort"`
 	AnthropicPort int    `mapstructure:"anthropic_port" yaml:"anthropic_port" json:"anthropicPort"`
 	Host          string `mapstructure:"host" yaml:"host" json:"host"`
-	ReadTimeout   int    `mapstructure:"read_timeout" yaml:"read_timeout" json:"readTimeout"`    // seconds
-	WriteTimeout  int    `mapstructure:"write_timeout" yaml:"write_timeout" json:"writeTimeout"` // seconds
+	ModelBindHost string `mapstructure:"model_bind_host" yaml:"model_bind_host" json:"modelBindHost"` // Bind address for model backend processes (0.0.0.0 or 127.0.0.1)
+	ReadTimeout   int    `mapstructure:"read_timeout" yaml:"read_timeout" json:"readTimeout"`         // seconds
+	WriteTimeout  int    `mapstructure:"write_timeout" yaml:"write_timeout" json:"writeTimeout"`       // seconds
 }
 
 // ModelConfig contains model scanning and management configuration
@@ -281,6 +282,7 @@ func DefaultConfig() *Config {
 			WebPort:       9190,
 			AnthropicPort: 9170,
 			Host:          "0.0.0.0",
+			ModelBindHost: "0.0.0.0",
 			ReadTimeout:   60,
 			WriteTimeout:  60,
 		},

@@ -138,10 +138,17 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Resolve model bind host from config (default: 0.0.0.0)
+	bindHost := cfg.Server.ModelBindHost
+	if bindHost == "" {
+		bindHost = "0.0.0.0"
+	}
+
 	// Sync llama.cpp from legacy config
 	llamacppCfg := &BackendConfig{
-		Type: BackendLlamaCpp,
-		Name: "LlamaCpp",
+		Type:     BackendLlamaCpp,
+		Name:     "LlamaCpp",
+		BindHost: bindHost,
 	}
 	if len(cfg.Llamacpp.Paths) > 0 {
 		llamacppCfg.BinPath = cfg.Llamacpp.Paths[0].Path
@@ -163,6 +170,7 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 			ExtraArgs:   cfg.Backends.VLLM.ExtraArgs,
 			DefaultPort: cfg.Backends.VLLM.DefaultPort,
 			EnvVars:     cfg.Backends.VLLM.Env,
+			BindHost:    bindHost,
 		}
 		if len(cfg.Backends.VLLM.Paths) > 0 {
 			vllmCfg.BinPath = cfg.Backends.VLLM.Paths[0].Path
@@ -185,6 +193,7 @@ func (r *Registry) SyncFromConfig(cfg *config.Config) {
 			ExtraArgs:   cfg.Backends.VLLMOmni.ExtraArgs,
 			DefaultPort: cfg.Backends.VLLMOmni.DefaultPort,
 			EnvVars:     cfg.Backends.VLLMOmni.Env,
+			BindHost:    bindHost,
 		}
 		if len(cfg.Backends.VLLMOmni.Paths) > 0 {
 			omniCfg.BinPath = cfg.Backends.VLLMOmni.Paths[0].Path

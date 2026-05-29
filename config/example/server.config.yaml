@@ -2,6 +2,7 @@ server:
     web_port: 9190
     anthropic_port: 9170
     host: 0.0.0.0
+    model_bind_host: 0.0.0.0
     read_timeout: 60
     write_timeout: 60
 model:
@@ -38,8 +39,6 @@ backends:
         extra_args: ""
         default_port: 8000
         env: []
-        video_pruning_rate: 0
-        mm_tensor_ipc: false
         paths:
             - path: /usr/local/bin/
               name: Default

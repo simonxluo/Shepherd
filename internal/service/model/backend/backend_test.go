@@ -304,6 +304,84 @@ func TestVLLMBackend_BuildStartConfig(t *testing.T) {
 	if !containsAll(cmd, "--dtype", "auto", "--tensor-parallel-size", "2", "--trust-remote-code") {
 		t.Errorf("command missing vLLM params: %s", cmd)
 	}
+	// Conda mode should skip LD_LIBRARY_PATH
+	if !cfg.SkipLDLibraryPath {
+		t.Error("conda mode should skip LD_LIBRARY_PATH")
+	}
+}
+
+func TestVLLMBackend_BuildStartConfig_BinPath(t *testing.T) {
+	b := NewVLLMBackend()
+	info := &BackendInfo{
+		Type:      BackendVLLM,
+		Name:      "vLLM",
+		BinPath:   "/opt/vllm/bin/vllm",
+		Available: true,
+	}
+
+	req := &LoadRequest{
+		ModelPath: "/models/llama-hf",
+		Port:      8000,
+		BindHost:  "127.0.0.1",
+		VLLMParams: &VLLMLoadParams{
+			DataType: "auto",
+		},
+	}
+
+	cfg, err := b.BuildStartConfig(info, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cmd := cfg.Command
+	if !containsAll(cmd, "/opt/vllm/bin/vllm", "serve", "/models/llama-hf") {
+		t.Errorf("command should use BinPath directly: %s", cmd)
+	}
+	if !containsAll(cmd, "--host", "127.0.0.1") {
+		t.Errorf("command should use custom bind host: %s", cmd)
+	}
+	if strings.Contains(cmd, "conda") {
+		t.Errorf("BinPath mode should not use conda: %s", cmd)
+	}
+	// BinPath mode should NOT skip LD_LIBRARY_PATH
+	if cfg.SkipLDLibraryPath {
+		t.Error("BinPath mode should not skip LD_LIBRARY_PATH")
+	}
+}
+
+func TestVLLMBackend_BuildStartConfig_GlobalExtraArgs(t *testing.T) {
+	b := NewVLLMBackend()
+	info := &BackendInfo{
+		Type:      BackendVLLM,
+		Name:      "vLLM",
+		CondaEnv:  "vllm",
+		Available: true,
+		ExtraArgs: "--global-flag",
+	}
+
+	req := &LoadRequest{
+		ModelPath: "/models/llama-hf",
+		Port:      8000,
+		VLLMParams: &VLLMLoadParams{
+			ExtraArgs: "--model-flag",
+		},
+	}
+
+	cfg, err := b.BuildStartConfig(info, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cmd := cfg.Command
+	if !containsAll(cmd, "--global-flag", "--model-flag") {
+		t.Errorf("command should include both global and model extra args: %s", cmd)
+	}
+	// Model-level args should appear after global args
+	globalIdx := strings.Index(cmd, "--global-flag")
+	modelIdx := strings.Index(cmd, "--model-flag")
+	if modelIdx < globalIdx {
+		t.Errorf("model-level extra args should appear after global: %s", cmd)
+	}
 }
 
 func TestVLLMOmniBackend_BuildStartConfig(t *testing.T) {
@@ -336,11 +414,63 @@ func TestVLLMOmniBackend_BuildStartConfig(t *testing.T) {
 	if !containsAll(cmd, "vllm-omni", "serve") {
 		t.Errorf("command should use vllm-omni: %s", cmd)
 	}
+	if !containsAll(cmd, "--omni") {
+		t.Errorf("command missing --omni flag: %s", cmd)
+	}
 	if !containsAll(cmd, "--video-pruning-rate") {
 		t.Errorf("command missing video pruning rate: %s", cmd)
 	}
 	if !containsAll(cmd, "--mm-tensor-ipc") {
 		t.Errorf("command missing mm-tensor-ipc: %s", cmd)
+	}
+	if !containsAll(cmd, "--host", "0.0.0.0") {
+		t.Errorf("command should default to 0.0.0.0: %s", cmd)
+	}
+}
+
+func TestVLLMOmniBackend_BuildStartConfig_BinPath(t *testing.T) {
+	b := NewVLLMOmniBackend()
+	info := &BackendInfo{
+		Type:      BackendVLLMOmni,
+		Name:      "vLLM-Omni",
+		BinPath:   "/opt/bin/vllm-omni",
+		Available: true,
+	}
+
+	req := &LoadRequest{
+		ModelPath: "/models/omni-model",
+		Port:      8000,
+		BindHost:  "127.0.0.1",
+		VLLOmniParams: &VLLOmniLoadParams{
+			VLLMLoadParams: VLLMLoadParams{
+				DataType: "bfloat16",
+			},
+		},
+	}
+
+	cfg, err := b.BuildStartConfig(info, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cmd := cfg.Command
+	if !containsAll(cmd, "/opt/bin/vllm-omni", "serve", "/models/omni-model") {
+		t.Errorf("command should use BinPath directly: %s", cmd)
+	}
+	if strings.Contains(cmd, "conda") {
+		t.Errorf("BinPath mode should not use conda: %s", cmd)
+	}
+	if !containsAll(cmd, "--omni") {
+		t.Errorf("command missing --omni flag: %s", cmd)
+	}
+	if !containsAll(cmd, "--host", "127.0.0.1") {
+		t.Errorf("command should use custom bind host: %s", cmd)
+	}
+	if cfg.SkipLDLibraryPath {
+		t.Error("BinPath mode should not skip LD_LIBRARY_PATH")
+	}
+	if cfg.BackendType != BackendVLLMOmni {
+		t.Errorf("got backend type %v, want %v", cfg.BackendType, BackendVLLMOmni)
 	}
 }
 

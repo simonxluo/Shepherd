@@ -308,11 +308,12 @@ func (s *Server) HandleGetConfig(c *gin.Context) {
 	api.Success(c, gin.H{
 		"role": s.config.ServerCfg.Node.Role,
 		"server": gin.H{
-			"host":           s.config.Host,
-			"web_port":       s.config.WebPort,
-			"anthropic_port": s.config.AnthropicPort,
-			"ollama_port":    s.config.ServerCfg.Compatibility.Ollama.Port,
-			"lm_studio_port": s.config.ServerCfg.Compatibility.LMStudio.Port,
+			"host":            s.config.Host,
+			"model_bind_host": s.config.ServerCfg.Server.ModelBindHost,
+			"web_port":        s.config.WebPort,
+			"anthropic_port":  s.config.AnthropicPort,
+			"ollama_port":     s.config.ServerCfg.Compatibility.Ollama.Port,
+			"lm_studio_port":  s.config.ServerCfg.Compatibility.LMStudio.Port,
 		},
 		"storage": gin.H{
 			"type":   cfg.Storage.Type,
@@ -345,10 +346,11 @@ func (s *Server) HandleGetConfig(c *gin.Context) {
 // @Router       /api/config [put]
 func (s *Server) HandleUpdateConfig(c *gin.Context) {
 	var req struct {
-		Mode      string   `json:"mode"`
-		WebPort   int      `json:"web_port"`
-		AutoScan  bool     `json:"auto_scan"`
-		ScanPaths []string `json:"scan_paths"`
+		Mode          string   `json:"mode"`
+		WebPort       int      `json:"web_port"`
+		AutoScan      bool     `json:"auto_scan"`
+		ScanPaths     []string `json:"scan_paths"`
+		ModelBindHost string   `json:"model_bind_host"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -364,6 +366,22 @@ func (s *Server) HandleUpdateConfig(c *gin.Context) {
 		restartRequired = true
 	}
 
+	// 更新模型绑定地址（需要重启已加载的模型才生效）
+	if req.ModelBindHost != "" {
+		if req.ModelBindHost != "0.0.0.0" && req.ModelBindHost != "127.0.0.1" {
+			api.ErrorWithDetails(c, types.ErrInvalidRequest, "无效的绑定地址", "model_bind_host must be 0.0.0.0 or 127.0.0.1")
+			return
+		}
+		if req.ModelBindHost != s.config.ServerCfg.Server.ModelBindHost {
+			s.config.ServerCfg.Server.ModelBindHost = req.ModelBindHost
+			// Re-sync backend registry so new models use the updated bind host
+			if s.modelMgr != nil {
+				s.modelMgr.SyncBackendRegistry(s.config.ServerCfg)
+			}
+			restartRequired = true
+		}
+	}
+
 	// 更新扫描路径
 	if len(req.ScanPaths) > 0 {
 		s.config.ServerCfg.Model.Paths = req.ScanPaths
@@ -375,6 +393,13 @@ func (s *Server) HandleUpdateConfig(c *gin.Context) {
 					logger.Warnf("模型扫描失败: error=%v", err)
 				}
 			}()
+		}
+	}
+
+	// 持久化配置到磁盘
+	if s.config.ConfigMgr != nil {
+		if err := s.config.ConfigMgr.Save(s.config.ServerCfg); err != nil {
+			logger.Warnf("配置持久化失败: error=%v", err)
 		}
 	}
 

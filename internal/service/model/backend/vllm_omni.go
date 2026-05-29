@@ -22,7 +22,9 @@ func (b *VLLMOmniBackend) Discover(cfg *BackendConfig) (*BackendInfo, error) {
 	return discoverVLLMVariant(cfg, BackendVLLMOmni, "vLLM-Omni", "vllm-omni")
 }
 
-// BuildStartConfig constructs the vllm-omni serve command with multimodal parameters
+// BuildStartConfig constructs the vllm-omni serve command with multimodal parameters.
+// Unlike the previous implementation, this builds the command directly instead of
+// delegating to VLLMBackend.BuildStartConfig and doing string replacement.
 func (b *VLLMOmniBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) (*StartConfig, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
@@ -36,40 +38,47 @@ func (b *VLLMOmniBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		p = &VLLOmniLoadParams{}
 	}
 
-	// Create a vLLM LoadRequest with the embedded params
-	vllmReq := &LoadRequest{
-		ModelPath:  req.ModelPath,
-		Port:       req.Port,
-		CtxSize:    req.CtxSize,
-		GPULayers:  req.GPULayers,
-		Threads:    req.Threads,
-		Devices:    req.Devices,
-		VLLMParams: &p.VLLMLoadParams,
-	}
+	// Build command prefix using shared helper with "vllm-omni" binary name
+	args := buildVLLMPrefix(info, req, "vllm-omni")
 
-	startCfg, err := b.vllm.BuildStartConfig(info, vllmReq)
+	// Append common vLLM parameters (port, host, dtype, parallelism, etc.)
+	vllmParams := &p.VLLMLoadParams
+	args, err := appendVLLMArgs(args, req, vllmParams)
 	if err != nil {
 		return nil, err
 	}
 
-	// Replace "vllm serve" with "vllm-omni serve" in the command
-	cmd := startCfg.Command
-	cmd = strings.Replace(cmd, "vllm serve", "vllm-omni serve", 1)
-
-	// vllm_omni 后端始终启用 --omni（这是使用此后端的核心目的）
-	cmd += " --omni"
+	// vllm_omni 后端始终启用 --omni（这是使用此后端的核心目的，不带此参数会报错）
+	args = append(args, "--omni")
 
 	// Append multimodal-specific parameters
 	if p.VideoPruningRate > 0 {
-		cmd += fmt.Sprintf(" --video-pruning-rate %.2f", p.VideoPruningRate)
+		args = append(args, "--video-pruning-rate", fmt.Sprintf("%.2f", p.VideoPruningRate))
 	}
 	if p.MMTensorIPC {
-		cmd += " --mm-tensor-ipc"
+		args = append(args, "--mm-tensor-ipc")
 	}
 
-	startCfg.Command = cmd
-	startCfg.BackendType = BackendVLLMOmni
-	return startCfg, nil
+	cmd := quoteAndJoin(args)
+
+	// Append extra args: global config ExtraArgs first, then model-level ExtraArgs (higher priority)
+	if info.ExtraArgs != "" {
+		cmd += " " + strings.TrimSpace(info.ExtraArgs)
+	}
+	if vllmParams.ExtraArgs != "" {
+		cmd += " " + strings.TrimSpace(vllmParams.ExtraArgs)
+	}
+
+	// SkipLDLibraryPath: conda manages its own env, but direct binary mode may need LD_LIBRARY_PATH
+	skipLD := info.CondaEnv != "" && info.BinPath == ""
+
+	return &StartConfig{
+		Command:           cmd,
+		BinPath:           info.BinPath,
+		BackendType:       BackendVLLMOmni,
+		SkipLDLibraryPath: skipLD,
+		CondaPath:         info.CondaPath,
+	}, nil
 }
 
 // IsLoadComplete detects vLLM-omni load completion (same signal as vLLM)

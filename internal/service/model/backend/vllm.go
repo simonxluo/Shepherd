@@ -39,10 +39,42 @@ func (b *VLLMBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) (*St
 		p = &VLLMLoadParams{}
 	}
 
-	// Build args
+	// Build prefix args (binary/conda + serve + model)
+	args := buildVLLMPrefix(info, req, "vllm")
+
+	// Append common vLLM parameters
+	args, err := appendVLLMArgs(args, req, p)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := quoteAndJoin(args)
+
+	// Append extra args: global config ExtraArgs first, then model-level ExtraArgs (higher priority)
+	if info.ExtraArgs != "" {
+		cmd += " " + strings.TrimSpace(info.ExtraArgs)
+	}
+	if p.ExtraArgs != "" {
+		cmd += " " + strings.TrimSpace(p.ExtraArgs)
+	}
+
+	// SkipLDLibraryPath: conda manages its own env, but direct binary mode may need LD_LIBRARY_PATH
+	skipLD := info.CondaEnv != "" && info.BinPath == ""
+
+	return &StartConfig{
+		Command:           cmd,
+		BinPath:           info.BinPath,
+		BackendType:       BackendVLLM,
+		SkipLDLibraryPath: skipLD,
+		CondaPath:         info.CondaPath,
+	}, nil
+}
+
+// buildVLLMPrefix builds the command prefix for vLLM/vLLM-omni.
+// binaryName is "vllm" or "vllm-omni".
+func buildVLLMPrefix(info *BackendInfo, req *LoadRequest, binaryName string) []string {
 	var args []string
 
-	// Use conda wrapper if no custom binary path
 	if info.BinPath != "" {
 		args = append(args, info.BinPath, "serve", req.ModelPath)
 	} else {
@@ -50,12 +82,22 @@ func (b *VLLMBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) (*St
 		if condaPath == "" {
 			condaPath = "conda"
 		}
-		args = append(args, condaPath, "run", "--no-banner", "-n", info.CondaEnv, "vllm", "serve", req.ModelPath)
+		args = append(args, condaPath, "run", "--no-banner", "-n", info.CondaEnv, binaryName, "serve", req.ModelPath)
 	}
 
-	// Port
+	return args
+}
+
+// appendVLLMArgs appends common vLLM parameters (port, host, dtype, parallelism, etc.) to args.
+// This is shared between VLLMBackend and VLLMOmniBackend.
+func appendVLLMArgs(args []string, req *LoadRequest, p *VLLMLoadParams) ([]string, error) {
+	// Port & host
 	args = append(args, "--port", fmt.Sprintf("%d", req.Port))
-	args = append(args, "--host", "0.0.0.0")
+	bindHost := req.BindHost
+	if bindHost == "" {
+		bindHost = "0.0.0.0"
+	}
+	args = append(args, "--host", bindHost)
 
 	// Context size
 	if req.CtxSize > 0 {
@@ -134,26 +176,12 @@ func (b *VLLMBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) (*St
 		args = append(args, "--enforce-eager")
 	}
 
-	// GPU layers (mapped to -ngl for compatibility, though vLLM handles GPU automatically)
-	// vLLM doesn't use -ngl, but we log if it's set
+	// GPU layers: vLLM doesn't use -ngl, just log if set
 	if req.GPULayers > 0 {
 		logger.Debug("vLLM ignores gpuLayers setting - it manages GPU offloading automatically")
 	}
 
-	cmd := quoteAndJoin(args)
-
-	// Append extra args
-	if p.ExtraArgs != "" {
-		cmd += " " + strings.TrimSpace(p.ExtraArgs)
-	}
-
-	return &StartConfig{
-		Command:           cmd,
-		BinPath:           info.BinPath,
-		BackendType:       BackendVLLM,
-		SkipLDLibraryPath: true,
-		CondaPath:         info.CondaPath,
-	}, nil
+	return args, nil
 }
 
 // IsLoadComplete detects vLLM load completion from stdout
@@ -161,7 +189,8 @@ func (b *VLLMBackend) IsLoadComplete(outputLine string) bool {
 	return strings.Contains(outputLine, "Uvicorn running on")
 }
 
-// CheckHealth performs an HTTP health check against the vLLM server
+// CheckHealth performs an HTTP health check against the vLLM server.
+// Always uses localhost since health checks are issued from the local machine.
 func (b *VLLMBackend) CheckHealth(port int) (*HealthResult, error) {
 	client := &http.Client{Timeout: 2 * time.Second}
 	resp, err := client.Get(fmt.Sprintf("http://localhost:%d/health", port))

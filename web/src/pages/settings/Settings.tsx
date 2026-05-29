@@ -6,12 +6,15 @@ import {
   Toolbox,
   Info,
   FolderOpen,
+  Globe,
+  Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PathConfigPanel } from '@/features/settings/components/PathConfigPanel';
 import { ApiConfigCard, type ApiConfig } from '@/features/settings/components/ApiConfigCard';
 import { McpSettingsPanel } from '@/features/settings/components/McpSettingsPanel';
 import { compatibilityApi } from '@/lib/api/compatibility';
+import { apiClient } from '@/lib/api/client';
 import { useServerInfo } from '@/hooks/useServerInfo';
 import { toast } from '@/hooks/useToast';
 
@@ -95,6 +98,8 @@ function GeneralSettingsPanel() {
   const [ollamaPort, setOllamaPort] = useState(11434);
   const [lmstudioEnabled, setLmstudioEnabled] = useState(false);
   const [lmstudioPort, setLmstudioPort] = useState(1234);
+  const [modelBindHost, setModelBindHost] = useState('0.0.0.0');
+  const [bindHostLoading, setBindHostLoading] = useState(false);
 
   const [saveDone, setSaveDone] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -107,12 +112,18 @@ function GeneralSettingsPanel() {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const response = await compatibilityApi.get();
-        if (response.success && response.data) {
-          setOllamaEnabled(response.data.ollama.enabled);
-          setOllamaPort(response.data.ollama.port);
-          setLmstudioEnabled(response.data.lmstudio.enabled);
-          setLmstudioPort(response.data.lmstudio.port);
+        const [compatResponse, configResponse] = await Promise.all([
+          compatibilityApi.get(),
+          apiClient.get<{ success: boolean; data?: { server?: { model_bind_host?: string } } }>('/config'),
+        ]);
+        if (compatResponse.success && compatResponse.data) {
+          setOllamaEnabled(compatResponse.data.ollama.enabled);
+          setOllamaPort(compatResponse.data.ollama.port);
+          setLmstudioEnabled(compatResponse.data.lmstudio.enabled);
+          setLmstudioPort(compatResponse.data.lmstudio.port);
+        }
+        if (configResponse.success && configResponse.data?.server?.model_bind_host) {
+          setModelBindHost(configResponse.data.server.model_bind_host);
         }
       } catch (error) {
         console.error('加载兼容性配置失败:', error);
@@ -240,6 +251,30 @@ function GeneralSettingsPanel() {
     }
   }, [ollamaEnabled, ollamaPort, lmstudioEnabled, lmstudioPort, toast]);
 
+  const handleBindHostChange = useCallback(async (host: string) => {
+    if (host === modelBindHost) return;
+    setBindHostLoading(true);
+    try {
+      const response = await apiClient.put<{ success: boolean; data?: { restart_required?: boolean }; error?: string }>('/config', {
+        model_bind_host: host,
+      });
+      if (response.success) {
+        setModelBindHost(host);
+        toast.success(
+          t('settings.bindHost.saveSuccess'),
+          t('settings.bindHost.restartHint')
+        );
+      } else {
+        toast.error(t('settings.bindHost.saveFailed'), response.error || '');
+      }
+    } catch (error) {
+      console.error('更新绑定地址失败:', error);
+      toast.error(t('settings.bindHost.saveFailed'), t('settings.saveFailedDesc'));
+    } finally {
+      setBindHostLoading(false);
+    }
+  }, [modelBindHost, t]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12 text-foreground">
@@ -279,6 +314,50 @@ function GeneralSettingsPanel() {
         onTestConnection={handleTestConnection}
         onConnectionFailed={handleConnectionFailed}
       />
+
+      {/* Model bind host config */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold">{t('settings.bindHost.title')}</h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          {t('settings.bindHost.description')}
+        </p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            disabled={bindHostLoading}
+            onClick={() => handleBindHostChange('0.0.0.0')}
+            className={cn(
+              'flex-1 flex items-center gap-2 rounded-lg border-2 p-3 transition-all',
+              modelBindHost === '0.0.0.0'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-muted-foreground/50'
+            )}
+          >
+            <Globe size={18} className={modelBindHost === '0.0.0.0' ? 'text-primary' : 'text-muted-foreground'} />
+            <div className="text-left">
+              <div className="text-sm font-medium">0.0.0.0</div>
+              <div className="text-xs text-muted-foreground">{t('settings.bindHost.allInterfaces')}</div>
+            </div>
+          </button>
+          <button
+            type="button"
+            disabled={bindHostLoading}
+            onClick={() => handleBindHostChange('127.0.0.1')}
+            className={cn(
+              'flex-1 flex items-center gap-2 rounded-lg border-2 p-3 transition-all',
+              modelBindHost === '127.0.0.1'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-muted-foreground/50'
+            )}
+          >
+            <Shield size={18} className={modelBindHost === '127.0.0.1' ? 'text-primary' : 'text-muted-foreground'} />
+            <div className="text-left">
+              <div className="text-sm font-medium">127.0.0.1</div>
+              <div className="text-xs text-muted-foreground">{t('settings.bindHost.localhostOnly')}</div>
+            </div>
+          </button>
+        </div>
+      </div>
 
     </div>
   );
