@@ -38,6 +38,7 @@ export function SystemMonitorPage() {
       {resources && (
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
           {resources.hostname && <span>{resources.hostname}</span>}
+          {resources.hostIp && <span>{resources.hostIp}</span>}
           {resources.platform && (
             <span>
               {resources.platform}/{resources.arch}

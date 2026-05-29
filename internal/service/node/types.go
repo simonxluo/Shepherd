@@ -89,6 +89,7 @@ type NodeResources struct {
 	Platform      string     `json:"platform,omitempty"`      // OS platform (e.g., "linux")
 	Arch          string     `json:"arch,omitempty"`          // CPU architecture (e.g., "amd64")
 	Hostname      string     `json:"hostname,omitempty"`      // System hostname
+	HostIP        string     `json:"hostIp,omitempty"`        // Primary host IP address
 }
 
 // LlamacppInfo contains information about llama.cpp installation

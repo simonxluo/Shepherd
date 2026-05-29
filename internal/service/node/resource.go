@@ -218,6 +218,9 @@ func (rm *ResourceMonitor) initializeResources() error {
 		rm.resources.Hostname = hostname
 	}
 
+	// 获取主机IP
+	rm.resources.HostIP = rm.detectHostIP()
+
 	// 检测GPU
 	rm.detectGPUs()
 
@@ -563,6 +566,19 @@ func isValidROCmVersion(s string) bool {
 func (rm *ResourceMonitor) detectKernelVersion() string {
 	if hostStat, err := host.Info(); err == nil {
 		return hostStat.KernelVersion
+	}
+	return ""
+}
+
+// detectHostIP returns the primary non-loopback IP address.
+func (rm *ResourceMonitor) detectHostIP() string {
+	cmd := exec.CommandContext(rm.ctx, "hostname", "-I")
+	out, err := cmd.Output()
+	if err == nil {
+		parts := strings.Fields(string(out))
+		if len(parts) > 0 {
+			return parts[0]
+		}
 	}
 	return ""
 }

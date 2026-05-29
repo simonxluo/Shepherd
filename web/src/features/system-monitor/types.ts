@@ -41,6 +41,7 @@ export interface SystemResources {
   platform: string;
   arch: string;
   hostname: string;
+  hostIp: string;
 }
 
 export interface ModelStats {

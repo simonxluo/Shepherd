@@ -613,6 +613,7 @@ func (s *Server) HandleGetResources(c *gin.Context) {
 				"platform":      snapshot.Platform,
 				"arch":          snapshot.Arch,
 				"hostname":      snapshot.Hostname,
+				"hostIp":        snapshot.HostIP,
 			})
 			return
 		}
