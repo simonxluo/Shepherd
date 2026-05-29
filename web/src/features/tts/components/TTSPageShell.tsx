@@ -18,6 +18,7 @@ import type { TTSPluginPanelProps } from '../types';
 // Import plugins to register them
 import '../plugins/generic';
 import '../plugins/voxcpm2';
+import '../plugins/qwen3tts';
 
 export function TTSPageShell() {
   const { t } = useTranslation();
