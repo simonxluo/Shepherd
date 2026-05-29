@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="cosy-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6236FF"/>
+      <stop offset="100%" style="stop-color:#36CED0"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="url(#cosy-grad)"/>
+  <!-- Stylized waveform representing Cosy Voice -->
+  <path d="M14 32h4l3-8 4 16 4-12 4 8 3-4h4l3-6 4 12 3-6h4" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Microphone dot -->
+  <circle cx="32" cy="48" r="3" fill="#FFFFFF" opacity="0.8"/>
+</svg>

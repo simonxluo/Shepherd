@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="omni-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B00"/>
+      <stop offset="100%" style="stop-color:#FF9500"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="url(#omni-grad)"/>
+  <!-- Sound wave icon representing voice -->
+  <circle cx="24" cy="32" r="4" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
+  <path d="M32 22c5.5 3 9 7 9 10s-3.5 7-9 10" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M36 26c3.3 1.8 5.4 4.2 5.4 6s-2.1 4.2-5.4 6" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M40 29.5c1.8 1 2.8 2.2 2.8 2.5s-1 1.5-2.8 2.5" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

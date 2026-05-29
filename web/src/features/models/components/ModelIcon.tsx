@@ -20,6 +20,13 @@ const MODEL_ICONS: [string, string][] = [
   ['lfm', '/model-icons/lfm-color.svg'],
   ['paddleocr', '/model-icons/paddleocr-color.svg'],
   ['seed_oss', '/model-icons/seed_oss-color.svg'],
+  ['voxcpm', '/model-icons/openbmb-color.svg'],
+  ['openbmb', '/model-icons/openbmb-color.svg'],
+  ['minicpm', '/model-icons/openbmb-color.svg'],
+  ['omnivoice', '/model-icons/omnivoice-color.svg'],
+  ['cosyvoice', '/model-icons/cosyvoice-color.svg'],
+  ['funaudio', '/model-icons/cosyvoice-color.svg'],
+  ['stepfun', '/model-icons/stepfun-color.svg'],
   ['step35', '/model-icons/step35-color.svg'],
 ];
 
