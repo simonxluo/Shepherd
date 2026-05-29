@@ -1,5 +1,4 @@
 // Package middleware provides HTTP middleware for the Shepherd API server.
-// 这个包提供 HTTP 中间件用于 API 处理
 package middleware
 
 import (

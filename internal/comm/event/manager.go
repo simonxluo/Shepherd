@@ -11,7 +11,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 )
 
-// LoadedModelCounter 返回当前已加载模型数量的函数类型
+// LoadedModelCounter is a function type that returns the current number of loaded models.
 type LoadedModelCounter func() int
 
 // Manager manages WebSocket connections and broadcasts events

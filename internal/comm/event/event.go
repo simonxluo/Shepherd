@@ -195,7 +195,7 @@ func NewScanCompleteEvent(foundModels int, duration time.Duration) *Event {
 	return event
 }
 
-// NewBenchmarkUpdateEvent 创建压测任务状态更新事件
+// NewBenchmarkUpdateEvent creates a benchmark task status update event.
 func NewBenchmarkUpdateEvent(taskID, modelID, status string, data interface{}) *Event {
 	event := NewEvent(EventTypeBenchmarkUpdate)
 	event.TaskID = taskID

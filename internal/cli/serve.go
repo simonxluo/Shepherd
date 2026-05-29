@@ -351,7 +351,7 @@ func startWebDevServer(projectDir string) (*exec.Cmd, error) {
 	return devCmd, nil
 }
 
-// cleanupWebDevServer 停止前端开发服务器进程
+// cleanupWebDevServer stops the frontend dev server process.
 func cleanupWebDevServer(devCmd *exec.Cmd) {
 	if devCmd == nil || devCmd.Process == nil {
 		return

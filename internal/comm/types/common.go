@@ -1,5 +1,5 @@
-// Package types provides unified type definitions for the Shepherd system
-// 这个包提供统一的类型定义，消除不同模块间的类型重复
+// Package types provides unified type definitions for the Shepherd system,
+// eliminating type duplication across modules.
 package types
 
 import (
@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// NodeState represents the unified state of a node or client
-// 统一的节点状态，替代 NodeStatus 和 ClientStatus
+// NodeState represents the unified state of a node or client,
+// replacing the separate NodeStatus and ClientStatus types.
 type NodeState string
 
 const (
@@ -23,8 +23,7 @@ func (s NodeState) String() string {
 	return string(s)
 }
 
-// ErrorCode represents unified error codes
-// 统一的错误码定义
+// ErrorCode represents unified error codes for the API layer.
 type ErrorCode string
 
 const (
@@ -66,8 +65,7 @@ func (e ErrorCode) HTTPStatusCode() int {
 	}
 }
 
-// ErrorInfo represents detailed error information
-// 错误详细信息
+// ErrorInfo represents detailed error information for API responses.
 type ErrorInfo struct {
 	Code    ErrorCode `json:"code"`
 	Message string    `json:"message"`
@@ -82,8 +80,7 @@ func (e *ErrorInfo) Error() string {
 	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
 }
 
-// ResponseMeta represents metadata included in API responses
-// API 响应元数据
+// ResponseMeta represents metadata included in API responses.
 type ResponseMeta struct {
 	Timestamp string `json:"timestamp"`
 	RequestID string `json:"requestId"`
@@ -98,8 +95,7 @@ func NewResponseMeta(requestID string) *ResponseMeta {
 	}
 }
 
-// ApiResponse represents a unified API response format
-// 统一的 API 响应格式，支持泛型类型
+// ApiResponse represents a unified API response format with generic type support.
 type ApiResponse[T any] struct {
 	Success  bool          `json:"success"`
 	Data     T             `json:"data,omitempty"`

@@ -9,65 +9,65 @@ import (
 	"strings"
 )
 
-// ParseLlamacppDeviceList 解析 llama-bench --list-devices 输出，返回去重后的设备列表
+// ParseLlamacppDeviceList parses the output of llama-bench --list-devices and returns a deduplicated device list.
 //
-// 输入示例:
+// Example input:
 // Available devices:
 //
 //	ROCm0: AMD Radeon Graphics (122880 MiB, 114915 MiB free)
 //	CUDA0: NVIDIA GeForce RTX 3090 (24576 MiB, 20321 MiB free)
 //
-// 注意: llama.cpp 存在 bug，可能会输出重复的设备，因此需要去重
+// Note: llama.cpp has a bug that may output duplicate devices, so deduplication is required.
 //
-// 参数:
-//   - output: llama-bench 命令的输出
+// Parameters:
+//   - output: the output of the llama-bench command
 //
-// 返回:
-//   - []string: 去重后的设备信息列表，每行格式为 "ROCm0: AMD Radeon Graphics (122880 MiB, 114915 MiB free)"
+// Returns:
+//   - []string: deduplicated device info list, each line formatted as "ROCm0: AMD Radeon Graphics (122880 MiB, 114915 MiB free)"
 func ParseLlamacppDeviceList(output string) []string {
 	var devices []string
 	lines := strings.Split(output, "\n")
 
-	// 用于去重，防止 llama-bench 重复输出同一设备
+	// Used for deduplication to prevent llama-bench from outputting the same device multiple times
 	seenDeviceIDs := make(map[string]bool)
 
-	// 查找 "Available devices:" 标记后的设备列表
-	// 必须精确匹配 "Available devices:"，避免匹配调试信息中的 "found"
+	// Look for the "Available devices:" marker followed by the device list
+	// Must match "Available devices:" exactly to avoid matching debug info containing "found"
 	inDeviceList := false
 
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 
-		// 检测设备列表开始 - 必须包含完整的 "Available devices:" 标记
+		// Detect device list start - must contain the complete "Available devices:" marker
 		if strings.Contains(trimmedLine, "Available devices:") {
 			inDeviceList = true
 			continue
 		}
 
-		// 空行结束设备列表
+		// Empty line ends the device list
 		if inDeviceList && trimmedLine == "" {
 			break
 		}
 
-		// 解析设备行
+		// Parse device line
 		if inDeviceList {
-			// 匹配格式: "ROCm0: AMD Radeon Graphics (122880 MiB, 114915 MiB free)"
-			// 或 "CUDA0: NVIDIA GeForce RTX 3090 (24576 MiB, 20321 MiB free)"
-			// 必须包含设备类型前缀 (ROCm/CUDA 等) 和冒号
+			// Match format: "ROCm0: AMD Radeon Graphics (122880 MiB, 114915 MiB free)"
+			// or "CUDA0: NVIDIA GeForce RTX 3090 (24576 MiB, 20321 MiB free)"
+			// Must contain a device type prefix (ROCm/CUDA etc.) and colon
 			if strings.Contains(trimmedLine, ":") {
 				parts := strings.SplitN(trimmedLine, ":", 2)
 				if len(parts) == 2 {
 					deviceID := strings.TrimSpace(parts[0])
-					// 验证设备前缀格式: ROCm0, CUDA0, Vulkan0, Metal0 等
+					// Validate device prefix format: ROCm0, CUDA0, Vulkan0, Metal0 etc.
 					if isValidLlamacppDevicePrefix(deviceID) {
-						// 检查是否已经处理过该设备 ID（去重）
+						// Check if this device ID has already been processed (dedup)
 						if seenDeviceIDs[deviceID] {
-							// 跳过重复设备
+							// Skip duplicate device
 							continue
 						}
 						seenDeviceIDs[deviceID] = true
 
-						// 保留完整的设备信息行，以便前端显示
+						// Keep the full device info line for frontend display
 						devices = append(devices, trimmedLine)
 					}
 				}
@@ -81,54 +81,54 @@ func ParseLlamacppDeviceList(output string) []string {
 // devicePrefixRe matches known llama.cpp device prefixes: CUDA0, ROCm0, Vulkan0, Metal0, SYCL0, CPU0, etc.
 var devicePrefixRe = regexp.MustCompile(`^(CUDA|ROCm|Vulkan|Metal|SYCL|CPU)[0-9]*$`)
 
-// isValidLlamacppDevicePrefix 验证设备前缀是否有效
-// 有效的前缀格式: CUDA, ROCm, Vulkan, Metal, SYCL, CPU 后跟可选数字
+// isValidLlamacppDevicePrefix validates whether a device prefix is valid.
+// Valid prefix format: CUDA, ROCm, Vulkan, Metal, SYCL, or CPU followed by an optional number.
 func isValidLlamacppDevicePrefix(prefix string) bool {
 	return devicePrefixRe.MatchString(prefix)
 }
 
-// GetLlamacppDeviceList 使用 llama-bench 获取设备列表
+// GetLlamacppDeviceList uses llama-bench to retrieve the device list.
 //
-// 参数:
-//   - benchPath: llama-bench 可执行文件路径
+// Parameters:
+//   - benchPath: path to the llama-bench executable
 //
-// 返回:
-//   - []string: 去重后的设备信息列表
-//   - error: 错误信息
+// Returns:
+//   - []string: deduplicated device info list
+//   - error: error information
 func GetLlamacppDeviceList(benchPath string) ([]string, error) {
-	// 执行 llama-bench --list-devices
+	// Execute llama-bench --list-devices
 	cmd := exec.Command(benchPath, "--list-devices")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute %s --list-devices: %w, output: %s", benchPath, err, string(output))
 	}
 
-	// 解析输出获取设备列表
+	// Parse output to get device list
 	devices := ParseLlamacppDeviceList(string(output))
 
 	return devices, nil
 }
 
-// FindLlamacppBinary 在指定路径中查找 llama.cpp 可执行文件
+// FindLlamacppBinary searches for a llama.cpp executable in the specified path.
 //
-// 参数:
-//   - binPath: llama.cpp 路径（可以是目录或可执行文件）
-//   - binaryType: 二进制文件类型 ("server", "cli", "bench" 等)
+// Parameters:
+//   - binPath: llama.cpp path (can be a directory or executable file)
+//   - binaryType: binary file type ("server", "cli", "bench", etc.)
 //
-// 返回:
-//   - string: 找到的可执行文件完整路径，如果未找到返回空字符串
+// Returns:
+//   - string: full path of the found executable, or empty string if not found
 //
-// 查找逻辑:
-//  1. 如果 binPath 是文件且可执行，直接返回
-//  2. 如果 binPath 是目录，在目录中查找对应的二进制文件
-//  3. 如果未找到，尝试在 bin/ 子目录中查找
+// Search logic:
+//  1. If binPath is an executable file, return it directly
+//  2. If binPath is a directory, search for the corresponding binary in it
+//  3. If not found, try searching in bin/ and build/bin/ subdirectories
 //
-// 支持的二进制文件名:
+// Supported binary names:
 //   - server: llama-server, server
 //   - cli: llama-cli, cli, main
 //   - bench: llama-bench, bench
 func FindLlamacppBinary(binPath string, binaryType string) string {
-	// 定义不同类型的二进制文件名
+	// Define possible binary names for each type
 	var possibleNames []string
 	switch strings.ToLower(binaryType) {
 	case "server":
@@ -138,21 +138,21 @@ func FindLlamacppBinary(binPath string, binaryType string) string {
 	case "bench":
 		possibleNames = []string{"llama-bench", "bench"}
 	default:
-		// 默认查找所有可能的二进制文件
+		// Default: search for all possible binaries
 		possibleNames = []string{"llama-server", "server", "llama-cli", "cli", "main", "llama-bench", "bench"}
 	}
 
-	// 1. 检查路径是否为文件
+	// 1. Check if the path is a file
 	if info, err := os.Stat(binPath); err == nil && info.Mode().IsRegular() {
-		// 如果是文件且可执行，直接返回
+		// If it's a file and executable, return directly
 		if info.Mode().Perm()&0111 != 0 {
 			return binPath
 		}
 	}
 
-	// 2. 如果是目录，在目录中查找二进制文件
+	// 2. If it's a directory, search for binaries within it
 	if info, err := os.Stat(binPath); err == nil && info.IsDir() {
-		// 先在当前目录中查找
+		// Search in the current directory first
 		for _, name := range possibleNames {
 			candidatePath := filepath.Join(binPath, name)
 			if info, err := os.Stat(candidatePath); err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
@@ -160,7 +160,7 @@ func FindLlamacppBinary(binPath string, binaryType string) string {
 			}
 		}
 
-		// 3. 尝试在 bin 和 build/bin 子目录中查找
+		// 3. Try searching in bin/ and build/bin/ subdirectories
 		for _, subDir := range []string{"bin", "build/bin"} {
 			dirPath := filepath.Join(binPath, subDir)
 			for _, name := range possibleNames {
