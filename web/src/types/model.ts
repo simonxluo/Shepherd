@@ -624,6 +624,7 @@ export interface CreateBenchmarkRequest {
   cmd?: string;            // Benchmark command string
   args?: string[];         // Benchmark command arguments
   configName?: string;     // Optional config name
+  nodeId?: string;         // Optional node ID for distributed benchmarking
 }
 
 /**
@@ -642,6 +643,7 @@ export interface BenchmarkV2Request {
   modelId: string;
   promptTokens: number;
   maxTokens: number;
+  nodeId?: string;
 }
 
 export interface BenchmarkV2Timings {

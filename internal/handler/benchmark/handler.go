@@ -380,6 +380,7 @@ func (h *Handler) Create(c *gin.Context) {
 		Cmd          string            `json:"cmd"`
 		Args         []string          `json:"args"`
 		Config       map[string]string `json:"config"`
+		NodeID       string            `json:"nodeId"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -427,6 +428,9 @@ func (h *Handler) Create(c *gin.Context) {
 	config := make(map[string]interface{})
 	for k, v := range req.Config {
 		config[k] = v
+	}
+	if req.NodeID != "" {
+		config["nodeId"] = req.NodeID
 	}
 
 	// 创建任务
@@ -541,7 +545,8 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, llamaBinPath string, arg
 	task.FinishedAt = &finishedAt
 
 	// Save output to file
-	h.saveBenchmarkOutput(task.ModelID, string(output))
+	taskNodeId, _ := task.Config["nodeId"].(string)
+	h.saveBenchmarkOutput(task.ModelID, taskNodeId, string(output))
 
 	// 解析输出提取指标
 	metrics := h.parseBenchmarkOutput(string(output))
@@ -913,9 +918,9 @@ func (h *Handler) ListHistory(c *gin.Context) {
 		})
 		return
 	}
+	nodeId := c.Query("nodeId")
 
-	safeModelId := sanitizeModelId(modelId)
-	dir := filepath.Join("data", "benchmark", safeModelId)
+	dir := benchmarkDir(modelId, nodeId)
 
 	// Create directory if not exists
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -972,6 +977,7 @@ func (h *Handler) GetHistoryFile(c *gin.Context) {
 		})
 		return
 	}
+	nodeId := c.Query("nodeId")
 
 	// Prevent path traversal
 	cleanName := filepath.Base(fileName)
@@ -983,8 +989,11 @@ func (h *Handler) GetHistoryFile(c *gin.Context) {
 		return
 	}
 
-	// Search in all model directories under data/benchmark/
+	// Search in all model directories under the appropriate base
 	baseDir := filepath.Join("data", "benchmark")
+	if nodeId != "" {
+		baseDir = filepath.Join("data", "benchmark", sanitizeModelId(nodeId))
+	}
 	var filePath string
 
 	if entries, err := os.ReadDir(baseDir); err == nil {
@@ -1037,6 +1046,7 @@ func (h *Handler) DeleteHistoryFile(c *gin.Context) {
 		})
 		return
 	}
+	nodeId := c.Query("nodeId")
 
 	// Prevent path traversal
 	cleanName := filepath.Base(fileName)
@@ -1048,8 +1058,11 @@ func (h *Handler) DeleteHistoryFile(c *gin.Context) {
 		return
 	}
 
-	// Search in all model directories under data/benchmark/
+	// Search in all model directories under the appropriate base
 	baseDir := filepath.Join("data", "benchmark")
+	if nodeId != "" {
+		baseDir = filepath.Join("data", "benchmark", sanitizeModelId(nodeId))
+	}
 	var filePath string
 
 	if entries, err := os.ReadDir(baseDir); err == nil {
@@ -1111,6 +1124,17 @@ func sanitizeModelId(modelId string) string {
 	return result
 }
 
+// benchmarkDir returns the benchmark directory path for a model, optionally scoped by nodeId.
+// Format: data/benchmark/{nodeId}/{modelId}/ (with nodeId) or data/benchmark/{modelId}/ (without)
+func benchmarkDir(modelId string, nodeId string) string {
+	safeModelId := sanitizeModelId(modelId)
+	if nodeId != "" {
+		safeNodeId := sanitizeModelId(nodeId)
+		return filepath.Join("data", "benchmark", safeNodeId, safeModelId)
+	}
+	return filepath.Join("data", "benchmark", safeModelId)
+}
+
 // Delete deletes a benchmark task by ID.
 // @Summary      Delete benchmark task
 // @Description  Deletes a benchmark task and its results
@@ -1139,13 +1163,12 @@ func (h *Handler) Delete(c *gin.Context) {
 }
 
 // saveBenchmarkOutput saves the benchmark output to a timestamped file
-func (h *Handler) saveBenchmarkOutput(modelId string, output string) {
+func (h *Handler) saveBenchmarkOutput(modelId string, nodeId string, output string) {
 	if output == "" {
 		return
 	}
 
-	safeModelId := sanitizeModelId(modelId)
-	dir := filepath.Join("data", "benchmark", safeModelId)
+	dir := benchmarkDir(modelId, nodeId)
 
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		h.log.Errorf("Failed to create benchmark output dir: %v", err)
@@ -1153,7 +1176,7 @@ func (h *Handler) saveBenchmarkOutput(modelId string, output string) {
 	}
 
 	timestamp := time.Now().Format("20060102_150405")
-	fileName := fmt.Sprintf("%s_%s.txt", safeModelId, timestamp)
+	fileName := fmt.Sprintf("%s_%s.txt", sanitizeModelId(modelId), timestamp)
 	filePath := filepath.Join(dir, fileName)
 
 	if err := os.WriteFile(filePath, []byte(output), 0644); err != nil {
@@ -1222,6 +1245,7 @@ func (h *Handler) CreateV2(c *gin.Context) {
 		ModelID      string `json:"modelId" binding:"required"`
 		PromptTokens int    `json:"promptTokens" binding:"required,min=1"`
 		MaxTokens    int    `json:"maxTokens" binding:"required,min=1"`
+		NodeID       string `json:"nodeId"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1338,7 +1362,7 @@ func (h *Handler) CreateV2(c *gin.Context) {
 	}
 
 	// Save to JSONL file
-	h.saveV2Record(record)
+	h.saveV2Record(record, req.NodeID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -1347,15 +1371,15 @@ func (h *Handler) CreateV2(c *gin.Context) {
 }
 
 // saveV2Record appends a V2 benchmark record to the model's JSONL file
-func (h *Handler) saveV2Record(record *benchmarkV2Record) {
-	safeModelId := sanitizeModelId(record.ModelID)
-	dir := filepath.Join("data", "benchmark", safeModelId)
+func (h *Handler) saveV2Record(record *benchmarkV2Record, nodeId string) {
+	dir := benchmarkDir(record.ModelID, nodeId)
 
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		h.log.Errorf("Failed to create V2 benchmark dir: %v", err)
 		return
 	}
 
+	safeModelId := sanitizeModelId(record.ModelID)
 	fileName := fmt.Sprintf("%s_V2.jsonl", safeModelId)
 	filePath := filepath.Join(dir, fileName)
 
@@ -1393,10 +1417,12 @@ func (h *Handler) ListV2(c *gin.Context) {
 		})
 		return
 	}
+	nodeId := c.Query("nodeId")
 
+	dir := benchmarkDir(modelId, nodeId)
 	safeModelId := sanitizeModelId(modelId)
 	fileName := fmt.Sprintf("%s_V2.jsonl", safeModelId)
-	filePath := filepath.Join("data", "benchmark", safeModelId, fileName)
+	filePath := filepath.Join(dir, fileName)
 
 	records := make([]map[string]interface{}, 0)
 
@@ -1452,6 +1478,7 @@ func (h *Handler) DeleteV2(c *gin.Context) {
 	var req struct {
 		ModelID    string `json:"modelId" binding:"required"`
 		LineNumber int    `json:"lineNumber"`
+		NodeID     string `json:"nodeId"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1462,9 +1489,10 @@ func (h *Handler) DeleteV2(c *gin.Context) {
 		return
 	}
 
+	dir := benchmarkDir(req.ModelID, req.NodeID)
 	safeModelId := sanitizeModelId(req.ModelID)
 	fileName := fmt.Sprintf("%s_V2.jsonl", safeModelId)
-	filePath := filepath.Join("data", "benchmark", safeModelId, fileName)
+	filePath := filepath.Join(dir, fileName)
 
 	// Read all lines
 	f, err := os.Open(filePath)
