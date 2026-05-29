@@ -11,6 +11,7 @@ import {
   Music,
   Settings,
   Gauge,
+  Monitor,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -24,6 +25,7 @@ export const navItems: NavItem[] = [
   { path: '/', icon: LayoutDashboard, labelKey: 'sidebar.dashboard', feature: 'dashboard' },
   { path: '/models', icon: Package, labelKey: 'sidebar.models', feature: 'models' },
   { path: '/benchmark', icon: Gauge, labelKey: 'sidebar.benchmark', feature: 'benchmark' },
+  { path: '/system-monitor', icon: Monitor, labelKey: 'sidebar.systemMonitor', feature: 'systemMonitor' },
   { path: '/downloads', icon: Download, labelKey: 'sidebar.downloads', feature: 'downloads' },
   { path: '/cluster', icon: Network, labelKey: 'sidebar.cluster', feature: 'cluster' },
   { path: '/chat', icon: MessageSquare, labelKey: 'sidebar.chat', feature: 'chat' },

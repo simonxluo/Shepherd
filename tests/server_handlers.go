@@ -53,6 +53,10 @@ func (s *testServerHandlers) HandleGetResources(c *gin.Context) {
 	api.Success(c, gin.H{"resources": nil})
 }
 
+func (s *testServerHandlers) HandleGetModelStatistics(c *gin.Context) {
+	api.Success(c, gin.H{"models": []interface{}{}, "count": 0})
+}
+
 func (s *testServerHandlers) HandleWebSocket(c *gin.Context) {
 	c.String(http.StatusOK, "websocket")
 }

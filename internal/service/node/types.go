@@ -74,6 +74,7 @@ type NodeCapabilities struct {
 type NodeResources struct {
 	CPUUsed       int64      `json:"cpuUsed"`     // cores * 1000 (millicores)
 	CPUTotal      int64      `json:"cpuTotal"`    // cores * 1000 (millicores)
+	CPUModel      string     `json:"cpuModel"`    // CPU model name
 	MemoryUsed    int64      `json:"memoryUsed"`  // bytes
 	MemoryTotal   int64      `json:"memoryTotal"` // bytes
 	DiskUsed      int64      `json:"diskUsed"`    // bytes
@@ -85,6 +86,9 @@ type NodeResources struct {
 	LoadAverage   []float64  `json:"loadAverage,omitempty"`   // 1min, 5min, 15min
 	ROCmVersion   string     `json:"rocmVersion,omitempty"`   // ROCm version (if AMD GPU)
 	KernelVersion string     `json:"kernelVersion,omitempty"` // Linux kernel version
+	Platform      string     `json:"platform,omitempty"`      // OS platform (e.g., "linux")
+	Arch          string     `json:"arch,omitempty"`          // CPU architecture (e.g., "amd64")
+	Hostname      string     `json:"hostname,omitempty"`      // System hostname
 }
 
 // LlamacppInfo contains information about llama.cpp installation

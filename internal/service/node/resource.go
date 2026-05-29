@@ -206,6 +206,18 @@ func (rm *ResourceMonitor) initializeResources() error {
 		}
 	}
 
+	// 获取CPU型号
+	if cpuInfos, err := cpu.Info(); err == nil && len(cpuInfos) > 0 {
+		rm.resources.CPUModel = cpuInfos[0].ModelName
+	}
+
+	// 获取平台信息
+	rm.resources.Platform = runtime.GOOS
+	rm.resources.Arch = runtime.GOARCH
+	if hostname, err := os.Hostname(); err == nil {
+		rm.resources.Hostname = hostname
+	}
+
 	// 检测GPU
 	rm.detectGPUs()
 

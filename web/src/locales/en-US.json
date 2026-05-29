@@ -24,6 +24,7 @@
     "dashboard": "Dashboard",
     "models": "Models",
     "benchmark": "Benchmark",
+    "systemMonitor": "System Monitor",
     "downloads": "Downloads",
     "cluster": "Cluster",
     "chat": "Chat",
@@ -1105,6 +1106,36 @@
       "refresh": "Refresh",
       "loadError": "Load failed",
       "noSlots": "No slot data available"
+    }
+  },
+  "systemMonitor": {
+    "title": "System Monitor",
+    "subtitle": "Real-time system resources and model usage statistics",
+    "systemResources": "System Resources",
+    "gpuDevices": "GPU Devices",
+    "modelStats": "Model Instances & Statistics",
+    "noModelsLoaded": "No models currently loaded",
+    "vram": "VRAM",
+    "utilization": "Utilization",
+    "temperature": "Temperature",
+    "power": "Power",
+    "driver": "Driver",
+    "memory": "Memory",
+    "disk": "Disk",
+    "cores": "cores",
+    "loadAverage": "Load Average",
+    "uptime": "Uptime",
+    "table": {
+      "model": "Model",
+      "status": "Status",
+      "backend": "Backend",
+      "port": "Port",
+      "uptime": "Uptime",
+      "requests": "Requests",
+      "promptTokens": "Prompt Tokens",
+      "completionTokens": "Completion Tokens",
+      "avgLatency": "Avg Latency",
+      "inflight": "Inflight"
     }
   }
 }

@@ -76,6 +76,11 @@ type ModelStatus struct {
 
 	TotalPromptTokens     int64
 	TotalCompletionTokens int64
+	RequestCount          int64
+	ErrorCount            int64
+	TotalLatencyMs        int64
+	FirstRequestAt        time.Time
+	LastRequestAt         time.Time
 	tokenMu               sync.Mutex
 }
 

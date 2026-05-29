@@ -59,6 +59,7 @@ type ServerHandlers interface {
 	HandleGetLlamacppParamSchema(c *gin.Context)
 	HandlePreviewLlamacppCommand(c *gin.Context)
 	HandleGetResources(c *gin.Context)
+	HandleGetModelStatistics(c *gin.Context)
 	HandleGetConfig(c *gin.Context)
 	HandleUpdateConfig(c *gin.Context)
 	HandleListModels(c *gin.Context)
@@ -194,6 +195,7 @@ func registerRoutes(
 		apiGroup.GET("/backends/llamacpp/schema", sh.HandleGetLlamacppParamSchema)
 		apiGroup.POST("/backends/llamacpp/preview", sh.HandlePreviewLlamacppCommand)
 		apiGroup.GET("/system/resources", sh.HandleGetResources)
+		apiGroup.GET("/system/model-stats", sh.HandleGetModelStatistics)
 
 		registerConfigRoutes(apiGroup, h, sh)
 		registerConversationRoutes(apiGroup, h)

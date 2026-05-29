@@ -576,11 +576,15 @@ func (s *Server) HandleGetResources(c *gin.Context) {
 			gpuList := []gin.H{}
 			for _, g := range snapshot.GPUInfo {
 				gpuList = append(gpuList, gin.H{
-					"index":       g.Index,
-					"name":        g.Name,
-					"vendor":      g.Vendor,
-					"memoryUsed":  g.UsedMemory,
-					"memoryTotal": g.TotalMemory,
+					"index":         g.Index,
+					"name":          g.Name,
+					"vendor":        g.Vendor,
+					"memoryUsed":    g.UsedMemory,
+					"memoryTotal":   g.TotalMemory,
+					"temperature":   g.Temperature,
+					"utilization":   g.Utilization,
+					"powerUsage":    g.PowerUsage,
+					"driverVersion": g.DriverVersion,
 				})
 			}
 
@@ -589,6 +593,7 @@ func (s *Server) HandleGetResources(c *gin.Context) {
 					"used":    snapshot.CPUUsed,
 					"total":   snapshot.CPUTotal,
 					"percent": cpuPercent,
+					"model":   snapshot.CPUModel,
 				},
 				"memory": gin.H{
 					"used":    snapshot.MemoryUsed,
@@ -605,6 +610,9 @@ func (s *Server) HandleGetResources(c *gin.Context) {
 				"uptime":        snapshot.Uptime,
 				"kernelVersion": snapshot.KernelVersion,
 				"rocmVersion":   snapshot.ROCmVersion,
+				"platform":      snapshot.Platform,
+				"arch":          snapshot.Arch,
+				"hostname":      snapshot.Hostname,
 			})
 			return
 		}
@@ -618,6 +626,21 @@ func (s *Server) HandleGetResources(c *gin.Context) {
 		"gpu":         []gin.H{},
 		"loadAverage": []float64{0, 0, 0},
 		"uptime":      0,
+	})
+}
+
+// HandleGetModelStatistics returns usage statistics for all loaded models.
+// @Summary      Get model statistics
+// @Description  Returns request counts, token usage, latency and uptime for loaded models
+// @Tags         System
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/system/model-stats [get]
+func (s *Server) HandleGetModelStatistics(c *gin.Context) {
+	stats := s.modelMgr.GetModelStatistics()
+	api.Success(c, gin.H{
+		"models": stats,
+		"count":  len(stats),
 	})
 }
 
