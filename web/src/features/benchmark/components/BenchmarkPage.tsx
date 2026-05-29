@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
@@ -6,6 +6,7 @@ import { useModels } from '@/features/models';
 import { ModelListPanel } from './ModelListPanel';
 import { BenchmarkControlsPanel } from './BenchmarkControlsPanel';
 import { BenchmarkParamsModal } from './BenchmarkParamsModal';
+import { BenchmarkV2Panel } from './BenchmarkV2Panel';
 import { HistoryPanel } from './HistoryPanel';
 import { OutputPanel } from './OutputPanel';
 import {
@@ -19,11 +20,15 @@ import {
 import { buildBenchArgs } from '../lib/commandBuilder';
 import { toast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
+import { cn } from '@/lib/utils';
+
+type BenchmarkTab = 'v1' | 'v2';
 
 export function BenchmarkPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const alertDialog = useAlertDialog();
+  const [activeTab, setActiveTab] = useState<BenchmarkTab>('v1');
 
   // Data queries
   const { data: models = [] } = useModels();
@@ -35,6 +40,9 @@ export function BenchmarkPage() {
   const { data: historyFiles = [], isLoading: historyLoading } = useBenchmarkHistory(state.selectedModelId);
   const deleteHistoryFile = useDeleteHistoryFile();
   const createBenchmark = useCreateBenchmarkTask();
+
+  // Check if selected model is loaded
+  const isModelLoaded = state.selectedModel?.isLoaded ?? false;
 
   // Initialize from URL params
   useEffect(() => {
@@ -134,10 +142,39 @@ export function BenchmarkPage() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border">
-        <h1 className="text-xl font-bold text-foreground">{t('benchmark.title')}</h1>
-        <div className="flex items-center gap-2 mt-1.5 text-xs text-amber-600 dark:text-amber-400">
-          <AlertTriangle className="w-3.5 h-3.5" />
-          <span>{t('benchmark.warning')}</span>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">{t('benchmark.title')}</h1>
+            <div className="flex items-center gap-2 mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>{t('benchmark.warning')}</span>
+            </div>
+          </div>
+          {/* Tab switcher */}
+          <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
+            <button
+              onClick={() => setActiveTab('v1')}
+              className={cn(
+                'px-3 py-1 text-xs font-medium rounded transition-colors',
+                activeTab === 'v1'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {t('benchmark.v1')}
+            </button>
+            <button
+              onClick={() => setActiveTab('v2')}
+              className={cn(
+                'px-3 py-1 text-xs font-medium rounded transition-colors',
+                activeTab === 'v2'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {t('benchmark.v2')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -150,51 +187,61 @@ export function BenchmarkPage() {
           onSelectModel={state.setSelectedModelId}
         />
 
-        {/* Right: Controls + Results */}
+        {/* Right: Tab content */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Controls bar */}
-          <BenchmarkControlsPanel
-            llamaCppPath={state.llamaCppPath}
-            llamaCppVersions={llamaCppVersions}
-            onLlamaCppPathChange={state.setLlamaCppPath}
-            onRunBenchmark={handleRunBenchmark}
-            onOpenParams={() => state.setIsParamsModalOpen(true)}
-            isRunning={createBenchmark.isPending}
-            isDisabled={!state.selectedModel || !state.llamaCppPath || createBenchmark.isPending}
-            enabledParamsCount={enabledParamsCount}
-            totalParamsCount={benchmarkParams.length}
-            availableDevices={state.availableDevices}
-            selectedDeviceIndices={state.selectedDeviceIndices}
-            mainGpu={state.mainGpu}
-            onDeviceSelectionChange={state.setSelectedDeviceIndices}
-            onMainGpuChange={state.setMainGpu}
-          />
+          {activeTab === 'v1' ? (
+            <>
+              {/* V1: Controls bar */}
+              <BenchmarkControlsPanel
+                llamaCppPath={state.llamaCppPath}
+                llamaCppVersions={llamaCppVersions}
+                onLlamaCppPathChange={state.setLlamaCppPath}
+                onRunBenchmark={handleRunBenchmark}
+                onOpenParams={() => state.setIsParamsModalOpen(true)}
+                isRunning={createBenchmark.isPending}
+                isDisabled={!state.selectedModel || !state.llamaCppPath || createBenchmark.isPending}
+                enabledParamsCount={enabledParamsCount}
+                totalParamsCount={benchmarkParams.length}
+                availableDevices={state.availableDevices}
+                selectedDeviceIndices={state.selectedDeviceIndices}
+                mainGpu={state.mainGpu}
+                onDeviceSelectionChange={state.setSelectedDeviceIndices}
+                onMainGpuChange={state.setMainGpu}
+              />
 
-          {/* Results area */}
-          <div className="flex-1 flex min-h-0">
-            {/* History panel */}
-            <div className="w-56 flex-shrink-0 border-r border-border overflow-hidden flex flex-col">
-              <div className="px-3 py-2 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {t('benchmark.history')}
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                <HistoryPanel
-                  files={historyFiles}
-                  isLoading={historyLoading}
-                  selectedFile={state.selectedHistoryFile}
-                  onSelectFile={state.loadHistoryFile}
-                  onDeleteFile={handleDeleteFile}
+              {/* V1: Results area */}
+              <div className="flex-1 flex min-h-0">
+                {/* History panel */}
+                <div className="w-56 flex-shrink-0 border-r border-border overflow-hidden flex flex-col">
+                  <div className="px-3 py-2 border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t('benchmark.history')}
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    <HistoryPanel
+                      files={historyFiles}
+                      isLoading={historyLoading}
+                      selectedFile={state.selectedHistoryFile}
+                      onSelectFile={state.loadHistoryFile}
+                      onDeleteFile={handleDeleteFile}
+                    />
+                  </div>
+                </div>
+
+                {/* Output panel */}
+                <OutputPanel
+                  content={state.outputContent}
+                  isLoading={state.isOutputLoading}
+                  fileName={state.selectedHistoryFile}
                 />
               </div>
-            </div>
-
-            {/* Output panel */}
-            <OutputPanel
-              content={state.outputContent}
-              isLoading={state.isOutputLoading}
-              fileName={state.selectedHistoryFile}
+            </>
+          ) : (
+            /* V2: Server test panel */
+            <BenchmarkV2Panel
+              selectedModelId={state.selectedModelId}
+              isModelLoaded={isModelLoaded}
             />
-          </div>
+          )}
         </div>
       </div>
 

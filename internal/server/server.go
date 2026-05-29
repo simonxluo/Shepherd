@@ -167,7 +167,7 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.Storage = storageapi.NewHandler(config.ConfigMgr, storageMgr)
 	s.handlers.Compatibility = compatibilityapi.NewHandler(config.ConfigMgr, s.compatMgr)
 	s.handlers.Filesystem = filesystemapi.NewHandler()
-	s.handlers.Benchmark = benchmarkapi.NewHandler(logger.GetLogger(), storageMgr.GetStore())
+	s.handlers.Benchmark = benchmarkapi.NewHandler(logger.GetLogger(), storageMgr.GetStore(), modelMgr)
 	s.handlers.Chat = chatapi.NewHandler(modelMgr)
 	s.handlers.TTS = ttsapi.NewHandler(storageMgr, "./data/tts")
 

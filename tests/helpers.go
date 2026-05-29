@@ -106,7 +106,7 @@ func SetupTestServer(t *testing.T) *TestEnv {
 		Storage:       storageapi.NewHandler(cfgMgr, storageMgr),
 		Compatibility: compatibilityapi.NewHandler(cfgMgr, compatServerManager),
 		Filesystem:    filesystemapi.NewHandler(),
-		Benchmark:     benchmarkapi.NewHandler(logger.GetLogger(), store),
+		Benchmark:     benchmarkapi.NewHandler(logger.GetLogger(), store, modelMgr),
 		Chat:          chatapi.NewHandler(modelMgr),
 		TTS:           ttsapi.NewHandler(storageMgr, filepath.Join(tmpDir, "tts")),
 	}

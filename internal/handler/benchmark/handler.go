@@ -2,9 +2,12 @@
 package benchmark
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -17,8 +20,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
-	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"github.com/simonxluo/Shepherd/internal/comm/storage"
+	"github.com/simonxluo/Shepherd/internal/comm/utils"
+	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
 const (
@@ -38,6 +42,7 @@ type runningTask struct {
 type Handler struct {
 	log          *logger.Logger
 	store        storage.Store
+	modelMgr     *model.Manager
 	ctx          context.Context
 	cancelFunc   context.CancelFunc
 	runningTasks map[string]*runningTask
@@ -46,12 +51,13 @@ type Handler struct {
 }
 
 // NewHandler 创建新的压测处理器
-func NewHandler(log *logger.Logger, store storage.Store) *Handler {
+func NewHandler(log *logger.Logger, store storage.Store, modelMgr *model.Manager) *Handler {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	h := &Handler{
 		log:          log,
 		store:        store,
+		modelMgr:     modelMgr,
 		ctx:          ctx,
 		cancelFunc:   cancel,
 		runningTasks: make(map[string]*runningTask),
@@ -1183,4 +1189,327 @@ func (h *Handler) Shutdown() {
 			}
 		}
 	}
+}
+
+// ============================================================
+// V2 Benchmark: Test loaded model throughput via chat completions
+// ============================================================
+
+// benchmarkV2Record represents a single V2 benchmark result stored in JSONL
+type benchmarkV2Record struct {
+	Timestamp    string                 `json:"timestamp"`
+	ModelID      string                 `json:"modelId"`
+	PromptTokens int                   `json:"promptTokens"`
+	MaxTokens    int                   `json:"maxTokens"`
+	Timings      map[string]interface{} `json:"timings"`
+	Devices      []string               `json:"devices,omitempty"`
+	Cmd          string                 `json:"cmd,omitempty"`
+}
+
+// CreateV2 runs a V2 benchmark by sending a synthetic prompt to a loaded model.
+// @Summary      Run V2 benchmark
+// @Description  Tests loaded model throughput via /v1/chat/completions
+// @Tags         Benchmark
+// @Accept       json
+// @Produce      json
+// @Param        request body object true "V2 benchmark request"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/models/benchmark/v2 [post]
+func (h *Handler) CreateV2(c *gin.Context) {
+	var req struct {
+		ModelID      string `json:"modelId" binding:"required"`
+		PromptTokens int    `json:"promptTokens" binding:"required,min=1"`
+		MaxTokens    int    `json:"maxTokens" binding:"required,min=1"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Invalid request: %v", err),
+		})
+		return
+	}
+
+	// Check model is loaded
+	status, exists := h.modelMgr.GetStatusRef(req.ModelID)
+	if !exists || status.State != model.StateLoaded || status.Port <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Model is not loaded",
+		})
+		return
+	}
+
+	port := status.Port
+
+	// Generate synthetic prompt content: repeat " a" to approximate target token count
+	// Each " a" is roughly 1 token for most tokenizers
+	promptContent := strings.Repeat(" a", req.PromptTokens)
+
+	// Build chat completions request
+	chatReq := map[string]interface{}{
+		"model": req.ModelID,
+		"messages": []map[string]string{
+			{"role": "user", "content": promptContent},
+		},
+		"max_tokens": req.MaxTokens,
+		"stream":     false,
+	}
+
+	reqBody, err := json.Marshal(chatReq)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to build request",
+		})
+		return
+	}
+
+	// Send request to loaded model
+	targetURL := fmt.Sprintf("http://127.0.0.1:%d/v1/chat/completions", port)
+	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", targetURL, bytes.NewReader(reqBody))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to create request",
+		})
+		return
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Minute}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		h.log.Errorf("V2 benchmark request failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Request to model failed: %v", err),
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to read response",
+		})
+		return
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Model returned error: %s", string(respBody)),
+		})
+		return
+	}
+
+	// Parse response to extract timings
+	var respObj map[string]interface{}
+	if err := json.Unmarshal(respBody, &respObj); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to parse model response",
+		})
+		return
+	}
+
+	timings, _ := respObj["timings"].(map[string]interface{})
+	if timings == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Model response missing timings data",
+		})
+		return
+	}
+
+	// Build record
+	timestamp := time.Now().Format("20060102_150405")
+	record := &benchmarkV2Record{
+		Timestamp:    timestamp,
+		ModelID:      req.ModelID,
+		PromptTokens: req.PromptTokens,
+		MaxTokens:    req.MaxTokens,
+		Timings:      timings,
+	}
+
+	// Save to JSONL file
+	h.saveV2Record(record)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    record,
+	})
+}
+
+// saveV2Record appends a V2 benchmark record to the model's JSONL file
+func (h *Handler) saveV2Record(record *benchmarkV2Record) {
+	safeModelId := sanitizeModelId(record.ModelID)
+	dir := filepath.Join("data", "benchmark", safeModelId)
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		h.log.Errorf("Failed to create V2 benchmark dir: %v", err)
+		return
+	}
+
+	fileName := fmt.Sprintf("%s_V2.jsonl", safeModelId)
+	filePath := filepath.Join(dir, fileName)
+
+	line, err := json.Marshal(record)
+	if err != nil {
+		h.log.Errorf("Failed to marshal V2 record: %v", err)
+		return
+	}
+
+	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		h.log.Errorf("Failed to open V2 file: %v", err)
+		return
+	}
+	defer f.Close()
+
+	f.Write(line)
+	f.Write([]byte("\n"))
+}
+
+// ListV2 returns V2 benchmark records for a model.
+// @Summary      List V2 benchmark records
+// @Description  Returns all V2 benchmark records from the JSONL file
+// @Tags         Benchmark
+// @Produce      json
+// @Param        modelId query string true "Model ID"
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/models/benchmark/v2/list [get]
+func (h *Handler) ListV2(c *gin.Context) {
+	modelId := c.Query("modelId")
+	if modelId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "modelId parameter is required",
+		})
+		return
+	}
+
+	safeModelId := sanitizeModelId(modelId)
+	fileName := fmt.Sprintf("%s_V2.jsonl", safeModelId)
+	filePath := filepath.Join("data", "benchmark", safeModelId, fileName)
+
+	records := make([]map[string]interface{}, 0)
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		// File doesn't exist yet - return empty
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data": gin.H{
+				"records": records,
+			},
+		})
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024) // 1MB line buffer
+	lineNumber := 0
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			lineNumber++
+			continue
+		}
+		var record map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &record); err != nil {
+			lineNumber++
+			continue
+		}
+		record["lineNumber"] = lineNumber
+		records = append(records, record)
+		lineNumber++
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"records": records,
+		},
+	})
+}
+
+// DeleteV2 deletes a V2 benchmark record by line number.
+// @Summary      Delete V2 benchmark record
+// @Description  Removes a specific record from the JSONL file
+// @Tags         Benchmark
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/models/benchmark/v2/delete [post]
+func (h *Handler) DeleteV2(c *gin.Context) {
+	var req struct {
+		ModelID    string `json:"modelId" binding:"required"`
+		LineNumber int    `json:"lineNumber"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Invalid request: %v", err),
+		})
+		return
+	}
+
+	safeModelId := sanitizeModelId(req.ModelID)
+	fileName := fmt.Sprintf("%s_V2.jsonl", safeModelId)
+	filePath := filepath.Join("data", "benchmark", safeModelId, fileName)
+
+	// Read all lines
+	f, err := os.Open(filePath)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "File not found",
+		})
+		return
+	}
+
+	var lines []string
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	f.Close()
+
+	if req.LineNumber < 0 || req.LineNumber >= len(lines) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid line number",
+		})
+		return
+	}
+
+	// Remove the line
+	lines = append(lines[:req.LineNumber], lines[req.LineNumber+1:]...)
+
+	// Write back
+	content := strings.Join(lines, "\n")
+	if len(lines) > 0 {
+		content += "\n"
+	}
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		h.log.Errorf("Failed to write V2 file: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to delete record",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+	})
 }

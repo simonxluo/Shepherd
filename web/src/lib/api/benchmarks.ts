@@ -5,6 +5,9 @@ import type {
   BenchmarkParamsResponse,
   BenchmarkHistoryFile,
   LlamaCppVersion,
+  BenchmarkV2Request,
+  BenchmarkV2Response,
+  BenchmarkV2Record,
 } from '@/types';
 
 /**
@@ -33,5 +36,18 @@ export const benchmarksApi = {
 
   async deleteHistoryFile(fileName: string): Promise<{ success: boolean }> {
     return apiClient.post(`/models/benchmark/delete?fileName=${encodeURIComponent(fileName)}`, {});
+  },
+
+  // V2 Benchmark APIs
+  async createV2(params: BenchmarkV2Request): Promise<BenchmarkV2Response> {
+    return apiClient.post<BenchmarkV2Response>('/models/benchmark/v2', params);
+  },
+
+  async listV2(modelId: string): Promise<{ success: boolean; data?: { records: BenchmarkV2Record[] } }> {
+    return apiClient.get(`/models/benchmark/v2/list?modelId=${encodeURIComponent(modelId)}`);
+  },
+
+  async deleteV2(modelId: string, lineNumber: number): Promise<{ success: boolean }> {
+    return apiClient.post('/models/benchmark/v2/delete', { modelId, lineNumber });
   },
 };

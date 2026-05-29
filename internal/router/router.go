@@ -332,6 +332,10 @@ func registerModelRoutes(apiGroup *gin.RouterGroup, sh ServerHandlers, h *Handle
 			benchmark.GET("/list", h.Benchmark.ListHistory)
 			benchmark.GET("/get", h.Benchmark.GetHistoryFile)
 			benchmark.POST("/delete", h.Benchmark.DeleteHistoryFile)
+			// V2 benchmark (test loaded model via chat completions)
+			benchmark.POST("/v2", h.Benchmark.CreateV2)
+			benchmark.GET("/v2/list", h.Benchmark.ListV2)
+			benchmark.POST("/v2/delete", h.Benchmark.DeleteV2)
 		}
 
 		models.GET("/:id", sh.HandleGetModel)

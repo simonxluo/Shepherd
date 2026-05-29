@@ -635,5 +635,37 @@ export interface CreateBenchmarkResponse {
   error?: string;
 }
 
+/**
+ * V2 Benchmark: test loaded model throughput via chat completions
+ */
+export interface BenchmarkV2Request {
+  modelId: string;
+  promptTokens: number;
+  maxTokens: number;
+}
 
+export interface BenchmarkV2Timings {
+  prompt_n?: number;
+  prompt_ms?: number;
+  prompt_per_second?: number;
+  predicted_n?: number;
+  predicted_ms?: number;
+  predicted_per_second?: number;
+}
 
+export interface BenchmarkV2Record {
+  timestamp: string;
+  modelId: string;
+  promptTokens: number;
+  maxTokens: number;
+  timings: BenchmarkV2Timings;
+  devices?: string[];
+  cmd?: string;
+  lineNumber?: number;
+}
+
+export interface BenchmarkV2Response {
+  success: boolean;
+  data?: BenchmarkV2Record;
+  error?: string;
+}
