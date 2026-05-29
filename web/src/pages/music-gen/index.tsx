@@ -1,21 +1,18 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Music, Loader2, Play, Pause, Download, Clock, HardDrive } from 'lucide-react';
+import { Music, Play, Pause, Download, Clock, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { useLoadedModels, useAvailableModels } from '@/features/creative/hooks';
-import { ModelSelect } from '@/features/creative/ModelSelect';
-import { AvailableModelList } from '@/features/creative/AvailableModelList';
+import { cn } from '@/lib/utils';
+import { useLoadedModels } from '@/features/creative/hooks';
 import { useMusicGeneration } from '@/features/music-gen/hooks';
+import { musicRegistry } from '@/features/music-gen/registry';
 import { toast } from '@/hooks/useToast';
 import { formatBytes } from '@/lib/utils';
+import type { MusicGenRequest, MusicPluginPanelProps } from '@/features/music-gen/types';
 
-const AUDIO_FORMATS = [
-  { value: 'wav', label: 'WAV' },
-  { value: 'mp3', label: 'MP3' },
-];
+// Import plugins to register them
+import '@/features/music-gen/plugins/generic';
+import '@/features/music-gen/plugins/acestep';
 
 export function MusicGenPage() {
   const { t } = useTranslation();
@@ -24,64 +21,72 @@ export function MusicGenPage() {
     () => allModels.filter((m) => m.capabilities?.music),
     [allModels]
   );
-  const availableModels = useAvailableModels('music');
 
   const musicGen = useMusicGeneration();
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const [model, setModel] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(30);
-  const [responseFormat, setResponseFormat] = useState('wav');
-  const [temperature, setTemperature] = useState(0.7);
+  // Plugin system
+  const plugins = useMemo(() => musicRegistry.getAllPlugins(), []);
+  const [activePluginId, setActivePluginId] = useState<string>(plugins[0]?.id || 'generic');
+  const [modelByPlugin, setModelByPlugin] = useState<Record<string, string>>({});
+
+  // Audio state
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [generationTime, setGenerationTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [responseFormat, setResponseFormat] = useState('wav');
 
-  const handleGenerate = () => {
-    if (!model) {
-      toast.warning(t('musicGen.selectModelWarning', '请选择模型'));
-      return;
-    }
-    if (!prompt.trim()) {
-      toast.warning(t('musicGen.promptRequired', '请输入音乐描述'));
-      return;
-    }
+  // Current plugin and matched models
+  const activePlugin = useMemo(
+    () => plugins.find((p) => p.id === activePluginId) || plugins[0],
+    [plugins, activePluginId]
+  );
 
+  const matchedModels = useMemo(
+    () => (activePlugin ? musicRegistry.getModelsForPlugin(activePlugin, musicModels) : []),
+    [activePlugin, musicModels]
+  );
+
+  const currentModelName = modelByPlugin[activePluginId] || '';
+  const selectedModel = useMemo(
+    () => matchedModels.find((m) => (m.alias || m.name) === currentModelName) || matchedModels[0] || null,
+    [matchedModels, currentModelName]
+  );
+
+  const handleModelChange = useCallback((modelName: string) => {
+    setModelByPlugin((prev) => ({
+      ...prev,
+      [activePluginId]: modelName,
+    }));
+  }, [activePluginId]);
+
+  const handleGenerate = useCallback((payload: MusicGenRequest) => {
     if (audioUrl) {
       URL.revokeObjectURL(audioUrl);
     }
 
+    setResponseFormat(payload.response_format || 'wav');
     const startTime = Date.now();
 
-    musicGen.mutate(
-      {
-        model,
-        prompt: prompt.trim(),
-        duration,
-        response_format: responseFormat,
-        temperature,
+    musicGen.mutate(payload, {
+      onSuccess: ({ blob, contentType }) => {
+        const elapsed = (Date.now() - startTime) / 1000;
+        setGenerationTime(elapsed);
+        const typedBlob = new Blob([blob], { type: contentType });
+        setAudioBlob(typedBlob);
+        const url = URL.createObjectURL(typedBlob);
+        setAudioUrl(url);
+        setCurrentTime(0);
+        toast.success(t('musicGen.generateSuccess', '音乐生成完成'));
       },
-      {
-        onSuccess: ({ blob, contentType }) => {
-          const elapsed = (Date.now() - startTime) / 1000;
-          setGenerationTime(elapsed);
-          const typedBlob = new Blob([blob], { type: contentType });
-          setAudioBlob(typedBlob);
-          const url = URL.createObjectURL(typedBlob);
-          setAudioUrl(url);
-          setCurrentTime(0);
-          toast.success(t('musicGen.generateSuccess', '音乐生成完成'));
-        },
-        onError: (error) => {
-          toast.error(t('musicGen.generateFailed', '音乐生成失败'), error.message);
-        },
-      }
-    );
-  };
+      onError: (error) => {
+        toast.error(t('musicGen.generateFailed', '音乐生成失败'), error.message);
+      },
+    });
+  }, [audioUrl, musicGen, t]);
 
   const handlePlayPause = () => {
     if (!audioRef.current) return;
@@ -122,116 +127,38 @@ export function MusicGenPage() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Build panel props
+  const panelProps: MusicPluginPanelProps = {
+    model: selectedModel,
+    matchedModels,
+    onGenerate: handleGenerate,
+    isGenerating: musicGen.isPending,
+    audioUrl,
+    onModelChange: handleModelChange,
+  };
+
+  const PanelComponent = activePlugin?.component;
+
   return (
     <div className="h-full flex flex-col bg-background text-foreground">
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* Header — left-aligned at the top */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">
-            {t('musicGen.title', '音乐生成')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('musicGen.description', '通过 AI 模型从文本描述生成音乐')}
-          </p>
-        </div>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Center: main content area */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-foreground">
+              {t('musicGen.title', '音乐生成')}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t('musicGen.description', '通过 AI 模型从文本描述生成音乐')}
+            </p>
+          </div>
 
-        {/* Operation UI — centered */}
-        <div className="max-w-3xl mx-auto">
-          {musicModels.length === 0 ? (
-            <AvailableModelList
-              models={availableModels}
-              emptyText={t('creative.noScannedModels')}
-              emptyHint={t('creative.noScannedModelsHint')}
-            />
-          ) : (
+          {/* Operation UI — centered */}
+          <div className="max-w-3xl mx-auto">
             <div className="space-y-6">
-              {/* Form */}
-              <div className="space-y-4">
-                <ModelSelect
-                  models={musicModels}
-                  value={model}
-                  onValueChange={setModel}
-                  placeholder={t('musicGen.selectModel', '选择音乐生成模型')}
-                  label={t('musicGen.modelLabel', '音乐生成模型')}
-                  showBackend
-                />
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    {t('musicGen.promptLabel', '音乐描述')}
-                  </label>
-                  <Textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder={t('musicGen.promptPlaceholder', '描述要生成的音乐风格、情绪、乐器等...')}
-                    className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      {t('musicGen.durationLabel', '时长')}: {duration}s
-                    </label>
-                    <Slider
-                      value={[duration]}
-                      onValueChange={([val]) => setDuration(val)}
-                      min={5}
-                      max={300}
-                      step={5}
-                      className="w-full mt-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">
-                      {t('musicGen.formatLabel', '输出格式')}
-                    </label>
-                    <Select value={responseFormat} onValueChange={setResponseFormat}>
-                      <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AUDIO_FORMATS.map((f) => (
-                          <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    {t('musicGen.temperatureLabel', '温度')}: {temperature.toFixed(1)}
-                  </label>
-                  <Slider
-                    value={[temperature]}
-                    onValueChange={([val]) => setTemperature(val)}
-                    min={0}
-                    max={1}
-                    step={0.1}
-                    className="w-full mt-2"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleGenerate}
-                  disabled={musicGen.isPending || !model || !prompt.trim()}
-                  className="w-full"
-                >
-                  {musicGen.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {t('musicGen.generating', '生成中...')}
-                    </>
-                  ) : (
-                    <>
-                      <Music className="w-4 h-4 mr-2" />
-                      {t('musicGen.generate', '生成音乐')}
-                    </>
-                  )}
-                </Button>
-              </div>
+              {/* Plugin panel */}
+              {PanelComponent && <PanelComponent {...panelProps} />}
 
               {/* Result */}
               {audioUrl && (
@@ -316,8 +243,37 @@ export function MusicGenPage() {
                 </div>
               )}
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Right: vertical tab bar */}
+        {plugins.length > 1 && (
+          <div className="flex flex-col w-[120px] border-l bg-muted/30">
+            {plugins.map((plugin) => {
+              const isActive = plugin.id === activePluginId;
+              return (
+                <button
+                  key={plugin.id}
+                  onClick={() => setActivePluginId(plugin.id)}
+                  className={cn(
+                    'relative text-left px-3 py-3 text-sm transition-colors',
+                    'hover:bg-accent/50',
+                    isActive
+                      ? 'bg-primary/10 font-medium text-foreground'
+                      : 'text-muted-foreground'
+                  )}
+                >
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r" />
+                  )}
+                  <span className="block truncate">
+                    {t(plugin.labelKey, plugin.labelFallback)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

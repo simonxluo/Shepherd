@@ -27,6 +27,18 @@ func (h *MusicHandler) HandleCreateMusic(c *gin.Context) {
 		Duration       float64 `json:"duration,omitempty"`
 		ResponseFormat string  `json:"response_format,omitempty"`
 		Temperature    float64 `json:"temperature,omitempty"`
+		// ACE-Step extended fields
+		Lyrics         string  `json:"lyrics,omitempty"`
+		BPM            int     `json:"bpm,omitempty"`
+		KeyScale       string  `json:"key_scale,omitempty"`
+		TimeSignature  string  `json:"time_signature,omitempty"`
+		VocalLanguage  string  `json:"vocal_language,omitempty"`
+		InferenceSteps int     `json:"inference_steps,omitempty"`
+		GuidanceScale  float64 `json:"guidance_scale,omitempty"`
+		Seed           int64   `json:"seed,omitempty"`
+		TaskType       string  `json:"task_type,omitempty"`
+		// Generic extra params pass-through
+		ExtraParams any `json:"extra_params,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")

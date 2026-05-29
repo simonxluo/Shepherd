@@ -606,7 +606,35 @@
     "audioDuration": "音频时长",
     "format": "格式",
     "playing": "播放中",
-    "paused": "已暂停"
+    "paused": "已暂停",
+    "noModelsLoaded": "未检测到已加载的音乐生成模型",
+    "noModelsLoadedHint": "请从下方列表中选择一个模型进行加载",
+    "tabs": {
+      "generic": "通用",
+      "aceStep": "ACE-Step"
+    },
+    "aceStep": {
+      "notDetected": "未检测到已加载的 ACE-Step 模型",
+      "notDetectedHint": "请从下方列表中选择一个 ACE-Step 模型进行加载",
+      "noModels": "未扫描到 ACE-Step 模型",
+      "noModelsHint": "请确认已配置 ACE-Step 模型路径并完成扫描",
+      "selectModel": "选择 ACE-Step 模型",
+      "modelLabel": "ACE-Step 模型",
+      "promptLabel": "音乐描述 (Caption)",
+      "promptPlaceholder": "描述音乐的风格、情绪、乐器编排等，例如: A dreamy indie folk song with acoustic guitar and soft vocals...",
+      "lyricsLabel": "歌词 (Lyrics)",
+      "lyricsPlaceholder": "输入歌词，留空则生成纯音乐...",
+      "vocalLanguage": "演唱语言",
+      "inferenceSteps": "推理步数",
+      "advanced": "高级设置",
+      "guidanceScale": "引导强度",
+      "bpm": "BPM (节拍速度)",
+      "bpmPlaceholder": "留空自动检测",
+      "seed": "随机种子",
+      "seedPlaceholder": "留空随机",
+      "keyScale": "调性",
+      "timeSignature": "拍号"
+    }
   },
   "footer": {
     "version": "版本",

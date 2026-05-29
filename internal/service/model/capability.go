@@ -114,7 +114,7 @@ var (
 
 	musicArchKeywords = []string{
 		"musicgen", "audiogen", "audiocraft",
-		"music", "music-gen",
+		"music", "music-gen", "acestep", "ace-step",
 	}
 
 	rerankNameKeywords = []string{

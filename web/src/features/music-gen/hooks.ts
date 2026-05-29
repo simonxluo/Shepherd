@@ -1,13 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { v1Client } from '@/features/creative/hooks';
+import type { MusicGenRequest } from './types';
 
-export interface MusicGenRequest {
-  model: string;
-  prompt: string;
-  duration?: number;
-  response_format?: string;
-  temperature?: number;
-}
+export type { MusicGenRequest };
 
 export function useMusicGeneration() {
   return useMutation({

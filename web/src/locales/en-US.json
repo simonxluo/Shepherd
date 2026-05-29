@@ -606,7 +606,35 @@
     "audioDuration": "Duration",
     "format": "Format",
     "playing": "Playing",
-    "paused": "Paused"
+    "paused": "Paused",
+    "noModelsLoaded": "No loaded music generation models detected",
+    "noModelsLoadedHint": "Please select a model from the list below to load",
+    "tabs": {
+      "generic": "Generic",
+      "aceStep": "ACE-Step"
+    },
+    "aceStep": {
+      "notDetected": "No loaded ACE-Step model detected",
+      "notDetectedHint": "Please select an ACE-Step model from the list below to load",
+      "noModels": "No ACE-Step models scanned",
+      "noModelsHint": "Please ensure ACE-Step model path is configured and scan is complete",
+      "selectModel": "Select ACE-Step model",
+      "modelLabel": "ACE-Step Model",
+      "promptLabel": "Music Description (Caption)",
+      "promptPlaceholder": "Describe the music style, mood, instrumentation, e.g.: A dreamy indie folk song with acoustic guitar and soft vocals...",
+      "lyricsLabel": "Lyrics",
+      "lyricsPlaceholder": "Enter lyrics, leave empty for instrumental music...",
+      "vocalLanguage": "Vocal Language",
+      "inferenceSteps": "Inference Steps",
+      "advanced": "Advanced Settings",
+      "guidanceScale": "Guidance Scale",
+      "bpm": "BPM",
+      "bpmPlaceholder": "Leave empty for auto",
+      "seed": "Seed",
+      "seedPlaceholder": "Leave empty for random",
+      "keyScale": "Key",
+      "timeSignature": "Time Signature"
+    }
   },
   "footer": {
     "version": "Version",
