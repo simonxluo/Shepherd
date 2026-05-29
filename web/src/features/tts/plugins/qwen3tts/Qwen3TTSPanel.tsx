@@ -234,19 +234,18 @@ export function Qwen3TTSPanel({
       }
     }
 
-    // Advanced params via extra_params
-    const extraParams: Record<string, unknown> = {};
+    // Sampling params
     if (temperature && parseFloat(temperature) !== 0.9) {
-      extraParams.temperature = parseFloat(temperature);
+      payload.temperature = parseFloat(temperature);
     }
     if (topP && parseFloat(topP) !== 1.0) {
-      extraParams.top_p = parseFloat(topP);
+      payload.top_p = parseFloat(topP);
     }
     if (topK && parseInt(topK, 10) !== 50) {
-      extraParams.top_k = parseInt(topK, 10);
+      payload.top_k = parseInt(topK, 10);
     }
     if (repetitionPenalty && parseFloat(repetitionPenalty) !== 1.05) {
-      extraParams.repetition_penalty = parseFloat(repetitionPenalty);
+      payload.repetition_penalty = parseFloat(repetitionPenalty);
     }
     if (maxNewTokens) {
       payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
@@ -255,10 +254,7 @@ export function Qwen3TTSPanel({
       payload.seed = parseInt(seed, 10) || undefined;
     }
     if (mode === 'voice_clone' && fastCloneMode) {
-      extraParams.x_vector_only_mode = true;
-    }
-    if (Object.keys(extraParams).length > 0) {
-      payload.extra_params = extraParams;
+      payload.x_vector_only_mode = true;
     }
 
     onGenerate(payload);

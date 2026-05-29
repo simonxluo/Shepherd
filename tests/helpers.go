@@ -100,7 +100,7 @@ func SetupTestServer(t *testing.T) *TestEnv {
 		Ollama:        ollama.NewHandler(modelMgr),
 		Anthropic:     anthropic.NewHandler(modelMgr),
 		LMStudio:      lmstudio.NewHandler(modelMgr),
-		Audio:         openai.NewAudioHandler(modelMgr),
+		Audio:         openai.NewAudioHandler(modelMgr, storageMgr, filepath.Join(tmpDir, "tts")),
 		Image:         openai.NewImageHandler(modelMgr),
 		Music:         openai.NewMusicHandler(modelMgr),
 		Paths:         paths.NewHandler(cfgMgr),

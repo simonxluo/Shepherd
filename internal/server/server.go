@@ -162,7 +162,7 @@ func NewServer(config *Config, modelMgr *model.Manager) (*Server, error) {
 	s.handlers.Ollama = ollama.NewHandler(modelMgr)
 	s.handlers.Anthropic = anthropic.NewHandler(modelMgr)
 	s.handlers.LMStudio = lmstudio.NewHandler(modelMgr)
-	s.handlers.Audio = openai.NewAudioHandler(modelMgr)
+	s.handlers.Audio = openai.NewAudioHandler(modelMgr, storageMgr, "./data/tts")
 	s.handlers.Image = openai.NewImageHandler(modelMgr)
 	s.handlers.Music = openai.NewMusicHandler(modelMgr)
 	s.handlers.Paths = paths.NewHandler(config.ConfigMgr)

@@ -19,7 +19,6 @@ export interface MusicGenRequest {
   guidance_scale?: number;
   seed?: number;
   task_type?: string;
-  extra_params?: Record<string, unknown>;
 }
 
 /**

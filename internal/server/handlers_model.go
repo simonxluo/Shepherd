@@ -166,99 +166,110 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 		applyLaunchProfileToLoadRequest(&req, profile)
 	}
 
-	validation := backend.ValidateLlamaCppParamMap(map[string]any{
-		"ctxSize":        req.CtxSize,
-		"batchSize":      req.BatchSize,
-		"threads":        req.Threads,
-		"gpuLayers":      req.GPULayers,
-		"devices":        req.Devices,
-		"mainGpu":        req.MainGPU,
-		"splitMode":      req.SplitMode,
-		"tensorSplit":    req.TensorSplit,
-		"kvCacheTypeK":   req.KVCacheTypeK,
-		"kvCacheTypeV":   req.KVCacheTypeV,
-		"parallelSlots":  req.ParallelSlots,
-		"threadsHttp":    req.ThreadsHTTP,
-		"timeout":        req.Timeout,
-		"temperature":    req.Temperature,
-		"topP":           req.TopP,
-		"topK":           req.TopK,
-		"minP":           req.MinP,
-		"repeatPenalty":  req.RepeatPenalty,
-		"seed":           req.Seed,
-		"nPredict":       req.NPredict,
-		"mmprojPath":     req.MmprojPath,
-		"flashAttention": req.FlashAttention,
-		"noMmap":         req.NoMmap,
-		"lockMemory":     req.LockMemory,
-	})
-	if !validation.Valid {
-		api.ErrorWithDetails(c, types.ErrInvalidRequest, "无效的 llama.cpp 参数", strings.Join(validation.Errors, "; "))
-		return
-	}
+	// Backend-specific parameter processing.
+	// Determine the effective backend early and branch all backend-specific
+	// logic (validation, spec-decoding, defaults) into a single block.
+	// This avoids scattering backend-type checks across the handler and
+	// prevents llama.cpp parameters from leaking into vLLM/vLLM-Omni.
+	isLlamaCpp := req.BackendType == "" || req.BackendType == string(backend.BackendLlamaCpp)
+	if isLlamaCpp {
+		// -- Validate llama.cpp parameters --
+		validation := backend.ValidateLlamaCppParamMap(map[string]any{
+			"ctxSize":        req.CtxSize,
+			"batchSize":      req.BatchSize,
+			"threads":        req.Threads,
+			"gpuLayers":      req.GPULayers,
+			"devices":        req.Devices,
+			"mainGpu":        req.MainGPU,
+			"splitMode":      req.SplitMode,
+			"tensorSplit":    req.TensorSplit,
+			"kvCacheTypeK":   req.KVCacheTypeK,
+			"kvCacheTypeV":   req.KVCacheTypeV,
+			"parallelSlots":  req.ParallelSlots,
+			"threadsHttp":    req.ThreadsHTTP,
+			"timeout":        req.Timeout,
+			"temperature":    req.Temperature,
+			"topP":           req.TopP,
+			"topK":           req.TopK,
+			"minP":           req.MinP,
+			"repeatPenalty":  req.RepeatPenalty,
+			"seed":           req.Seed,
+			"nPredict":       req.NPredict,
+			"mmprojPath":     req.MmprojPath,
+			"flashAttention": req.FlashAttention,
+			"noMmap":         req.NoMmap,
+			"lockMemory":     req.LockMemory,
+		})
+		if !validation.Valid {
+			api.ErrorWithDetails(c, types.ErrInvalidRequest, "无效的 llama.cpp 参数", strings.Join(validation.Errors, "; "))
+			return
+		}
 
-	// Validate draft model if SpecDecoding is set with draft type
-	if req.SpecDecoding != nil && (req.SpecDecoding.SpecType == "draft" || req.SpecDecoding.SpecType == "eagle3") && req.SpecDecoding.SpecDraftModelID != "" {
-		if req.SpecDecoding.SpecDraftModelID == id {
-			api.BadRequest(c, "Draft模型不能与主模型相同")
-			return
+		// -- Validate speculative decoding draft model --
+		if req.SpecDecoding != nil && (req.SpecDecoding.SpecType == "draft" || req.SpecDecoding.SpecType == "eagle3") && req.SpecDecoding.SpecDraftModelID != "" {
+			if req.SpecDecoding.SpecDraftModelID == id {
+				api.BadRequest(c, "Draft模型不能与主模型相同")
+				return
+			}
+			draftModel, exists := s.modelMgr.GetModel(req.SpecDecoding.SpecDraftModelID)
+			if !exists {
+				api.BadRequest(c, fmt.Sprintf("Draft模型未找到: %s", req.SpecDecoding.SpecDraftModelID))
+				return
+			}
+			draftPath := draftModel.Path
+			if len(draftModel.ShardFiles) > 0 {
+				draftPath = draftModel.ShardFiles[0]
+			}
+			if _, err := os.Stat(draftPath); err != nil {
+				api.BadRequest(c, fmt.Sprintf("Draft模型文件不可访问: %s", draftPath))
+				return
+			}
+			mainModel, mainExists := s.modelMgr.GetModel(id)
+			if !mainExists {
+				api.BadRequest(c, "主模型未找到")
+				return
+			}
+			mainPath := mainModel.Path
+			if len(mainModel.ShardFiles) > 0 {
+				mainPath = mainModel.ShardFiles[0]
+			}
+			mainArch := getArchitecture(mainPath)
+			draftArch := getArchitecture(draftPath)
+			if mainArch == "" || draftArch == "" {
+				api.BadRequest(c, "无法读取模型架构信息，请确保模型文件有效")
+				return
+			}
+			if !strings.EqualFold(mainArch, draftArch) {
+				api.BadRequest(c, fmt.Sprintf("Draft模型架构(%s)与主模型架构(%s)不匹配", draftArch, mainArch))
+				return
+			}
+			req.SpecDecoding.SpecDraftModelPath = draftPath
+			logger.Infof("draft model resolved: modelId=%s, draftModelId=%s, draftPath=%s, arch=%s", id, req.SpecDecoding.SpecDraftModelID, draftPath, draftArch)
 		}
-		draftModel, exists := s.modelMgr.GetModel(req.SpecDecoding.SpecDraftModelID)
-		if !exists {
-			api.BadRequest(c, fmt.Sprintf("Draft模型未找到: %s", req.SpecDecoding.SpecDraftModelID))
-			return
-		}
-		draftPath := draftModel.Path
-		if len(draftModel.ShardFiles) > 0 {
-			draftPath = draftModel.ShardFiles[0]
-		}
-		if _, err := os.Stat(draftPath); err != nil {
-			api.BadRequest(c, fmt.Sprintf("Draft模型文件不可访问: %s", draftPath))
-			return
-		}
-		mainModel, mainExists := s.modelMgr.GetModel(id)
-		if !mainExists {
-			api.BadRequest(c, "主模型未找到")
-			return
-		}
-		mainPath := mainModel.Path
-		if len(mainModel.ShardFiles) > 0 {
-			mainPath = mainModel.ShardFiles[0]
-		}
-		mainArch := getArchitecture(mainPath)
-		draftArch := getArchitecture(draftPath)
-		if mainArch == "" || draftArch == "" {
-			api.BadRequest(c, "无法读取模型架构信息，请确保模型文件有效")
-			return
-		}
-		if !strings.EqualFold(mainArch, draftArch) {
-			api.BadRequest(c, fmt.Sprintf("Draft模型架构(%s)与主模型架构(%s)不匹配", draftArch, mainArch))
-			return
-		}
-		req.SpecDecoding.SpecDraftModelPath = draftPath
-		logger.Infof("draft model resolved: modelId=%s, draftModelId=%s, draftPath=%s, arch=%s", id, req.SpecDecoding.SpecDraftModelID, draftPath, draftArch)
-	}
 
-	if req.CtxSize == 0 {
-		req.CtxSize = 512
-	}
-	if req.BatchSize == 0 {
-		req.BatchSize = 512
-	}
-	if req.Threads == 0 {
-		req.Threads = -1
-	}
-	if req.Temperature == 0 {
-		req.Temperature = 0.7
-	}
-	if req.TopP == 0 {
-		req.TopP = 0.95
-	}
-	if req.TopK == 0 {
-		req.TopK = 40
-	}
-	if req.RepeatPenalty == 0 {
-		req.RepeatPenalty = 1.1
+		// -- Apply llama.cpp-specific defaults --
+		// Must run after validation; zero values mean "not set, use default".
+		if req.CtxSize == 0 {
+			req.CtxSize = 512
+		}
+		if req.BatchSize == 0 {
+			req.BatchSize = 512
+		}
+		if req.Threads == 0 {
+			req.Threads = -1
+		}
+		if req.Temperature == 0 {
+			req.Temperature = 0.7
+		}
+		if req.TopP == 0 {
+			req.TopP = 0.95
+		}
+		if req.TopK == 0 {
+			req.TopK = 40
+		}
+		if req.RepeatPenalty == 0 {
+			req.RepeatPenalty = 1.1
+		}
 	}
 
 	// No longer force vllm_omni backend — let Resolve's capability-aware routing handle it:

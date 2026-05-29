@@ -1,84 +1,139 @@
 package openai
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/service/model"
 )
 
 type AudioHandler struct {
 	*Handler
+	storageMgr *storage.Manager
+	ttsDataDir string
 }
 
-func NewAudioHandler(modelMgr *model.Manager) *AudioHandler {
+func NewAudioHandler(modelMgr *model.Manager, storageMgr *storage.Manager, ttsDataDir string) *AudioHandler {
 	return &AudioHandler{
-		Handler: NewHandler(modelMgr),
+		Handler:    NewHandler(modelMgr),
+		storageMgr: storageMgr,
+		ttsDataDir: ttsDataDir,
 	}
 }
 
-// HandleCreateSpeech proxies POST /v1/audio/speech (TTS) to the backend model.
-// The vLLM-Omni backend returns raw audio binary data.
-func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
-	var req struct {
-		Model          string  `json:"model"`
-		Input          string  `json:"input"`
-		Voice          string  `json:"voice,omitempty"`
-		ResponseFormat string  `json:"response_format,omitempty"`
-		Speed          float64 `json:"speed,omitempty"`
-		Language       string  `json:"language,omitempty"`
-		Stream         bool    `json:"stream,omitempty"`
-		// VoxCPM2 / 声音克隆扩展字段
-		Instructions       string  `json:"instructions,omitempty"`
-		RefAudio           string  `json:"ref_audio,omitempty"`
-		RefText            string  `json:"ref_text,omitempty"`
-		PromptAudio        string  `json:"prompt_audio,omitempty"`
-		PromptText         string  `json:"prompt_text,omitempty"`
-		MaxNewTokens       int     `json:"max_new_tokens,omitempty"`
-		Seed               int64   `json:"seed,omitempty"`
-		CfgValue           float64 `json:"cfg_value,omitempty"`
-		InferenceTimesteps int     `json:"inference_timesteps,omitempty"`
-		ExtraParams        any     `json:"extra_params,omitempty"`
+// resolveTTSAudioURL converts a frontend /api/tts/audio/<id> path to a file:// absolute URL
+// that vLLM accepts. Returns the original string if the pattern doesn't match or lookup fails.
+func (h *AudioHandler) resolveTTSAudioURL(audioURL string) string {
+	const prefix = "/api/tts/audio/"
+	if !strings.HasPrefix(audioURL, prefix) {
+		return audioURL
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+
+	id := strings.TrimPrefix(audioURL, prefix)
+	if id == "" {
+		return audioURL
+	}
+
+	if h.storageMgr == nil {
+		logger.Warnf("TTS 音频路径解析失败: storageMgr 未初始化, id=%s", id)
+		return audioURL
+	}
+
+	item, err := h.storageMgr.GetStore().GetTTSHistory(context.Background(), id)
+	if err != nil {
+		logger.Warnf("TTS 音频路径解析失败: 查找历史记录失败, id=%s, err=%v", id, err)
+		return audioURL
+	}
+
+	absPath, err := filepath.Abs(filepath.Join(h.ttsDataDir, item.AudioPath))
+	if err != nil {
+		logger.Warnf("TTS 音频路径解析失败: 获取绝对路径失败, id=%s, err=%v", id, err)
+		return audioURL
+	}
+
+	fileURL := "file://" + absPath
+	logger.Infof("TTS 参考音频路径解析: %s -> %s", audioURL, fileURL)
+	return fileURL
+}
+
+// prepareTTSRequest reads the raw JSON body, validates required fields, resolves
+// audio paths, and returns the prepared payload map for forwarding to vLLM.
+func (h *AudioHandler) prepareTTSRequest(c *gin.Context) (map[string]interface{}, string, bool) {
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
 		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
-		return
+		return nil, "", false
 	}
 
-	if req.Model == "" {
+	var payload map[string]interface{}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")
+		return nil, "", false
+	}
+
+	// Validate required fields
+	modelName, _ := payload["model"].(string)
+	if modelName == "" {
 		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: model", "model")
-		return
+		return nil, "", false
 	}
 
-	if req.Input == "" {
+	input, _ := payload["input"].(string)
+	if input == "" {
 		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "Missing required parameter: input", "input")
-		return
+		return nil, "", false
 	}
 
-	actualModelID, err := h.FindModel(req.Model)
+	// Resolve model
+	actualModelID, err := h.FindModel(modelName)
 	if err != nil {
 		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
-		return
+		return nil, "", false
 	}
 
-	// 验证模型具备 TTS 能力
+	// Verify TTS capability
 	caps := h.ModelMgr.GetModelCapabilities(actualModelID)
 	if caps == nil || !caps.TTS {
-		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_model", fmt.Sprintf("模型 %q 不支持 TTS（语音合成），请选择支持 TTS 的模型", req.Model), "model")
-		return
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_model",
+			fmt.Sprintf("模型 %q 不支持 TTS（语音合成），请选择支持 TTS 的模型", modelName), "model")
+		return nil, "", false
 	}
 
-	// 验证后端支持 /v1/audio/speech 端点
+	// Verify backend supports /v1/audio/speech
 	b := h.ModelMgr.GetBackendForModel(actualModelID)
 	if b != nil {
 		endpoints := b.SupportedEndpoints()
 		if supported, ok := endpoints["/v1/audio/speech"]; !ok || !supported {
 			h.SendOpenAIError(c, http.StatusBadRequest, "backend_not_supported",
 				fmt.Sprintf("当前后端 %q 不支持 TTS 端点，请使用 vLLM-Omni 后端加载模型", b.Type()), "model")
-			return
+			return nil, "", false
 		}
+	}
+
+	// Resolve audio paths: /api/tts/audio/<id> -> file://<abs>
+	for _, key := range []string{"ref_audio", "prompt_audio"} {
+		if v, ok := payload[key].(string); ok && v != "" {
+			payload[key] = h.resolveTTSAudioURL(v)
+		}
+	}
+
+	return payload, actualModelID, true
+}
+
+// HandleCreateSpeech proxies POST /v1/audio/speech (TTS) to the backend model.
+// The vLLM-Omni backend returns raw audio binary data.
+func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
+	payload, actualModelID, ok := h.prepareTTSRequest(c)
+	if !ok {
+		return
 	}
 
 	port, err := h.GetModelPort(actualModelID)
@@ -87,11 +142,13 @@ func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
 		return
 	}
 
-	if req.Stream {
-		logger.Infof("TTS 流式请求: model=%s, port=%d", req.Model, port)
-		h.ForwardStreamRequest(c, port, "/v1/audio/speech", actualModelID, &req)
+	isStream, _ := payload["stream"].(bool)
+	if isStream {
+		modelName, _ := payload["model"].(string)
+		logger.Infof("TTS 流式请求: model=%s, port=%d", modelName, port)
+		h.ForwardStreamRequest(c, port, "/v1/audio/speech", actualModelID, payload)
 	} else {
-		h.ForwardBinaryRequest(c, port, "/v1/audio/speech", actualModelID, &req)
+		h.ForwardBinaryRequest(c, port, "/v1/audio/speech", actualModelID, payload)
 	}
 }
 
@@ -110,7 +167,7 @@ func (h *AudioHandler) HandleCreateTranscription(c *gin.Context) {
 		return
 	}
 
-	// 验证模型具备 ASR 能力
+	// Verify that the model has ASR capabilities
 	caps := h.ModelMgr.GetModelCapabilities(actualModelID)
 	if caps == nil || !caps.ASR {
 		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_model", fmt.Sprintf("模型 %q 不支持 ASR（语音识别），请选择支持 ASR 的模型", modelName), "model")

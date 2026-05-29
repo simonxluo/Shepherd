@@ -13,7 +13,6 @@ import { ModelSelect } from '@/features/creative/ModelSelect';
 import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import { useAvailableModels, BACKEND_LABELS } from '@/features/creative/hooks';
 import {
-  useVoices,
   useTTSConfig,
   getTTSModelFeatures,
   type TTSRequest,
@@ -109,7 +108,6 @@ export function VoxCPM2Panel({
   const isModelError = modelStatus === 'error';
 
   const [input, setInput] = useState('');
-  const [voice, setVoice] = useState('default');
   const [instructions, setInstructions] = useState('');
   const [refAudio, setRefAudio] = useState('');
   const [refText, setRefText] = useState('');
@@ -134,8 +132,6 @@ export function VoxCPM2Panel({
     [selectedModel]
   );
 
-  const { data: voices = [] } = useVoices(modelName);
-
   const { ttsConfig, saveConfig, deleteConfig } = useTTSConfig(modelIdForConfig);
 
   const backendLabel = selectedModel?.backendType
@@ -146,7 +142,6 @@ export function VoxCPM2Panel({
   useEffect(() => {
     if (ttsConfig) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (ttsConfig.voice !== undefined) setVoice(ttsConfig.voice);
       if (ttsConfig.instructions !== undefined) setInstructions(ttsConfig.instructions);
       if (ttsConfig.refAudio !== undefined) setRefAudio(ttsConfig.refAudio);
       if (ttsConfig.refText !== undefined) setRefText(ttsConfig.refText);
@@ -172,7 +167,6 @@ export function VoxCPM2Panel({
   }, [refAudioOverride]);
 
   const getCurrentConfig = useCallback((): TTSConfig => ({
-    voice: voice !== 'default' ? voice : undefined,
     stream: true,
     responseFormat: 'pcm',
     instructions: instructions || undefined,
@@ -189,7 +183,7 @@ export function VoxCPM2Panel({
     inferenceTimesteps: inferenceTimesteps || undefined,
     cfgCutoffRatio: cfgCutoffRatio !== '1' ? cfgCutoffRatio : undefined,
     swaySamplingCoef: swaySamplingCoef !== '1' ? swaySamplingCoef : undefined,
-  }), [voice, instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
+  }), [instructions, refAudio, refText, promptAudio, promptText, ultimateCloning,
        seed, maxNewTokens, language, emotion, cfgValue, inferenceTimesteps,
        cfgCutoffRatio, swaySamplingCoef]);
 
@@ -208,7 +202,6 @@ export function VoxCPM2Panel({
   }, [modelIdForConfig, deleteConfig, t]);
 
   const handleLoadConfig = useCallback((cfg: TTSConfig) => {
-    if (cfg.voice !== undefined) setVoice(cfg.voice);
     if (cfg.instructions !== undefined) setInstructions(cfg.instructions);
     if (cfg.refAudio !== undefined) setRefAudio(cfg.refAudio);
     if (cfg.refText !== undefined) setRefText(cfg.refText);
@@ -255,7 +248,6 @@ export function VoxCPM2Panel({
     const payload: TTSRequest = {
       model: modelName,
       input: ultimateCloning ? (promptText || '') : input.trim(),
-      voice: voice || 'default',
       response_format: 'pcm',
       stream: true,
     };
@@ -276,33 +268,29 @@ export function VoxCPM2Panel({
     if (maxNewTokens) payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
     if (language && language !== 'auto') payload.language = language;
 
-    // extra_params: vLLM-Omni 不识别的顶层参数通过 extra_params 传递
-    const extraParams: Record<string, unknown> = {};
+    // Emotion & advanced params
     if (emotion && emotion !== 'default') {
-      extraParams.emotion = emotion;
+      payload.emotion = emotion;
     }
     if (cfgValue) {
       const val = parseFloat(cfgValue);
-      if (!isNaN(val) && val !== 2.0) extraParams.cfg_value = val;
+      if (!isNaN(val) && val !== 2.0) payload.cfg_value = val;
     }
     if (inferenceTimesteps) {
       const val = parseInt(inferenceTimesteps, 10);
-      if (!isNaN(val) && val !== 10) extraParams.inference_timesteps = val;
+      if (!isNaN(val) && val !== 10) payload.inference_timesteps = val;
     }
     if (cfgCutoffRatio) {
       const val = parseFloat(cfgCutoffRatio);
-      if (!isNaN(val) && val !== 1.0) extraParams.cfg_cutoff_ratio = val;
+      if (!isNaN(val) && val !== 1.0) payload.cfg_cutoff_ratio = val;
     }
     if (swaySamplingCoef) {
       const val = parseFloat(swaySamplingCoef);
-      if (!isNaN(val) && val !== 1.0) extraParams.sway_sampling_coef = val;
-    }
-    if (Object.keys(extraParams).length > 0) {
-      payload.extra_params = extraParams;
+      if (!isNaN(val) && val !== 1.0) payload.sway_sampling_coef = val;
     }
 
     onGenerate(payload);
-  }, [modelName, input, voice, instructions, refAudio, refText, promptAudio, promptText,
+  }, [modelName, input, instructions, refAudio, refText, promptAudio, promptText,
       ultimateCloning, seed, maxNewTokens, language, cfgValue, inferenceTimesteps,
       cfgCutoffRatio, swaySamplingCoef,
       isModelStopped, isModelLoading, isModelError,
@@ -345,7 +333,6 @@ export function VoxCPM2Panel({
             setUltimateCloning(false);
             setRefAudio('');
             setPromptAudio('');
-            setVoice('default');
           }}
           placeholder={t('tts.selectModel', 'Select TTS model')}
           label={t('tts.modelLabel', 'TTS Model')}
@@ -415,36 +402,6 @@ export function VoxCPM2Panel({
           className="bg-background"
         />
       </div>
-
-      {/* Voice selection */}
-      {features?.supportsVoiceSelection && (
-        <div>
-          <label className="block text-sm font-medium mb-1.5">
-            {t('tts.voiceLabel', 'Voice')}
-          </label>
-          <Select value={voice} onValueChange={setVoice}>
-            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-              <SelectValue placeholder={t('tts.selectVoice', 'Select voice')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">{t('tts.voiceDefault', 'Default')}</SelectItem>
-              {voices.length > 0 && voices.filter(v => !v.isUploaded).map(v => (
-                <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-              ))}
-              {voices.some(v => v.isUploaded) && (
-                <>
-                  <SelectSeparator />
-                  {voices.filter(v => v.isUploaded).map(v => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.name}{v.description ? ` (${v.description})` : ''}
-                    </SelectItem>
-                  ))}
-                </>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
 
       {/* Language */}
       <div>

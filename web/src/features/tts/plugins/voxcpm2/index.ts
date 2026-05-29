@@ -17,7 +17,7 @@ const voxcpm2Plugin: TTSPlugin = {
   },
   component: VoxCPM2Panel,
   features: {
-    supportsVoiceSelection: true,
+    supportsVoiceSelection: false,   // VoxCPM2 无预设声音，voice 字段被忽略
     supportsInstructions: true,
     supportsRefAudio: true,
     supportsUltimateCloning: true,
@@ -27,7 +27,7 @@ const voxcpm2Plugin: TTSPlugin = {
     supportsCfgCutoffRatio: true,
     supportsSwaySampling: true,
     supportsEmotion: true,
-    defaultSampleRate: 24000,
+    defaultSampleRate: 48000,         // VoxCPM2 输出 48kHz
     defaultFormat: 'pcm',
   },
 };

@@ -37,8 +37,6 @@ func (h *MusicHandler) HandleCreateMusic(c *gin.Context) {
 		GuidanceScale  float64 `json:"guidance_scale,omitempty"`
 		Seed           int64   `json:"seed,omitempty"`
 		TaskType       string  `json:"task_type,omitempty"`
-		// Generic extra params pass-through
-		ExtraParams any `json:"extra_params,omitempty"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", err.Error(), "body")

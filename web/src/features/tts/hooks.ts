@@ -25,8 +25,15 @@ export interface TTSRequest {
   seed?: number;
   cfg_value?: number;
   inference_timesteps?: number;
+  cfg_cutoff_ratio?: number;
+  sway_sampling_coef?: number;
   emotion?: string;
-  extra_params?: Record<string, unknown>;
+  // Sampling params (Qwen3-TTS)
+  temperature?: number;
+  top_p?: number;
+  top_k?: number;
+  repetition_penalty?: number;
+  x_vector_only_mode?: boolean;
 }
 
 export interface TTSModelFeatures {
@@ -49,18 +56,34 @@ export function getTTSModelFeatures(model: LoadedModel): TTSModelFeatures {
   const isVoxCPM = nameLower.includes('voxcpm');
   const isOmniBackend = model.backendType === 'vllm_omni';
 
-  if (isVoxCPM || isOmniBackend) {
+  if (isVoxCPM) {
+    return {
+      supportsVoiceSelection: false,     // VoxCPM2 无预设声音，voice 字段被忽略
+      supportsInstructions: true,
+      supportsRefAudio: true,
+      supportsUltimateCloning: true,
+      supportsStreamPcm: true,
+      supportsCfgValue: true,
+      supportsInferenceTimesteps: true,
+      supportsCfgCutoffRatio: true,
+      supportsSwaySampling: true,
+      supportsEmotion: true,
+      defaultSampleRate: 48000,          // VoxCPM2 输出 48kHz
+      defaultFormat: 'pcm',
+    };
+  }
+  if (isOmniBackend) {
     return {
       supportsVoiceSelection: true,
       supportsInstructions: true,
       supportsRefAudio: true,
-      supportsUltimateCloning: isVoxCPM,
+      supportsUltimateCloning: false,
       supportsStreamPcm: true,
-      supportsCfgValue: isVoxCPM,
-      supportsInferenceTimesteps: isVoxCPM,
-      supportsCfgCutoffRatio: isVoxCPM,
-      supportsSwaySampling: isVoxCPM,
-      supportsEmotion: isVoxCPM,
+      supportsCfgValue: false,
+      supportsInferenceTimesteps: false,
+      supportsCfgCutoffRatio: false,
+      supportsSwaySampling: false,
+      supportsEmotion: false,
       defaultSampleRate: 24000,
       defaultFormat: 'pcm',
     };
