@@ -67,7 +67,7 @@ type BackendInfo struct {
 	Version   string // Detected version
 	Available bool   // Whether the backend is usable
 	CondaEnv  string // Conda env name (if applicable)
-	CondaPath string // Conda 可执行文件路径 (if applicable)
+	CondaPath string // Conda executable path (if applicable)
 	ExtraArgs string // Global extra CLI arguments from config (passed through to BuildStartConfig)
 }
 
@@ -78,7 +78,7 @@ type StartConfig struct {
 	BinPath           string // Binary/library path for the process manager
 	BackendType       BackendType
 	SkipLDLibraryPath bool     // If true, skip setting LD_LIBRARY_PATH (for conda-based backends)
-	CondaPath         string   // Conda 可执行文件路径 (传递给 process 层使用)
+	CondaPath         string   // Conda executable path (passed to process layer)
 	EnvVars           []string // Additional environment variables (e.g., "KEY=VALUE")
 }
 
@@ -343,7 +343,7 @@ type VLLMLoadParams struct {
 // VLLOmniLoadParams contains vLLM-omni-specific load parameters
 type VLLOmniLoadParams struct {
 	VLLMLoadParams           // Embed base vLLM params
-	Omni             bool    // --omni (启用 omni 多模态模式)
+	Omni             bool    // --omni (enable omni multimodal mode)
 	VideoPruningRate float64 // --video-pruning-rate
 	MMTensorIPC      bool    // --mm-tensor-ipc
 }
@@ -359,7 +359,7 @@ func (r *LoadRequest) Validate() error {
 	return nil
 }
 
-// baseEndpoints 返回所有后端共有的基础端点集合
+// baseEndpoints returns the common set of endpoints shared by all backends.
 func baseEndpoints() map[string]bool {
 	return map[string]bool{
 		"/v1/chat/completions": true,
@@ -369,7 +369,7 @@ func baseEndpoints() map[string]bool {
 	}
 }
 
-// endpointsWithoutAudio 返回不支持音频端点的基础端点集合
+// endpointsWithoutAudio returns the base endpoint set with audio endpoints explicitly disabled.
 func endpointsWithoutAudio() map[string]bool {
 	ep := baseEndpoints()
 	ep["/v1/audio/speech"] = false
@@ -380,7 +380,7 @@ func endpointsWithoutAudio() map[string]bool {
 	return ep
 }
 
-// endpointsWithAudio 返回支持全部音频端点的端点集合
+// endpointsWithAudio returns the endpoint set with all audio endpoints enabled.
 func endpointsWithAudio() map[string]bool {
 	ep := baseEndpoints()
 	ep["/v1/audio/speech"] = true
@@ -391,7 +391,7 @@ func endpointsWithAudio() map[string]bool {
 	return ep
 }
 
-// buildEnvWithVars 构建包含自定义环境变量的进程环境
+// buildEnvWithVars builds a process environment with custom environment variables merged in.
 func buildEnvWithVars(envVars []string) []string {
 	env := os.Environ()
 	for _, ev := range envVars {
@@ -414,8 +414,8 @@ func buildEnvWithVars(envVars []string) []string {
 	return env
 }
 
-// discoverVLLMVariant 是 VLLM 和 VLLMOmni 共享的发现逻辑
-// binaryName 是要查找的二进制名称 ("vllm" 或 "vllm-omni")
+// discoverVLLMVariant is the shared discovery logic for VLLM and VLLMOmni backends.
+// binaryName is the binary to search for (e.g., "vllm" or "vllm-omni").
 func discoverVLLMVariant(cfg *BackendConfig, backendType BackendType, name, binaryName string) (*BackendInfo, error) {
 	info := &BackendInfo{
 		Type: backendType,
@@ -432,7 +432,7 @@ func discoverVLLMVariant(cfg *BackendConfig, backendType BackendType, name, bina
 
 	env := buildEnvWithVars(cfg.EnvVars)
 
-	// 优先检查 ServeBin（直接指定二进制路径）
+	// Check ServeBin first (explicitly specified binary path)
 	if cfg.ServeBin != "" {
 		cmd := exec.Command(cfg.ServeBin, "--version")
 		cmd.Env = env
@@ -446,7 +446,7 @@ func discoverVLLMVariant(cfg *BackendConfig, backendType BackendType, name, bina
 		logger.Warnf("%s ServeBin not available: path=%s", name, cfg.ServeBin)
 	}
 
-	// 检查 BinPaths 配置的路径中是否有二进制
+	// Check BinPaths for configured binary locations
 	if len(cfg.BinPaths) > 0 {
 		for _, p := range cfg.BinPaths {
 			// Check if the path itself is the binary (file path case)
@@ -478,7 +478,7 @@ func discoverVLLMVariant(cfg *BackendConfig, backendType BackendType, name, bina
 		return info, nil
 	}
 
-	// 通过 conda run 检查是否可用
+	// Check availability via conda run
 	condaPath := cfg.CondaPath
 	if condaPath == "" {
 		condaPath = "conda"

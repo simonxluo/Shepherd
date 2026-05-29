@@ -45,18 +45,18 @@ type ModelDTO struct {
 	Path        string                 `json:"path"`
 	PathPrefix  string                 `json:"pathPrefix"`
 	Size        int64                  `json:"size"`
-	TotalSize   int64                  `json:"totalSize,omitempty"`  // 包含所有分卷的总大小
-	ShardCount  int                    `json:"shardCount,omitempty"` // 分卷数量
-	ShardFiles  []string               `json:"shardFiles,omitempty"` // 所有分卷文件路径
-	MmprojPath  string                 `json:"mmprojPath,omitempty"` // mmproj 文件路径
+	TotalSize   int64                  `json:"totalSize,omitempty"`  // Total size including all shards
+	ShardCount  int                    `json:"shardCount,omitempty"` // Number of shards
+	ShardFiles  []string               `json:"shardFiles,omitempty"` // All shard file paths
+	MmprojPath  string                 `json:"mmprojPath,omitempty"` // Multimodal projector file path
 	Favourite   bool                   `json:"favourite"`
 	Tags        []string               `json:"tags,omitempty"`
 	Metadata    map[string]interface{} `json:"metadata"`
 	Status      string                 `json:"status"`
 	IsLoaded    bool                   `json:"isLoaded"`
 	Port        int                    `json:"port,omitempty"`
-	ScannedAt   string                 `json:"scannedAt,omitempty"`   // 扫描时间（ISO 8601 格式）
-	BackendType string                 `json:"backendType,omitempty"` // 推荐后端类型 (llamacpp/vllm/vllm_omni)
+	ScannedAt   string                 `json:"scannedAt,omitempty"`   // Scan time (ISO 8601 format)
+	BackendType string                 `json:"backendType,omitempty"` // Recommended backend type (llamacpp/vllm/vllm_omni)
 }
 
 // Server represents the HTTP server
@@ -92,11 +92,11 @@ type Config struct {
 	WriteTimeout  time.Duration
 	WebUIPath     string
 	ServerCfg     *config.Config
-	ConfigMgr     *config.Manager // 配置管理器
+	ConfigMgr     *config.Manager // Config manager
 	StorageMgr    *storage.Manager
 	// Version information
-	Version   string // 版本号
-	BuildTime string // 构建时间
+	Version   string // Version number
+	BuildTime string // Build time
 	GitCommit string // Git commit hash
 }
 

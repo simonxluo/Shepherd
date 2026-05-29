@@ -25,9 +25,9 @@ type Process struct {
 	Cmd     string
 	BinPath string
 
-	// 启动选项
-	SkipLDLibraryPath bool     // 跳过 LD_LIBRARY_PATH 设置（conda 后端使用）
-	EnvVars           []string // 额外的环境变量 (e.g., "KEY=VALUE")
+	// Start options
+	SkipLDLibraryPath bool     // Skip LD_LIBRARY_PATH setup (used by conda backends)
+	EnvVars           []string // Additional environment variables (e.g., "KEY=VALUE")
 
 	// Runtime state
 	PID     int
@@ -224,11 +224,11 @@ func (p *Process) setupEnvironment(cmd *exec.Cmd, binPath string) error {
 	// Get current environment
 	env := os.Environ()
 
-	// 应用配置中的自定义环境变量
+	// Apply custom environment variables from config
 	for _, ev := range p.EnvVars {
 		if idx := strings.Index(ev, "="); idx > 0 {
 			key := ev[:idx]
-			// 替换已有的同名变量
+			// Replace existing variable with the same name
 			prefix := key + "="
 			found := false
 			for i, e := range env {
@@ -244,7 +244,7 @@ func (p *Process) setupEnvironment(cmd *exec.Cmd, binPath string) error {
 		}
 	}
 
-	// conda 后端（vLLM/vLLM-omni）通过 conda run 管理环境，跳过 LD_LIBRARY_PATH 修改
+	// Conda backends (vLLM/vLLM-omni) manage their own environment via conda run; skip LD_LIBRARY_PATH
 	if p.SkipLDLibraryPath {
 		cmd.Env = env
 		return nil

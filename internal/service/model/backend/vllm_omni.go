@@ -48,7 +48,7 @@ func (b *VLLMOmniBackend) BuildStartConfig(info *BackendInfo, req *LoadRequest) 
 		return nil, err
 	}
 
-	// vllm_omni 后端始终启用 --omni（这是使用此后端的核心目的，不带此参数会报错）
+	// vllm_omni backend always enables --omni (core purpose of this backend; omitting it causes errors)
 	args = append(args, "--omni")
 
 	// Append multimodal-specific parameters
@@ -91,8 +91,8 @@ func (b *VLLMOmniBackend) CheckHealth(port int) (*HealthResult, error) {
 	return b.vllm.CheckHealth(port)
 }
 
-// SupportsModel returns true for safetensors/HuggingFace directories and GGUF files
-// vLLM-Omni 支持所有 vLLM 支持的格式，同时额外支持 GGUF（多模态模型可能为 GGUF 格式）
+// SupportsModel returns true for safetensors/HuggingFace directories and GGUF files.
+// vLLM-Omni supports all vLLM formats plus GGUF (multimodal models may be in GGUF format).
 func (b *VLLMOmniBackend) SupportsModel(modelPath string) bool {
 	return b.vllm.SupportsModel(modelPath) || IsGGUFModel(modelPath)
 }
