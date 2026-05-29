@@ -759,10 +759,7 @@
       "serviceRunning": "服务运行在端口 {{port}}",
       "clickToEnable": "点击启用以开始服务",
       "servicePort": "服务端口",
-      "portNotResponding": "端口 {{port}} 无响应",
-      "saving": "保存中...",
-      "saved": "已保存",
-      "saveFailed": "保存失败"
+      "portNotResponding": "端口 {{port}} 无响应"
     },
     "directoryBrowser": {
       "selectDirectory": "选择目录",
@@ -800,7 +797,6 @@
     "loadingConfig": "加载配置中...",
     "apiCompatibility": "API 兼容性设置",
     "apiCompatibilityDesc": "配置 Ollama 和 LM Studio API 兼容层端口",
-    "autoSaveNotice": "配置将自动保存",
     "benchmark": {
       "title": "性能压测",
       "inDevelopment": "性能压测功能开发中..."

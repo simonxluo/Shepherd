@@ -759,10 +759,7 @@
       "serviceRunning": "Service running on port {{port}}",
       "clickToEnable": "Click to enable service",
       "servicePort": "Service Port",
-      "portNotResponding": "Port {{port}} not responding",
-      "saving": "Saving...",
-      "saved": "Saved",
-      "saveFailed": "Save failed"
+      "portNotResponding": "Port {{port}} not responding"
     },
     "directoryBrowser": {
       "selectDirectory": "Select Directory",
@@ -800,7 +797,6 @@
     "loadingConfig": "Loading config...",
     "apiCompatibility": "API Compatibility Settings",
     "apiCompatibilityDesc": "Configure Ollama and LM Studio API compatibility layer ports",
-    "autoSaveNotice": "Config will auto-save",
     "benchmark": {
       "title": "Benchmark",
       "inDevelopment": "Benchmark feature is under development..."

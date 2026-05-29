@@ -128,6 +128,7 @@ function GeneralSettingsPanel() {
 
   const markChanged = useCallback(() => {
     setHasChanges(true);
+    setSaveDone(false);
   }, []);
 
   // Auto-save with 2s debounce
