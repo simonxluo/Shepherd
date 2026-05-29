@@ -318,7 +318,7 @@ func (d *downloader) downloadParallel(ctx context.Context) error {
 	for i := 0; i < len(parts); i++ {
 		if err := <-errChan; err != nil && firstError == nil {
 			firstError = err
-			partCancel() // 取消其余分片
+			partCancel() // cancel remaining parts
 		}
 	}
 

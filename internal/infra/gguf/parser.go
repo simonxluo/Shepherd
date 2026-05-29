@@ -6,13 +6,13 @@ import (
 	ggufparser "github.com/gpustack/gguf-parser-go"
 )
 
-// Parser 使用 gguf-parser-go 库解析 GGUF 文件
+// Parser wraps gguf-parser-go to parse GGUF model files.
 type Parser struct {
 	path string
 	file *ggufparser.GGUFFile
 }
 
-// NewParser 创建新的 GGUF 解析器
+// NewParser creates a new GGUF parser for the given file path.
 func NewParser(path string) (*Parser, error) {
 	file, err := ggufparser.ParseGGUFFile(path)
 	if err != nil {
@@ -25,28 +25,28 @@ func NewParser(path string) (*Parser, error) {
 	}, nil
 }
 
-// Close 关闭解析器并释放资源
+// Close closes the parser and releases resources.
 func (p *Parser) Close() error {
-	// gguf-parser-go 会自动管理资源
+	// gguf-parser-go manages resources automatically
 	return nil
 }
 
-// GetMetadata 获取解析后的元数据
+// GetMetadata returns parsed metadata from the GGUF file.
 func (p *Parser) GetMetadata() (*Metadata, error) {
 	if p.file == nil {
 		return nil, fmt.Errorf("GGUF file not loaded")
 	}
 
-	// 调用 gguf-parser-go 的 Metadata() 方法获取元数据
+	// Call gguf-parser-go's Metadata() method
 	gmeta := p.file.Metadata()
 
 	meta := &Metadata{
 		Extra: make(map[string]interface{}),
 	}
 
-	// 从 gguf-parser-go 直接获取的元数据
+	// Metadata directly from gguf-parser-go
 
-	// 基本信息
+	// Basic info
 	meta.Name = gmeta.Name
 	meta.Architecture = gmeta.Architecture
 	meta.Type = gmeta.Type
@@ -55,25 +55,25 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 	meta.Description = gmeta.Description
 	meta.License = gmeta.License
 
-	// 量化信息
+	// Quantization info
 	meta.FileType = uint32(gmeta.FileType)
 	meta.FileTypeDescriptor = gmeta.FileTypeDescriptor
 	meta.QuantizationVersion = gmeta.QuantizationVersion
 
-	// 模型参数
+	// Model parameters
 	meta.Parameters = float64(gmeta.Parameters)
 	meta.BitsPerWeight = float64(gmeta.BitsPerWeight)
 
-	// 文件信息
+	// File info
 	meta.Alignment = gmeta.Alignment
 	meta.LittleEndian = gmeta.LittleEndian
 	meta.FileSize = uint64(gmeta.FileSize)
 	meta.ModelSize = uint64(gmeta.Size)
 
-	// 从 Header.MetadataKV 中读取架构特定字段
+	// Read architecture-specific fields from Header.MetadataKV
 	metadataKV := p.file.Header.MetadataKV
 
-	// 辅助函数：从 KV map 中获取值
+	// Helper: get value from KV map
 	getKV := func(key string) (ggufparser.GGUFMetadataKV, bool) {
 		kvs, found := metadataKV.Index([]string{key})
 		if found > 0 {
@@ -82,7 +82,7 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		return ggufparser.GGUFMetadataKV{}, false
 	}
 
-	// 辅助函数：安全获取整数类型（处理 Uint32/Uint64/Int32/Int64）
+	// Helper: safely get integer value (handles Uint32/Uint64/Int32/Int64)
 	getIntValue := func(kv ggufparser.GGUFMetadataKV) int {
 		switch kv.ValueType {
 		case ggufparser.GGUFMetadataValueTypeUint32:
@@ -98,19 +98,19 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		}
 	}
 
-	// 读取架构特定字段
-	// 不同架构使用不同的前缀，如 llama.context_length, qwen3next.context_length, gpt-oss.context_length
-	// 使用架构名称动态构建键名
+	// Read architecture-specific fields
+	// Different architectures use different prefixes (e.g., llama.context_length, qwen3next.context_length)
+	// Build key names dynamically using the architecture name
 
 	arch := meta.Architecture
 	if arch == "" {
-		// 尝试从 general.architecture 获取
+		// Try to get from general.architecture
 		if kv, ok := getKV("general.architecture"); ok {
 			arch = kv.ValueString()
 		}
 	}
 
-	// 定义要读取的通用字段名（不带前缀）
+	// Define common field names (without prefix)
 	commonFields := []struct {
 		key         string
 		setter      func(int)
@@ -128,10 +128,10 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		{"rope.freq_scale", nil, func(v float64) { meta.RopeFreqScale = v }},
 	}
 
-	// 尝试使用架构前缀读取
+	// Try reading with architecture prefix
 	for _, field := range commonFields {
 		if arch != "" {
-			// 尝试 {architecture}.{field} 格式
+			// Try {architecture}.{field} format
 			archKey := fmt.Sprintf("%s.%s", arch, field.key)
 			if kv, ok := getKV(archKey); ok {
 				if field.setter != nil && (kv.ValueType == ggufparser.GGUFMetadataValueTypeUint32 ||
@@ -146,7 +146,7 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 			}
 		}
 
-		// 回退到 llama 前缀（兼容旧代码）
+		// Fall back to llama prefix (backward compatibility)
 		llamaKey := fmt.Sprintf("llama.%s", field.key)
 		if kv, ok := getKV(llamaKey); ok {
 			if field.setter != nil {
@@ -157,7 +157,7 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		}
 	}
 
-	// Tokenizer 信息
+	// Tokenizer info
 	if kv, ok := getKV("tokenizer.ggml.model"); ok {
 		meta.TokenizerModel = kv.ValueString()
 	}
@@ -182,17 +182,17 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		meta.PostToken = kv.ValueString()
 	}
 
-	// Token 词表大小
+	// Token vocabulary size
 	if kv, ok := getKV("tokenizer.ggml.token_count"); ok {
 		meta.TokenCount = getIntValue(kv)
 	} else if kv, ok := getKV("tokenizer.token_list"); ok {
-		// token_list 是一个数组，使用其长度
+		// token_list is an array; use its length
 		if arr := kv.ValueArray(); arr.Len > 0 {
 			meta.TokenCount = int(arr.Len)
 		}
 	}
 
-	// 备用 Tokenizer Token IDs（某些模型使用不同的键名）
+	// Fallback Tokenizer Token IDs (some models use different key names)
 	if meta.BosTokenID == 0 {
 		if kv, ok := getKV("tokenizer.bos_token_id"); ok {
 			meta.BosTokenID = getIntValue(kv)
@@ -204,18 +204,18 @@ func (p *Parser) GetMetadata() (*Metadata, error) {
 		}
 	}
 
-	// Chat Template - 用于能力检测
-	// 读取 tokenizer.chat_template（Jinja 模板用于对话格式化）
+	// Chat Template - used for capability detection
+	// Read tokenizer.chat_template (Jinja template for conversation formatting)
 	if kv, ok := getKV("tokenizer.chat_template"); ok {
 		meta.ChatTemplate = kv.ValueString()
 	}
 
-	// 架构特定信息
-	// 读取 pooling_type 等架构级别的元数据
+	// Architecture-specific info
+	// Read pooling_type and other architecture-level metadata
 	archInfo := p.file.Architecture()
 	meta.PoolingType = archInfo.PoolingType
 
-	// 计算量化字符串
+	// Compute quantization string
 	meta.Quantization = meta.GetQuantizationString()
 
 	return meta, nil

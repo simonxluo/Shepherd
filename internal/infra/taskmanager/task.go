@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// TaskStatus 任务状态
+// TaskStatus represents the status of a task.
 type TaskStatus string
 
 const (
@@ -17,14 +17,14 @@ const (
 	TaskStatusCancelled TaskStatus = "cancelled"
 )
 
-// TaskType 任务类型
+// TaskType represents the type of a task.
 type TaskType string
 
 const (
 	TaskTypeBenchmark TaskType = "benchmark"
 )
 
-// Task 一次性任务信息
+// Task represents a one-shot background task.
 type Task struct {
 	ID         string                 `json:"id"`
 	Type       TaskType               `json:"type"`
@@ -40,7 +40,7 @@ type Task struct {
 	StartedAt  *time.Time             `json:"startedAt,omitempty"`
 	FinishedAt *time.Time             `json:"finishedAt,omitempty"`
 
-	// 内部字段（不序列化）
+	// Internal fields (not serialized)
 	ctx      context.Context
 	cancel   context.CancelFunc
 	onUpdate func(*Task)
@@ -80,7 +80,7 @@ func (t *Task) SetOnUpdate(fn func(*Task)) {
 	t.mu.Unlock()
 }
 
-// ToMap 转为 map 用于 JSON 序列化（排除内部字段）
+// ToMap converts the task to a map for JSON serialization (excludes internal fields).
 func (t *Task) ToMap() map[string]interface{} {
 	t.mu.RLock()
 	defer t.mu.RUnlock()

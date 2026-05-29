@@ -392,7 +392,7 @@ func (m *Manager) executeDownload(task *Task) {
 		if task.StopRequested || task.Paused {
 			task.State = StatePaused
 		} else if task.RetryCount < task.MaxRetries {
-			// 自动重试：指数退避
+			// Auto retry with exponential backoff
 			task.RetryCount++
 			task.State = StateIdle
 			delay := time.Duration(1<<(task.RetryCount-1)) * time.Second

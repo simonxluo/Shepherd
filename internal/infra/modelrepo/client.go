@@ -142,7 +142,7 @@ func (c *Client) generateModelScopeURL(repoID, fileName string) (string, error) 
 
 // ListGGUFFiles lists GGUF files in a HuggingFace repository
 func (c *Client) ListGGUFFiles(repoID string) ([]FileInfo, error) {
-	// 使用 tree/main 端点获取带文件大小的文件列表
+	// Use tree/main endpoint to get file listing with sizes
 	apiURL := fmt.Sprintf("https://%s/api/models/%s/tree/main", c.endpoint, repoID)
 
 	req, err := http.NewRequest("GET", apiURL, nil)
@@ -164,7 +164,7 @@ func (c *Client) ListGGUFFiles(repoID string) ([]FileInfo, error) {
 		return nil, fmt.Errorf("failed to fetch model info: %s", resp.Status)
 	}
 
-	// HuggingFace tree API 返回文件列表，每个元素包含 path, type, size
+	// HuggingFace tree API returns a file list, each element containing path, type, size
 	var treeFiles []struct {
 		Path string `json:"path"`
 		Type string `json:"type"`
