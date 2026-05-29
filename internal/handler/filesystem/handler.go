@@ -154,7 +154,7 @@ func (h *Handler) ListDirectory(c *gin.Context) {
 	handler.Success(c, response)
 }
 
-// sanitizePath 清理和验证路径,防止路径遍历攻击
+// sanitizePath sanitizes and validates a path to prevent path traversal attacks.
 func (h *Handler) sanitizePath(inputPath string) (string, error) {
 	if inputPath == "" {
 		return "", fmt.Errorf("路径为空")
@@ -178,7 +178,7 @@ func (h *Handler) sanitizePath(inputPath string) (string, error) {
 	return cleanPath, nil
 }
 
-// getSystemRoots 返回系统根目录列表
+// getSystemRoots returns the list of system root directories.
 func (h *Handler) getSystemRoots() []DirectoryItem {
 	var roots []DirectoryItem
 
@@ -289,7 +289,7 @@ func (h *Handler) ValidatePath(c *gin.Context) {
 	})
 }
 
-// isReadable 检查目录是否可读
+// isReadable checks if a directory is readable.
 func isReadable(path string) bool {
 	// 尝试打开目录进行读取
 	file, err := os.Open(path)

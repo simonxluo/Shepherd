@@ -30,7 +30,7 @@ const (
 	MaxConcurrentBenchmarks = 3
 )
 
-// Handler 压测 API 处理器
+// Handler is the benchmark API handler.
 type Handler struct {
 	log        *logger.Logger
 	store      storage.Store
@@ -42,7 +42,7 @@ type Handler struct {
 	semaphore  chan struct{} // 用于限制并发数
 }
 
-// NewHandler 创建新的压测处理器
+// NewHandler creates a new benchmark handler.
 func NewHandler(log *logger.Logger, store storage.Store, modelMgr *model.Manager, taskMgr *taskmanager.Manager, eventMgr *event.Manager) *Handler {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -63,7 +63,7 @@ func NewHandler(log *logger.Logger, store storage.Store, modelMgr *model.Manager
 	return h
 }
 
-// BenchmarkParam 压测参数定义
+// BenchmarkParam defines a benchmark parameter.
 type BenchmarkParam struct {
 	FullName       string      `json:"fullName"`
 	Name           string      `json:"name"`
@@ -79,7 +79,7 @@ type BenchmarkParam struct {
 	GroupCollapsed bool        `json:"groupCollapsed,omitempty"`
 }
 
-// BenchmarkConfig 压测配置
+// BenchmarkConfig defines benchmark configuration.
 type BenchmarkConfig struct {
 	ModelID      string            `json:"modelId"`
 	ModelName    string            `json:"modelName"`
@@ -89,7 +89,7 @@ type BenchmarkConfig struct {
 	CreatedAt    string            `json:"createdAt"`
 }
 
-// cleanupFinishedTasks 定期清理已完成的任务
+// cleanupFinishedTasks periodically cleans up finished tasks.
 func (h *Handler) cleanupFinishedTasks() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
@@ -110,7 +110,7 @@ func (h *Handler) cleanupFinishedTasks() {
 	}
 }
 
-// isValidLlamaBinary 验证 llama.cpp 二进制文件是否安全可执行
+// isValidLlamaBinary validates that a llama.cpp binary is safe to execute.
 func (h *Handler) isValidLlamaBinary(path string) error {
 	// 检查路径是否为绝对路径
 	if !filepath.IsAbs(path) {
@@ -156,15 +156,15 @@ func (h *Handler) isValidLlamaBinary(path string) error {
 	return nil
 }
 
-// findLlamaCli 在指定路径中查找 llama-cli 可执行文件
-// 使用统一的工具函数 utils.FindLlamacppBinary
+// findLlamaCli finds the llama-cli executable in the specified path.
+// Uses the unified utility function utils.FindLlamacppBinary.
 func (h *Handler) findLlamaCli(llamaBinPath string) string {
 	return utils.FindLlamacppBinary(llamaBinPath, "cli")
 }
 
-// validatePathForDevices 验证路径是否有效（用于设备列表查询）
-// 允许目录路径或可执行文件路径
-// 使用统一的工具函数来查找二进制文件
+// validatePathForDevices validates a path for device list queries.
+// Accepts directory paths or executable file paths.
+// Uses the unified utility function to find the binary.
 func (h *Handler) validatePathForDevices(path string) error {
 	// 清理路径
 	cleanPath := filepath.Clean(path)
@@ -344,7 +344,7 @@ func (h *Handler) GetDevices(c *gin.Context) {
 	})
 }
 
-// GetRunningTasksCount 获取当前运行中的任务数量
+// GetRunningTasksCount returns the number of currently running tasks.
 func (h *Handler) GetRunningTasksCount() int {
 	return h.taskMgr.RunningCount(taskmanager.TaskTypeBenchmark)
 }
@@ -478,7 +478,7 @@ func (h *Handler) Create(c *gin.Context) {
 	})
 }
 
-// runBenchmark 执行压测任务
+// runBenchmark executes a benchmark task.
 func (h *Handler) runBenchmark(task *storage.Benchmark, benchTask *taskmanager.Task, llamaBinPath string, args []string) {
 	select {
 	case h.semaphore <- struct{}{}:
@@ -548,7 +548,7 @@ func (h *Handler) runBenchmark(task *storage.Benchmark, benchTask *taskmanager.T
 	}
 }
 
-// parseBenchmarkOutput 解析压测输出提取指标
+// parseBenchmarkOutput parses benchmark output to extract metrics.
 func (h *Handler) parseBenchmarkOutput(output string) map[string]interface{} {
 	metrics := make(map[string]interface{})
 
@@ -1141,7 +1141,7 @@ func (h *Handler) saveBenchmarkOutput(modelId string, nodeId string, output stri
 	}
 }
 
-// Shutdown 优雅关闭处理器
+// Shutdown gracefully shuts down the handler.
 func (h *Handler) Shutdown() {
 	h.log.Infof("Benchmark handler shutting down...")
 	h.cancelFunc()
