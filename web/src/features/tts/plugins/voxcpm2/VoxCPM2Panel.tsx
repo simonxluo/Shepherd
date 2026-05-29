@@ -67,7 +67,7 @@ const VOXCPM2_LANGUAGES = [
   { value: '吴语', group: 'dialect', label: '吴语 (Wu)' },
   { value: '东北话', group: 'dialect', label: '东北话 (Northeastern)' },
   { value: '河南话', group: 'dialect', label: '河南话 (Henan)' },
-  { value: '陕西方言', group: 'dialect', label: '陕西方言 (Shaanxi)' },
+  { value: '陕西话', group: 'dialect', label: '陕西话 (Shanxi)' },
   { value: '山东话', group: 'dialect', label: '山东话 (Shandong)' },
   { value: '天津话', group: 'dialect', label: '天津话 (Tianjin)' },
   { value: '闽南话', group: 'dialect', label: '闽南话 (Min Nan)' },
@@ -89,6 +89,15 @@ export function VoxCPM2Panel({
   const availableModels = useAvailableModels('tts');
   const loadModel = useLoadModel();
   const [showLoadDialog, setShowLoadDialog] = useState(false);
+
+  // Filter available models to only show VoxCPM2-related ones
+  const voxcpmAvailableModels = useMemo(
+    () => availableModels.filter((m) => {
+      const nameLower = (m.name || m.id || '').toLowerCase();
+      return nameLower.includes('voxcpm');
+    }),
+    [availableModels]
+  );
 
   const modelName = selectedModel ? (selectedModel.alias || selectedModel.name) : '';
   const modelIdForConfig = selectedModel?.id || '';
@@ -117,6 +126,8 @@ export function VoxCPM2Panel({
   const [inferenceTimesteps, setInferenceTimesteps] = useState('10');
   const [cfgCutoffRatio, setCfgCutoffRatio] = useState('1');
   const [swaySamplingCoef, setSwaySamplingCoef] = useState('1');
+
+  const isStreamActive = streamState === 'streaming' || streamState === 'playing';
 
   const features = useMemo(
     () => (selectedModel ? getTTSModelFeatures(selectedModel) : null),
@@ -267,6 +278,9 @@ export function VoxCPM2Panel({
 
     // extra_params: vLLM-Omni 不识别的顶层参数通过 extra_params 传递
     const extraParams: Record<string, unknown> = {};
+    if (emotion && emotion !== 'default') {
+      extraParams.emotion = emotion;
+    }
     if (cfgValue) {
       const val = parseFloat(cfgValue);
       if (!isNaN(val) && val !== 2.0) extraParams.cfg_value = val;
@@ -296,11 +310,26 @@ export function VoxCPM2Panel({
 
   if (matchedModels.length === 0) {
     return (
-      <AvailableModelList
-        models={availableModels}
-        emptyText={t('creative.noScannedModels')}
-        emptyHint={t('creative.noScannedModelsHint')}
-      />
+      <div className="space-y-4">
+        {/* Clear prompt: no VoxCPM2 model loaded */}
+        <div className="flex flex-col items-center gap-3 py-6 px-4 rounded-lg border border-dashed border-orange-300 bg-orange-50/50 dark:border-orange-700 dark:bg-orange-950/20">
+          <AlertCircle className="w-8 h-8 text-orange-500" />
+          <div className="text-center">
+            <p className="text-sm font-medium text-foreground">
+              {t('tts.voxcpm2NotDetected', '未检测到已加载的 VoxCPM2 模型')}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('tts.voxcpm2NotDetectedHint', '请从下方列表中选择一个 VoxCPM2 模型进行加载，或确认模型已被扫描')}
+            </p>
+          </div>
+        </div>
+        {/* Show filtered available models (VoxCPM2 only) */}
+        <AvailableModelList
+          models={voxcpmAvailableModels}
+          emptyText={t('tts.noVoxcpm2Models', '未扫描到 VoxCPM2 模型')}
+          emptyHint={t('tts.noVoxcpm2ModelsHint', '请确认已配置 VoxCPM2 模型路径并完成扫描')}
+        />
+      </div>
     );
   }
 
@@ -587,8 +616,8 @@ export function VoxCPM2Panel({
                 value={[parseFloat(cfgValue) || 2]}
                 onValueChange={([val]) => setCfgValue(String(val))}
                 min={1}
-                max={5}
-                step={0.5}
+                max={3}
+                step={0.1}
                 className="w-full mt-2"
               />
             </div>
@@ -603,8 +632,8 @@ export function VoxCPM2Panel({
               <Slider
                 value={[parseInt(inferenceTimesteps) || 10]}
                 onValueChange={([val]) => setInferenceTimesteps(String(val))}
-                min={4}
-                max={30}
+                min={1}
+                max={50}
                 step={1}
                 className="w-full mt-2"
               />

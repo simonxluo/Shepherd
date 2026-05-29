@@ -472,7 +472,11 @@
     "refreshVoices": "刷新语音列表",
     "noModelsTitle": "没有已加载的 TTS 模型",
     "noModelsDescription": "加载一个支持 TTS 的模型来开始生成语音。可用模型如下所示。",
-    "autoSaved": "已自动保存"
+    "autoSaved": "已自动保存",
+    "voxcpm2NotDetected": "未检测到已加载的 VoxCPM2 模型",
+    "voxcpm2NotDetectedHint": "请从下方列表中选择一个 VoxCPM2 模型进行加载，或确认模型已被扫描",
+    "noVoxcpm2Models": "未扫描到 VoxCPM2 模型",
+    "noVoxcpm2ModelsHint": "请确认已配置 VoxCPM2 模型路径并完成扫描"
   },
   "asr": {
     "title": "语音识别 (ASR)",

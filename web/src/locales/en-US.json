@@ -472,7 +472,11 @@
     "refreshVoices": "Refresh voices",
     "noModelsTitle": "No TTS Models Loaded",
     "noModelsDescription": "Load a TTS-capable model to start generating speech. Available models are shown below.",
-    "autoSaved": "Auto-saved"
+    "autoSaved": "Auto-saved",
+    "voxcpm2NotDetected": "No loaded VoxCPM2 model detected",
+    "voxcpm2NotDetectedHint": "Please load a VoxCPM2 model from the list below, or confirm that models have been scanned",
+    "noVoxcpm2Models": "No VoxCPM2 models found",
+    "noVoxcpm2ModelsHint": "Please ensure VoxCPM2 model paths are configured and scanned"
   },
   "asr": {
     "title": "Speech Recognition (ASR)",
