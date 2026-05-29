@@ -63,6 +63,8 @@ const (
 	kwHubert                     = "hubert"
 	kwSenseVoice                 = "sense-voice"
 	kwParaformer                 = "paraformer"
+	kwQwen3ASR                   = "qwen3-asr"
+	kwQwen3UnderscoreASR         = "qwen3_asr"
 	kwStableDiffusion            = "stable-diffusion"
 	kwStableDiffusionSDXL        = "sdxl"
 	kwFLUX                       = "flux"
@@ -135,7 +137,7 @@ var (
 	asrNameKeywords = []string{
 		kwASR, kwWhisper, kwSpeechToText,
 		kwAutomaticSpeechRecognition, kwWav2Vec, kwHubert,
-		kwSenseVoice, kwParaformer,
+		kwSenseVoice, kwParaformer, kwQwen3ASR, kwQwen3UnderscoreASR,
 	}
 
 	imageNameKeywords = []string{

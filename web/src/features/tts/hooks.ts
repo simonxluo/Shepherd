@@ -122,7 +122,7 @@ interface VoicesResponse {
 
 const VOICES_CACHE_KEY = 'shepherd-tts-voices-cache';
 
-function getVoicesCache(): Record<string, Array<{ id: string; name?: string }>> {
+function getVoicesCache(): Record<string, VoiceOption[]> {
   try {
     const saved = localStorage.getItem(VOICES_CACHE_KEY);
     return saved ? JSON.parse(saved) : {};
@@ -131,7 +131,7 @@ function getVoicesCache(): Record<string, Array<{ id: string; name?: string }>> 
   }
 }
 
-function saveVoicesCache(cache: Record<string, Array<{ id: string; name?: string }>>) {
+function saveVoicesCache(cache: Record<string, VoiceOption[]>) {
   try {
     localStorage.setItem(VOICES_CACHE_KEY, JSON.stringify(cache));
   } catch { /* silent */ }
@@ -158,7 +158,7 @@ export function useVoices(model?: string) {
       return [...presetVoices, ...uploadedVoices];
     },
     enabled: !!model,
-    placeholderData: () => {
+    placeholderData: (): VoiceOption[] => {
       if (!model) return [];
       const cache = getVoicesCache();
       return cache[model] ?? [];

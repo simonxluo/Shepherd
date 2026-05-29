@@ -96,13 +96,12 @@ function GeneralSettingsPanel() {
   const [lmstudioEnabled, setLmstudioEnabled] = useState(false);
   const [lmstudioPort, setLmstudioPort] = useState(1234);
 
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [saveDone, setSaveDone] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
   const [isAutoDisabling, setIsAutoDisabling] = useState(false);
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load config on mount
   useEffect(() => {
@@ -137,10 +136,8 @@ function GeneralSettingsPanel() {
     if (isLoading || !hasChanges || isAutoDisabling) return;
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
 
     saveTimeoutRef.current = setTimeout(async () => {
-      setSaveStatus('saving');
       try {
         const response = await compatibilityApi.update({
           ollama: { enabled: ollamaEnabled, port: ollamaPort },
@@ -148,10 +145,9 @@ function GeneralSettingsPanel() {
         });
 
         if (response.success) {
-          setSaveStatus('success');
+          setSaveDone(true);
           setHasChanges(false);
         } else {
-          setSaveStatus('error');
           const errorMsg = response.error || t('common.unknownError');
           const serviceName = response.service === 'ollama' ? 'Ollama API' : 'LM Studio API';
 
@@ -165,24 +161,14 @@ function GeneralSettingsPanel() {
             }
           }
         }
-
-        successTimeoutRef.current = setTimeout(() => {
-          setSaveStatus('idle');
-        }, 3000);
       } catch (error) {
         console.error('保存兼容性配置失败:', error);
-        setSaveStatus('error');
         toast.error(t('settings.saveFailed'), t('settings.saveFailedDesc'));
-
-        successTimeoutRef.current = setTimeout(() => {
-          setSaveStatus('idle');
-        }, 3000);
       }
     }, 2000);
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
     };
   }, [ollamaEnabled, ollamaPort, lmstudioEnabled, lmstudioPort, isLoading, hasChanges, isAutoDisabling, toast]);
 
@@ -278,7 +264,7 @@ function GeneralSettingsPanel() {
         type="ollama"
         config={{ enabled: ollamaEnabled, port: ollamaPort }}
         onConfigChange={handleOllamaChange}
-        saveStatus={saveStatus}
+        saveDone={saveDone}
         onTestConnection={handleTestConnection}
         onConnectionFailed={handleConnectionFailed}
       />
@@ -288,17 +274,11 @@ function GeneralSettingsPanel() {
         type="lmstudio"
         config={{ enabled: lmstudioEnabled, port: lmstudioPort }}
         onConfigChange={handleLmstudioChange}
-        saveStatus={saveStatus}
+        saveDone={saveDone}
         onTestConnection={handleTestConnection}
         onConnectionFailed={handleConnectionFailed}
       />
 
-      {/* Auto-save notice */}
-      <div className="flex items-center justify-center py-2">
-        <p className="text-xs text-muted-foreground">
-          {t('settings.autoSaveNotice')}
-        </p>
-      </div>
     </div>
   );
 }

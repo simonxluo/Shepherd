@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plug, CheckCircle2, XCircle, AlertTriangle, Loader2, Power } from 'lucide-react';
+import { Plug, CheckCircle2, AlertTriangle, Loader2, Power } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export interface ApiConfig {
@@ -12,7 +12,7 @@ interface ApiConfigCardProps {
   type: 'ollama' | 'lmstudio';
   config: ApiConfig;
   onConfigChange: (config: ApiConfig) => void;
-  saveStatus?: 'idle' | 'saving' | 'success' | 'error';
+  saveDone?: boolean;
   onTestConnection?: (port: number, type: 'ollama' | 'lmstudio') => Promise<boolean>;
   onConnectionFailed?: (type: 'ollama' | 'lmstudio', port: number) => void;
 }
@@ -21,7 +21,7 @@ export function ApiConfigCard({
   type,
   config,
   onConfigChange,
-  saveStatus = 'idle',
+  saveDone = false,
   onTestConnection,
   onConnectionFailed,
 }: ApiConfigCardProps) {
@@ -120,7 +120,7 @@ export function ApiConfigCard({
 
   // When save succeeds and we're pending, start testing (server should be running now)
   useEffect(() => {
-    if (saveStatus === 'success' && config.enabled && pendingSaveRef.current) {
+    if (saveDone && config.enabled && pendingSaveRef.current) {
       pendingSaveRef.current = false;
       clearTimers();
       testTimeoutRef.current = setTimeout(() => {
@@ -128,7 +128,7 @@ export function ApiConfigCard({
         intervalRef.current = setInterval(runTest, 10000);
       }, 500);
     }
-  }, [saveStatus, config.enabled, runTest, clearTimers]);
+  }, [saveDone, config.enabled, runTest, clearTimers]);
 
   const handleToggle = () => {
     const newEnabled = !config.enabled;
@@ -213,24 +213,6 @@ export function ApiConfigCard({
     }
   };
 
-  const getSaveIndicator = () => {
-    if (saveStatus === 'idle') return null;
-
-    const indicators = {
-      saving: { icon: Loader2, text: t('settings.apiConfig.saving'), className: 'animate-spin text-blue-500' },
-      success: { icon: CheckCircle2, text: t('settings.apiConfig.saved'), className: 'text-green-500' },
-      error: { icon: XCircle, text: t('settings.apiConfig.saveFailed'), className: 'text-red-500' },
-    };
-
-    const { icon: Icon, text, className } = indicators[saveStatus];
-    return (
-      <div className="flex items-center gap-1.5 text-xs">
-        <Icon className={`w-3 h-3 ${className}`} />
-        <span className={className}>{text}</span>
-      </div>
-    );
-  };
-
   return (
     <div className="rounded-xl border bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between mb-4">
@@ -284,10 +266,6 @@ export function ApiConfigCard({
             </div>
           )}
         </div>
-      </div>
-
-      <div className="mt-3 pt-2 border-t flex justify-end">
-        {getSaveIndicator()}
       </div>
     </div>
   );

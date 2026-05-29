@@ -544,7 +544,26 @@
     "wordCount": "Words",
     "charCount": "Characters",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "tabs": {
+      "generic": "Generic",
+      "qwen3asr": "Qwen3-ASR"
+    },
+    "qwen3": {
+      "langAuto": "Auto Detect",
+      "languageLabel": "Language",
+      "languageHint": "Supports 30 languages + 22 Chinese dialects",
+      "backend": "Backend",
+      "notDetected": "No loaded Qwen3-ASR model detected",
+      "notDetectedHint": "Please select a Qwen3-ASR model from the list below to load",
+      "noModels": "No Qwen3-ASR models found",
+      "noModelsHint": "Please ensure Qwen3-ASR model paths are configured and scanned",
+      "modelLoading": "Model is loading, please wait...",
+      "modelNotLoaded": "Model not loaded",
+      "modelError": "Model encountered an error",
+      "loadModel": "Load Model",
+      "loadModelToTranscribe": "Load Model & Transcribe"
+    }
   },
   "imageGen": {
     "title": "Image Generation",

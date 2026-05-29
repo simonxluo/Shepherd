@@ -544,7 +544,26 @@
     "wordCount": "词数",
     "charCount": "字符数",
     "copy": "复制",
-    "copied": "已复制"
+    "copied": "已复制",
+    "tabs": {
+      "generic": "通用",
+      "qwen3asr": "Qwen3-ASR"
+    },
+    "qwen3": {
+      "langAuto": "自动检测",
+      "languageLabel": "语言",
+      "languageHint": "支持 30 种语言 + 22 种中文方言",
+      "backend": "后端",
+      "notDetected": "未检测到已加载的 Qwen3-ASR 模型",
+      "notDetectedHint": "请从下方列表中选择一个 Qwen3-ASR 模型进行加载",
+      "noModels": "未扫描到 Qwen3-ASR 模型",
+      "noModelsHint": "请确认已配置 Qwen3-ASR 模型路径并完成扫描",
+      "modelLoading": "模型加载中，请稍候...",
+      "modelNotLoaded": "模型未加载",
+      "modelError": "模型遇到错误",
+      "loadModel": "加载模型",
+      "loadModelToTranscribe": "加载模型并识别"
+    }
   },
   "imageGen": {
     "title": "图像生成",
