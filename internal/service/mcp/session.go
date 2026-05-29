@@ -7,6 +7,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	sessionMaxAge         = 30 * time.Minute
+	sessionCleanupInterval = 5 * time.Minute
+)
+
 // Session represents an active MCP session for the MCP Server.
 type Session struct {
 	ID        string
@@ -18,13 +23,17 @@ type Session struct {
 type SessionManager struct {
 	sessions map[string]*Session
 	mu       sync.RWMutex
+	stopCh   chan struct{}
 }
 
-// NewSessionManager creates a new session manager.
+// NewSessionManager creates a new session manager with automatic cleanup.
 func NewSessionManager() *SessionManager {
-	return &SessionManager{
+	sm := &SessionManager{
 		sessions: make(map[string]*Session),
+		stopCh:   make(chan struct{}),
 	}
+	go sm.cleanupLoop()
+	return sm
 }
 
 // Create creates a new session and returns its ID.
@@ -41,10 +50,10 @@ func (sm *SessionManager) Create() string {
 	return id
 }
 
-// Get retrieves a session by ID.
+// Get retrieves a session by ID and updates its last-used timestamp.
 func (sm *SessionManager) Get(id string) (*Session, bool) {
-	sm.mu.RLock()
-	defer sm.mu.RUnlock()
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
 
 	s, ok := sm.sessions[id]
 	if ok {
@@ -69,6 +78,25 @@ func (sm *SessionManager) Cleanup(maxAge time.Duration) {
 	for id, s := range sm.sessions {
 		if s.LastUsed.Before(cutoff) {
 			delete(sm.sessions, id)
+		}
+	}
+}
+
+// Stop stops the background cleanup goroutine.
+func (sm *SessionManager) Stop() {
+	close(sm.stopCh)
+}
+
+// cleanupLoop periodically removes stale sessions.
+func (sm *SessionManager) cleanupLoop() {
+	ticker := time.NewTicker(sessionCleanupInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			sm.Cleanup(sessionMaxAge)
+		case <-sm.stopCh:
+			return
 		}
 	}
 }

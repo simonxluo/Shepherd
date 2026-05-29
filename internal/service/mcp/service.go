@@ -77,6 +77,9 @@ func (s *Service) Initialize() error {
 
 // Stop performs cleanup.
 func (s *Service) Stop() {
+	// Stop session cleanup goroutine
+	s.Server.GetSessionManager().Stop()
+
 	// Save registry state to file as backup
 	if err := s.Registry.Save(); err != nil {
 		logger.Warnf("failed to save MCP registry: %v", err)
@@ -154,6 +157,11 @@ func (s *Service) RefreshServer(id string) ([]Tool, error) {
 
 	// Persist tools to database
 	s.persistToolsToDB(id, tools)
+
+	// Persist updated server status to database
+	if updated, ok := s.Registry.GetServer(id); ok {
+		s.persistServerToDB(updated)
+	}
 
 	if err := s.Registry.Save(); err != nil {
 		logger.Warnf("MCP: failed to save registry after refresh: %v", err)

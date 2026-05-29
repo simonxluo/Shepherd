@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/simonxluo/Shepherd/internal/comm/config"
@@ -85,7 +84,7 @@ func (m *Manager) ListModels() []*Model {
 	return models
 }
 
-// GetStatus returns the status of a model
+// GetStatus returns a copy of the specified model's status (safe copy without sync primitives).
 func (m *Manager) GetStatus(modelID string) (*ModelStatus, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -95,16 +94,11 @@ func (m *Manager) GetStatus(modelID string) (*ModelStatus, bool) {
 		return nil, false
 	}
 
-	// Return a copy (reset sync fields to avoid copylocks)
-	statusCopy := *status //nolint:copylocks
-	statusCopy.mu = sync.Mutex{}
-	statusCopy.tokenMu = sync.Mutex{}
-	statusCopy.LoadWait = sync.WaitGroup{}
-	statusCopy.InflightWg = sync.WaitGroup{}
-	statusCopy.ConcurrencySem = nil
-	return &statusCopy, true
+	return copyModelStatus(status), true
 }
 
+// GetStatusRef returns a direct reference to the model status (not a copy).
+// Callers must handle synchronization carefully.
 func (m *Manager) GetStatusRef(modelID string) (*ModelStatus, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -113,20 +107,14 @@ func (m *Manager) GetStatusRef(modelID string) (*ModelStatus, bool) {
 	return status, exists
 }
 
-// ListStatus returns all model statuses
+// ListStatus returns copies of all model statuses.
 func (m *Manager) ListStatus() map[string]*ModelStatus {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	statuses := make(map[string]*ModelStatus, len(m.statuses))
 	for k, v := range m.statuses {
-		statusCopy := *v //nolint:copylocks
-		statusCopy.mu = sync.Mutex{}
-		statusCopy.tokenMu = sync.Mutex{}
-		statusCopy.LoadWait = sync.WaitGroup{}
-		statusCopy.InflightWg = sync.WaitGroup{}
-		statusCopy.ConcurrencySem = nil
-		statuses[k] = &statusCopy
+		statuses[k] = copyModelStatus(v)
 	}
 
 	return statuses
@@ -368,6 +356,7 @@ func (m *Manager) saveModels() {
 	}
 }
 
+// GetLoadedModelCount returns the number of models currently in StateLoaded.
 func (m *Manager) GetLoadedModelCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -381,7 +370,7 @@ func (m *Manager) GetLoadedModelCount() int {
 	return count
 }
 
-// saveCapabilities 将检测到的模型能力保存到数据库
+// saveCapabilities persists detected model capabilities to the database.
 func (m *Manager) saveCapabilities(modelID string, caps *storage.Capabilities) {
 	ctx := context.Background()
 	existingMeta, err := m.storageMgr.GetStore().GetModelMetadata(ctx, modelID)
@@ -400,7 +389,7 @@ func (m *Manager) saveCapabilities(modelID string, caps *storage.Capabilities) {
 	}
 }
 
-// updateModelMetadata 获取或创建模型元数据，应用更新函数后保存
+// updateModelMetadata retrieves or creates model metadata, applies the update function, and saves it.
 func (m *Manager) updateModelMetadata(modelID string, model *Model, updateFn func(*storage.ModelMetadata)) error {
 	if m.storageMgr == nil {
 		return nil
@@ -429,4 +418,36 @@ func (m *Manager) updateModelMetadata(modelID string, model *Model, updateFn fun
 		return fmt.Errorf("failed to save model metadata: %w", err)
 	}
 	return nil
+}
+
+// copyModelStatus creates a shallow copy of ModelStatus with sync primitives reset to zero values.
+// This avoids the copylocks issue when returning status snapshots to callers.
+func copyModelStatus(s *ModelStatus) *ModelStatus {
+	s.mu.Lock()
+	s.tokenMu.Lock()
+	cp := &ModelStatus{
+		ID:                    s.ID,
+		InstanceID:            s.InstanceID,
+		Name:                  s.Name,
+		State:                 s.State,
+		ProcessID:             s.ProcessID,
+		Port:                  s.Port,
+		CtxSize:               s.CtxSize,
+		LoadedAt:              s.LoadedAt,
+		BackendType:           s.BackendType,
+		Error:                 s.Error,
+		LastRequestTime:       s.LastRequestTime,
+		ConcurrencyLimit:      s.ConcurrencyLimit,
+		UnloadAfter:           s.UnloadAfter,
+		TotalPromptTokens:     s.TotalPromptTokens,
+		TotalCompletionTokens: s.TotalCompletionTokens,
+		RequestCount:          s.RequestCount,
+		ErrorCount:            s.ErrorCount,
+		TotalLatencyMs:        s.TotalLatencyMs,
+		FirstRequestAt:        s.FirstRequestAt,
+		LastRequestAt:         s.LastRequestAt,
+	}
+	s.tokenMu.Unlock()
+	s.mu.Unlock()
+	return cp
 }

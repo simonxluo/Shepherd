@@ -1,5 +1,5 @@
-// Package model provides model scanning and management functionality.
-// It handles discovering GGUF models, reading their metadata, and managing model loading.
+// Package model provides model scanning and lifecycle management functionality.
+// It handles discovering GGUF models, reading their metadata, and managing model loading/unloading.
 package model
 
 import (
@@ -52,6 +52,18 @@ type Model struct {
 	TotalTokens int64     // Total tokens generated (if tracked)
 }
 
+// ModelStatus represents the runtime state of a model, including process info,
+// concurrency control, and request statistics.
+//
+// State machine: StateUnloaded -> StateLoading -> StateLoaded -> StateUnloading -> StateUnloaded
+//
+//	StateLoading/StateLoaded/StateUnloading -> StateError (on failure)
+//	StateError -> StateUnloaded (on recovery)
+//
+// Concurrency notes:
+//   - mu: protects State, Port, ProcessID and other state transition fields
+//   - tokenMu: independently protects token statistics to avoid contention with mu
+//   - InflightCount/InflightWg: atomic ops + WaitGroup, lock-free
 type ModelStatus struct {
 	ID          string
 	InstanceID  string
@@ -84,6 +96,8 @@ type ModelStatus struct {
 	tokenMu               sync.Mutex
 }
 
+// transitionTo transitions the model to newState.
+// Returns an error if the transition is invalid (not in validTransitions table).
 func (s *ModelStatus) transitionTo(newState LoadState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -95,6 +109,8 @@ func (s *ModelStatus) transitionTo(newState LoadState) error {
 	return nil
 }
 
+// LoadState represents the loading state of a model.
+// String() returns the user-facing state name (stopped/loading/running/unloading/error).
 type LoadState int
 
 const (

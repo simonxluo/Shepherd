@@ -835,6 +835,8 @@
       "exposeTts": "暴露 TTS",
       "exposeAsr": "暴露 ASR",
       "exposeChat": "暴露 Chat",
+      "clientSettings": "客户端设置",
+      "clientEnabled": "启用 MCP 客户端",
       "importConfig": "导入配置",
       "importConfigDesc": "粘贴 MCP 服务器配置 JSON"
     },

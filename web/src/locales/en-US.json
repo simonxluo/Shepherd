@@ -835,6 +835,8 @@
       "exposeTts": "Expose TTS",
       "exposeAsr": "Expose ASR",
       "exposeChat": "Expose Chat",
+      "clientSettings": "Client Settings",
+      "clientEnabled": "Enable MCP Client",
       "importConfig": "Import Config",
       "importConfigDesc": "Paste MCP server configuration JSON"
     },

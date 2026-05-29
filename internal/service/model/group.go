@@ -4,6 +4,13 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 )
 
+// ModelGroup defines a model group supporting llama-swap style model swapping
+// and exclusive loading behavior.
+//
+// Fields:
+//   - Swap: models in the same group are mutually exclusive — loading one auto-unloads others
+//   - Exclusive: exclusive mode — loading a model in this group also unloads non-persistent groups
+//   - Persistent: persistent groups are never unloaded by exclusive rules
 type ModelGroup struct {
 	ID         string
 	Models     []string
@@ -43,6 +50,7 @@ func (m *Manager) loadGroupsFromConfig() {
 	logger.Infof("loadGroupsFromConfig: loaded %d model group(s)", len(m.groups))
 }
 
+// findGroupForModel returns the group that contains the given model ID, or nil if not in any group.
 func (m *Manager) findGroupForModel(modelID string) *ModelGroup {
 	for _, g := range m.groups {
 		for _, id := range g.Models {
@@ -54,6 +62,10 @@ func (m *Manager) findGroupForModel(modelID string) *ModelGroup {
 	return nil
 }
 
+// swapBeforeLoad executes group swap logic before loading a model.
+// If the model belongs to a Swap group, it unloads other loaded models in that group.
+// If the group is also marked Exclusive, it additionally unloads models from
+// other non-Persistent groups.
 func (m *Manager) swapBeforeLoad(modelID string) error {
 	group := m.findGroupForModel(modelID)
 	if group == nil || !group.Swap {

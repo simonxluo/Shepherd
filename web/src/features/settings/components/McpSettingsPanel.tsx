@@ -21,18 +21,20 @@ export function McpSettingsPanel() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const [serversRes, configRes] = await Promise.all([
         listMCPServers(),
         getMCPConfig(),
       ]);
       setServers(serversRes.servers || []);
       setConfig(configRes);
-    } catch {
-      // ignore
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load MCP data');
     } finally {
       setLoading(false);
     }
@@ -44,30 +46,33 @@ export function McpSettingsPanel() {
 
   const handleAddServer = async (serverConfig: MCPServerConfig) => {
     try {
+      setError(null);
       await addMCPServer(serverConfig);
       setShowAddDialog(false);
       await fetchData();
-    } catch {
-      // ignore
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to add server');
     }
   };
 
   const handleRemoveServer = async (id: string) => {
     try {
+      setError(null);
       await removeMCPServer(id);
       await fetchData();
-    } catch {
-      // ignore
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to remove server');
     }
   };
 
   const handleRefreshServer = async (id: string) => {
     try {
+      setError(null);
       setRefreshingId(id);
       await refreshMCPServer(id);
       await fetchData();
-    } catch {
-      // ignore
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to refresh server');
     } finally {
       setRefreshingId(null);
     }
@@ -75,10 +80,11 @@ export function McpSettingsPanel() {
 
   const handleConfigChange = async (newConfig: MCPConfig) => {
     try {
+      setError(null);
       await updateMCPConfig(newConfig);
       setConfig(newConfig);
-    } catch {
-      // ignore
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to update config');
     }
   };
 
@@ -92,6 +98,13 @@ export function McpSettingsPanel() {
 
   return (
     <div className="space-y-6 p-4 overflow-y-auto h-full">
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center justify-between rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-2 text-xs hover:underline">✕</button>
+        </div>
+      )}
       {/* MCP Server Mode Toggle */}
       {config && (
         <section className="space-y-3">
@@ -130,6 +143,57 @@ export function McpSettingsPanel() {
               handleConfigChange({ ...config, server: { ...config.server, enabled: v } })
             }
           />
+        </section>
+      )}
+
+      {/* MCP Client Settings */}
+      {config && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Wrench size={18} className="text-muted-foreground" />
+            <h3 className="text-sm font-medium">{t('settings.mcp.clientSettings')}</h3>
+          </div>
+          <ToggleItem
+            label={t('settings.mcp.clientEnabled')}
+            checked={config.client.enabled}
+            onChange={(v) =>
+              handleConfigChange({ ...config, client: { ...config.client, enabled: v } })
+            }
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs text-muted-foreground">{t('settings.mcp.callTimeout')}</label>
+              <input
+                type="number"
+                min={10}
+                max={600}
+                value={config.client.callTimeout}
+                onChange={(e) =>
+                  handleConfigChange({
+                    ...config,
+                    client: { ...config.client, callTimeout: parseInt(e.target.value) || 120 },
+                  })
+                }
+                className="w-full mt-1 px-2 py-1 border rounded-md bg-background text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">{t('settings.mcp.readyTimeout')}</label>
+              <input
+                type="number"
+                min={5}
+                max={120}
+                value={config.client.readyTimeout}
+                onChange={(e) =>
+                  handleConfigChange({
+                    ...config,
+                    client: { ...config.client, readyTimeout: parseInt(e.target.value) || 30 },
+                  })
+                }
+                className="w-full mt-1 px-2 py-1 border rounded-md bg-background text-sm"
+              />
+            </div>
+          </div>
         </section>
       )}
 

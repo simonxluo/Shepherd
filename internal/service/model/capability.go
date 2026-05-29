@@ -8,7 +8,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
-// 能力检测关键词常量
+// Capability detection keyword constants
 const (
 	kwRerank                 = "rerank"
 	kwReRank                 = "re-rank"
@@ -87,8 +87,8 @@ const (
 	kwAceStepAlt  = "ace-step"
 )
 
-// 架构→能力映射关键词表
-// 参考 llama.cpp (llama-arch.h) 和 LM Studio (architectureStylizations.ts) 的架构分类
+// Architecture-to-capability keyword mapping tables.
+// Reference: llama.cpp (llama-arch.h) and LM Studio (architectureStylizations.ts) architecture classifications.
 var (
 	embeddingArchKeywords = []string{
 		"bert", "nomic-bert", "modern-bert", "neo-bert",
@@ -165,14 +165,14 @@ var (
 	}
 )
 
-// DetectCapabilities 自动检测 GGUF 模型能力
+// DetectCapabilities auto-detects GGUF model capabilities.
 //
-// 检测优先级:
-// P1: general.type 过滤（非 model 类型直接返回空能力）
-// P2: pooling_type（GGUF 结构化元数据，最可靠的 embedding/rerank 检测信号）
-// P3: architecture 名称映射（已知架构关键词匹配）
-// P4: 模型名称关键词 fallback
-// P5: chat_template 检测（tools/thinking）
+// Detection priority:
+//   - P1: general.type filter (non-"model" types return empty capabilities)
+//   - P2: pooling_type (structured GGUF metadata, most reliable embedding/rerank signal)
+//   - P3: architecture name mapping (known architecture keyword matching)
+//   - P4: model name keyword fallback
+//   - P5: chat_template inspection (tools/thinking support)
 func DetectCapabilities(meta *gguf.Metadata) *storage.Capabilities {
 	if meta == nil {
 		return &storage.Capabilities{}
@@ -258,13 +258,13 @@ func DetectCapabilities(meta *gguf.Metadata) *storage.Capabilities {
 	return caps
 }
 
-// DetectCapabilitiesFromHF 检测 HuggingFace 模型能力
+// DetectCapabilitiesFromHF detects HuggingFace model capabilities.
 //
-// 检测优先级:
-// P1: diffusers 类名检测
-// P2: HF architectures 字段映射
-// P3: HF model_type 字段映射
-// P4: 名称关键词 fallback（使用 DirName + Name + ModelType + Architectures）
+// Detection priority:
+//   - P1: diffusers class name detection
+//   - P2: HF architectures field mapping
+//   - P3: HF model_type field mapping
+//   - P4: name keyword fallback (using DirName + Name + ModelType + Architectures)
 func DetectCapabilitiesFromHF(hfInfo *huggingface.HFModelInfo) *storage.Capabilities {
 	caps := &storage.Capabilities{}
 

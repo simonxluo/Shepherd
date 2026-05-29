@@ -14,13 +14,26 @@ import (
 	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
-// Manager manages model scanning and loading
+// Manager is the central model manager responsible for scanning, loading,
+// unloading, and lifecycle management of inference models.
+//
+// Core responsibilities:
+//   - Scan configured paths to discover GGUF/HuggingFace models
+//   - Start inference processes via the Backend Registry
+//   - Manage runtime state (loading/loaded/unloading/error)
+//   - TTL-based auto-unload of idle models
+//   - Inflight request tracking and concurrency limiting
+//   - Model group swapping (llama-swap style)
+//
+// Concurrency: all public methods are thread-safe, protected by mu (RWMutex).
+// The atomic version counter is incremented on every models/statuses mutation
+// and can be used externally for cache invalidation.
 type Manager struct {
 	config        *config.Config
 	configMgr     *config.Manager
 	processMgr    *process.Manager
 	portAllocator *port.PortAllocator
-	storageMgr    *storage.Manager // 数据库存储管理器
+	storageMgr    *storage.Manager // database storage manager
 
 	// Backend registry for multi-backend support
 	backendRegistry *backend.Registry
@@ -43,7 +56,7 @@ type Manager struct {
 	wg          sync.WaitGroup
 }
 
-// ScanStatus represents the current scan status
+// ScanStatus represents the progress of an ongoing model scan operation.
 type ScanStatus struct {
 	Scanning    bool
 	Progress    float64
@@ -52,7 +65,8 @@ type ScanStatus struct {
 	Errors      []ScanError
 }
 
-// NewManager creates a new model manager
+// NewManager creates and initializes a model manager.
+// Initialization sequence: create backend registry -> load saved models from config -> start TTL checker.
 func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Manager, portAllocator *port.PortAllocator, storageMgr *storage.Manager) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -97,7 +111,7 @@ func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Man
 	return m
 }
 
-// Close closes the manager
+// Close shuts down the manager, cancels all background goroutines and waits for them to exit.
 func (m *Manager) Close() error {
 	m.cancel()
 	m.wg.Wait()
@@ -123,12 +137,12 @@ func (m *Manager) bumpVersion() {
 	m.version.Add(1)
 }
 
-// GetProcessManager returns the process manager
+// GetProcessManager returns the process manager instance.
 func (m *Manager) GetProcessManager() *process.Manager {
 	return m.processMgr
 }
 
-// GetModelCapabilities 从存储获取模型能力信息
+// GetModelCapabilities retrieves model capabilities from storage.
 func (m *Manager) GetModelCapabilities(modelID string) *storage.Capabilities {
 	if m.storageMgr == nil {
 		return nil
@@ -141,7 +155,7 @@ func (m *Manager) GetModelCapabilities(modelID string) *storage.Capabilities {
 	return meta.Capabilities
 }
 
-// GetBackendForModel 根据已加载模型的后端类型获取后端实例
+// GetBackendForModel returns the backend instance for a loaded model based on its backend type.
 func (m *Manager) GetBackendForModel(modelID string) backend.Backend {
 	m.mu.RLock()
 	status, exists := m.statuses[modelID]

@@ -3,7 +3,6 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
@@ -15,7 +14,6 @@ type Client struct {
 	streamableTransport *StreamableHTTPTransport
 	registry            *Registry
 	callTimeout         time.Duration
-	mu                  sync.RWMutex
 }
 
 // NewClient creates a new MCP client.

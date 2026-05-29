@@ -99,7 +99,7 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 	return proc, allocatedPort, b, nil
 }
 
-// LoadAsync 异步加载模型（立即返回，后台加载）
+// LoadAsync loads a model asynchronously (returns immediately, loads in background).
 func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 	if req.InstanceID == "" {
 		req.InstanceID = generateRuntimeInstanceID(req.ModelID)
@@ -180,8 +180,8 @@ func (m *Manager) LoadAsync(req *LoadRequest) (*LoadResult, error) {
 	}, nil
 }
 
-// loadModelAsync 后台异步加载模型
-// model 参数已在 LoadAsync 中获取，避免在此 goroutine 中再次获取锁导致死锁
+// loadModelAsync runs the actual model loading in a background goroutine.
+// The model parameter is pre-fetched in LoadAsync to avoid re-acquiring locks in this goroutine.
 func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *Model) {
 	startTime := time.Now()
 
@@ -330,7 +330,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 	}
 }
 
-// calculateLoadTimeout 根据模型大小计算动态超时时间
+// calculateLoadTimeout computes a dynamic timeout based on model file size.
 func (m *Manager) calculateLoadTimeout(modelSize int64) time.Duration {
 	const (
 		minTimeout   = 5 * time.Minute

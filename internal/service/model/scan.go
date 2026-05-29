@@ -559,8 +559,8 @@ func expandPath(path string) string {
 	return path
 }
 
-// getScanPaths returns the list of scan paths (from PathConfigs or Paths)
-// 从配置管理器获取最新配置，而不是使用初始化时的静态快照
+// getScanPaths returns the list of scan paths (from PathConfigs or Paths).
+// Reads from the config manager for the latest config, rather than the initial static snapshot.
 func (m *Manager) getScanPaths() []string {
 	// 获取配置:优先使用 configMgr,如果为 nil 则使用传入的 config
 	var cfg *config.Config
@@ -643,8 +643,8 @@ func (m *Manager) calculatePathPrefix(path string) string {
 	return filepath.Base(dir)
 }
 
-// isSplitGGUF 检查是否为分卷文件
-// 返回：是否为分卷、基础名称、分卷号、总分卷数
+// isSplitGGUF checks whether the filename represents a split GGUF shard.
+// Returns: isSplit, baseName, partNumber, totalParts.
 func isSplitGGUF(filename string) (bool, string, int, int) {
 	// 匹配模式: "name-00001-of-00006.gguf"
 	matches := reSplitGGUF.FindStringSubmatch(filename)
@@ -656,7 +656,7 @@ func isSplitGGUF(filename string) (bool, string, int, int) {
 	return false, "", 0, 0
 }
 
-// extractModelName 从文件名提取模型名称，移除分卷后缀
+// extractModelName extracts the model name from a filename, removing the split shard suffix.
 func extractModelName(filename string) string {
 	// 移除扩展名
 	name := strings.TrimSuffix(filename, ".gguf")
@@ -668,15 +668,15 @@ func extractModelName(filename string) string {
 	return name
 }
 
-// generateUnifiedModelID 为分卷模型生成统一的模型ID
+// generateUnifiedModelID generates a unified model ID for a split/sharded model.
 func generateUnifiedModelID(baseName string, partsCount int) string {
 	hash := sha256.Sum256([]byte(baseName))
 	hashStr := hex.EncodeToString(hash[:8])
 	return fmt.Sprintf("%s-%dparts-%s", baseName, partsCount, hashStr)
 }
 
-// mergeSplitModels 合并分卷文件为单个模型
-// 返回合并的组数量
+// mergeSplitModels merges split GGUF shards into a single unified model entry.
+// Returns the number of merged groups.
 func (m *Manager) mergeSplitModels() int {
 	// 按目录和基础名称分组
 	groups := make(map[string][]*Model)

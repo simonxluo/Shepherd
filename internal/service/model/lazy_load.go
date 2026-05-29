@@ -6,6 +6,16 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 )
 
+// EnsureLoaded ensures the specified model is in a loaded state (lazy loading).
+//
+// Behavior:
+//   - If already loaded: returns its listening port immediately
+//   - If currently loading: blocks until loading completes
+//   - If not loaded: triggers an async load and blocks until complete
+//
+// Uses a default CtxSize of 4096. Intended for protocol compatibility layers
+// to automatically load models upon receiving inference requests.
+// Returns the model's listening port or an error if loading fails.
 func (m *Manager) EnsureLoaded(modelID string) (int, error) {
 	m.mu.RLock()
 	status, exists := m.statuses[modelID]
