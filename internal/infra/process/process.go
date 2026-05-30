@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/simonxluo/Shepherd/internal/comm/logger"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"io"
 	"os"
@@ -338,7 +339,7 @@ func (p *Process) handleOutputLine(line string) {
 	}
 
 	if len(line) > 0 && line[0] != '[' {
-		fmt.Printf("[%s] %s\n", p.Name, line)
+		logger.Debug(fmt.Sprintf("[%s] %s", p.Name, line))
 	}
 }
 

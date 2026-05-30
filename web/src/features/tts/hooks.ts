@@ -132,9 +132,6 @@ function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
     seed: (raw.seed as string) || undefined,
     maxNewTokens: (raw.maxNewTokens as string) || undefined,
     language: (raw.language as string) || undefined,
-    mode: (raw.mode as string) || undefined,
-    voiceDesignPrompt: (raw.voiceDesignPrompt as string) || undefined,
-    styleDescription: (raw.styleDescription as string) || undefined,
   };
 }
 

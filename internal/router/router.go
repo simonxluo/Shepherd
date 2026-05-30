@@ -120,6 +120,8 @@ type ServerHandlers interface {
 	HandleCreateImage(c *gin.Context)
 	HandleCreateMusic(c *gin.Context)
 	HandleListVoices(c *gin.Context)
+	HandleUploadVoice(c *gin.Context)
+	HandleDeleteVoice(c *gin.Context)
 
 	// Model proxy (forward to running llama.cpp)
 	HandleModelTokenize(c *gin.Context)
@@ -476,6 +478,8 @@ func registerCompatibilityRoutes(engine *gin.Engine, sh ServerHandlers) {
 		openai.GET("/models", sh.HandleOpenAIModels)
 		openai.POST("/audio/speech", sh.HandleCreateSpeech)
 		openai.GET("/audio/voices", sh.HandleListVoices)
+		openai.POST("/audio/voices", sh.HandleUploadVoice)
+		openai.DELETE("/audio/voices/:name", sh.HandleDeleteVoice)
 		openai.POST("/audio/transcriptions", sh.HandleCreateTranscription)
 		openai.POST("/audio/translations", sh.HandleCreateTranslation)
 		openai.POST("/images/generations", sh.HandleCreateImage)

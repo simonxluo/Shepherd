@@ -18,7 +18,7 @@ const voxcpm2Plugin: TTSPlugin = {
   component: VoxCPM2Panel,
   features: {
     supportsVoiceSelection: false,   // VoxCPM2 has no preset voices; voice field ignored
-    supportsInstructions: false,     // Not a standalone param; uses bracket convention
+    supportsInstructions: true,      // Instructions for voice design / style description
     supportsRefAudio: true,
     supportsStreamPcm: true,
     supportsVoiceDesign: true,       // Voice Design via bracket convention

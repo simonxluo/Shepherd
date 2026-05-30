@@ -5,8 +5,8 @@ package utils
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
+	"log"
 	"os"
 	"syscall"
 	"time"
@@ -23,7 +23,7 @@ func CloseQuietly(c io.Closer) {
 func RemoveQuietly(path string) {
 	if err := os.Remove(path); err != nil {
 		if !os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "[WARN] 删除文件失败 %s: %v\n", path, err)
+			log.Printf("[WARN] 删除文件失败 %s: %v", path, err)
 		}
 	}
 }
@@ -32,7 +32,7 @@ func RemoveQuietly(path string) {
 // This is useful for HTTP responses where write failures are not critical.
 func WriteQuietly(writer io.Writer, data []byte) {
 	if _, err := writer.Write(data); err != nil {
-		fmt.Fprintf(os.Stderr, "[WARN] 写入失败: %v\n", err)
+		log.Printf("[WARN] 写入失败: %v", err)
 	}
 }
 
@@ -43,7 +43,7 @@ func KillQuietly(process *os.Process) {
 		return
 	}
 	if err := process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
-		fmt.Fprintf(os.Stderr, "[WARN] 终止进程失败 %d: %v\n", process.Pid, err)
+		log.Printf("[WARN] 终止进程失败 %d: %v", process.Pid, err)
 	}
 }
 
@@ -54,7 +54,7 @@ func SignalQuietly(process *os.Process, sig syscall.Signal) {
 		return
 	}
 	if err := process.Signal(sig); err != nil && !errors.Is(err, os.ErrProcessDone) {
-		fmt.Fprintf(os.Stderr, "[WARN] 发送信号失败 %d: %v\n", process.Pid, err)
+		log.Printf("[WARN] 发送信号失败 %d: %v", process.Pid, err)
 	}
 }
 
@@ -76,7 +76,7 @@ func SetWriteDeadlineQuietly(conn interface{ SetWriteDeadline(time.Time) error }
 // Returns true if unmarshaling succeeded, false otherwise.
 func UnmarshalQuietly(data []byte, v interface{}, fieldName string) bool {
 	if err := json.Unmarshal(data, v); err != nil {
-		fmt.Fprintf(os.Stderr, "[WARN] 解析%s失败: %v\n", fieldName, err)
+		log.Printf("[WARN] 解析%s失败: %v", fieldName, err)
 		return false
 	}
 	return true
@@ -85,6 +85,6 @@ func UnmarshalQuietly(data []byte, v interface{}, fieldName string) bool {
 // WriteMessageQuietly writes a WebSocket message and ignores errors.
 func WriteMessageQuietly(conn interface{ WriteMessage(int, []byte) error }, messageType int, data []byte) {
 	if err := conn.WriteMessage(messageType, data); err != nil {
-		fmt.Fprintf(os.Stderr, "[WARN] 写入WebSocket消息失败: %v\n", err)
+		log.Printf("[WARN] 写入WebSocket消息失败: %v", err)
 	}
 }

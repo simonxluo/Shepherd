@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Volume2, Loader2, Settings2, ChevronDown, AlertCircle, Play } from 'lucide-react';
+import { Volume2, Loader2, Settings2, ChevronDown, AlertCircle, Play, Upload, Trash2, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -21,8 +21,7 @@ import { useLoadModel } from '@/features/models';
 import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
 import { cn } from '@/lib/utils';
 import type { TTSPluginPanelProps } from '../../types';
-
-type VoxCPM2Mode = 'standard' | 'voice_design' | 'voice_clone' | 'ultimate_cloning';
+import { listVoices, uploadVoice, deleteVoice, type VoiceInfo } from '@/lib/api/voices';
 
 const VOXCPM2_LANGUAGES = [
   // Auto detect
@@ -107,18 +106,71 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
   const isModelStopped = modelStatus === 'stopped';
   const isModelError = modelStatus === 'error';
 
-  // --- Generation mode & state ---
-  const [mode, setMode] = useState<VoxCPM2Mode>('standard');
+  // --- State (no mode selector — fields are always visible) ---
   const [input, setInput] = useState('');
-  const [voiceDesignPrompt, setVoiceDesignPrompt] = useState('');
-  const [styleDescription, setStyleDescription] = useState('');
   const [refAudio, setRefAudio] = useState('');
   const [refText, setRefText] = useState('');
+  const [instructions, setInstructions] = useState('');
   const [seed, setSeed] = useState('');
   const [maxNewTokens, setMaxNewTokens] = useState('');
   const [language, setLanguage] = useState('auto');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+
+  // Voice management
+  const [uploadedVoices, setUploadedVoices] = useState<VoiceInfo[]>([]);
+  const [isLoadingVoices, setIsLoadingVoices] = useState(false);
+  const [isUploadingVoice, setIsUploadingVoice] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reference audio collapsible
+  const [refAudioOpen, setRefAudioOpen] = useState(false);
+
+  const loadVoices = useCallback(async () => {
+    if (!modelName) return;
+    setIsLoadingVoices(true);
+    try {
+      const res = await listVoices(modelName);
+      setUploadedVoices(res.uploaded_voices || []);
+    } catch {
+      // model may not be loaded yet
+    } finally {
+      setIsLoadingVoices(false);
+    }
+  }, [modelName]);
+
+  const handleUploadVoice = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !modelName) return;
+    const voiceName = file.name.replace(/\.[^.]+$/, '');
+    setIsUploadingVoice(true);
+    try {
+      await uploadVoice(modelName, file, voiceName);
+      toast.success(t('tts.voxcpm2.voiceUploaded', 'Voice uploaded'));
+      await loadVoices();
+    } catch (err) {
+      toast.error(t('tts.voxcpm2.voiceUploadFailed', 'Upload failed'), (err as Error).message);
+    } finally {
+      setIsUploadingVoice(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, [modelName, loadVoices, t]);
+
+  const handleDeleteVoice = useCallback(async (voiceName: string) => {
+    if (!modelName) return;
+    try {
+      await deleteVoice(modelName, voiceName);
+      toast.success(t('tts.voxcpm2.voiceDeleted', 'Voice deleted'));
+      if (selectedVoice === voiceName) setSelectedVoice('');
+      await loadVoices();
+    } catch (err) {
+      toast.error(t('tts.voxcpm2.voiceDeleteFailed', 'Delete failed'), (err as Error).message);
+    }
+  }, [modelName, selectedVoice, loadVoices, t]);
+
+  // Load voices when model is running
+  useEffect(() => { if (isModelRunning) loadVoices(); }, [isModelRunning, loadVoices]);
 
   const isStreamActive = streamState === 'streaming' || streamState === 'playing';
 
@@ -132,11 +184,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
   /* eslint-disable react-hooks/set-state-in-effect -- restoring state from persisted config */
   useEffect(() => {
     if (!ttsConfig) return;
-    if (ttsConfig.mode) {
-      setMode(ttsConfig.mode as VoxCPM2Mode);
-    }
-    if (ttsConfig.voiceDesignPrompt !== undefined) setVoiceDesignPrompt(ttsConfig.voiceDesignPrompt);
-    if (ttsConfig.styleDescription !== undefined) setStyleDescription(ttsConfig.styleDescription);
+    if (ttsConfig.instructions !== undefined) setInstructions(ttsConfig.instructions);
     if (ttsConfig.refAudio !== undefined) setRefAudio(ttsConfig.refAudio);
     if (ttsConfig.refText !== undefined) setRefText(ttsConfig.refText);
     if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
@@ -145,14 +193,12 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
   }, [ttsConfig]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // --- refAudioOverride: auto-switch mode ---
+  // --- refAudioOverride: set ref audio and expand section ---
   /* eslint-disable react-hooks/set-state-in-effect -- syncing external ref audio override */
   useEffect(() => {
     if (!refAudioOverride) return;
     setRefAudio(refAudioOverride);
-    if (mode === 'standard' || mode === 'voice_design') {
-      setMode('voice_clone');
-    }
+    setRefAudioOpen(true);
   }, [refAudioOverride]); // eslint-disable-line react-hooks/exhaustive-deps
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -160,16 +206,13 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
   const getCurrentConfig = useCallback((): TTSConfig => ({
     stream: true,
     responseFormat: 'pcm',
-    mode,
-    voiceDesignPrompt: voiceDesignPrompt || undefined,
-    styleDescription: styleDescription || undefined,
+    instructions: instructions || undefined,
     refAudio: refAudio || undefined,
     refText: refText || undefined,
     seed: seed || undefined,
     maxNewTokens: maxNewTokens || undefined,
     language: language === 'auto' ? undefined : language || undefined,
-  }), [mode, voiceDesignPrompt, styleDescription, refAudio, refText,
-       seed, maxNewTokens, language]);
+  }), [instructions, refAudio, refText, seed, maxNewTokens, language]);
 
   const handleSaveToServer = useCallback(() => {
     if (!modelIdForConfig) return;
@@ -185,16 +228,12 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
   }, [modelIdForConfig, deleteConfig, t]);
 
   const handleLoadConfig = useCallback((cfg: TTSConfig) => {
-    if (cfg.mode) {
-      setMode(cfg.mode as VoxCPM2Mode);
-    }
+    if (cfg.instructions !== undefined) setInstructions(cfg.instructions);
     if (cfg.refAudio !== undefined) setRefAudio(cfg.refAudio);
     if (cfg.refText !== undefined) setRefText(cfg.refText);
     if (cfg.seed !== undefined) setSeed(cfg.seed);
     if (cfg.maxNewTokens !== undefined) setMaxNewTokens(cfg.maxNewTokens);
     if (cfg.language !== undefined) setLanguage(cfg.language || 'auto');
-    if (cfg.voiceDesignPrompt !== undefined) setVoiceDesignPrompt(cfg.voiceDesignPrompt);
-    if (cfg.styleDescription !== undefined) setStyleDescription(cfg.styleDescription);
   }, []);
 
   // --- Generate logic ---
@@ -215,63 +254,34 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
       toast.error(t('tts.modelError', 'Model encountered an error, please check model status'));
       return;
     }
-
-    // Mode-specific validation
-    const needsInput = mode !== 'ultimate_cloning';
-    if (needsInput && !input.trim()) {
+    if (!input.trim()) {
       toast.warning(t('tts.inputRequired', 'Please enter text'));
       return;
-    }
-    if (mode === 'voice_clone' && !refAudio) {
-      toast.warning(t('tts.voxcpm2.refAudioHint', 'Please provide reference audio'));
-      return;
-    }
-    if (mode === 'ultimate_cloning' && !refAudio) {
-      toast.warning(t('tts.voxcpm2.refAudioHint', 'Please provide reference audio'));
-      return;
-    }
-    if (mode === 'voice_design' && !voiceDesignPrompt.trim()) {
-      toast.warning(t('tts.voxcpm2.voiceDesignLabel', 'Please enter voice description'));
-      return;
-    }
-
-    // Build input text with bracket convention
-    let formattedInput = input.trim();
-    if (mode === 'voice_design' && voiceDesignPrompt.trim()) {
-      formattedInput = `(${voiceDesignPrompt.trim()})${formattedInput}`;
-    }
-    if (mode === 'voice_clone' && styleDescription.trim()) {
-      formattedInput = `(${styleDescription.trim()})${formattedInput}`;
     }
 
     const payload: TTSRequest = {
       model: modelName,
-      input: mode === 'ultimate_cloning' ? (refText || '') : formattedInput,
+      input: input.trim(),
       response_format: 'pcm',
       stream: true,
     };
 
-    // Mode-specific params
-    if (mode === 'voice_clone' && refAudio) {
+    if (selectedVoice) {
+      payload.voice = selectedVoice;
+    } else if (refAudio) {
       payload.ref_audio = refAudio;
-      payload.ref_text = refText || undefined;
-    }
-    if (mode === 'ultimate_cloning' && refAudio) {
-      payload.ref_audio = refAudio;
-      payload.ref_text = refText || undefined;
     }
 
-    // Common params
+    if (refText.trim()) payload.ref_text = refText.trim();
+    if (instructions.trim()) payload.instructions = instructions.trim();
     if (seed) payload.seed = parseInt(seed, 10) || undefined;
     if (maxNewTokens) payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
     if (language && language !== 'auto') payload.language = language;
 
     onGenerate(payload);
-  }, [modelName, mode, input, voiceDesignPrompt, styleDescription,
-       refAudio, refText,
-       seed, maxNewTokens, language,
-       isModelStopped, isModelLoading, isModelError,
-       onGenerate, t]);
+  }, [modelName, input, refAudio, refText, instructions,
+       selectedVoice, seed, maxNewTokens, language,
+       isModelStopped, isModelLoading, isModelError, onGenerate, t]);
 
   // --- Auto-transcribe ---
   const handleAutoTranscribe = useCallback(() => {
@@ -372,140 +382,161 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
         )}
       </div>
 
-      {/* Mode selector */}
+      {/* Input Text — always visible */}
       <div>
         <label className="block text-sm font-medium mb-1.5">
-          {t('tts.voxcpm2.modeLabel')}
+          {t('tts.inputLabel', 'Input Text')}
         </label>
-        <Select value={mode} onValueChange={(v) => setMode(v as VoxCPM2Mode)}>
+        <Textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={t('tts.inputPlaceholder', 'Enter text to convert to speech...')}
+          className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
+          rows={4}
+        />
+      </div>
+
+      {/* Language selector — always visible */}
+      <div>
+        <label className="block text-sm font-medium mb-1.5">
+          {t('tts.languageLabel', 'Language')}
+        </label>
+        <Select value={language} onValueChange={setLanguage}>
           <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-            <SelectValue />
+            <SelectValue placeholder={t('tts.languageAuto', 'Auto Detect')} />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="standard">{t('tts.voxcpm2.modeStandard')}</SelectItem>
-            <SelectItem value="voice_design">{t('tts.voxcpm2.modeVoiceDesign')}</SelectItem>
-            <SelectItem value="voice_clone">{t('tts.voxcpm2.modeVoiceClone')}</SelectItem>
-            <SelectItem value="ultimate_cloning">{t('tts.voxcpm2.modeUltimateCloning')}</SelectItem>
+          <SelectContent position="popper" className="!max-h-[300px]">
+            <SelectItem value="auto">{t('tts.languageAuto', 'Auto Detect')}</SelectItem>
+            <SelectSeparator />
+            <SelectGroup>
+              <SelectLabel>{t('tts.languageOfficial', 'Official Languages')}</SelectLabel>
+              {VOXCPM2_LANGUAGES.filter(l => l.group === 'official').map(l => (
+                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+              ))}
+            </SelectGroup>
+            <SelectSeparator />
+            <SelectGroup>
+              <SelectLabel>{t('tts.languageDialects', 'Chinese Dialects')}</SelectLabel>
+              {VOXCPM2_LANGUAGES.filter(l => l.group === 'dialect').map(l => (
+                <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
       </div>
 
-      {/* ===== Standard mode ===== */}
-      {mode === 'standard' && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.inputLabel', 'Input Text')}
-            </label>
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={t('tts.inputPlaceholder', 'Enter text to convert to speech...')}
-              className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
-              rows={4}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('tts.voxcpm2.voiceDesignHint')}
-            </p>
-          </div>
-        </>
-      )}
+      {/* Reference Audio — collapsible, default folded */}
+      <Collapsible open={refAudioOpen} onOpenChange={setRefAudioOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full justify-between p-0 h-auto text-sm font-medium hover:bg-transparent">
+            <span className="flex items-center gap-2">
+              <Mic className="w-4 h-4" />
+              {t('tts.voxcpm2.refAudioSection', 'Reference Audio')}
+            </span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${refAudioOpen ? 'rotate-180' : ''}`} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 pt-2">
+          {/* Voice Library */}
+          <div className="space-y-2 rounded-lg border p-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">
+                {t('tts.voxcpm2.voiceLibrary', 'Voice Library')}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={handleUploadVoice}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  disabled={!isModelRunning || isUploadingVoice}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {isUploadingVoice ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                  {t('tts.voxcpm2.uploadVoice', 'Upload')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  disabled={isLoadingVoices}
+                  onClick={loadVoices}
+                >
+                  {isLoadingVoices ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  {t('tts.voxcpm2.refresh', 'Refresh')}
+                </Button>
+              </div>
+            </div>
 
-      {/* ===== Voice Design mode ===== */}
-      {mode === 'voice_design' && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.voxcpm2.voiceDesignLabel')}
-            </label>
-            <Textarea
-              value={voiceDesignPrompt}
-              onChange={(e) => setVoiceDesignPrompt(e.target.value)}
-              placeholder={t('tts.voxcpm2.voiceDesignPlaceholder')}
-              className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
-              rows={4}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('tts.voxcpm2.voiceDesignHint')}
-            </p>
+            {uploadedVoices.length > 0 ? (
+              <div className="space-y-1.5">
+                {/* "None" option to clear selection */}
+                <label className={cn(
+                  'flex items-center gap-2 px-2.5 py-2 rounded-md border cursor-pointer text-sm transition-colors',
+                  !selectedVoice ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50',
+                )}>
+                  <input
+                    type="radio"
+                    name="voice-select"
+                    className="accent-primary"
+                    checked={!selectedVoice}
+                    onChange={() => setSelectedVoice('')}
+                  />
+                  <Mic className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="flex-1">{t('tts.voxcpm2.useRefAudio', 'Use reference audio below')}</span>
+                </label>
+                {uploadedVoices.map((v) => (
+                  <label key={v.name} className={cn(
+                    'flex items-center gap-2 px-2.5 py-2 rounded-md border cursor-pointer text-sm transition-colors',
+                    selectedVoice === v.name ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50',
+                  )}>
+                    <input
+                      type="radio"
+                      name="voice-select"
+                      className="accent-primary"
+                      checked={selectedVoice === v.name}
+                      onChange={() => setSelectedVoice(v.name)}
+                    />
+                    <Mic className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="flex-1 truncate">{v.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => { e.preventDefault(); handleDeleteVoice(v.name); }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t('tts.voxcpm2.noVoices', 'No uploaded voices. Upload an audio file to use as voice reference.')}
+              </p>
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.inputLabel', 'Input Text')}
-            </label>
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={t('tts.inputPlaceholder', 'Enter text to convert to speech...')}
-              className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
-              rows={4}
-            />
-          </div>
-        </>
-      )}
 
-      {/* ===== Voice Clone mode ===== */}
-      {mode === 'voice_clone' && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.refAudio', 'Reference Audio')}
-            </label>
-            <RefAudioInput value={refAudio} onChange={setRefAudio} />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('tts.voxcpm2.refAudioHint')}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.refText', 'Reference Audio Transcription')}
-            </label>
-            <Textarea
-              value={refText}
-              onChange={(e) => setRefText(e.target.value)}
-              placeholder={t('tts.refTextPlaceholder', 'Enter transcription of the reference audio (optional)')}
-              rows={2}
-              className="bg-background"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.voxcpm2.styleDescription')}
-            </label>
-            <Input
-              value={styleDescription}
-              onChange={(e) => setStyleDescription(e.target.value)}
-              placeholder={t('tts.voxcpm2.stylePlaceholder')}
-              className="bg-background"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.inputLabel', 'Input Text')}
-            </label>
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={t('tts.inputPlaceholder', 'Enter text to convert to speech...')}
-              className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
-              rows={4}
-            />
-          </div>
-        </>
-      )}
+          {/* Ref Audio Input — only when no uploaded voice is selected */}
+          {!selectedVoice && (
+            <div>
+              <label className="block text-sm font-medium mb-1.5">
+                {t('tts.refAudio', 'Reference Audio')}
+              </label>
+              <RefAudioInput value={refAudio} onChange={setRefAudio} />
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('tts.voxcpm2.refAudioHint')}
+              </p>
+            </div>
+          )}
 
-      {/* ===== Ultimate Cloning mode ===== */}
-      {mode === 'ultimate_cloning' && (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">
-              {t('tts.refAudio', 'Reference Audio')}
-            </label>
-            <RefAudioInput value={refAudio} onChange={setRefAudio} />
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('tts.voxcpm2.refAudioHint')}
-            </p>
-          </div>
+          {/* Ref Text — auto-transcribe button */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-sm font-medium">
@@ -532,45 +563,31 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
               value={refText}
               onChange={(e) => setRefText(e.target.value)}
               placeholder={t('tts.refTextPlaceholder', 'Enter transcription of the reference audio (optional)')}
-              rows={3}
+              rows={2}
               className="bg-background"
             />
           </div>
-        </>
-      )}
+        </CollapsibleContent>
+      </Collapsible>
 
-      {/* Language: only for Standard and Voice Clone modes */}
-      {(mode === 'standard' || mode === 'voice_clone') && (
-        <div>
-          <label className="block text-sm font-medium mb-1.5">
-            {t('tts.languageLabel', 'Language')}
-          </label>
-          <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
-              <SelectValue placeholder={t('tts.languageAuto', 'Auto Detect')} />
-            </SelectTrigger>
-            <SelectContent position="popper" className="!max-h-[300px]">
-              <SelectItem value="auto">{t('tts.languageAuto', 'Auto Detect')}</SelectItem>
-              <SelectSeparator />
-              <SelectGroup>
-                <SelectLabel>{t('tts.languageOfficial', 'Official Languages')}</SelectLabel>
-                {VOXCPM2_LANGUAGES.filter(l => l.group === 'official').map(l => (
-                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
-                ))}
-              </SelectGroup>
-              <SelectSeparator />
-              <SelectGroup>
-                <SelectLabel>{t('tts.languageDialects', 'Chinese Dialects')}</SelectLabel>
-                {VOXCPM2_LANGUAGES.filter(l => l.group === 'dialect').map(l => (
-                  <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      {/* Instructions — optional voice description / style */}
+      <div>
+        <label className="block text-sm font-medium mb-1.5">
+          {t('tts.voxcpm2.instructionsLabel', 'Instructions')}
+        </label>
+        <Textarea
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
+          placeholder={t('tts.voxcpm2.instructionsPlaceholder', 'Describe voice style, e.g., (A warm male voice, gentle tone) or "speak softly"...')}
+          className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
+          rows={2}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          {t('tts.voxcpm2.instructionsHint', 'Optional. Used for voice design or style control.')}
+        </p>
+      </div>
 
-      {/* Advanced: seed and maxNewTokens only */}
+      {/* Advanced: seed and maxNewTokens */}
       <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="w-full justify-between p-0 h-auto text-sm font-medium hover:bg-transparent">

@@ -55,3 +55,9 @@ func (s *Server) HandleCreateMusic(c *gin.Context) {
 func (s *Server) HandleListVoices(c *gin.Context) {
 	s.handlers.Audio.HandleListVoices(c)
 }
+func (s *Server) HandleUploadVoice(c *gin.Context) {
+	s.handlers.Audio.HandleUploadVoice(c)
+}
+func (s *Server) HandleDeleteVoice(c *gin.Context) {
+	s.handlers.Audio.HandleDeleteVoice(c)
+}

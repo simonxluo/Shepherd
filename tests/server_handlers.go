@@ -490,6 +490,12 @@ func (s *testServerHandlers) HandleCreateMusic(c *gin.Context) {
 func (s *testServerHandlers) HandleListVoices(c *gin.Context) {
 	s.handlers.Audio.HandleListVoices(c)
 }
+func (s *testServerHandlers) HandleUploadVoice(c *gin.Context) {
+	s.handlers.Audio.HandleUploadVoice(c)
+}
+func (s *testServerHandlers) HandleDeleteVoice(c *gin.Context) {
+	s.handlers.Audio.HandleDeleteVoice(c)
+}
 
 // Model proxy stubs
 func (s *testServerHandlers) HandleModelTokenize(c *gin.Context)      { c.JSON(200, gin.H{}) }

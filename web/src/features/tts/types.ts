@@ -39,10 +39,6 @@ export interface TTSConfig {
   seed?: string;
   maxNewTokens?: string;
   language?: string;
-  // VoxCPM2 generation mode
-  mode?: string;                 // 'standard' | 'voice_design' | 'voice_clone' | 'ultimate_cloning'
-  voiceDesignPrompt?: string;    // Voice Design 描述
-  styleDescription?: string;     // Voice Clone 模式的风格描述
 }
 
 /** Feature flags describing what a TTS model / plugin supports. */

@@ -504,3 +504,36 @@ func (b *BaseHandler) ForwardGetRequest(c *gin.Context, port int, path string) {
 	c.Status(resp.StatusCode)
 	utils.WriteQuietly(c.Writer, respBody)
 }
+
+func (b *BaseHandler) ForwardDeleteRequest(c *gin.Context, port int, path string) {
+	reqURL := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
+
+	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "DELETE", reqURL, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	httpReq.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
+
+	resp, err := b.Client.Do(httpReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+	defer utils.CloseQuietly(resp.Body)
+
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	for key, values := range resp.Header {
+		for _, value := range values {
+			c.Header(key, value)
+		}
+	}
+	c.Status(resp.StatusCode)
+	utils.WriteQuietly(c.Writer, respBody)
+}

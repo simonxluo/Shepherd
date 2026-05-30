@@ -245,3 +245,50 @@ func (h *AudioHandler) HandleListVoices(c *gin.Context) {
 
 	h.ForwardGetRequest(c, port, "/v1/audio/voices")
 }
+
+// HandleUploadVoice proxies POST /v1/audio/voices (upload voice) to the backend.
+func (h *AudioHandler) HandleUploadVoice(c *gin.Context) {
+	modelName := c.PostForm("model")
+	if modelName == "" {
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "缺少必要参数: model", "model")
+		return
+	}
+
+	actualModelID, err := h.FindModel(modelName)
+	if err != nil {
+		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		return
+	}
+
+	port, err := h.GetModelPort(actualModelID)
+	if err != nil {
+		h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		return
+	}
+
+	h.ForwardMultipartRequest(c, port, "/v1/audio/voices", actualModelID, nil)
+}
+
+// HandleDeleteVoice proxies DELETE /v1/audio/voices/:name to the backend.
+func (h *AudioHandler) HandleDeleteVoice(c *gin.Context) {
+	modelName := c.Query("model")
+	if modelName == "" {
+		h.SendOpenAIError(c, http.StatusBadRequest, "invalid_request", "缺少必要参数: model", "model")
+		return
+	}
+
+	actualModelID, err := h.FindModel(modelName)
+	if err != nil {
+		h.SendOpenAIError(c, http.StatusNotFound, "model_not_found", err.Error(), "model")
+		return
+	}
+
+	port, err := h.GetModelPort(actualModelID)
+	if err != nil {
+		h.SendOpenAIError(c, http.StatusInternalServerError, "server_error", err.Error(), "")
+		return
+	}
+
+	voiceName := c.Param("name")
+	h.ForwardDeleteRequest(c, port, "/v1/audio/voices/"+voiceName)
+}
