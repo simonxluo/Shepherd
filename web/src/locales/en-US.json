@@ -496,6 +496,29 @@
       "temperature": "Temperature",
       "repetitionPenalty": "Repetition Penalty"
     },
+    "voxcpm2": {
+      "modeLabel": "Generation Mode",
+      "modeStandard": "Standard TTS",
+      "modeVoiceDesign": "Voice Design",
+      "modeVoiceClone": "Voice Cloning",
+      "modeUltimateCloning": "Ultimate Cloning",
+      "voiceDesignLabel": "Voice Description",
+      "voiceDesignPlaceholder": "Describe the voice in natural language...",
+      "voiceDesignHint": "Create a new voice from description, e.g., (A warm male voice, gentle tone)",
+      "styleDescription": "Style Description (Optional)",
+      "stylePlaceholder": "e.g., Speak gently...",
+      "refAudioHint": "3+ seconds of clear speech recommended",
+      "promptAudioLabel": "Cloning Audio",
+      "promptTextLabel": "Audio Transcription",
+      "autoTranscribe": "Auto Transcribe",
+      "transcribing": "Transcribing...",
+      "noAsrModel": "No ASR model available",
+      "transcribeFailed": "Auto transcription failed",
+      "notDetected": "No loaded VoxCPM2 model detected",
+      "notDetectedHint": "Please load a VoxCPM2 model from the list below, or confirm that models have been scanned",
+      "noModels": "No VoxCPM2 models found",
+      "noModelsHint": "Please ensure VoxCPM2 model paths are configured and scanned"
+    },
     "history": "History",
     "historyLoading": "Loading history...",
     "historyAll": "All",
@@ -511,11 +534,7 @@
     "refreshVoices": "Refresh voices",
     "noModelsTitle": "No TTS Models Loaded",
     "noModelsDescription": "Load a TTS-capable model to start generating speech. Available models are shown below.",
-    "autoSaved": "Auto-saved",
-    "voxcpm2NotDetected": "No loaded VoxCPM2 model detected",
-    "voxcpm2NotDetectedHint": "Please load a VoxCPM2 model from the list below, or confirm that models have been scanned",
-    "noVoxcpm2Models": "No VoxCPM2 models found",
-    "noVoxcpm2ModelsHint": "Please ensure VoxCPM2 model paths are configured and scanned"
+    "autoSaved": "Auto-saved"
   },
   "asr": {
     "title": "Speech Recognition (ASR)",

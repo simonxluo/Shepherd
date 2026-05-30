@@ -119,10 +119,8 @@ func (h *AudioHandler) prepareTTSRequest(c *gin.Context) (map[string]interface{}
 	}
 
 	// Resolve audio paths: /api/tts/audio/<id> -> file://<abs>
-	for _, key := range []string{"ref_audio", "prompt_audio"} {
-		if v, ok := payload[key].(string); ok && v != "" {
-			payload[key] = h.resolveTTSAudioURL(v)
-		}
+	if v, ok := payload["ref_audio"].(string); ok && v != "" {
+		payload["ref_audio"] = h.resolveTTSAudioURL(v)
 	}
 
 	return payload, actualModelID, true

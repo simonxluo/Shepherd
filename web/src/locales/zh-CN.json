@@ -496,6 +496,29 @@
       "temperature": "Temperature (采样温度)",
       "repetitionPenalty": "Repetition Penalty (重复惩罚)"
     },
+    "voxcpm2": {
+      "modeLabel": "生成模式",
+      "modeStandard": "标准合成",
+      "modeVoiceDesign": "语音设计",
+      "modeVoiceClone": "声音克隆",
+      "modeUltimateCloning": "终极克隆",
+      "voiceDesignLabel": "语音描述",
+      "voiceDesignPlaceholder": "用自然语言描述想要的声音...",
+      "voiceDesignHint": "通过自然语言描述创建全新声音，如：(年轻女性，声音甜美温柔)",
+      "styleDescription": "风格描述（可选）",
+      "stylePlaceholder": "如：温柔地说 / Speak gently...",
+      "refAudioHint": "建议 3 秒以上清晰语音",
+      "promptAudioLabel": "克隆音频",
+      "promptTextLabel": "音频转录",
+      "autoTranscribe": "自动转录",
+      "transcribing": "转录中...",
+      "noAsrModel": "未找到可用的 ASR 模型",
+      "transcribeFailed": "自动转录失败",
+      "notDetected": "未检测到已加载的 VoxCPM2 模型",
+      "notDetectedHint": "请从下方列表中选择一个 VoxCPM2 模型进行加载，或确认模型已被扫描",
+      "noModels": "未扫描到 VoxCPM2 模型",
+      "noModelsHint": "请确认已配置 VoxCPM2 模型路径并完成扫描"
+    },
     "history": "历史记录",
     "historyLoading": "加载历史记录...",
     "historyAll": "全部",
@@ -511,11 +534,7 @@
     "refreshVoices": "刷新语音列表",
     "noModelsTitle": "没有已加载的 TTS 模型",
     "noModelsDescription": "加载一个支持 TTS 的模型来开始生成语音。可用模型如下所示。",
-    "autoSaved": "已自动保存",
-    "voxcpm2NotDetected": "未检测到已加载的 VoxCPM2 模型",
-    "voxcpm2NotDetectedHint": "请从下方列表中选择一个 VoxCPM2 模型进行加载，或确认模型已被扫描",
-    "noVoxcpm2Models": "未扫描到 VoxCPM2 模型",
-    "noVoxcpm2ModelsHint": "请确认已配置 VoxCPM2 模型路径并完成扫描"
+    "autoSaved": "已自动保存"
   },
   "asr": {
     "title": "语音识别 (ASR)",

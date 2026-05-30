@@ -1,7 +1,65 @@
 import type { LoadedModel } from '@/features/creative/hooks';
-import type { TTSRequest, TTSModelFeatures, TTSConfig } from './hooks';
 import type { StreamState, TTSStreamMetrics } from './lib/StreamAudioPlayer';
 import type { ModelStatus } from '@/types';
+
+/** Request payload sent to the /v1/audio/speech endpoint. */
+export interface TTSRequest {
+  model: string;
+  input: string;
+  voice?: string;
+  response_format?: string;
+  speed?: number;
+  language?: string;
+  stream?: boolean;
+  // Voice cloning / ultimate cloning extensions
+  instructions?: string;
+  ref_audio?: string;
+  ref_text?: string;
+  max_new_tokens?: number;
+  seed?: number;
+  // Sampling params (Qwen3-TTS)
+  temperature?: number;
+  top_p?: number;
+  top_k?: number;
+  repetition_penalty?: number;
+  x_vector_only_mode?: boolean;
+  /** vLLM-Omni escape hatch: merged directly into SamplingParams.extra_args */
+  extra_params?: Record<string, unknown>;
+}
+
+/** Persisted configuration for a TTS model. */
+export interface TTSConfig {
+  voice?: string;
+  speed?: number;
+  responseFormat?: string;
+  stream?: boolean;
+  instructions?: string;
+  refAudio?: string;
+  refText?: string;
+  seed?: string;
+  maxNewTokens?: string;
+  language?: string;
+  // VoxCPM2 generation mode
+  mode?: string;                 // 'standard' | 'voice_design' | 'voice_clone' | 'ultimate_cloning'
+  voiceDesignPrompt?: string;    // Voice Design 描述
+  styleDescription?: string;     // Voice Clone 模式的风格描述
+}
+
+/** Feature flags describing what a TTS model / plugin supports. */
+export interface TTSModelFeatures {
+  supportsVoiceSelection: boolean;
+  supportsInstructions: boolean;
+  supportsRefAudio: boolean;
+  supportsStreamPcm: boolean;
+  /** Voice Design mode via bracket convention */
+  supportsVoiceDesign: boolean;
+  defaultSampleRate: number;
+  defaultFormat: string;
+}
+
+// ---------------------------------------------------------------------------
+// Plugin interfaces
+// ---------------------------------------------------------------------------
 
 /**
  * Props passed to every TTS plugin panel component.
@@ -55,4 +113,4 @@ export interface TTSPlugin {
   order?: number;
 }
 
-export type { TTSRequest, TTSModelFeatures, TTSConfig, StreamState, TTSStreamMetrics, LoadedModel };
+export type { StreamState, TTSStreamMetrics, LoadedModel };

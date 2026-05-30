@@ -17,17 +17,12 @@ const voxcpm2Plugin: TTSPlugin = {
   },
   component: VoxCPM2Panel,
   features: {
-    supportsVoiceSelection: false,   // VoxCPM2 无预设声音，voice 字段被忽略
-    supportsInstructions: true,
+    supportsVoiceSelection: false,   // VoxCPM2 has no preset voices; voice field ignored
+    supportsInstructions: false,     // Not a standalone param; uses bracket convention
     supportsRefAudio: true,
-    supportsUltimateCloning: true,
     supportsStreamPcm: true,
-    supportsCfgValue: true,
-    supportsInferenceTimesteps: true,
-    supportsCfgCutoffRatio: true,
-    supportsSwaySampling: true,
-    supportsEmotion: true,
-    defaultSampleRate: 48000,         // VoxCPM2 输出 48kHz
+    supportsVoiceDesign: true,       // Voice Design via bracket convention
+    defaultSampleRate: 48000,        // VoxCPM2 outputs 48kHz
     defaultFormat: 'pcm',
   },
 };

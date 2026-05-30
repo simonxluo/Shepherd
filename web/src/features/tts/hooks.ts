@@ -6,103 +6,30 @@ import {
   useDeleteModelLoadConfig,
 } from '@/features/models/config';
 import type { LoadedModel } from '@/features/creative/hooks';
+import type { TTSRequest, TTSConfig, TTSModelFeatures } from './types';
+import { ttsRegistry } from './registry';
 
-export interface TTSRequest {
-  model: string;
-  input: string;
-  voice?: string;
-  response_format?: string;
-  speed?: number;
-  language?: string;
-  stream?: boolean;
-  // VoxCPM2 / 声音克隆扩展字段
-  instructions?: string;
-  ref_audio?: string;
-  ref_text?: string;
-  prompt_audio?: string;
-  prompt_text?: string;
-  max_new_tokens?: number;
-  seed?: number;
-  cfg_value?: number;
-  inference_timesteps?: number;
-  cfg_cutoff_ratio?: number;
-  sway_sampling_coef?: number;
-  emotion?: string;
-  // Sampling params (Qwen3-TTS)
-  temperature?: number;
-  top_p?: number;
-  top_k?: number;
-  repetition_penalty?: number;
-  x_vector_only_mode?: boolean;
-}
+export type { TTSRequest, TTSConfig, TTSModelFeatures };
 
-export interface TTSModelFeatures {
-  supportsVoiceSelection: boolean;
-  supportsInstructions: boolean;
-  supportsRefAudio: boolean;
-  supportsUltimateCloning: boolean;
-  supportsStreamPcm: boolean;
-  supportsCfgValue: boolean;
-  supportsInferenceTimesteps: boolean;
-  supportsCfgCutoffRatio: boolean;
-  supportsSwaySampling: boolean;
-  supportsEmotion: boolean;
-  defaultSampleRate: number;
-  defaultFormat: string;
-}
+/** Default feature set returned when no plugin matches. */
+const DEFAULT_FEATURES: TTSModelFeatures = {
+  supportsVoiceSelection: true,
+  supportsInstructions: false,
+  supportsRefAudio: false,
+  supportsStreamPcm: false,
+  supportsVoiceDesign: false,
+  defaultSampleRate: 24000,
+  defaultFormat: 'mp3',
+};
 
+/**
+ * Look up model features via the plugin registry.
+ * Falls back to DEFAULT_FEATURES when no plugin claims the model.
+ */
 export function getTTSModelFeatures(model: LoadedModel): TTSModelFeatures {
-  const nameLower = model.name.toLowerCase();
-  const isVoxCPM = nameLower.includes('voxcpm');
-  const isOmniBackend = model.backendType === 'vllm_omni';
-
-  if (isVoxCPM) {
-    return {
-      supportsVoiceSelection: false,     // VoxCPM2 无预设声音，voice 字段被忽略
-      supportsInstructions: true,
-      supportsRefAudio: true,
-      supportsUltimateCloning: true,
-      supportsStreamPcm: true,
-      supportsCfgValue: true,
-      supportsInferenceTimesteps: true,
-      supportsCfgCutoffRatio: true,
-      supportsSwaySampling: true,
-      supportsEmotion: true,
-      defaultSampleRate: 48000,          // VoxCPM2 输出 48kHz
-      defaultFormat: 'pcm',
-    };
-  }
-  if (isOmniBackend) {
-    return {
-      supportsVoiceSelection: true,
-      supportsInstructions: true,
-      supportsRefAudio: true,
-      supportsUltimateCloning: false,
-      supportsStreamPcm: true,
-      supportsCfgValue: false,
-      supportsInferenceTimesteps: false,
-      supportsCfgCutoffRatio: false,
-      supportsSwaySampling: false,
-      supportsEmotion: false,
-      defaultSampleRate: 24000,
-      defaultFormat: 'pcm',
-    };
-  }
-
-  return {
-    supportsVoiceSelection: true,
-    supportsInstructions: false,
-    supportsRefAudio: false,
-    supportsUltimateCloning: false,
-    supportsStreamPcm: false,
-    supportsCfgValue: false,
-    supportsInferenceTimesteps: false,
-    supportsCfgCutoffRatio: false,
-    supportsSwaySampling: false,
-    supportsEmotion: false,
-    defaultSampleRate: 24000,
-    defaultFormat: 'mp3',
-  };
+  const plugin = ttsRegistry.getPluginForModel(model);
+  if (plugin) return plugin.features;
+  return DEFAULT_FEATURES;
 }
 
 export function useTTS() {
@@ -166,7 +93,7 @@ export function useVoices(model?: string) {
     queryFn: async () => {
       if (!model) return [];
       const res = await v1Client.get<VoicesResponse>('/audio/voices', { model });
-      // vLLM-Omni 返回 voices: string[] 和 uploaded_voices: Array<{name, ...}>
+      // vLLM-Omni returns voices: string[] and uploaded_voices
       const presetVoices: VoiceOption[] = (res.voices ?? []).map(v => ({
         id: v,
         name: v,
@@ -190,26 +117,7 @@ export function useVoices(model?: string) {
   });
 }
 
-export interface TTSConfig {
-  voice?: string;
-  speed?: number;
-  responseFormat?: string;
-  stream?: boolean;
-  instructions?: string;
-  refAudio?: string;
-  refText?: string;
-  promptAudio?: string;
-  promptText?: string;
-  ultimateCloning?: boolean;
-  seed?: string;
-  maxNewTokens?: string;
-  language?: string;
-  emotion?: string;
-  cfgValue?: string;
-  inferenceTimesteps?: string;
-  cfgCutoffRatio?: string;
-  swaySamplingCoef?: string;
-}
+// TTSConfig is now defined in types.ts
 
 function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
   if (!raw) return null;
@@ -221,17 +129,12 @@ function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
     instructions: (raw.instructions as string) || undefined,
     refAudio: (raw.refAudio as string) || undefined,
     refText: (raw.refText as string) || undefined,
-    promptAudio: (raw.promptAudio as string) || undefined,
-    promptText: (raw.promptText as string) || undefined,
-    ultimateCloning: raw.ultimateCloning as boolean | undefined,
     seed: (raw.seed as string) || undefined,
     maxNewTokens: (raw.maxNewTokens as string) || undefined,
     language: (raw.language as string) || undefined,
-    emotion: (raw.emotion as string) || undefined,
-    cfgValue: (raw.cfgValue as string) || undefined,
-    inferenceTimesteps: (raw.inferenceTimesteps as string) || undefined,
-    cfgCutoffRatio: (raw.cfgCutoffRatio as string) || undefined,
-    swaySamplingCoef: (raw.swaySamplingCoef as string) || undefined,
+    mode: (raw.mode as string) || undefined,
+    voiceDesignPrompt: (raw.voiceDesignPrompt as string) || undefined,
+    styleDescription: (raw.styleDescription as string) || undefined,
   };
 }
 
@@ -243,4 +146,53 @@ export function useTTSConfig(modelId: string) {
   const ttsConfig = (data?.exists && data.config) ? extractTTSConfig(data.config.config as Record<string, unknown>) : null;
 
   return { ttsConfig, isLoading, saveConfig, deleteConfig };
+}
+
+// ---------------------------------------------------------------------------
+// Auto-transcribe hook (used by VoxCPM2 Ultimate Cloning mode)
+// ---------------------------------------------------------------------------
+
+/** Convert a data-URI or URL audio source to a File object. */
+async function audioSourceToFile(audioSource: string): Promise<File> {
+  if (audioSource.startsWith('data:')) {
+    const [meta, base64] = audioSource.split(',');
+    const mimeMatch = meta.match(/data:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'audio/wav';
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const ext = mime.includes('mp3') ? 'mp3' : mime.includes('ogg') ? 'ogg' : 'wav';
+    return new File([bytes], `audio.${ext}`, { type: mime });
+  }
+  // URL-based: fetch then convert
+  const resp = await fetch(audioSource);
+  const blob = await resp.blob();
+  const ext = blob.type.includes('mp3') ? 'mp3' : blob.type.includes('ogg') ? 'ogg' : 'wav';
+  return new File([blob], `audio.${ext}`, { type: blob.type || 'audio/wav' });
+}
+
+/**
+ * Mutation hook that calls the ASR endpoint to auto-transcribe audio.
+ * Used in VoxCPM2 Ultimate Cloning mode for prompt text generation.
+ */
+export function useAutoTranscribe() {
+  return useMutation({
+    mutationFn: async ({ audioSource, asrModelName }: {
+      audioSource: string;
+      asrModelName: string;
+    }) => {
+      const file = await audioSourceToFile(audioSource);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('model', asrModelName);
+
+      const response = await fetch(`${v1Client.getBaseUrl()}/audio/transcriptions`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) throw new Error(`ASR failed: ${response.status}`);
+      const result = await response.json();
+      return result.text || '';
+    },
+  });
 }
