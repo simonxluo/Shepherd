@@ -80,6 +80,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
     refAudioOverride,
     modelStatus,
     fullModelId,
+    voiceRefreshTrigger,
   } = props;
   const { t } = useTranslation();
   const availableModels = useAvailableModels('tts');
@@ -171,6 +172,11 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
 
   // Load voices when model is running
   useEffect(() => { if (isModelRunning) loadVoices(); }, [isModelRunning, loadVoices]);
+
+  // Reload voices when external trigger changes (e.g., after saving voice from history)
+  useEffect(() => {
+    if (voiceRefreshTrigger && voiceRefreshTrigger > 0 && isModelRunning) loadVoices();
+  }, [voiceRefreshTrigger, isModelRunning, loadVoices]);
 
   const isStreamActive = streamState === 'streaming' || streamState === 'playing';
 

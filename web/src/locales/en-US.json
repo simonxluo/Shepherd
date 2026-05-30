@@ -509,7 +509,9 @@
       "notDetected": "No loaded VoxCPM2 model detected",
       "notDetectedHint": "Please load a VoxCPM2 model from the list below, or confirm that models have been scanned",
       "noModels": "No VoxCPM2 models found",
-      "noModelsHint": "Please ensure VoxCPM2 model paths are configured and scanned"
+      "noModelsHint": "Please ensure VoxCPM2 model paths are configured and scanned",
+      "voiceSaved": "Voice saved successfully",
+      "voiceSaveFailed": "Failed to save voice"
     },
     "history": "History",
     "historyLoading": "Loading history...",
@@ -524,6 +526,11 @@
     "cancel": "Cancel",
     "autoPlay": "Auto-play",
     "refreshVoices": "Refresh voices",
+    "expandText": "Click to expand",
+    "collapseText": "Click to collapse",
+    "saveVoice": "Save as voice",
+    "voiceNamePlaceholder": "Voice name...",
+    "cancelVoice": "Cancel",
     "noModelsTitle": "No TTS Models Loaded",
     "noModelsDescription": "Load a TTS-capable model to start generating speech. Available models are shown below.",
     "autoSaved": "Auto-saved"

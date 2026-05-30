@@ -261,6 +261,10 @@ export function TTSPageShell() {
     toast.success(t('tts.refAudioSet', 'Reference audio set from history'));
   }, [t]);
 
+  // Voice refresh trigger for plugin panels
+  const [voiceRefreshTrigger, setVoiceRefreshTrigger] = useState(0);
+  const handleVoiceRegistered = useCallback(() => setVoiceRefreshTrigger((v) => v + 1), []);
+
   // Build panel props
   const panelProps: TTSPluginPanelProps = {
     model: selectedModel,
@@ -275,6 +279,7 @@ export function TTSPageShell() {
     refAudioOverride,
     modelStatus: fullModel?.status,
     fullModelId: fullModel?.id,
+    voiceRefreshTrigger,
   };
 
   const PanelComponent = activePlugin?.component;
@@ -287,6 +292,9 @@ export function TTSPageShell() {
           <TTSHistoryPanel
             onUseAsReference={handleUseAsReference}
             supportsRefAudio={currentFeatures.supportsRefAudio}
+            supportsVoiceLibrary={currentFeatures.supportsRefAudio}
+            modelName={selectedModel ? (selectedModel.alias || selectedModel.name) : ''}
+            onVoiceRegistered={handleVoiceRegistered}
           />
         </div>
 

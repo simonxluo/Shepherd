@@ -85,6 +85,8 @@ export interface TTSPluginPanelProps {
   modelStatus?: ModelStatus;
   /** 完整模型 ID（用于加载操作） */
   fullModelId?: string;
+  /** 递增计数器，用于触发插件面板刷新语音列表 */
+  voiceRefreshTrigger?: number;
 }
 
 /**
