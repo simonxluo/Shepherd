@@ -165,7 +165,10 @@ export class StreamAudioPlayer {
       const reader = response.body?.getReader();
       if (!reader) throw new Error('无法获取响应流');
 
-      let buffer = new Uint8Array();
+      let chunks: Uint8Array[] = [];
+      let totalBytes = 0;
+      let leftover = new Uint8Array(0);
+      let leftoverBytes = 0;
       let hasFirstChunk = false;
 
       while (true) {
@@ -180,40 +183,50 @@ export class StreamAudioPlayer {
           this.updateMetrics({ ttfp: Math.round(ttfp) });
         }
 
-        // 合并到 buffer
-        const newBuffer = new Uint8Array(buffer.length + value.length);
-        newBuffer.set(buffer);
-        newBuffer.set(value, buffer.length);
-        buffer = newBuffer;
+        chunks.push(value);
+        totalBytes += value.length;
 
-        // 按 2 字节对齐切分 Int16Array
-        const alignedLength = Math.floor(buffer.length / 2) * 2;
-        if (alignedLength >= 2) {
-          const pcm = new Int16Array(buffer.buffer, buffer.byteOffset, alignedLength / 2);
-          const chunk = new Int16Array(pcm);
-          this.pcmChunks.push(chunk);
-          this.sendChunk(chunk);
+        // 处理累积数据：合并 leftover + 所有 chunks，按 2 字节对齐
+        const allBytes = leftoverBytes + totalBytes;
+        const alignedLength = Math.floor(allBytes / 2) * 2;
 
-          // 保留未对齐的尾部字节
-          const remaining = buffer.length - alignedLength;
-          if (remaining > 0) {
-            const leftover = new Uint8Array(remaining);
-            leftover.set(buffer.subarray(alignedLength));
-            buffer = leftover;
-          } else {
-            buffer = new Uint8Array();
+        if (alignedLength >= 2 && alignedLength > leftoverBytes) {
+          const merged = new Uint8Array(allBytes);
+          let offset = 0;
+          merged.set(leftover, offset);
+          offset += leftoverBytes;
+          for (const chunk of chunks) {
+            merged.set(chunk, offset);
+            offset += chunk.length;
           }
+
+          const pcm = new Int16Array(merged.buffer, merged.byteOffset, alignedLength / 2);
+          const pcmCopy = new Int16Array(pcm);
+          this.pcmChunks.push(pcmCopy);
+          this.sendChunk(pcmCopy);
+
+          // 保留未对齐的尾部
+          const remaining = allBytes - alignedLength;
+          if (remaining > 0) {
+            leftover = new Uint8Array(remaining);
+            leftover.set(merged.subarray(alignedLength));
+          } else {
+            leftover = new Uint8Array(0);
+          }
+          leftoverBytes = remaining;
+          chunks = [];
+          totalBytes = 0;
         }
 
         this.updateMetrics({ bytesReceived: this._metrics.bytesReceived + value.length });
       }
 
-      // 处理尾部字节
-      if (buffer.length >= 2) {
-        const pcm = new Int16Array(buffer.buffer, buffer.byteOffset, Math.floor(buffer.length / 2));
-        const chunk = new Int16Array(pcm);
-        this.pcmChunks.push(chunk);
-        this.sendChunk(chunk);
+      // 处理最终 leftover
+      if (leftoverBytes >= 2) {
+        const pcm = new Int16Array(leftover.buffer, leftover.byteOffset, Math.floor(leftoverBytes / 2));
+        const pcmCopy = new Int16Array(pcm);
+        this.pcmChunks.push(pcmCopy);
+        this.sendChunk(pcmCopy);
       }
 
       // 计算最终指标
