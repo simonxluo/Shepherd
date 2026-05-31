@@ -6,9 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useLoadedModels, useAvailableModels } from '@/features/creative/hooks';
-import { ModelSelect } from '@/features/creative/ModelSelect';
-import { AvailableModelList } from '@/features/creative/AvailableModelList';
+import { ModelSelect } from '@/components/model/ModelSelect';
+import { AvailableModelList } from '@/components/model/AvailableModelList';
 import { useImageGeneration } from '@/features/image-gen/hooks';
+import { useImageGenStore } from '@/stores/imageGenStore';
 import { toast } from '@/hooks/useToast';
 
 export function ImageGenPage() {
@@ -22,35 +23,35 @@ export function ImageGenPage() {
 
   const imageGen = useImageGeneration();
 
-  const [model, setModel] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [size, setSize] = useState('1024x1024');
-  const [n, setN] = useState(1);
-  const [quality, setQuality] = useState('standard');
-  const [style, setStyle] = useState('vivid');
+  // 表单状态从 Zustand store 获取（跨页面持久化）
+  const form = useImageGenStore((s) => s.form);
+  const setField = useImageGenStore((s) => s.setField);
+
+  // 瞬态 UI 状态保留为本地 useState
   const [lastPrompt, setLastPrompt] = useState('');
   const downloadCounter = useRef(0);
 
   const handleGenerate = () => {
-    if (!model) {
+    const currentForm = useImageGenStore.getState().form;
+    if (!currentForm.model) {
       toast.warning(t('imageGen.selectModelWarning', '请选择模型'));
       return;
     }
-    if (!prompt.trim()) {
+    if (!currentForm.prompt.trim()) {
       toast.warning(t('imageGen.promptRequired', '请输入描述'));
       return;
     }
 
-    setLastPrompt(prompt.trim());
+    setLastPrompt(currentForm.prompt.trim());
 
     imageGen.mutate(
       {
-        model,
-        prompt: prompt.trim(),
-        size: size || undefined,
-        n: n > 1 ? n : undefined,
-        quality: quality !== 'standard' ? quality : undefined,
-        style: style !== 'vivid' ? style : undefined,
+        model: currentForm.model,
+        prompt: currentForm.prompt.trim(),
+        size: currentForm.size || undefined,
+        n: currentForm.n > 1 ? currentForm.n : undefined,
+        quality: currentForm.quality !== 'standard' ? currentForm.quality : undefined,
+        style: currentForm.style !== 'vivid' ? currentForm.style : undefined,
       },
       {
         onError: (error) => {
@@ -106,8 +107,8 @@ export function ImageGenPage() {
               <div className="space-y-4">
                 <ModelSelect
                   models={imageModels}
-                  value={model}
-                  onValueChange={setModel}
+                  value={form.model}
+                  onValueChange={(v) => setField('model', v)}
                   placeholder={t('imageGen.selectModel', '选择模型')}
                   label={t('imageGen.modelLabel', '图像生成模型')}
                 />
@@ -117,8 +118,8 @@ export function ImageGenPage() {
                     {t('imageGen.promptLabel', '图像描述')}
                   </label>
                   <Textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
+                    value={form.prompt}
+                    onChange={(e) => setField('prompt', e.target.value)}
                     placeholder={t('imageGen.promptPlaceholder', '描述要生成的图像...')}
                     className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
                     rows={3}
@@ -130,7 +131,7 @@ export function ImageGenPage() {
                     <label className="block text-sm font-medium mb-1.5">
                       {t('imageGen.sizeLabel', '尺寸')}
                     </label>
-                    <Select value={size} onValueChange={setSize}>
+                    <Select value={form.size} onValueChange={(v) => setField('size', v)}>
                       <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
                         <SelectValue />
                       </SelectTrigger>
@@ -146,7 +147,7 @@ export function ImageGenPage() {
                     <label className="block text-sm font-medium mb-1.5">
                       {t('imageGen.countLabel', '数量')}
                     </label>
-                    <Select value={String(n)} onValueChange={(v) => setN(Number(v))}>
+                    <Select value={String(form.n)} onValueChange={(v) => setField('n', Number(v))}>
                       <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
                         <SelectValue />
                       </SelectTrigger>
@@ -161,7 +162,7 @@ export function ImageGenPage() {
                     <label className="block text-sm font-medium mb-1.5">
                       {t('imageGen.qualityLabel', '质量')}
                     </label>
-                    <Select value={quality} onValueChange={setQuality}>
+                    <Select value={form.quality} onValueChange={(v) => setField('quality', v)}>
                       <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
                         <SelectValue />
                       </SelectTrigger>
@@ -175,7 +176,7 @@ export function ImageGenPage() {
                     <label className="block text-sm font-medium mb-1.5">
                       {t('imageGen.styleLabel', '风格')}
                     </label>
-                    <Select value={style} onValueChange={setStyle}>
+                    <Select value={form.style} onValueChange={(v) => setField('style', v)}>
                       <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
                         <SelectValue />
                       </SelectTrigger>
@@ -189,7 +190,7 @@ export function ImageGenPage() {
 
                 <Button
                   onClick={handleGenerate}
-                  disabled={imageGen.isPending || !model || !prompt.trim()}
+                  disabled={imageGen.isPending || !form.model || !form.prompt.trim()}
                   className="w-full"
                 >
                   {imageGen.isPending ? (

@@ -5,15 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ModelSelect } from '@/features/creative/ModelSelect';
-import { AvailableModelList } from '@/features/creative/AvailableModelList';
-import { useAvailableModels, BACKEND_LABELS } from '@/features/creative/hooks';
+import { ModelSelect } from '@/components/model/ModelSelect';
+import { AvailableModelList } from '@/components/model/AvailableModelList';
+import { useAvailableModels } from '@/features/creative/hooks';
+import { BACKEND_LABELS } from '@/lib/constants/model';
 import { useLoadModel } from '@/features/models';
 import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
+import { useASRStore } from '@/stores/asrStore';
 import { toast } from '@/hooks/useToast';
 import { formatBytes } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import type { ASRPluginPanelProps } from '../../types';
+import type { ASRPluginPanelProps } from '@/features/asr/types';
 
 // Qwen3-ASR supported languages (30 languages + 22 Chinese dialects)
 const QWEN3_ASR_LANGUAGES = [
@@ -84,11 +86,13 @@ export function Qwen3ASRPanel({
   const isModelStopped = modelStatus === 'stopped';
   const isModelError = modelStatus === 'error';
 
+  // 表单状态从 Zustand store 获取（跨页面持久化）
+  const qwen3Form = useASRStore((s) => s.qwen3Form);
+  const setQwen3Field = useASRStore((s) => s.setQwen3Field);
+  const { language, prompt, responseFormat, temperature } = qwen3Form;
+
+  // 瞬态 UI 状态保留为本地 useState
   const [file, setFile] = useState<File | null>(null);
-  const [language, setLanguage] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [responseFormat, setResponseFormat] = useState('text');
-  const [temperature, setTemperature] = useState(0);
   const [copied, setCopied] = useState(false);
 
   const backendLabel = selectedModel?.backendType
@@ -274,7 +278,7 @@ export function Qwen3ASRPanel({
           <label className="block text-sm font-medium mb-1.5">
             {t('asr.qwen3.languageLabel', 'Language')}
           </label>
-          <Select value={language} onValueChange={setLanguage}>
+          <Select value={language} onValueChange={(v) => setQwen3Field('language', v)}>
             <SelectTrigger className="w-full bg-background">
               <SelectValue placeholder={t('asr.qwen3.langAuto', 'Auto Detect')} />
             </SelectTrigger>
@@ -297,7 +301,7 @@ export function Qwen3ASRPanel({
           <Input
             type="text"
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => setQwen3Field('prompt', e.target.value)}
             placeholder={t('asr.promptPlaceholder', 'Optional prompt text')}
             className="w-full"
           />
@@ -310,7 +314,7 @@ export function Qwen3ASRPanel({
           <label className="block text-sm font-medium mb-1.5">
             {t('asr.responseFormatLabel', 'Response Format')}
           </label>
-          <Select value={responseFormat} onValueChange={setResponseFormat}>
+          <Select value={responseFormat} onValueChange={(v) => setQwen3Field('responseFormat', v)}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -329,7 +333,7 @@ export function Qwen3ASRPanel({
           </label>
           <Slider
             value={[temperature]}
-            onValueChange={([val]) => setTemperature(val)}
+            onValueChange={([val]) => setQwen3Field('temperature', val)}
             min={0}
             max={1}
             step={0.1}

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Play, Pause, Download, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StreamPlaybackPanel } from './StreamPlaybackPanel';
-import type { StreamState, TTSStreamMetrics } from '../lib/StreamAudioPlayer';
+import type { StreamState, TTSStreamMetrics } from '@/features/tts/lib/StreamAudioPlayer';
 
 interface TTSPlaybackAreaProps {
   /** Stream playback state */

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, type TFunction } from 'react-i18next';
 import {
   Cpu,
   HardDrive,
@@ -184,7 +184,7 @@ function HeaderStatCard({ icon: Icon, label, value, color }: HeaderStatCardProps
 /**
  * GPU detail card
  */
-function GPUCard({ gpu, index, t }: { gpu: GPUInfo; index: number; t: (key: string, options?: Record<string, unknown>) => string }) {
+function GPUCard({ gpu, index, t }: { gpu: GPUInfo; index: number; t: TFunction }) {
   const vramPercent = gpu.totalMemory > 0 ? (gpu.usedMemory / gpu.totalMemory) * 100 : 0;
   const tempColor = gpu.temperature > 80 ? 'text-red-500' : gpu.temperature > 60 ? 'text-amber-500' : 'text-emerald-500';
 

@@ -1,17 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
-import type { ModelCapabilities } from '@/types/model';
 import { useModels, useAllModelCapabilities } from '@/features/models';
-import type { Model } from '@/types/model';
-
-export interface LoadedModel {
-  id: string;
-  name: string;
-  alias?: string;
-  backendType?: string;
-  capabilities?: ModelCapabilities;
-}
+import type { Model, ModelCapabilities, LoadedModel } from '@/types';
 
 interface LoadedModelsResponse {
   success: boolean;
@@ -24,12 +15,6 @@ interface LoadedModelsResponse {
     requestId: string;
   };
 }
-
-export const BACKEND_LABELS: Record<string, string> = {
-  llamacpp: 'llama.cpp',
-  vllm: 'vLLM',
-  vllm_omni: 'vLLM-Omni',
-};
 
 export function useLoadedModels() {
   return useQuery({

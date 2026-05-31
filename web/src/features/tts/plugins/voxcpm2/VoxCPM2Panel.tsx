@@ -6,22 +6,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ModelSelect } from '@/features/creative/ModelSelect';
-import { AvailableModelList } from '@/features/creative/AvailableModelList';
-import { useAvailableModels, BACKEND_LABELS } from '@/features/creative/hooks';
+import { ModelSelect } from '@/components/model/ModelSelect';
+import { AvailableModelList } from '@/components/model/AvailableModelList';
+import { useAvailableModels } from '@/features/creative/hooks';
+import { BACKEND_LABELS } from '@/lib/constants/model';
 import {
   useTTSConfig,
   useAutoTranscribe,
-} from '../../hooks';
-import type { TTSRequest, TTSConfig } from '../../types';
-import { RefAudioInput } from '../../components/RefAudioInput';
-import { ConfigManager } from '../../components/ConfigManager';
+} from '@/features/tts/hooks';
+import type { TTSRequest, TTSConfig } from '@/features/tts/types';
+import { RefAudioInput } from '@/features/tts/components/RefAudioInput';
+import { ConfigManager } from '@/features/tts/components/ConfigManager';
 import { toast } from '@/hooks/useToast';
 import { useLoadModel, useModels, useAllModelCapabilities } from '@/features/models';
 import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
 import { cn } from '@/lib/utils';
-import type { TTSPluginPanelProps } from '../../types';
+import type { TTSPluginPanelProps } from '@/features/tts/types';
 import { listVoices, uploadVoice, deleteVoice, type VoiceInfo } from '@/lib/api/voices';
+import { useTTSStore } from '@/stores/ttsStore';
 
 const VOXCPM2_LANGUAGES = [
   // 30 official languages (alphabetical)
@@ -136,22 +138,20 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
   const isModelStopped = modelStatus === 'stopped';
   const isModelError = modelStatus === 'error';
 
-  // --- State (no mode selector — fields are always visible) ---
-  const [input, setInput] = useState('');
-  const [refAudio, setRefAudio] = useState('');
-  const [refText, setRefText] = useState('');
-  const [instructions, setInstructions] = useState('');
-  const [seed, setSeed] = useState('');
-  const [maxNewTokens, setMaxNewTokens] = useState('');
-  const [language, setLanguage] = useState('auto');
+  // --- Zustand form state ---
+  const voxcpm2Form = useTTSStore((s) => s.voxcpm2Form);
+  const setVoxcpm2Field = useTTSStore((s) => s.setVoxcpm2Field);
+  const { input, refAudio, refText, instructions, seed, maxNewTokens, language, selectedVoice } = voxcpm2Form;
+
+  // --- Transient UI state (not persisted) ---
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [refAudioName, setRefAudioName] = useState('');
 
   // Voice management
   const [uploadedVoices, setUploadedVoices] = useState<VoiceInfo[]>([]);
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
   const [isUploadingVoice, setIsUploadingVoice] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reference audio collapsible
@@ -193,7 +193,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
     try {
       await deleteVoice(modelName, voiceName);
       toast.success(t('tts.voxcpm2.voiceDeleted', 'Voice deleted'));
-      if (selectedVoice === voiceName) setSelectedVoice('');
+      if (selectedVoice === voiceName) setVoxcpm2Field('selectedVoice', '');
       await loadVoices();
     } catch (err) {
       toast.error(t('tts.voxcpm2.voiceDeleteFailed', 'Delete failed'), (err as Error).message);
@@ -217,47 +217,39 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
     : '';
 
   // --- Config restore ---
-  /* eslint-disable react-hooks/set-state-in-effect -- restoring state from persisted config */
+
   useEffect(() => {
     if (ttsConfig) {
-      if (ttsConfig.instructions !== undefined) setInstructions(ttsConfig.instructions);
-      if (ttsConfig.refAudio !== undefined) setRefAudio(ttsConfig.refAudio);
-      if (ttsConfig.refText !== undefined) setRefText(ttsConfig.refText);
-      if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
-      if (ttsConfig.maxNewTokens !== undefined) setMaxNewTokens(ttsConfig.maxNewTokens);
-      if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language || 'auto');
+      useTTSStore.getState().hydrateFromServerConfig('voxcpm2', ttsConfig);
     } else {
-      // 模型切换后无 config 时清除残留状态
-      setInstructions('');
-      setRefAudio('');
-      setRefText('');
-      setSeed('');
-      setMaxNewTokens('');
-      setLanguage('auto');
+      useTTSStore.getState().resetVoxcpm2Form();
     }
   }, [ttsConfig, modelIdForConfig]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
   // --- refAudioOverride: set ref audio and expand section ---
-  /* eslint-disable react-hooks/set-state-in-effect -- syncing external ref audio override */
+
   useEffect(() => {
     if (!refAudioOverride) return;
-    setRefAudio(refAudioOverride);
+    useTTSStore.getState().setVoxcpm2Field('refAudio', refAudioOverride);
     setRefAudioOpen(true);
-  }, [refAudioOverride]); // eslint-disable-line react-hooks/exhaustive-deps
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }, [refAudioOverride]);  
+   
 
   // --- Config persistence ---
-  const getCurrentConfig = useCallback((): TTSConfig => ({
-    stream: true,
-    responseFormat: 'pcm',
-    instructions: instructions || undefined,
-    refAudio: refAudio || undefined,
-    refText: refText || undefined,
-    seed: seed || undefined,
-    maxNewTokens: maxNewTokens || undefined,
-    language: language === 'auto' ? undefined : language || undefined,
-  }), [instructions, refAudio, refText, seed, maxNewTokens, language]);
+  const getCurrentConfig = useCallback((): TTSConfig => {
+    const form = useTTSStore.getState().voxcpm2Form;
+    return {
+      stream: true,
+      responseFormat: 'pcm',
+      instructions: form.instructions || undefined,
+      refAudio: form.refAudio || undefined,
+      refText: form.refText || undefined,
+      seed: form.seed || undefined,
+      maxNewTokens: form.maxNewTokens || undefined,
+      language: form.language === 'auto' ? undefined : form.language || undefined,
+    };
+  }, []);
 
   const handleSaveToServer = useCallback(() => {
     if (!modelIdForConfig) return;
@@ -273,12 +265,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
   }, [modelIdForConfig, deleteConfig, t]);
 
   const handleLoadConfig = useCallback((cfg: TTSConfig) => {
-    if (cfg.instructions !== undefined) setInstructions(cfg.instructions);
-    if (cfg.refAudio !== undefined) setRefAudio(cfg.refAudio);
-    if (cfg.refText !== undefined) setRefText(cfg.refText);
-    if (cfg.seed !== undefined) setSeed(cfg.seed);
-    if (cfg.maxNewTokens !== undefined) setMaxNewTokens(cfg.maxNewTokens);
-    if (cfg.language !== undefined) setLanguage(cfg.language || 'auto');
+    useTTSStore.getState().hydrateFromServerConfig('voxcpm2', cfg);
   }, []);
 
   // --- Generate logic ---
@@ -299,40 +286,41 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
       toast.error(t('tts.modelError', 'Model encountered an error, please check model status'));
       return;
     }
-    if (!input.trim()) {
+
+    const form = useTTSStore.getState().voxcpm2Form;
+
+    if (!form.input.trim()) {
       toast.warning(t('tts.inputRequired', 'Please enter text'));
       return;
     }
 
     const payload: TTSRequest = {
       model: modelName,
-      input: input.trim(),
+      input: form.input.trim(),
       response_format: 'pcm',
       stream: true,
     };
 
-    if (selectedVoice) {
-      payload.voice = selectedVoice;
+    if (form.selectedVoice) {
+      payload.voice = form.selectedVoice;
       // 当同时设置了 refAudio 时提示用户
-      if (refAudio) {
+      if (form.refAudio) {
         toast.info(t('tts.voxcpm2.voiceOverridesRefAudio', 'Voice is set — reference audio will be ignored.'));
       }
-    } else if (refAudio) {
-      payload.ref_audio = refAudio;
+    } else if (form.refAudio) {
+      payload.ref_audio = form.refAudio;
     }
 
-    if (refText.trim()) payload.ref_text = refText.trim();
-    if (instructions.trim()) payload.instructions = instructions.trim();
-    const parsedSeed = parseInt(seed, 10);
-    if (seed !== '' && !Number.isNaN(parsedSeed)) payload.seed = parsedSeed;
-    const parsedTokens = parseInt(maxNewTokens, 10);
-    if (maxNewTokens !== '' && !Number.isNaN(parsedTokens)) payload.max_new_tokens = parsedTokens;
-    if (language && language !== 'auto') payload.language = language;
+    if (form.refText.trim()) payload.ref_text = form.refText.trim();
+    if (form.instructions.trim()) payload.instructions = form.instructions.trim();
+    const parsedSeed = parseInt(form.seed, 10);
+    if (form.seed !== '' && !Number.isNaN(parsedSeed)) payload.seed = parsedSeed;
+    const parsedTokens = parseInt(form.maxNewTokens, 10);
+    if (form.maxNewTokens !== '' && !Number.isNaN(parsedTokens)) payload.max_new_tokens = parsedTokens;
+    if (form.language && form.language !== 'auto') payload.language = form.language;
 
     onGenerate(payload);
-  }, [modelName, input, refAudio, refText, instructions,
-       selectedVoice, seed, maxNewTokens, language,
-       isModelStopped, isModelLoading, isModelError, onGenerate, t]);
+  }, [modelName, isModelStopped, isModelLoading, isModelError, onGenerate, t]);
 
   // --- Auto-transcribe ---
   const handleAutoTranscribe = useCallback(() => {
@@ -354,7 +342,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
       { audioSource: refAudio, asrModelName },
       {
         onSuccess: (text) => {
-          setRefText(text);
+          setVoxcpm2Field('refText', text);
           setIsTranscribing(false);
         },
         onError: () => {
@@ -398,13 +386,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
           value={modelName}
           onValueChange={(v) => {
             onModelChange(v);
-            setRefAudio('');
-            setSelectedVoice('');
-            setRefText('');
-            setInstructions('');
-            setSeed('');
-            setMaxNewTokens('');
-            setLanguage('auto');
+            useTTSStore.getState().resetVoxcpm2Form();
           }}
           placeholder={t('tts.selectModel', 'Select TTS model')}
           label={t('tts.modelLabel', 'TTS Model')}
@@ -453,7 +435,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
         </label>
         <Textarea
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => setVoxcpm2Field('input', e.target.value)}
           placeholder={t('tts.inputPlaceholder', 'Enter text to convert to speech...')}
           className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
           rows={4}
@@ -465,7 +447,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
         <label className="block text-sm font-medium mb-1.5">
           {t('tts.languageLabel', 'Language')}
         </label>
-        <Select value={language} onValueChange={setLanguage}>
+        <Select value={language} onValueChange={(v) => setVoxcpm2Field('language', v)}>
           <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
             <SelectValue placeholder={t('tts.languageAuto', 'Auto Detect')} />
           </SelectTrigger>
@@ -550,7 +532,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
                     name="voice-select"
                     className="accent-primary"
                     checked={!selectedVoice}
-                    onChange={() => setSelectedVoice('')}
+                    onChange={() => setVoxcpm2Field('selectedVoice', '')}
                   />
                   <Mic className="w-3.5 h-3.5 text-muted-foreground" />
                   <span className="flex-1">{t('tts.voxcpm2.useRefAudio', 'Use reference audio below')}</span>
@@ -565,7 +547,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
                       name="voice-select"
                       className="accent-primary"
                       checked={selectedVoice === v.name}
-                      onChange={() => setSelectedVoice(v.name)}
+                      onChange={() => setVoxcpm2Field('selectedVoice', v.name)}
                     />
                     <Mic className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="flex-1 truncate">{v.name}</span>
@@ -593,7 +575,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
               <label className="block text-sm font-medium mb-1.5">
                 {t('tts.refAudio', 'Reference Audio')}
               </label>
-              <RefAudioInput value={refAudio} onChange={setRefAudio} />
+              <RefAudioInput value={refAudio} onChange={(v, name) => { setVoxcpm2Field('refAudio', v); setRefAudioName(name || ''); }} fileName={refAudioName} />
               <p className="text-xs text-muted-foreground mt-1">
                 {t('tts.voxcpm2.refAudioHint')}
               </p>
@@ -677,7 +659,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
             </div>
             <Textarea
               value={refText}
-              onChange={(e) => setRefText(e.target.value)}
+              onChange={(e) => setVoxcpm2Field('refText', e.target.value)}
               placeholder={t('tts.refTextPlaceholder', 'Enter transcription of the reference audio (optional)')}
               rows={2}
               className="bg-background"
@@ -693,7 +675,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
         </label>
         <Textarea
           value={instructions}
-          onChange={(e) => setInstructions(e.target.value)}
+          onChange={(e) => setVoxcpm2Field('instructions', e.target.value)}
           placeholder={t('tts.voxcpm2.instructionsPlaceholder', 'Describe voice style, e.g., (A warm male voice, gentle tone) or "speak softly"...')}
           className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
           rows={2}
@@ -722,7 +704,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
               </label>
               <Input
                 value={seed}
-                onChange={(e) => setSeed(e.target.value)}
+                onChange={(e) => setVoxcpm2Field('seed', e.target.value)}
                 placeholder={t('tts.seedPlaceholder', 'Leave empty for random')}
                 type="number"
                 className="bg-background"
@@ -734,7 +716,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
               </label>
               <Input
                 value={maxNewTokens}
-                onChange={(e) => setMaxNewTokens(e.target.value)}
+                onChange={(e) => setVoxcpm2Field('maxNewTokens', e.target.value)}
                 placeholder={t('tts.maxNewTokens', 'Leave empty for default')}
                 type="number"
                 className="bg-background"

@@ -6,7 +6,7 @@ import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { LogPanel } from '@/features/logs/components/LogPanel';
 import { useLogStream } from '@/features/logs/hooks';
-import type { UnifiedNode } from '@/types/node';
+import type { UnifiedNode } from '@/types';
 
 type Tab = 'local' | 'nodes';
 

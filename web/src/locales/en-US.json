@@ -3,6 +3,7 @@
     "search": "Search...",
     "loading": "Loading...",
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "delete": "Delete",
@@ -608,7 +609,19 @@
       "noModels": "No VoxCPM2 models found",
       "noModelsHint": "Please ensure VoxCPM2 model paths are configured and scanned",
       "voiceSaved": "Voice saved successfully",
-      "voiceSaveFailed": "Failed to save voice"
+      "voiceSaveFailed": "Failed to save voice",
+      "voiceLibrary": "Voice Library",
+      "uploadVoice": "Upload",
+      "voiceUploaded": "Voice uploaded",
+      "voiceUploadFailed": "Upload failed",
+      "voiceDeleted": "Voice deleted",
+      "voiceDeleteFailed": "Delete failed",
+      "confirmDeleteVoice": "Delete voice \"{{name}}\"?",
+      "noVoices": "No uploaded voices yet. Upload an audio file to use as a voice reference.",
+      "useRefAudio": "Use reference audio below",
+      "voiceOverridesRefAudio": "Voice is set — reference audio will be ignored.",
+      "selectAsrModel": "Select ASR model",
+      "refresh": "Refresh"
     },
     "history": "History",
     "historyLoading": "Loading history...",
@@ -630,7 +643,10 @@
     "cancelVoice": "Cancel",
     "noModelsTitle": "No TTS Models Loaded",
     "noModelsDescription": "Load a TTS-capable model to start generating speech. Available models are shown below.",
-    "autoSaved": "Auto-saved"
+    "autoSaved": "Auto-saved",
+    "modelRunning": "Running",
+    "playbackFailed": "Playback failed",
+    "dragToRefAudioHint": "Drag audio to reference area"
   },
   "asr": {
     "title": "Speech Recognition (ASR)",

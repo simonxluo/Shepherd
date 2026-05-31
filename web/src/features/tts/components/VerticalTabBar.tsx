@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import type { TTSPlugin } from '../types';
+import type { TTSPlugin } from '@/features/tts/types';
 
 interface VerticalTabBarProps {
   plugins: TTSPlugin[];

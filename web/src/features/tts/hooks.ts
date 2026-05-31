@@ -6,7 +6,8 @@ import {
   useSaveModelLoadConfig,
   useDeleteModelLoadConfig,
 } from '@/features/models/config';
-import type { LoadedModel } from '@/features/creative/hooks';
+import type { LoadedModel } from '@/types/model';
+import type { LoadModelParams } from '@/types/model';
 import type { TTSRequest, TTSConfig, TTSModelFeatures } from './types';
 import type { VoicesResponse } from '@/lib/api/voices';
 import { ttsRegistry } from './registry';
@@ -111,7 +112,7 @@ export function useTTSConfig(modelId: string) {
 
   const saveTTSConfig = useCallback((config: TTSConfig) => {
     if (!modelId) return;
-    rawSaveConfig.mutate({ modelId, config: config as unknown as import('@/types/model').LoadModelParams });
+    rawSaveConfig.mutate({ modelId, config: config as unknown as LoadModelParams });
   }, [modelId, rawSaveConfig]);
 
   return {

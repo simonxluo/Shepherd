@@ -1,6 +1,8 @@
 package model
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
@@ -13,8 +15,8 @@ import (
 //   - If currently loading: blocks until loading completes
 //   - If not loaded: triggers an async load and blocks until complete
 //
-// Uses a default CtxSize of 4096. Intended for protocol compatibility layers
-// to automatically load models upon receiving inference requests.
+// Attempts to restore a previously saved load configuration from storage.
+// Falls back to a default CtxSize of 4096 if no saved config exists.
 // Returns the model's listening port or an error if loading fails.
 func (m *Manager) EnsureLoaded(modelID string) (int, error) {
 	m.mu.RLock()
@@ -39,9 +41,12 @@ func (m *Manager) EnsureLoaded(modelID string) (int, error) {
 
 	logger.Infof("惰性加载模型: modelId=%s", modelID)
 
-	req := &LoadRequest{
-		ModelID: modelID,
-		CtxSize: 4096,
+	req := m.loadSavedConfig(modelID)
+	if req == nil {
+		req = &LoadRequest{
+			ModelID: modelID,
+			CtxSize: 4096,
+		}
 	}
 
 	result, err := m.LoadAsync(req)
@@ -71,4 +76,47 @@ func (m *Manager) EnsureLoaded(modelID string) (int, error) {
 		return status.Port, nil
 	}
 	return 0, fmt.Errorf("model %s load failed", modelID)
+}
+
+// loadSavedConfig attempts to load a previously saved model load configuration from storage.
+// Returns nil if no config is found or if deserialization fails.
+func (m *Manager) loadSavedConfig(modelID string) *LoadRequest {
+	if m.storageMgr == nil {
+		return nil
+	}
+
+	store := m.storageMgr.GetStore()
+	if store == nil {
+		return nil
+	}
+
+	// 获取节点 ID，与 handler 中的 getNodeID() 逻辑一致
+	nodeID := "local"
+	if m.config != nil && m.config.Node.ID != "" {
+		nodeID = m.config.Node.ID
+	}
+
+	cfg, err := store.GetModelLoadConfig(context.Background(), nodeID, modelID)
+	if err != nil {
+		return nil
+	}
+
+	// 将 Config (map[string]interface{}) 序列化后反序列化为 LoadRequest
+	jsonBytes, err := json.Marshal(cfg.Config)
+	if err != nil {
+		return nil
+	}
+
+	var req LoadRequest
+	if err := json.Unmarshal(jsonBytes, &req); err != nil {
+		return nil
+	}
+
+	req.ModelID = modelID
+	if req.CtxSize == 0 {
+		req.CtxSize = 4096
+	}
+
+	logger.Infof("从存储恢复模型加载配置: modelId=%s, ctxSize=%d", modelID, req.CtxSize)
+	return &req
 }

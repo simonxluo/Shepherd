@@ -4,7 +4,7 @@ import { Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/useToast';
 import { cn } from '@/lib/utils';
-import type { TTSConfig } from '../types';
+import type { TTSConfig } from '@/features/tts/types';
 
 interface ConfigManagerProps {
   /** Model name used as localStorage key segment */

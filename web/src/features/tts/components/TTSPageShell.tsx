@@ -4,17 +4,18 @@ import { PanelLeftOpen } from 'lucide-react';
 import { useLoadedModels } from '@/features/creative/hooks';
 import { useModels } from '@/features/models';
 import { Button } from '@/components/ui/button';
-import { useTTS, getTTSModelFeatures } from '../hooks';
-import type { TTSRequest } from '../types';
-import { StreamAudioPlayer, type StreamState, type TTSStreamMetrics } from '../lib/StreamAudioPlayer';
-import { ttsRegistry } from '../registry';
+import { useTTS, getTTSModelFeatures } from '@/features/tts/hooks';
+import type { TTSRequest } from '@/features/tts/types';
+import { StreamAudioPlayer, type StreamState, type TTSStreamMetrics } from '@/features/tts/lib/StreamAudioPlayer';
+import { ttsRegistry } from '@/features/tts/registry';
 import { VerticalTabBar } from './VerticalTabBar';
 import { TTSPlaybackArea } from './TTSPlaybackArea';
 import { TTSHistoryPanel } from './TTSHistoryPanel';
-import { useCreateTTSHistory } from '../historyHooks';
+import { useCreateTTSHistory } from '@/features/tts/historyHooks';
 import { toast } from '@/hooks/useToast';
-import { pcmToWav } from '../lib/pcmToWav';
-import type { TTSPluginPanelProps } from '../types';
+import { pcmToWav } from '@/features/tts/lib/pcmToWav';
+import type { TTSPluginPanelProps } from '@/features/tts/types';
+import { useTTSStore } from '@/stores/ttsStore';
 
 // Import plugins to register them
 import '../plugins/generic';
@@ -35,11 +36,12 @@ export function TTSPageShell() {
   // Get registered plugins
   const plugins = useMemo(() => ttsRegistry.getAllPlugins(), []);
 
-  // Active tab state
-  const [activePluginId, setActivePluginId] = useState<string>(plugins[0]?.id || 'generic');
+  // Active tab state (persisted via Zustand)
+  const activePluginId = useTTSStore((s) => s.activePluginId);
+  const setActivePluginId = useTTSStore((s) => s.setActivePluginId);
 
-  // Selected model per plugin tab
-  const [modelByPlugin, setModelByPlugin] = useState<Record<string, string>>({});
+  // Selected model per plugin tab (persisted via Zustand)
+  const modelByPlugin = useTTSStore((s) => s.modelByPlugin);
 
   // TTS mutation (non-stream)
   const tts = useTTS();
@@ -76,16 +78,9 @@ export function TTSPageShell() {
   // Last used voice (for download naming)
   const [lastVoice, setLastVoice] = useState<string>('');
 
-  // Auto-play toggle with localStorage persistence
-  const [autoPlay, setAutoPlay] = useState(() => {
-    try { return localStorage.getItem('shepherd-tts-autoplay') === 'true'; }
-    catch { return false; }
-  });
-
-  useEffect(() => {
-    try { localStorage.setItem('shepherd-tts-autoplay', String(autoPlay)); }
-    catch { /* silent */ }
-  }, [autoPlay]);
+  // Auto-play toggle (persisted via Zustand)
+  const autoPlay = useTTSStore((s) => s.autoPlay);
+  const setAutoPlay = useTTSStore((s) => s.setAutoPlay);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -123,11 +118,7 @@ export function TTSPageShell() {
   useEffect(() => {
     if (matchedModels.length > 0 && !currentModelName) {
       const firstModel = matchedModels[0];
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setModelByPlugin((prev) => ({
-        ...prev,
-        [activePluginId]: firstModel.alias || firstModel.name,
-      }));
+      useTTSStore.getState().setModelForPlugin(activePluginId, firstModel.alias || firstModel.name);
     }
   }, [matchedModels, currentModelName, activePluginId]);
 
@@ -144,10 +135,7 @@ export function TTSPageShell() {
   const handleModelChange = useCallback((modelName: string) => {
     // 切换模型前取消进行中的生成
     handleCancel();
-    setModelByPlugin((prev) => ({
-      ...prev,
-      [activePluginId]: modelName,
-    }));
+    useTTSStore.getState().setModelForPlugin(activePluginId, modelName);
   }, [activePluginId, handleCancel]);
 
   // Get features for current model (for sample rate)

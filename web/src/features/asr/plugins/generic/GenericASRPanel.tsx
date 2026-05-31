@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ModelSelect } from '@/features/creative/ModelSelect';
-import { AvailableModelList } from '@/features/creative/AvailableModelList';
+import { ModelSelect } from '@/components/model/ModelSelect';
+import { AvailableModelList } from '@/components/model/AvailableModelList';
 import { useAvailableModels } from '@/features/creative/hooks';
+import { useASRStore } from '@/stores/asrStore';
 import { toast } from '@/hooks/useToast';
 import { formatBytes } from '@/lib/utils';
-import type { ASRPluginPanelProps } from '../../types';
+import type { ASRPluginPanelProps } from '@/features/asr/types';
 
 export function GenericASRPanel({
   model: selectedModel,
@@ -26,11 +27,13 @@ export function GenericASRPanel({
 
   const modelName = selectedModel ? (selectedModel.alias || selectedModel.name) : '';
 
+  // 表单状态从 Zustand store 获取（跨页面持久化）
+  const genericForm = useASRStore((s) => s.genericForm);
+  const setGenericField = useASRStore((s) => s.setGenericField);
+  const { language, prompt, responseFormat, temperature } = genericForm;
+
+  // 瞬态 UI 状态保留为本地 useState
   const [file, setFile] = useState<File | null>(null);
-  const [language, setLanguage] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [responseFormat, setResponseFormat] = useState('text');
-  const [temperature, setTemperature] = useState(0);
   const [copied, setCopied] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,7 +157,7 @@ export function GenericASRPanel({
           <Input
             type="text"
             value={language}
-            onChange={(e) => setLanguage(e.target.value)}
+            onChange={(e) => setGenericField('language', e.target.value)}
             placeholder={t('asr.languagePlaceholder', 'e.g., zh, en, ja')}
             className="w-full"
           />
@@ -166,7 +169,7 @@ export function GenericASRPanel({
           <Input
             type="text"
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => setGenericField('prompt', e.target.value)}
             placeholder={t('asr.promptPlaceholder', 'Optional prompt text')}
             className="w-full"
           />
@@ -179,7 +182,7 @@ export function GenericASRPanel({
           <label className="block text-sm font-medium mb-1.5">
             {t('asr.responseFormatLabel', 'Response Format')}
           </label>
-          <Select value={responseFormat} onValueChange={setResponseFormat}>
+          <Select value={responseFormat} onValueChange={(v) => setGenericField('responseFormat', v)}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -198,7 +201,7 @@ export function GenericASRPanel({
           </label>
           <Slider
             value={[temperature]}
-            onValueChange={([val]) => setTemperature(val)}
+            onValueChange={([val]) => setGenericField('temperature', val)}
             min={0}
             max={1}
             step={0.1}

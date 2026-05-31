@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ModelSelect } from '@/features/creative/ModelSelect';
-import { AvailableModelList } from '@/features/creative/AvailableModelList';
+import { ModelSelect } from '@/components/model/ModelSelect';
+import { AvailableModelList } from '@/components/model/AvailableModelList';
 import { useAvailableModels } from '@/features/creative/hooks';
+import { useMusicGenStore } from '@/stores/musicGenStore';
 import { toast } from '@/hooks/useToast';
-import type { MusicPluginPanelProps, MusicGenRequest } from '../../types';
-import { AUDIO_FORMATS } from '../../constants';
+import type { MusicPluginPanelProps, MusicGenRequest } from '@/features/music-gen/types';
+import { AUDIO_FORMATS } from '@/features/music-gen/constants';
 
 const VOCAL_LANGUAGES = [
   { value: 'en', label: 'English' },
@@ -73,57 +74,51 @@ export function AceStepPanel({
 
   const modelName = selectedModel ? (selectedModel.alias || selectedModel.name) : '';
 
-  // Basic fields
-  const [prompt, setPrompt] = useState('');
-  const [lyrics, setLyrics] = useState('');
-  const [duration, setDuration] = useState(30);
-  const [responseFormat, setResponseFormat] = useState('wav');
-  const [vocalLanguage, setVocalLanguage] = useState('en');
+  // 表单状态从 Zustand store 获取（跨页面持久化）
+  const aceStepForm = useMusicGenStore((s) => s.aceStepForm);
+  const setAceStepField = useMusicGenStore((s) => s.setAceStepField);
+  const { prompt, lyrics, duration, responseFormat, vocalLanguage,
+          bpm, keyScale, timeSignature, inferenceSteps, guidanceScale, seed } = aceStepForm;
 
-  // Advanced fields
+  // 瞬态 UI 状态保留为本地 useState
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [bpm, setBpm] = useState('');
-  const [keyScale, setKeyScale] = useState('__auto');
-  const [timeSignature, setTimeSignature] = useState('__auto');
-  const [inferenceSteps, setInferenceSteps] = useState(8);
-  const [guidanceScale, setGuidanceScale] = useState(7.0);
-  const [seed, setSeed] = useState('');
 
   const handleGenerate = () => {
+    const form = useMusicGenStore.getState().aceStepForm;
     if (!modelName) {
       toast.warning(t('musicGen.selectModelWarning', '请选择模型'));
       return;
     }
-    if (!prompt.trim()) {
+    if (!form.prompt.trim()) {
       toast.warning(t('musicGen.promptRequired', '请输入音乐描述'));
       return;
     }
 
     const payload: MusicGenRequest = {
       model: modelName,
-      prompt: prompt.trim(),
-      duration,
-      response_format: responseFormat,
-      vocal_language: vocalLanguage,
-      inference_steps: inferenceSteps,
-      guidance_scale: guidanceScale,
+      prompt: form.prompt.trim(),
+      duration: form.duration,
+      response_format: form.responseFormat,
+      vocal_language: form.vocalLanguage,
+      inference_steps: form.inferenceSteps,
+      guidance_scale: form.guidanceScale,
       task_type: 'text2music',
     };
 
-    if (lyrics.trim()) {
-      payload.lyrics = lyrics.trim();
+    if (form.lyrics.trim()) {
+      payload.lyrics = form.lyrics.trim();
     }
-    if (bpm) {
-      payload.bpm = parseInt(bpm, 10) || undefined;
+    if (form.bpm) {
+      payload.bpm = parseInt(form.bpm, 10) || undefined;
     }
-    if (keyScale && keyScale !== '__auto') {
-      payload.key_scale = keyScale;
+    if (form.keyScale && form.keyScale !== '__auto') {
+      payload.key_scale = form.keyScale;
     }
-    if (timeSignature && timeSignature !== '__auto') {
-      payload.time_signature = timeSignature;
+    if (form.timeSignature && form.timeSignature !== '__auto') {
+      payload.time_signature = form.timeSignature;
     }
-    if (seed) {
-      payload.seed = parseInt(seed, 10) || undefined;
+    if (form.seed) {
+      payload.seed = parseInt(form.seed, 10) || undefined;
     }
 
     onGenerate(payload);
@@ -171,7 +166,7 @@ export function AceStepPanel({
         </label>
         <Textarea
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={(e) => setAceStepField('prompt', e.target.value)}
           placeholder={t('musicGen.aceStep.promptPlaceholder', '描述音乐的风格、情绪、乐器编排等，例如: A dreamy indie folk song with acoustic guitar and soft vocals...')}
           className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
           rows={3}
@@ -185,7 +180,7 @@ export function AceStepPanel({
         </label>
         <Textarea
           value={lyrics}
-          onChange={(e) => setLyrics(e.target.value)}
+          onChange={(e) => setAceStepField('lyrics', e.target.value)}
           placeholder={t('musicGen.aceStep.lyricsPlaceholder', '输入歌词，留空则生成纯音乐...')}
           className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
           rows={4}
@@ -200,7 +195,7 @@ export function AceStepPanel({
           </label>
           <Slider
             value={[duration]}
-            onValueChange={([val]) => setDuration(val)}
+            onValueChange={([val]) => setAceStepField('duration', val)}
             min={5}
             max={300}
             step={5}
@@ -211,7 +206,7 @@ export function AceStepPanel({
           <label className="block text-sm font-medium mb-1.5">
             {t('musicGen.aceStep.vocalLanguage', '演唱语言')}
           </label>
-          <Select value={vocalLanguage} onValueChange={setVocalLanguage}>
+          <Select value={vocalLanguage} onValueChange={(v) => setAceStepField('vocalLanguage', v)}>
             <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
               <SelectValue />
             </SelectTrigger>
@@ -230,7 +225,7 @@ export function AceStepPanel({
           <label className="block text-sm font-medium mb-1.5">
             {t('musicGen.formatLabel', '输出格式')}
           </label>
-          <Select value={responseFormat} onValueChange={setResponseFormat}>
+          <Select value={responseFormat} onValueChange={(v) => setAceStepField('responseFormat', v)}>
             <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
               <SelectValue />
             </SelectTrigger>
@@ -247,7 +242,7 @@ export function AceStepPanel({
           </label>
           <Slider
             value={[inferenceSteps]}
-            onValueChange={([val]) => setInferenceSteps(val)}
+            onValueChange={([val]) => setAceStepField('inferenceSteps', val)}
             min={1}
             max={50}
             step={1}
@@ -275,7 +270,7 @@ export function AceStepPanel({
             </label>
             <Slider
               value={[guidanceScale]}
-              onValueChange={([val]) => setGuidanceScale(val)}
+              onValueChange={([val]) => setAceStepField('guidanceScale', val)}
               min={1}
               max={15}
               step={0.5}
@@ -291,7 +286,7 @@ export function AceStepPanel({
               </label>
               <Input
                 value={bpm}
-                onChange={(e) => setBpm(e.target.value)}
+                onChange={(e) => setAceStepField('bpm', e.target.value)}
                 placeholder={t('musicGen.aceStep.bpmPlaceholder', '留空自动检测')}
                 type="number"
                 min={40}
@@ -305,7 +300,7 @@ export function AceStepPanel({
               </label>
               <Input
                 value={seed}
-                onChange={(e) => setSeed(e.target.value)}
+                onChange={(e) => setAceStepField('seed', e.target.value)}
                 placeholder={t('musicGen.aceStep.seedPlaceholder', '留空随机')}
                 type="number"
                 className="bg-background"
@@ -319,7 +314,7 @@ export function AceStepPanel({
               <label className="block text-sm font-medium mb-1.5">
                 {t('musicGen.aceStep.keyScale', '调性')}
               </label>
-              <Select value={keyScale} onValueChange={setKeyScale}>
+              <Select value={keyScale} onValueChange={(v) => setAceStepField('keyScale', v)}>
                 <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
                   <SelectValue placeholder="Auto" />
                 </SelectTrigger>
@@ -334,7 +329,7 @@ export function AceStepPanel({
               <label className="block text-sm font-medium mb-1.5">
                 {t('musicGen.aceStep.timeSignature', '拍号')}
               </label>
-              <Select value={timeSignature} onValueChange={setTimeSignature}>
+              <Select value={timeSignature} onValueChange={(v) => setAceStepField('timeSignature', v)}>
                 <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
                   <SelectValue placeholder="Auto" />
                 </SelectTrigger>
@@ -352,7 +347,7 @@ export function AceStepPanel({
       {/* Generate button */}
       <Button
         onClick={handleGenerate}
-        disabled={isGenerating || !modelName || !prompt.trim()}
+        disabled={isGenerating || !modelName || !aceStepForm.prompt.trim()}
         className="w-full"
       >
         {isGenerating ? (

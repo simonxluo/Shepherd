@@ -1,16 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Music, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ModelSelect } from '@/features/creative/ModelSelect';
-import { AvailableModelList } from '@/features/creative/AvailableModelList';
+import { ModelSelect } from '@/components/model/ModelSelect';
+import { AvailableModelList } from '@/components/model/AvailableModelList';
 import { useAvailableModels } from '@/features/creative/hooks';
+import { useMusicGenStore } from '@/stores/musicGenStore';
 import { toast } from '@/hooks/useToast';
-import type { MusicPluginPanelProps } from '../../types';
-import { AUDIO_FORMATS } from '../../constants';
+import type { MusicPluginPanelProps } from '@/features/music-gen/types';
+import { AUDIO_FORMATS } from '@/features/music-gen/constants';
 
 export function GenericMusicPanel({
   model: selectedModel,
@@ -32,27 +33,28 @@ export function GenericMusicPanel({
 
   const modelName = selectedModel ? (selectedModel.alias || selectedModel.name) : '';
 
-  const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(30);
-  const [responseFormat, setResponseFormat] = useState('wav');
-  const [temperature, setTemperature] = useState(0.7);
+  // 表单状态从 Zustand store 获取（跨页面持久化）
+  const genericForm = useMusicGenStore((s) => s.genericForm);
+  const setGenericField = useMusicGenStore((s) => s.setGenericField);
+  const { prompt, duration, responseFormat, temperature } = genericForm;
 
   const handleGenerate = () => {
+    const form = useMusicGenStore.getState().genericForm;
     if (!modelName) {
       toast.warning(t('musicGen.selectModelWarning', '请选择模型'));
       return;
     }
-    if (!prompt.trim()) {
+    if (!form.prompt.trim()) {
       toast.warning(t('musicGen.promptRequired', '请输入音乐描述'));
       return;
     }
 
     onGenerate({
       model: modelName,
-      prompt: prompt.trim(),
-      duration,
-      response_format: responseFormat,
-      temperature,
+      prompt: form.prompt.trim(),
+      duration: form.duration,
+      response_format: form.responseFormat,
+      temperature: form.temperature,
     });
   };
 
@@ -96,7 +98,7 @@ export function GenericMusicPanel({
         </label>
         <Textarea
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={(e) => setGenericField('prompt', e.target.value)}
           placeholder={t('musicGen.promptPlaceholder', '描述要生成的音乐风格、情绪、乐器等...')}
           className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
           rows={3}
@@ -110,7 +112,7 @@ export function GenericMusicPanel({
           </label>
           <Slider
             value={[duration]}
-            onValueChange={([val]) => setDuration(val)}
+            onValueChange={([val]) => setGenericField('duration', val)}
             min={5}
             max={300}
             step={5}
@@ -121,7 +123,7 @@ export function GenericMusicPanel({
           <label className="block text-sm font-medium mb-1.5">
             {t('musicGen.formatLabel', '输出格式')}
           </label>
-          <Select value={responseFormat} onValueChange={setResponseFormat}>
+          <Select value={responseFormat} onValueChange={(v) => setGenericField('responseFormat', v)}>
             <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
               <SelectValue />
             </SelectTrigger>
@@ -140,7 +142,7 @@ export function GenericMusicPanel({
         </label>
         <Slider
           value={[temperature]}
-          onValueChange={([val]) => setTemperature(val)}
+          onValueChange={([val]) => setGenericField('temperature', val)}
           min={0}
           max={1}
           step={0.1}
@@ -150,7 +152,7 @@ export function GenericMusicPanel({
 
       <Button
         onClick={handleGenerate}
-        disabled={isGenerating || !modelName || !prompt.trim()}
+        disabled={isGenerating || !modelName || !genericForm.prompt.trim()}
         className="w-full"
       >
         {isGenerating ? (

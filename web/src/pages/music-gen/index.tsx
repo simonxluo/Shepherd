@@ -6,6 +6,7 @@ import { cn, formatBytes } from '@/lib/utils';
 import { useLoadedModels } from '@/features/creative/hooks';
 import { useMusicGeneration } from '@/features/music-gen/hooks';
 import { musicRegistry } from '@/features/music-gen/registry';
+import { useMusicGenStore } from '@/stores/musicGenStore';
 import { toast } from '@/hooks/useToast';
 import type { MusicGenRequest, MusicPluginPanelProps } from '@/features/music-gen/types';
 
@@ -25,10 +26,11 @@ export function MusicGenPage() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const prevAudioUrlRef = useRef<string | null>(null);
 
-  // Plugin system
+  // Plugin system (persisted via Zustand)
   const plugins = useMemo(() => musicRegistry.getAllPlugins(), []);
-  const [activePluginId, setActivePluginId] = useState<string>(plugins[0]?.id || 'generic');
-  const [modelByPlugin, setModelByPlugin] = useState<Record<string, string>>({});
+  const activePluginId = useMusicGenStore((s) => s.activePluginId);
+  const setActivePluginId = useMusicGenStore((s) => s.setActivePluginId);
+  const modelByPlugin = useMusicGenStore((s) => s.modelByPlugin);
 
   // Audio state
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -67,10 +69,7 @@ export function MusicGenPage() {
   );
 
   const handleModelChange = useCallback((modelName: string) => {
-    setModelByPlugin((prev) => ({
-      ...prev,
-      [activePluginId]: modelName,
-    }));
+    useMusicGenStore.getState().setModelForPlugin(activePluginId, modelName);
   }, [activePluginId]);
 
   const handleGenerate = useCallback((payload: MusicGenRequest) => {

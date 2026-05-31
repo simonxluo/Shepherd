@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import type { ASRPlugin } from '../types';
+import type { ASRPlugin } from '@/features/asr/types';
 
 interface VerticalTabBarProps {
   plugins: ASRPlugin[];

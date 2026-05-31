@@ -1,6 +1,6 @@
-import { ttsRegistry } from '../../registry';
-import { GenericTTSPanel } from '../../components/GenericTTSPanel';
-import type { TTSPlugin } from '../../types';
+import { ttsRegistry } from '@/features/tts/registry';
+import { GenericTTSPanel } from '@/features/tts/components/GenericTTSPanel';
+import type { TTSPlugin } from '@/features/tts/types';
 
 const genericPlugin: TTSPlugin = {
   id: 'generic',

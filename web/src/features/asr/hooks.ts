@@ -1,20 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { v1ApiClient } from '@/lib/api/client';
-
-export interface ASRRequest {
-  model: string;
-  file: File;
-  language?: string;
-  prompt?: string;
-  response_format?: string;
-  temperature?: number;
-}
-
-export interface ASRResponse {
-  text: string;
-  language?: string;
-  duration?: number;
-}
+import type { ASRRequest, ASRResponse } from './types';
 
 export function useASR() {
   return useMutation({

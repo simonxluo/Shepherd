@@ -1,13 +1,14 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLoadedModels } from '@/features/creative/hooks';
 import { useModels } from '@/features/models';
-import { useASR } from '../hooks';
-import { asrRegistry } from '../registry';
+import { useASRStore } from '@/stores/asrStore';
+import { useASR } from '@/features/asr/hooks';
+import { asrRegistry } from '@/features/asr/registry';
 import { VerticalTabBar } from './VerticalTabBar';
 import { toast } from '@/hooks/useToast';
-import type { ASRPluginPanelProps } from '../types';
-import type { ASRRequest } from '../hooks';
+import type { ASRPluginPanelProps } from '@/features/asr/types';
+import type { ASRRequest } from '@/features/asr/types';
 
 // Import plugins to register them
 import '../plugins/generic';
@@ -27,11 +28,10 @@ export function ASRPageShell() {
   // Get registered plugins
   const plugins = useMemo(() => asrRegistry.getAllPlugins(), []);
 
-  // Active tab state
-  const [activePluginId, setActivePluginId] = useState<string>(plugins[0]?.id || 'generic');
-
-  // Selected model per plugin tab
-  const [modelByPlugin, setModelByPlugin] = useState<Record<string, string>>({});
+  // Active tab state (persisted via Zustand)
+  const activePluginId = useASRStore((s) => s.activePluginId);
+  const setActivePluginId = useASRStore((s) => s.setActivePluginId);
+  const modelByPlugin = useASRStore((s) => s.modelByPlugin);
 
   // ASR mutation
   const asr = useASR();
@@ -64,19 +64,12 @@ export function ASRPageShell() {
   useEffect(() => {
     if (matchedModels.length > 0 && !currentModelName) {
       const firstModel = matchedModels[0];
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setModelByPlugin((prev) => ({
-        ...prev,
-        [activePluginId]: firstModel.alias || firstModel.name,
-      }));
+      useASRStore.getState().setModelForPlugin(activePluginId, firstModel.alias || firstModel.name);
     }
   }, [matchedModels, currentModelName, activePluginId]);
 
   const handleModelChange = useCallback((modelName: string) => {
-    setModelByPlugin((prev) => ({
-      ...prev,
-      [activePluginId]: modelName,
-    }));
+    useASRStore.getState().setModelForPlugin(activePluginId, modelName);
   }, [activePluginId]);
 
   // Unified transcribe handler

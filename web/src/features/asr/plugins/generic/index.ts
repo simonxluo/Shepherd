@@ -1,6 +1,6 @@
-import { asrRegistry } from '../../registry';
+import { asrRegistry } from '@/features/asr/registry';
 import { GenericASRPanel } from './GenericASRPanel';
-import type { ASRPlugin } from '../../types';
+import type { ASRPlugin } from '@/features/asr/types';
 
 const genericPlugin: ASRPlugin = {
   id: 'generic',

@@ -611,7 +611,7 @@ export function LoadModelDialog({
   // 计算能力更新逻辑（纯函数，无副作用）
   const computeCapabilityUpdate = useCallback((
     prev: LoadModelParams, key: string, value: boolean
-  ): Pick<LoadModelParams, 'capabilities' | 'reranking'> => {
+  ): { capabilities: NonNullable<LoadModelParams['capabilities']>; reranking: boolean } => {
     const currentCaps = prev.capabilities || {};
     const currentReranking = prev.reranking || false;
     const newCaps: Record<string, boolean> = { ...currentCaps, [key]: value };
@@ -649,24 +649,28 @@ export function LoadModelDialog({
   }, []);
 
   const handleCapabilityChange = useCallback((key: string, value: boolean) => {
-    let computed: Pick<LoadModelParams, 'capabilities' | 'reranking'>;
+    // Compute outside the updater so TypeScript can verify the value exists.
+    // We need the *previous* state for computation, so read via setParams callback.
     setParams(prev => {
-      computed = computeCapabilityUpdate(prev, key, value);
+      const computed = computeCapabilityUpdate(prev, key, value);
+      // Schedule the mutate as a microtask so it runs after setState commits.
+      // The computed value is captured in closure — no stale reference risk.
+      queueMicrotask(() => {
+        setModelCapabilities.mutate({
+          modelId,
+          capabilities: {
+            thinking: computed.capabilities.thinking || false,
+            tools: computed.capabilities.tools || false,
+            rerank: computed.reranking,
+            embedding: computed.capabilities.embedding || false,
+            tts: computed.capabilities.tts || false,
+            asr: computed.capabilities.asr || false,
+            imageGeneration: computed.capabilities.imageGeneration || false,
+            music: computed.capabilities.music || false,
+          },
+        });
+      });
       return { ...prev, ...computed };
-    });
-    // setState updater 同步执行，computed 此时可安全访问
-    setModelCapabilities.mutate({
-      modelId,
-      capabilities: {
-        thinking: computed!.capabilities.thinking || false,
-        tools: computed!.capabilities.tools || false,
-        rerank: computed!.reranking,
-        embedding: computed!.capabilities.embedding || false,
-        tts: computed!.capabilities.tts || false,
-        asr: computed!.capabilities.asr || false,
-        imageGeneration: computed!.capabilities.imageGeneration || false,
-        music: computed!.capabilities.music || false,
-      },
     });
   }, [modelId, setModelCapabilities, computeCapabilityUpdate]);
 

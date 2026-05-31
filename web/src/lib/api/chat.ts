@@ -134,6 +134,8 @@ export const chatApi = {
     } = params;
 
     (async () => {
+      // Declare reader outside try so catch block can release it on error
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
       try {
         const body: Record<string, unknown> = {
           model,
@@ -159,7 +161,7 @@ export const chatApi = {
           throw new Error(`HTTP ${response.status}: ${errBody}`);
         }
 
-        const reader = response.body?.getReader();
+        reader = response.body?.getReader();
         if (!reader) throw new Error('No reader available');
 
         const decoder = new TextDecoder();
@@ -168,7 +170,7 @@ export const chatApi = {
         let chunkCount = 0;
         const startTime = Date.now();
         let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined;
-        const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB 缓冲区上限，防止 [DONE] 丢失时内存无限增长
+        const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB buffer cap: prevents unbounded growth if [DONE] is lost
 
         while (true) {
           const { done, value } = await reader.read();
@@ -176,7 +178,7 @@ export const chatApi = {
 
           buffer += decoder.decode(value, { stream: true });
           if (buffer.length > MAX_BUFFER_SIZE) {
-            throw new Error(`流式缓冲区超出 ${MAX_BUFFER_SIZE / 1024 / 1024}MB 限制，服务端未发送 [DONE]`);
+            throw new Error(`Streaming buffer exceeded ${MAX_BUFFER_SIZE / 1024 / 1024}MB limit — server did not send [DONE]`);
           }
           const lines = buffer.split('\n');
           buffer = lines.pop() ?? '';

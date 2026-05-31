@@ -520,6 +520,18 @@ export interface ModelCapabilities {
 }
 
 /**
+ * Lightweight model info returned by /models/loaded.
+ * Used across creative features (TTS, ASR, ImageGen, MusicGen).
+ */
+export interface LoadedModel {
+  id: string;
+  name: string;
+  alias?: string;
+  backendType?: string;
+  capabilities?: ModelCapabilities;
+}
+
+/**
  * Benchmark parameter type
  */
 export type BenchmarkParamType = 'STRING' | 'INTEGER' | 'FLOAT' | 'LOGIC';

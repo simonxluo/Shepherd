@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, type TFunction } from 'react-i18next';
 import { Server, Cpu, HardDrive, Clock, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -17,7 +17,7 @@ interface ClientCardProps {
 /**
  * Format last seen time
  */
-function formatLastSeen(timestamp: string, t: (key: string, options?: Record<string, unknown>) => string): string {
+function formatLastSeen(timestamp: string, t: TFunction): string {
   const date = new Date(timestamp);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
@@ -32,7 +32,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
   const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const statusColor = STATUS_COLORS[client.status];
-  const statusLabel = getStatusLabel(client.status, t);
+  const statusLabel = getStatusLabel(client.status);
   const isConnected = client.status === 'online' || client.status === 'busy';
 
   const { cpu: cpuPercent, memory: memoryPercent, gpu: gpuPercent, gpuMemory: gpuMemoryPercent } = getResourcePercentages(client.resources);

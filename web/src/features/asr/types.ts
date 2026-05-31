@@ -1,6 +1,22 @@
-import type { LoadedModel } from '@/features/creative/hooks';
-import type { ASRRequest, ASRResponse } from './hooks';
+import type { LoadedModel } from '@/types/model';
 import type { ModelStatus } from '@/types';
+
+/** Request payload sent to the /v1/audio/transcriptions endpoint. */
+export interface ASRRequest {
+  model: string;
+  file: File;
+  language?: string;
+  prompt?: string;
+  response_format?: string;
+  temperature?: number;
+}
+
+/** Response from the ASR transcription endpoint. */
+export interface ASRResponse {
+  text: string;
+  language?: string;
+  duration?: number;
+}
 
 /**
  * Props passed to every ASR plugin panel component.

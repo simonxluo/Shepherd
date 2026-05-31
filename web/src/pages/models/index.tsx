@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import type { Model, ModelStatus, LoadModelParams, ModelCapabilities } from '@/types';
 import { useAlertDialog } from '@/providers/AlertDialog';
 import { toast } from '@/hooks/useToast';
-import { APIError } from '@/lib/api/client';
+import { type APIError } from '@/lib/api/client';
 import { useUIStore } from '@/stores/uiStore';
 
 const CATEGORY_ICONS: Record<ModelCategory, React.ElementType> = {

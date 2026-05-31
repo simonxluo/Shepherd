@@ -9,22 +9,23 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ModelSelect } from '@/features/creative/ModelSelect';
-import { AvailableModelList } from '@/features/creative/AvailableModelList';
-import { useAvailableModels, BACKEND_LABELS } from '@/features/creative/hooks';
+import { ModelSelect } from '@/components/model/ModelSelect';
+import { AvailableModelList } from '@/components/model/AvailableModelList';
+import { useAvailableModels } from '@/features/creative/hooks';
+import { BACKEND_LABELS } from '@/lib/constants/model';
 import {
   useVoices,
   useTTSConfig,
-  type TTSRequest,
-  type TTSConfig,
-} from '../../hooks';
-import { RefAudioInput } from '../../components/RefAudioInput';
-import { ConfigManager } from '../../components/ConfigManager';
+} from '@/features/tts/hooks';
+import type { TTSRequest, TTSConfig } from '@/features/tts/types';
+import { RefAudioInput } from '@/features/tts/components/RefAudioInput';
+import { ConfigManager } from '@/features/tts/components/ConfigManager';
 import { toast } from '@/hooks/useToast';
 import { useLoadModel } from '@/features/models';
 import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
 import { cn } from '@/lib/utils';
-import type { TTSPluginPanelProps } from '../../types';
+import type { TTSPluginPanelProps } from '@/features/tts/types';
+import { useTTSStore } from '@/stores/ttsStore';
 
 // Qwen3-TTS predefined speakers
 const QWEN3_SPEAKERS = [
@@ -92,33 +93,18 @@ export function Qwen3TTSPanel({
   const isModelError = modelStatus === 'error';
   const isStreamActive = streamState === 'streaming' || streamState === 'playing';
 
-  // Generation mode
-  const [mode, setMode] = useState<GenerationMode>('custom_voice');
+  // Form state from Zustand store
+  const qwen3Form = useTTSStore((s) => s.qwen3Form);
+  const setQwen3Field = useTTSStore((s) => s.setQwen3Field);
+  const {
+    input, language, mode, speaker, instructions, voiceDesignPrompt,
+    refAudio, refText, fastCloneMode, temperature, topP, topK,
+    repetitionPenalty, maxNewTokens, seed,
+  } = qwen3Form;
 
-  // Common state
-  const [input, setInput] = useState('');
-  const [language, setLanguage] = useState('auto');
-
-  // CustomVoice state
-  const [speaker, setSpeaker] = useState('Vivian');
-  const [instructions, setInstructions] = useState('');
-
-  // VoiceDesign state
-  const [voiceDesignPrompt, setVoiceDesignPrompt] = useState('');
-
-  // VoiceClone state
-  const [refAudio, setRefAudio] = useState('');
-  const [refText, setRefText] = useState('');
-  const [fastCloneMode, setFastCloneMode] = useState(false);
-
-  // Advanced settings
+  // Transient UI state (kept as local useState)
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [temperature, setTemperature] = useState('0.9');
-  const [topP, setTopP] = useState('1.0');
-  const [topK, setTopK] = useState('50');
-  const [repetitionPenalty, setRepetitionPenalty] = useState('1.05');
-  const [maxNewTokens, setMaxNewTokens] = useState('');
-  const [seed, setSeed] = useState('');
+  const [refAudioName, setRefAudioName] = useState('');
 
   const { data: voices = [] } = useVoices(modelName);
   const { ttsConfig, saveConfig, deleteConfig } = useTTSConfig(modelIdForConfig);
@@ -130,35 +116,34 @@ export function Qwen3TTSPanel({
   // Restore config
   useEffect(() => {
     if (ttsConfig) {
-      if (ttsConfig.voice !== undefined) setSpeaker(ttsConfig.voice);
-      if (ttsConfig.instructions !== undefined) setInstructions(ttsConfig.instructions);
-      if (ttsConfig.refAudio !== undefined) setRefAudio(ttsConfig.refAudio);
-      if (ttsConfig.refText !== undefined) setRefText(ttsConfig.refText);
-      if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language || 'auto');
+      useTTSStore.getState().hydrateFromServerConfig('qwen3tts', ttsConfig);
     }
   }, [ttsConfig]);
 
   // Sync external ref audio override
   useEffect(() => {
     if (refAudioOverride) {
-      setRefAudio(refAudioOverride);
-      setMode('voice_clone');
+      useTTSStore.getState().setQwen3Field('refAudio', refAudioOverride);
+      useTTSStore.getState().setQwen3Field('mode', 'voice_clone');
     }
   }, [refAudioOverride]);
 
-  const getCurrentConfig = useCallback((): TTSConfig => ({
-    voice: speaker || undefined,
-    stream: true,
-    responseFormat: 'pcm',
-    instructions: instructions || undefined,
-    refAudio: refAudio || undefined,
-    refText: refText || undefined,
-    language: language === 'auto' ? undefined : language,
-  }), [speaker, instructions, refAudio, refText, language]);
+  const getCurrentConfig = useCallback((): TTSConfig => {
+    const form = useTTSStore.getState().qwen3Form;
+    return {
+      voice: form.speaker || undefined,
+      stream: true,
+      responseFormat: 'pcm',
+      instructions: form.instructions || undefined,
+      refAudio: form.refAudio || undefined,
+      refText: form.refText || undefined,
+      language: form.language === 'auto' ? undefined : form.language,
+    };
+  }, []);
 
   const handleSaveToServer = useCallback(() => {
     if (!modelIdForConfig) return;
-    saveConfig.mutate({ modelId: modelIdForConfig, config: getCurrentConfig() as unknown as import('@/types/model').LoadModelParams });
+    saveConfig.mutate(getCurrentConfig());
   }, [modelIdForConfig, getCurrentConfig, saveConfig]);
 
   const handleDeleteFromServer = useCallback(() => {
@@ -170,11 +155,7 @@ export function Qwen3TTSPanel({
   }, [modelIdForConfig, deleteConfig, t]);
 
   const handleLoadConfig = useCallback((cfg: TTSConfig) => {
-    if (cfg.voice !== undefined) setSpeaker(cfg.voice);
-    if (cfg.instructions !== undefined) setInstructions(cfg.instructions);
-    if (cfg.refAudio !== undefined) setRefAudio(cfg.refAudio);
-    if (cfg.refText !== undefined) setRefText(cfg.refText);
-    if (cfg.language !== undefined) setLanguage(cfg.language || 'auto');
+    useTTSStore.getState().hydrateFromServerConfig('qwen3tts', cfg);
   }, []);
 
   const handleGenerate = useCallback(() => {
@@ -194,75 +175,74 @@ export function Qwen3TTSPanel({
       toast.error(t('tts.modelError', 'Model encountered an error'));
       return;
     }
-    if (!input.trim() && mode !== 'voice_clone') {
+
+    const form = useTTSStore.getState().qwen3Form;
+
+    if (!form.input.trim() && form.mode !== 'voice_clone') {
       toast.warning(t('tts.inputRequired', 'Please enter text'));
       return;
     }
-    if (mode === 'voice_clone' && !refAudio) {
+    if (form.mode === 'voice_clone' && !form.refAudio) {
       toast.warning(t('tts.qwen3.refAudioRequired', 'Please provide reference audio'));
       return;
     }
-    if (mode === 'voice_design' && !voiceDesignPrompt.trim()) {
+    if (form.mode === 'voice_design' && !form.voiceDesignPrompt.trim()) {
       toast.warning(t('tts.qwen3.voiceDesignRequired', 'Please enter voice design description'));
       return;
     }
 
     const payload: TTSRequest = {
       model: modelName,
-      input: input.trim(),
+      input: form.input.trim(),
       response_format: 'pcm',
       stream: true,
     };
 
     // Language
-    if (language && language !== 'auto') {
-      payload.language = language;
+    if (form.language && form.language !== 'auto') {
+      payload.language = form.language;
     }
 
     // Mode-specific parameters
-    if (mode === 'custom_voice') {
-      payload.voice = speaker;
-      if (instructions.trim()) {
-        payload.instructions = instructions.trim();
+    if (form.mode === 'custom_voice') {
+      payload.voice = form.speaker;
+      if (form.instructions.trim()) {
+        payload.instructions = form.instructions.trim();
       }
-    } else if (mode === 'voice_design') {
-      payload.instructions = voiceDesignPrompt.trim();
-    } else if (mode === 'voice_clone') {
-      payload.ref_audio = refAudio;
-      if (refText.trim()) {
-        payload.ref_text = refText.trim();
+    } else if (form.mode === 'voice_design') {
+      payload.instructions = form.voiceDesignPrompt.trim();
+    } else if (form.mode === 'voice_clone') {
+      payload.ref_audio = form.refAudio;
+      if (form.refText.trim()) {
+        payload.ref_text = form.refText.trim();
       }
     }
 
     // Sampling params
-    if (temperature && parseFloat(temperature) !== 0.9) {
-      payload.temperature = parseFloat(temperature);
+    if (form.temperature && parseFloat(form.temperature) !== 0.9) {
+      payload.temperature = parseFloat(form.temperature);
     }
-    if (topP && parseFloat(topP) !== 1.0) {
-      payload.top_p = parseFloat(topP);
+    if (form.topP && parseFloat(form.topP) !== 1.0) {
+      payload.top_p = parseFloat(form.topP);
     }
-    if (topK && parseInt(topK, 10) !== 50) {
-      payload.top_k = parseInt(topK, 10);
+    if (form.topK && parseInt(form.topK, 10) !== 50) {
+      payload.top_k = parseInt(form.topK, 10);
     }
-    if (repetitionPenalty && parseFloat(repetitionPenalty) !== 1.05) {
-      payload.repetition_penalty = parseFloat(repetitionPenalty);
+    if (form.repetitionPenalty && parseFloat(form.repetitionPenalty) !== 1.05) {
+      payload.repetition_penalty = parseFloat(form.repetitionPenalty);
     }
-    if (maxNewTokens) {
-      payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
+    if (form.maxNewTokens) {
+      payload.max_new_tokens = parseInt(form.maxNewTokens, 10) || undefined;
     }
-    if (seed) {
-      payload.seed = parseInt(seed, 10) || undefined;
+    if (form.seed) {
+      payload.seed = parseInt(form.seed, 10) || undefined;
     }
-    if (mode === 'voice_clone' && fastCloneMode) {
+    if (form.mode === 'voice_clone' && form.fastCloneMode) {
       payload.x_vector_only_mode = true;
     }
 
     onGenerate(payload);
-  }, [modelName, input, mode, speaker, instructions, voiceDesignPrompt,
-      refAudio, refText, language, temperature, topP, topK,
-      repetitionPenalty, maxNewTokens, seed, fastCloneMode,
-      isModelStopped, isModelLoading, isModelError,
-      onGenerate, t]);
+  }, [modelName, isModelStopped, isModelLoading, isModelError, onGenerate, t]);
 
   // Empty state
   if (matchedModels.length === 0) {
@@ -297,8 +277,9 @@ export function Qwen3TTSPanel({
           value={modelName}
           onValueChange={(v) => {
             onModelChange(v);
-            setSpeaker('Vivian');
-            setRefAudio('');
+            const store = useTTSStore.getState();
+            store.setQwen3Field('speaker', 'Vivian');
+            store.setQwen3Field('refAudio', '');
           }}
           placeholder={t('tts.selectModel', 'Select TTS model')}
           label={t('tts.modelLabel', 'TTS Model')}
@@ -344,7 +325,7 @@ export function Qwen3TTSPanel({
         <label className="block text-sm font-medium mb-1.5">
           {t('tts.qwen3.modeLabel', '生成模式')}
         </label>
-        <Select value={mode} onValueChange={(v) => setMode(v as GenerationMode)}>
+        <Select value={mode} onValueChange={(v) => setQwen3Field('mode', v as GenerationMode)}>
           <SelectTrigger className="w-full bg-background">
             <SelectValue />
           </SelectTrigger>
@@ -369,7 +350,7 @@ export function Qwen3TTSPanel({
         </label>
         <Textarea
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => setQwen3Field('input', e.target.value)}
           placeholder={t('tts.inputPlaceholder', 'Enter text to convert to speech...')}
           className="w-full bg-background resize-none"
           rows={4}
@@ -384,7 +365,7 @@ export function Qwen3TTSPanel({
             <label className="block text-sm font-medium mb-1.5">
               {t('tts.qwen3.speakerLabel', '预设音色')}
             </label>
-            <Select value={speaker} onValueChange={setSpeaker}>
+            <Select value={speaker} onValueChange={(v) => setQwen3Field('speaker', v)}>
               <SelectTrigger className="w-full bg-background">
                 <SelectValue placeholder={t('tts.qwen3.selectSpeaker', 'Select speaker')} />
               </SelectTrigger>
@@ -414,7 +395,7 @@ export function Qwen3TTSPanel({
             </label>
             <Input
               value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
+              onChange={(e) => setQwen3Field('instructions', e.target.value)}
               placeholder={t('tts.qwen3.instructPlaceholder', '可选: 用温柔的语气朗读 / Speak in a cheerful tone...')}
               className="bg-background"
             />
@@ -432,7 +413,7 @@ export function Qwen3TTSPanel({
           </label>
           <Textarea
             value={voiceDesignPrompt}
-            onChange={(e) => setVoiceDesignPrompt(e.target.value)}
+            onChange={(e) => setQwen3Field('voiceDesignPrompt', e.target.value)}
             placeholder={t('tts.qwen3.voiceDesignPlaceholder', '用自然语言描述想要的声音特征，如：\n年轻女性，声音甜美温柔，语速适中，带有轻微的撒娇语气...\nA warm male voice, mid-30s, with a gentle authoritative tone...')}
             className="w-full bg-background resize-none"
             rows={4}
@@ -449,7 +430,7 @@ export function Qwen3TTSPanel({
             <label className="block text-sm font-medium mb-1.5">
               {t('tts.qwen3.refAudioLabel', '参考音频')}
             </label>
-            <RefAudioInput value={refAudio} onChange={setRefAudio} />
+            <RefAudioInput value={refAudio} onChange={(v, name) => { setQwen3Field('refAudio', v); setRefAudioName(name || ''); }} fileName={refAudioName} />
             <p className="text-xs text-muted-foreground mt-1">
               {t('tts.qwen3.refAudioHint', '建议 3 秒以上清晰语音')}
             </p>
@@ -460,14 +441,14 @@ export function Qwen3TTSPanel({
             </label>
             <Textarea
               value={refText}
-              onChange={(e) => setRefText(e.target.value)}
+              onChange={(e) => setQwen3Field('refText', e.target.value)}
               placeholder={t('tts.qwen3.refTextPlaceholder', '输入参考音频对应的文本（ICL 模式需要，快速模式可选）')}
               rows={2}
               className="bg-background"
             />
           </div>
           <div className="flex items-center gap-3">
-            <Switch checked={fastCloneMode} onCheckedChange={setFastCloneMode} />
+            <Switch checked={fastCloneMode} onCheckedChange={(v) => setQwen3Field('fastCloneMode', v)} />
             <div>
               <Label className="text-sm font-medium">
                 {t('tts.qwen3.fastClone', '快速克隆模式')}
@@ -485,7 +466,7 @@ export function Qwen3TTSPanel({
         <label className="block text-sm font-medium mb-1.5">
           {t('tts.languageLabel', 'Language')}
         </label>
-        <Select value={language} onValueChange={setLanguage}>
+        <Select value={language} onValueChange={(v) => setQwen3Field('language', v)}>
           <SelectTrigger className="w-full bg-background">
             <SelectValue placeholder={t('tts.languageAuto', 'Auto Detect')} />
           </SelectTrigger>
@@ -518,7 +499,7 @@ export function Qwen3TTSPanel({
             </label>
             <Slider
               value={[parseFloat(temperature) || 0.9]}
-              onValueChange={([val]) => setTemperature(String(val))}
+              onValueChange={([val]) => setQwen3Field('temperature', String(val))}
               min={0.1}
               max={1.5}
               step={0.05}
@@ -533,7 +514,7 @@ export function Qwen3TTSPanel({
             </label>
             <Slider
               value={[parseFloat(topP) || 1.0]}
-              onValueChange={([val]) => setTopP(String(val))}
+              onValueChange={([val]) => setQwen3Field('topP', String(val))}
               min={0.5}
               max={1.0}
               step={0.05}
@@ -548,7 +529,7 @@ export function Qwen3TTSPanel({
             </label>
             <Slider
               value={[parseInt(topK) || 50]}
-              onValueChange={([val]) => setTopK(String(val))}
+              onValueChange={([val]) => setQwen3Field('topK', String(val))}
               min={1}
               max={100}
               step={1}
@@ -563,7 +544,7 @@ export function Qwen3TTSPanel({
             </label>
             <Slider
               value={[parseFloat(repetitionPenalty) || 1.05]}
-              onValueChange={([val]) => setRepetitionPenalty(String(val))}
+              onValueChange={([val]) => setQwen3Field('repetitionPenalty', String(val))}
               min={1.0}
               max={2.0}
               step={0.05}
@@ -579,7 +560,7 @@ export function Qwen3TTSPanel({
               </label>
               <Input
                 value={seed}
-                onChange={(e) => setSeed(e.target.value)}
+                onChange={(e) => setQwen3Field('seed', e.target.value)}
                 placeholder={t('tts.seedPlaceholder', 'Leave empty for random')}
                 type="number"
                 className="bg-background"
@@ -591,7 +572,7 @@ export function Qwen3TTSPanel({
               </label>
               <Input
                 value={maxNewTokens}
-                onChange={(e) => setMaxNewTokens(e.target.value)}
+                onChange={(e) => setQwen3Field('maxNewTokens', e.target.value)}
                 placeholder="2048"
                 type="number"
                 className="bg-background"

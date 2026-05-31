@@ -1,4 +1,4 @@
-import type { LoadedModel } from '@/features/creative/hooks';
+import type { LoadedModel } from '@/types/model';
 
 /**
  * Extended music generation request with ACE-Step-specific fields.

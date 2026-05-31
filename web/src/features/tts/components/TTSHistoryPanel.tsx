@@ -2,8 +2,8 @@ import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, Pause, Download, Trash2, Star, Clock, Mic, Check, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useTTSHistory, useToggleTTSFavourite, useDeleteTTSHistory } from '../historyHooks';
-import { getTTSAudioUrl, type TTSHistoryItem } from '../api';
+import { useTTSHistory, useToggleTTSFavourite, useDeleteTTSHistory } from '@/features/tts/historyHooks';
+import { getTTSAudioUrl, type TTSHistoryItem } from '@/features/tts/api';
 import { uploadVoice } from '@/lib/api/voices';
 import { toast } from '@/hooks/useToast';
 

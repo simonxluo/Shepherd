@@ -4,21 +4,25 @@ import { Upload, Mic, MicOff, Link, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/useToast';
-import { useTTSHistory } from '../historyHooks';
-import { getTTSAudioUrl, type TTSHistoryItem } from '../api';
+import { useTTSHistory } from '@/features/tts/historyHooks';
+import { getTTSAudioUrl, type TTSHistoryItem } from '@/features/tts/api';
 
 type InputMode = 'upload' | 'record' | 'url' | 'history';
 
 interface RefAudioInputProps {
   value: string;
-  onChange: (base64OrUrl: string) => void;
+  onChange: (base64OrUrl: string, fileName?: string) => void;
+  /** 外部传入的文件名（用于显示，不参与值传递） */
+  fileName?: string;
 }
 
-export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
+export function RefAudioInput({ value, onChange, fileName: externalFileName }: RefAudioInputProps) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<InputMode>('upload');
   const [recording, setRecording] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  /** 内部跟踪的文件名（上传/录制产生） */
+  const [internalFileName, setInternalFileName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -36,7 +40,8 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
 
   const handleFile = useCallback(async (file: File) => {
     const base64 = await audioFileToBase64(file);
-    onChange(base64);
+    setInternalFileName(file.name);
+    onChange(base64, file.name);
   }, [onChange]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,6 +61,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
     // 处理 URL 拖拽（从 TTS 历史面板拖拽）
     const url = e.dataTransfer.getData('text/plain');
     if (url) {
+      setInternalFileName('');
       onChange(url);
     }
   };
@@ -94,10 +100,14 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
 
   const handleSelectFromHistory = (item: TTSHistoryItem) => {
     const audioUrl = getTTSAudioUrl(item.id);
+    setInternalFileName('');
     onChange(audioUrl);
   };
 
-  const clearValue = () => onChange('');
+  const clearValue = () => {
+    setInternalFileName('');
+    onChange('');
+  };
 
   const hasValue = !!value;
 
@@ -137,7 +147,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
         >
           {hasValue ? (
             <div className="flex items-center justify-center gap-2">
-              <span className="text-sm text-muted-foreground">{t('tts.refAudioLoaded', '已加载音频')}</span>
+              <span className="text-sm text-muted-foreground">{externalFileName || internalFileName || t('tts.refAudioLoaded', '已加载音频')}</span>
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); clearValue(); }}>
                 <X className="w-3 h-3" />
               </Button>
@@ -170,7 +180,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
             <span className="text-sm text-red-500 animate-pulse">{t('tts.refAudioRecording', '录制中...')}</span>
           )}
           {hasValue && !recording && (
-            <span className="text-sm text-muted-foreground">{t('tts.refAudioRecorded', '已录制')}</span>
+            <span className="text-sm text-muted-foreground">{externalFileName || internalFileName || t('tts.refAudioRecorded', '已录制')}</span>
           )}
         </div>
       )}

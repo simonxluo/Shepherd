@@ -1,4 +1,5 @@
-import type { ASRPlugin, LoadedModel } from './types';
+import type { ASRPlugin } from './types';
+import type { LoadedModel } from '@/types/model';
 
 /**
  * Registry for ASR plugins. Plugins register themselves on import,

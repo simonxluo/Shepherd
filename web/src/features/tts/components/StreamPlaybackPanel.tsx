@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Download, Square } from 'lucide-react';
-import { pcmToWav } from '../lib/pcmToWav';
-import type { StreamState, TTSStreamMetrics } from '../lib/StreamAudioPlayer';
+import { pcmToWav } from '@/features/tts/lib/pcmToWav';
+import type { StreamState, TTSStreamMetrics } from '@/features/tts/lib/StreamAudioPlayer';
 
 interface StreamPlaybackPanelProps {
   state: StreamState;

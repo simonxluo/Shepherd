@@ -1,6 +1,6 @@
-import { musicRegistry } from '../../registry';
+import { musicRegistry } from '@/features/music-gen/registry';
 import { GenericMusicPanel } from './GenericMusicPanel';
-import type { MusicPlugin } from '../../types';
+import type { MusicPlugin } from '@/features/music-gen/types';
 
 const genericMusicPlugin: MusicPlugin = {
   id: 'generic',

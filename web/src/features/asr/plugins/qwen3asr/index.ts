@@ -1,6 +1,7 @@
-import { asrRegistry } from '../../registry';
+import { asrRegistry } from '@/features/asr/registry';
 import { Qwen3ASRPanel } from './Qwen3ASRPanel';
-import type { ASRPlugin, LoadedModel } from '../../types';
+import type { ASRPlugin } from '@/features/asr/types';
+import type { LoadedModel } from '@/types/model';
 
 const qwen3asrPlugin: ASRPlugin = {
   id: 'qwen3asr',

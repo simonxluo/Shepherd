@@ -18,7 +18,7 @@ import { BenchmarkPage } from './pages/benchmark';
 import { SystemMonitorPage } from './pages/system-monitor';
 import { useSSEConnection } from './hooks/useSSEConnection';
 import type { SSEEvent } from './types';
-import type { UnifiedNode } from './types/node';
+import type { UnifiedNode } from './types';
 import { AlertDialogProvider } from './providers/AlertDialog';
 import { AlertDialog } from './components/ui/alert-dialog';
 import { Toaster } from './components/ui/sonner';

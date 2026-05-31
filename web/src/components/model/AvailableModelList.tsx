@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
 import { useLoadModel } from '@/features/models';
 import { formatBytes } from '@/lib/utils';
-import { BACKEND_LABELS } from './hooks';
+import { BACKEND_LABELS } from '@/lib/constants/model';
 import type { Model } from '@/types/model';
 
 interface AvailableModelListProps {

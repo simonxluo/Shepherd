@@ -2,10 +2,12 @@ package openai
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -29,8 +31,9 @@ func NewAudioHandler(modelMgr *model.Manager, storageMgr *storage.Manager, ttsDa
 	}
 }
 
-// resolveTTSAudioURL converts a frontend /api/tts/audio/<id> path to a file:// absolute URL
-// that vLLM accepts. Returns the original string if the pattern doesn't match or lookup fails.
+// resolveTTSAudioURL converts a frontend /api/tts/audio/<id> path to a base64 data URI
+// that vLLM accepts without requiring --allowed-local-media-path.
+// Returns the original string if the pattern doesn't match or conversion fails.
 func (h *AudioHandler) resolveTTSAudioURL(audioURL string) string {
 	const prefix = "/api/tts/audio/"
 	if !strings.HasPrefix(audioURL, prefix) {
@@ -59,9 +62,33 @@ func (h *AudioHandler) resolveTTSAudioURL(audioURL string) string {
 		return audioURL
 	}
 
-	fileURL := "file://" + absPath
-	logger.Infof("TTS 参考音频路径解析: %s -> %s", audioURL, fileURL)
-	return fileURL
+	// Read the audio file and convert to base64 data URI
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		// Fallback: degrade to file:// URL with a warning
+		fileURL := "file://" + absPath
+		logger.Warnf("TTS 参考音频文件读取失败，降级为 file:// URL: %s, err=%v", absPath, err)
+		return fileURL
+	}
+
+	mime := "audio/wav"
+	switch strings.TrimPrefix(filepath.Ext(absPath), ".") {
+	case "mp3":
+		mime = "audio/mpeg"
+	case "ogg":
+		mime = "audio/ogg"
+	case "webm":
+		mime = "audio/webm"
+	case "flac":
+		mime = "audio/flac"
+	case "pcm":
+		mime = "audio/pcm"
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(data)
+	dataURI := fmt.Sprintf("data:%s;base64,%s", mime, encoded)
+	logger.Infof("TTS 参考音频路径解析: %s -> data:%s;base64,...(%d bytes)", audioURL, mime, len(data))
+	return dataURI
 }
 
 // prepareTTSRequest reads the raw JSON body, validates required fields, resolves
@@ -118,7 +145,7 @@ func (h *AudioHandler) prepareTTSRequest(c *gin.Context) (map[string]interface{}
 		}
 	}
 
-	// Resolve audio paths: /api/tts/audio/<id> -> file://<abs>
+	// Resolve audio paths: /api/tts/audio/<id> -> data:<mime>;base64,...
 	if v, ok := payload["ref_audio"].(string); ok && v != "" {
 		payload["ref_audio"] = h.resolveTTSAudioURL(v)
 	}

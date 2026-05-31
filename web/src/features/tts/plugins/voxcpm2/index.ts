@@ -1,7 +1,7 @@
-import { ttsRegistry } from '../../registry';
+import { ttsRegistry } from '@/features/tts/registry';
 import { VoxCPM2Panel } from './VoxCPM2Panel';
-import type { LoadedModel } from '@/features/creative/hooks';
-import type { TTSPlugin } from '../../types';
+import type { LoadedModel } from '@/types/model';
+import type { TTSPlugin } from '@/features/tts/types';
 
 const voxcpm2Plugin: TTSPlugin = {
   id: 'voxcpm2',

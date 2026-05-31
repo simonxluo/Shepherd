@@ -1,7 +1,7 @@
-import { ttsRegistry } from '../../registry';
+import { ttsRegistry } from '@/features/tts/registry';
 import { Qwen3TTSPanel } from './Qwen3TTSPanel';
-import type { LoadedModel } from '@/features/creative/hooks';
-import type { TTSPlugin } from '../../types';
+import type { LoadedModel } from '@/types/model';
+import type { TTSPlugin } from '@/features/tts/types';
 
 const qwen3ttsPlugin: TTSPlugin = {
   id: 'qwen3tts',

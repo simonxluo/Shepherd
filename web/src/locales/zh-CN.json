@@ -3,6 +3,7 @@
     "search": "搜索...",
     "loading": "加载中...",
     "save": "保存",
+    "saving": "保存中...",
     "cancel": "取消",
     "confirm": "确认",
     "delete": "删除",
@@ -608,7 +609,19 @@
       "noModels": "未扫描到 VoxCPM2 模型",
       "noModelsHint": "请确认已配置 VoxCPM2 模型路径并完成扫描",
       "voiceSaved": "语音保存成功",
-      "voiceSaveFailed": "语音保存失败"
+      "voiceSaveFailed": "语音保存失败",
+      "voiceLibrary": "语音库",
+      "uploadVoice": "上传语音",
+      "voiceUploaded": "语音上传成功",
+      "voiceUploadFailed": "语音上传失败",
+      "voiceDeleted": "语音已删除",
+      "voiceDeleteFailed": "语音删除失败",
+      "confirmDeleteVoice": "确定要删除语音 \"{{name}}\" 吗？",
+      "noVoices": "暂无上传语音，上传音频文件作为语音参考。",
+      "useRefAudio": "使用下方参考音频",
+      "voiceOverridesRefAudio": "已选择语音，参考音频将被忽略。",
+      "selectAsrModel": "选择 ASR 模型",
+      "refresh": "刷新"
     },
     "history": "历史记录",
     "historyLoading": "加载历史记录...",
@@ -630,7 +643,10 @@
     "cancelVoice": "取消",
     "noModelsTitle": "没有已加载的 TTS 模型",
     "noModelsDescription": "加载一个支持 TTS 的模型来开始生成语音。可用模型如下所示。",
-    "autoSaved": "已自动保存"
+    "autoSaved": "已自动保存",
+    "modelRunning": "运行中",
+    "playbackFailed": "播放失败",
+    "dragToRefAudioHint": "将音频拖拽到参考音频区域"
   },
   "asr": {
     "title": "语音识别 (ASR)",

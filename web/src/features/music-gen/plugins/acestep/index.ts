@@ -1,6 +1,6 @@
-import { musicRegistry } from '../../registry';
+import { musicRegistry } from '@/features/music-gen/registry';
 import { AceStepPanel } from './AceStepPanel';
-import type { MusicPlugin, LoadedModel } from '../../types';
+import type { MusicPlugin, LoadedModel } from '@/features/music-gen/types';
 
 const aceStepPlugin: MusicPlugin = {
   id: 'acestep',

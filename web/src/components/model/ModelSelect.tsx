@@ -1,5 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BACKEND_LABELS, type LoadedModel } from './hooks';
+import { BACKEND_LABELS } from '@/lib/constants/model';
+import type { LoadedModel } from '@/types/model';
 
 interface ModelSelectProps {
   models: LoadedModel[];

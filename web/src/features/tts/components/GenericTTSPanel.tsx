@@ -8,21 +8,21 @@ import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, Sele
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ModelSelect } from '@/features/creative/ModelSelect';
-import { AvailableModelList } from '@/features/creative/AvailableModelList';
-import { useAvailableModels, BACKEND_LABELS } from '@/features/creative/hooks';
+import { ModelSelect } from '@/components/model/ModelSelect';
+import { AvailableModelList } from '@/components/model/AvailableModelList';
+import { useAvailableModels } from '@/features/creative/hooks';
+import { BACKEND_LABELS } from '@/lib/constants/model';
 import {
   useVoices,
   useTTSConfig,
   getTTSModelFeatures,
-  type TTSRequest,
-  type TTSConfig,
-  type VoiceOption,
-} from '../hooks';
+} from '@/features/tts/hooks';
+import type { TTSRequest, TTSConfig } from '@/features/tts/types';
 import { RefAudioInput } from './RefAudioInput';
 import { ConfigManager } from './ConfigManager';
 import { toast } from '@/hooks/useToast';
-import type { TTSPluginPanelProps } from '../types';
+import type { TTSPluginPanelProps } from '@/features/tts/types';
+import { useTTSStore } from '@/stores/ttsStore';
 
 const AUDIO_FORMATS: Array<{ value: string; label: string; i18nKey?: string }> = [
   { value: 'mp3', label: 'MP3' },
@@ -47,17 +47,13 @@ export function GenericTTSPanel({
   const modelName = selectedModel ? (selectedModel.alias || selectedModel.name) : '';
   const modelIdForConfig = selectedModel?.id || '';
 
-  const [input, setInput] = useState('');
-  const [voice, setVoice] = useState('');
-  const [speed, setSpeed] = useState(1);
-  const [responseFormat, setResponseFormat] = useState('mp3');
+  const genericForm = useTTSStore((s) => s.genericForm);
+  const setGenericField = useTTSStore((s) => s.setGenericField);
+  const { input, voice, speed, responseFormat, language, refAudio, refText, seed, maxNewTokens } = genericForm;
+
   const [stream, setStream] = useState(false);
-  const [language, setLanguage] = useState('');
-  const [refAudio, setRefAudio] = useState('');
-  const [refText, setRefText] = useState('');
-  const [seed, setSeed] = useState('');
-  const [maxNewTokens, setMaxNewTokens] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [refAudioName, setRefAudioName] = useState('');
 
   const features = useMemo(
     () => (selectedModel ? getTTSModelFeatures(selectedModel) : null),
@@ -74,31 +70,17 @@ export function GenericTTSPanel({
   // Restore config from server
   useEffect(() => {
     if (ttsConfig) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (ttsConfig.voice !== undefined) setVoice(ttsConfig.voice);
-      if (ttsConfig.speed !== undefined) setSpeed(ttsConfig.speed);
-      if (ttsConfig.responseFormat !== undefined) setResponseFormat(ttsConfig.responseFormat);
+      useTTSStore.getState().hydrateFromServerConfig('generic', ttsConfig);
       if (ttsConfig.stream !== undefined) setStream(ttsConfig.stream);
-      if (ttsConfig.refAudio !== undefined) setRefAudio(ttsConfig.refAudio);
-      if (ttsConfig.refText !== undefined) setRefText(ttsConfig.refText);
-      if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
-      if (ttsConfig.maxNewTokens !== undefined) setMaxNewTokens(ttsConfig.maxNewTokens);
-      if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language);
     } else {
-      // 模型切换后无 config 时清除残留状态
-      setVoice('');
-      setRefAudio('');
-      setRefText('');
-      setSeed('');
-      setMaxNewTokens('');
-      setLanguage('');
+      useTTSStore.getState().resetGenericForm();
     }
   }, [ttsConfig, modelIdForConfig]);
 
   // Sync external ref audio override from history panel
   useEffect(() => {
     if (refAudioOverride) {
-      setRefAudio(refAudioOverride);
+      setGenericField('refAudio', refAudioOverride);
     }
   }, [refAudioOverride]);
 
@@ -107,24 +89,26 @@ export function GenericTTSPanel({
     if (selectedModel) {
       const fmt = getTTSModelFeatures(selectedModel).defaultFormat;
       if (fmt === 'pcm') {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setResponseFormat('pcm');
+        useTTSStore.getState().setGenericField('responseFormat', 'pcm');
         setStream(true);
       }
     }
   }, [selectedModel]);
 
-  const getCurrentConfig = useCallback((): TTSConfig => ({
-    voice: voice || undefined,
-    speed: speed !== 1 ? speed : undefined,
-    responseFormat,
-    stream,
-    refAudio: refAudio || undefined,
-    refText: refText || undefined,
-    seed: seed || undefined,
-    maxNewTokens: maxNewTokens || undefined,
-    language: language || undefined,
-  }), [voice, speed, responseFormat, stream, refAudio, refText, seed, maxNewTokens, language]);
+  const getCurrentConfig = useCallback((): TTSConfig => {
+    const { voice, speed, responseFormat, refAudio, refText, seed, maxNewTokens, language } = useTTSStore.getState().genericForm;
+    return {
+      voice: voice || undefined,
+      speed: speed !== 1 ? speed : undefined,
+      responseFormat,
+      stream,
+      refAudio: refAudio || undefined,
+      refText: refText || undefined,
+      seed: seed || undefined,
+      maxNewTokens: maxNewTokens || undefined,
+      language: language || undefined,
+    };
+  }, [stream]);
 
   const handleSaveToServer = useCallback(() => {
     if (!modelIdForConfig) return;
@@ -140,15 +124,8 @@ export function GenericTTSPanel({
   }, [modelIdForConfig, deleteConfig, t]);
 
   const handleLoadConfig = useCallback((cfg: TTSConfig) => {
-    if (cfg.voice !== undefined) setVoice(cfg.voice);
-    if (cfg.speed !== undefined) setSpeed(cfg.speed);
-    if (cfg.responseFormat !== undefined) setResponseFormat(cfg.responseFormat);
+    useTTSStore.getState().hydrateFromServerConfig('generic', cfg);
     if (cfg.stream !== undefined) setStream(cfg.stream);
-    if (cfg.refAudio !== undefined) setRefAudio(cfg.refAudio);
-    if (cfg.refText !== undefined) setRefText(cfg.refText);
-    if (cfg.seed !== undefined) setSeed(cfg.seed);
-    if (cfg.maxNewTokens !== undefined) setMaxNewTokens(cfg.maxNewTokens);
-    if (cfg.language !== undefined) setLanguage(cfg.language);
   }, []);
 
   const handleGenerate = useCallback(() => {
@@ -156,6 +133,7 @@ export function GenericTTSPanel({
       toast.warning(t('tts.selectModelWarning', 'Please select a model'));
       return;
     }
+    const { input, voice, speed, responseFormat, refAudio, refText, seed, maxNewTokens, language } = useTTSStore.getState().genericForm;
     if (!input.trim()) {
       toast.warning(t('tts.inputRequired', 'Please enter text'));
       return;
@@ -188,7 +166,7 @@ export function GenericTTSPanel({
     if (language) payload.language = language;
 
     onGenerate(payload);
-  }, [modelName, input, voice, speed, responseFormat, stream, features, refAudio, refText, seed, maxNewTokens, language, onGenerate, t]);
+  }, [modelName, stream, features, onGenerate, t]);
 
   if (matchedModels.length === 0) {
     return (
@@ -221,12 +199,7 @@ export function GenericTTSPanel({
           value={modelName}
           onValueChange={(v) => {
             onModelChange(v);
-            setVoice('');
-            setRefAudio('');
-            setRefText('');
-            setSeed('');
-            setMaxNewTokens('');
-            setLanguage('');
+            useTTSStore.getState().resetGenericForm();
           }}
           placeholder={t('tts.selectModel', 'Select TTS model')}
           label={t('tts.modelLabel', 'TTS Model')}
@@ -245,8 +218,8 @@ export function GenericTTSPanel({
           {t('tts.inputLabel', 'Input Text')}
         </label>
         <Textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+          value={genericForm.input}
+          onChange={(e) => setGenericField('input', e.target.value)}
           placeholder={t('tts.inputPlaceholder', 'Enter text to convert to speech...')}
           className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
           rows={4}
@@ -260,7 +233,7 @@ export function GenericTTSPanel({
             <label className="block text-sm font-medium mb-1.5">
               {t('tts.voiceLabel', 'Voice')}
             </label>
-            <Select value={voice} onValueChange={setVoice}>
+            <Select value={genericForm.voice} onValueChange={(v) => setGenericField('voice', v)}>
               <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
                 <SelectValue placeholder={t('tts.selectVoice', 'Select voice')} />
               </SelectTrigger>
@@ -289,7 +262,7 @@ export function GenericTTSPanel({
           <label className="block text-sm font-medium mb-1.5">
             {t('tts.formatLabel', 'Output Format')}
           </label>
-          <Select value={responseFormat} onValueChange={setResponseFormat}>
+          <Select value={genericForm.responseFormat} onValueChange={(v) => setGenericField('responseFormat', v)}>
             <SelectTrigger className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent">
               <SelectValue />
             </SelectTrigger>
@@ -311,8 +284,8 @@ export function GenericTTSPanel({
             {t('tts.languageLabel', 'Language')}
           </label>
           <Input
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
+            value={genericForm.language}
+            onChange={(e) => setGenericField('language', e.target.value)}
             placeholder={t('tts.languagePlaceholder', 'e.g., zh, en, ja')}
             className="bg-background"
           />
@@ -328,11 +301,11 @@ export function GenericTTSPanel({
       {/* Speed */}
       <div>
         <label className="block text-sm font-medium mb-1.5">
-          {t('tts.speedLabel', 'Speed')}: {speed}x
+          {t('tts.speedLabel', 'Speed')}: {genericForm.speed}x
         </label>
         <Slider
-          value={[speed]}
-          onValueChange={([val]) => setSpeed(val)}
+          value={[genericForm.speed]}
+          onValueChange={([val]) => setGenericField('speed', val)}
           min={0.25}
           max={4}
           step={0.25}
@@ -347,16 +320,16 @@ export function GenericTTSPanel({
             <label className="block text-sm font-medium mb-1.5">
               {t('tts.refAudio', 'Reference Audio')}
             </label>
-            <RefAudioInput value={refAudio} onChange={setRefAudio} />
+            <RefAudioInput value={genericForm.refAudio} onChange={(v, name) => { setGenericField('refAudio', v); setRefAudioName(name || ''); }} fileName={refAudioName} />
           </div>
-          {refAudio && (
+          {genericForm.refAudio && (
             <div>
               <label className="block text-sm font-medium mb-1.5">
                 {t('tts.refText', 'Reference Audio Transcription')}
               </label>
               <Textarea
-                value={refText}
-                onChange={(e) => setRefText(e.target.value)}
+                value={genericForm.refText}
+                onChange={(e) => setGenericField('refText', e.target.value)}
                 placeholder={t('tts.refTextPlaceholder', 'Enter transcription of the reference audio (optional)')}
                 rows={2}
                 className="bg-background"
@@ -384,8 +357,8 @@ export function GenericTTSPanel({
                 {t('tts.seed', 'Seed')}
               </label>
               <Input
-                value={seed}
-                onChange={(e) => setSeed(e.target.value)}
+                value={genericForm.seed}
+                onChange={(e) => setGenericField('seed', e.target.value)}
                 placeholder={t('tts.seedPlaceholder', 'Leave empty for random')}
                 type="number"
                 className="bg-background"
@@ -396,8 +369,8 @@ export function GenericTTSPanel({
                 {t('tts.maxNewTokens', 'Max New Tokens')}
               </label>
               <Input
-                value={maxNewTokens}
-                onChange={(e) => setMaxNewTokens(e.target.value)}
+                value={genericForm.maxNewTokens}
+                onChange={(e) => setGenericField('maxNewTokens', e.target.value)}
                 placeholder={t('tts.maxNewTokensPlaceholder', 'Leave empty for default')}
                 type="number"
                 className="bg-background"
@@ -420,7 +393,7 @@ export function GenericTTSPanel({
       ) : (
         <Button
           onClick={handleGenerate}
-          disabled={!modelName || !input.trim()}
+          disabled={!modelName || !genericForm.input.trim()}
           className="w-full"
         >
           <Volume2 className="w-4 h-4 mr-2" />

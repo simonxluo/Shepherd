@@ -368,7 +368,7 @@ export function PathEditDialog({
               disabled={isSaving || !formData.path.trim()}
               className="h-8 px-3 text-xs"
             >
-              {isSaving ? t('models.editAlias.saving') : t('common.save')}
+              {isSaving ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </form>
