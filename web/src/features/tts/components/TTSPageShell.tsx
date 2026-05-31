@@ -130,13 +130,6 @@ export function TTSPageShell() {
     }
   }, [matchedModels, currentModelName, activePluginId]);
 
-  const handleModelChange = useCallback((modelName: string) => {
-    setModelByPlugin((prev) => ({
-      ...prev,
-      [activePluginId]: modelName,
-    }));
-  }, [activePluginId]);
-
   const handleStopStream = useCallback(() => {
     playerRef.current?.stop();
   }, []);
@@ -147,11 +140,28 @@ export function TTSPageShell() {
     playerRef.current?.stop();
   }, []);
 
+  const handleModelChange = useCallback((modelName: string) => {
+    // 切换模型前取消进行中的生成
+    handleCancel();
+    setModelByPlugin((prev) => ({
+      ...prev,
+      [activePluginId]: modelName,
+    }));
+  }, [activePluginId, handleCancel]);
+
   // Get features for current model (for sample rate)
   const currentFeatures = useMemo(
     () => (selectedModel ? getTTSModelFeatures(selectedModel) : { defaultSampleRate: 24000, defaultFormat: 'mp3', supportsStreamPcm: false, supportsRefAudio: false }),
     [selectedModel]
   );
+
+  // 当 sampleRate 变化时重建播放器
+  useEffect(() => {
+    if (playerRef.current) {
+      playerRef.current.destroy();
+      playerRef.current = null;
+    }
+  }, [currentFeatures.defaultSampleRate]);
 
   // Save to history helper
   const saveToHistory = useCallback(async (blob: Blob, payload: TTSRequest, format: string) => {
@@ -179,11 +189,13 @@ export function TTSPageShell() {
 
     if (isStreamRequest) {
       try {
-        if (!playerRef.current) {
-          const player = new StreamAudioPlayer(currentFeatures.defaultSampleRate);
-          await player.init();
-          playerRef.current = player;
+        // 始终重建播放器以确保 sampleRate 正确
+        if (playerRef.current) {
+          playerRef.current.destroy();
         }
+        const player = new StreamAudioPlayer(currentFeatures.defaultSampleRate);
+        await player.init();
+        playerRef.current = player;
 
         playerRef.current.onStateChange = (state) => {
           setStreamState(state);
