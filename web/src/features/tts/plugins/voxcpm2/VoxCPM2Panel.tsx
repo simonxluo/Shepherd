@@ -217,14 +217,23 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
   // --- Config restore ---
   /* eslint-disable react-hooks/set-state-in-effect -- restoring state from persisted config */
   useEffect(() => {
-    if (!ttsConfig) return;
-    if (ttsConfig.instructions !== undefined) setInstructions(ttsConfig.instructions);
-    if (ttsConfig.refAudio !== undefined) setRefAudio(ttsConfig.refAudio);
-    if (ttsConfig.refText !== undefined) setRefText(ttsConfig.refText);
-    if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
-    if (ttsConfig.maxNewTokens !== undefined) setMaxNewTokens(ttsConfig.maxNewTokens);
-    if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language || 'auto');
-  }, [ttsConfig]);
+    if (ttsConfig) {
+      if (ttsConfig.instructions !== undefined) setInstructions(ttsConfig.instructions);
+      if (ttsConfig.refAudio !== undefined) setRefAudio(ttsConfig.refAudio);
+      if (ttsConfig.refText !== undefined) setRefText(ttsConfig.refText);
+      if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
+      if (ttsConfig.maxNewTokens !== undefined) setMaxNewTokens(ttsConfig.maxNewTokens);
+      if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language || 'auto');
+    } else {
+      // 模型切换后无 config 时清除残留状态
+      setInstructions('');
+      setRefAudio('');
+      setRefText('');
+      setSeed('');
+      setMaxNewTokens('');
+      setLanguage('auto');
+    }
+  }, [ttsConfig, modelIdForConfig]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // --- refAudioOverride: set ref audio and expand section ---
@@ -308,8 +317,10 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
 
     if (refText.trim()) payload.ref_text = refText.trim();
     if (instructions.trim()) payload.instructions = instructions.trim();
-    if (seed) payload.seed = parseInt(seed, 10) || undefined;
-    if (maxNewTokens) payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
+    const parsedSeed = parseInt(seed, 10);
+    if (seed !== '' && !Number.isNaN(parsedSeed)) payload.seed = parsedSeed;
+    const parsedTokens = parseInt(maxNewTokens, 10);
+    if (maxNewTokens !== '' && !Number.isNaN(parsedTokens)) payload.max_new_tokens = parsedTokens;
     if (language && language !== 'auto') payload.language = language;
 
     onGenerate(payload);
@@ -382,6 +393,12 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
           onValueChange={(v) => {
             onModelChange(v);
             setRefAudio('');
+            setSelectedVoice('');
+            setRefText('');
+            setInstructions('');
+            setSeed('');
+            setMaxNewTokens('');
+            setLanguage('auto');
           }}
           placeholder={t('tts.selectModel', 'Select TTS model')}
           label={t('tts.modelLabel', 'TTS Model')}
