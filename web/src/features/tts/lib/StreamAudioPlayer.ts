@@ -34,8 +34,6 @@ export class StreamAudioPlayer {
   readonly pcmChunks: Int16Array[] = [];
 
   onMetricsUpdate?: (metrics: TTSStreamMetrics) => void;
-  onPlaybackStart?: () => void;
-  onPlaybackEnd?: () => void;
   onError?: (error: Error) => void;
   onStateChange?: (state: StreamState) => void;
 
@@ -179,7 +177,6 @@ export class StreamAudioPlayer {
           const ttfp = this.firstChunkTime - this.startTime;
           hasFirstChunk = true;
           this.setState('playing');
-          this.onPlaybackStart?.();
           this.updateMetrics({ ttfp: Math.round(ttfp) });
         }
 
@@ -232,17 +229,6 @@ export class StreamAudioPlayer {
       });
 
       this.setState('completed');
-
-      // 等待播放结束
-      const estimatedPlayTime = audioDuration * 1000;
-      const playStart = this.firstChunkTime || this.startTime;
-      const elapsed = performance.now() - playStart;
-      const remaining = Math.max(0, estimatedPlayTime - elapsed);
-      setTimeout(() => {
-        if (this._state === 'completed') {
-          this.onPlaybackEnd?.();
-        }
-      }, remaining + 200);
     } catch (err) {
       if ((err as Error).name === 'AbortError') {
         this.setState('idle');

@@ -17,15 +17,13 @@ import type { TTSRequest, TTSConfig } from '../../types';
 import { RefAudioInput } from '../../components/RefAudioInput';
 import { ConfigManager } from '../../components/ConfigManager';
 import { toast } from '@/hooks/useToast';
-import { useLoadModel } from '@/features/models';
+import { useLoadModel, useModels, useAllModelCapabilities } from '@/features/models';
 import { LoadModelDialog } from '@/features/models/components/LoadModelDialog';
 import { cn } from '@/lib/utils';
 import type { TTSPluginPanelProps } from '../../types';
 import { listVoices, uploadVoice, deleteVoice, type VoiceInfo } from '@/lib/api/voices';
 
 const VOXCPM2_LANGUAGES = [
-  // Auto detect
-  { value: 'auto', group: 'auto', label: 'tts.languageAuto', fallback: 'Auto Detect' },
   // 30 official languages (alphabetical)
   { value: 'Arabic', group: 'official', label: 'Arabic' },
   { value: 'Burmese', group: 'official', label: 'Burmese' },
@@ -84,10 +82,40 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
   } = props;
   const { t } = useTranslation();
   const availableModels = useAvailableModels('tts');
-  const asrModels = useAvailableModels('asr');
   const loadModel = useLoadModel();
   const autoTranscribe = useAutoTranscribe();
   const [showLoadDialog, setShowLoadDialog] = useState(false);
+
+  // ASR 模型：获取所有具有 ASR 能力的模型（包括已加载和未加载）
+  const { data: allModels = [] } = useModels();
+  const allModelIds = useMemo(() => allModels.map((m) => m.id), [allModels]);
+  const capsResults = useAllModelCapabilities(allModelIds);
+  const asrModels = useMemo(() => {
+    return allModels.filter((m, i) => {
+      const caps = capsResults[i]?.data;
+      return caps?.asr === true;
+    });
+  }, [allModels, capsResults]);
+
+  const [selectedAsrModelId, setSelectedAsrModelId] = useState<string>('');
+  const [showAsrLoadDialog, setShowAsrLoadDialog] = useState(false);
+
+  // 默认选中第一个 ASR 模型
+  useEffect(() => {
+    if (!selectedAsrModelId && asrModels.length > 0) {
+      setSelectedAsrModelId(asrModels[0].id);
+    }
+  }, [asrModels, selectedAsrModelId]);
+
+  // 选中的 ASR 模型信息
+  const selectedAsrModel = useMemo(
+    () => asrModels.find((m) => m.id === selectedAsrModelId),
+    [asrModels, selectedAsrModelId]
+  );
+  const asrModelName = selectedAsrModel ? (selectedAsrModel.alias || selectedAsrModel.name || selectedAsrModel.id) : '';
+  const isAsrModelRunning = selectedAsrModel?.isLoaded;
+  const isAsrModelLoading = selectedAsrModel?.status === 'loading' || selectedAsrModel?.status === 'unloading';
+  const isAsrModelStopped = selectedAsrModel?.status === 'stopped' || (!selectedAsrModel?.isLoaded && selectedAsrModel?.status !== 'loading');
 
   // Filter available models to only show VoxCPM2-related ones
   const voxcpmAvailableModels = useMemo(
@@ -291,15 +319,22 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
 
   // --- Auto-transcribe ---
   const handleAutoTranscribe = useCallback(() => {
-    const asrModel = asrModels[0];
-    if (!asrModel) {
+    if (!selectedAsrModel || !asrModelName) {
       toast.warning(t('tts.voxcpm2.noAsrModel'));
       return;
     }
     if (!refAudio) return;
+    if (isAsrModelStopped) {
+      setShowAsrLoadDialog(true);
+      return;
+    }
+    if (isAsrModelLoading) {
+      toast.info(t('tts.modelLoading', 'ASR model is loading, please wait...'));
+      return;
+    }
     setIsTranscribing(true);
     autoTranscribe.mutate(
-      { audioSource: refAudio, asrModelName: asrModel.alias || asrModel.name },
+      { audioSource: refAudio, asrModelName },
       {
         onSuccess: (text) => {
           setRefText(text);
@@ -311,7 +346,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
         },
       }
     );
-  }, [asrModels, refAudio, autoTranscribe, t]);
+  }, [selectedAsrModel, asrModelName, refAudio, isAsrModelStopped, isAsrModelLoading, autoTranscribe, t]);
 
   // --- Empty state ---
   if (matchedModels.length === 0) {
@@ -542,8 +577,60 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
             </div>
           )}
 
-          {/* Ref Text — auto-transcribe button */}
+          {/* Ref Text — auto-transcribe button with ASR model selector */}
           <div>
+            {/* ASR 模型选择行 */}
+            {asrModels.length > 0 && (
+              <div className="flex items-center gap-2 mb-2">
+                <Select value={selectedAsrModelId} onValueChange={setSelectedAsrModelId}>
+                  <SelectTrigger className="flex-1 h-8 text-xs">
+                    <SelectValue placeholder={t('tts.voxcpm2.selectAsrModel', 'Select ASR model')} />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    {asrModels.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        <span className="flex items-center gap-1.5">
+                          {m.alias || m.displayName || m.name}
+                          {m.isLoaded ? (
+                            <span className="text-green-500">●</span>
+                          ) : (
+                            <span className="text-muted-foreground">○</span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* ASR 模型状态 */}
+                {selectedAsrModel && (
+                  <div className={cn(
+                    'flex items-center gap-1 text-xs shrink-0',
+                    isAsrModelRunning && 'text-green-600 dark:text-green-400',
+                    isAsrModelLoading && 'text-yellow-600 dark:text-yellow-400',
+                    isAsrModelStopped && 'text-orange-600 dark:text-orange-400',
+                  )}>
+                    {isAsrModelRunning && <span>● {t('tts.modelRunning', 'Running')}</span>}
+                    {isAsrModelLoading && <><Loader2 className="w-3 h-3 animate-spin" />{t('tts.modelLoading', 'Loading...')}</>}
+                    {isAsrModelStopped && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs gap-1 text-orange-600 dark:text-orange-400 hover:text-orange-700"
+                        onClick={() => setShowAsrLoadDialog(true)}
+                      >
+                        <Play className="w-3 h-3" />
+                        {t('tts.loadModel', 'Load')}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {asrModels.length === 0 && (
+              <p className="text-xs text-muted-foreground mb-2">
+                {t('tts.voxcpm2.noAsrModel', 'No ASR models available. Please scan or download an ASR model first.')}
+              </p>
+            )}
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-sm font-medium">
                 {t('tts.refText', 'Reference Audio Transcription')}
@@ -552,7 +639,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
                 variant="outline"
                 size="sm"
                 className="h-7 text-xs gap-1"
-                disabled={!refAudio || asrModels.length === 0 || isTranscribing}
+                disabled={!refAudio || !asrModelName || isTranscribing || !isAsrModelRunning}
                 onClick={handleAutoTranscribe}
               >
                 {isTranscribing ? (
@@ -681,7 +768,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
         />
       )}
 
-      {/* Load model dialog */}
+      {/* Load TTS model dialog */}
       {showLoadDialog && fullModelId && (
         <LoadModelDialog
           modelId={fullModelId}
@@ -692,6 +779,22 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
           onConfirm={(params) => {
             loadModel.mutate({ modelId: fullModelId, ...params });
             setShowLoadDialog(false);
+          }}
+        />
+      )}
+
+      {/* Load ASR model dialog */}
+      {showAsrLoadDialog && selectedAsrModel && (
+        <LoadModelDialog
+          modelId={selectedAsrModel.id}
+          modelName={selectedAsrModel.alias || selectedAsrModel.displayName || selectedAsrModel.name}
+          modelPath={selectedAsrModel.path}
+          backendType={selectedAsrModel.backendType}
+          isOpen={showAsrLoadDialog}
+          onClose={() => setShowAsrLoadDialog(false)}
+          onConfirm={(params) => {
+            loadModel.mutate({ modelId: selectedAsrModel.id, ...params });
+            setShowAsrLoadDialog(false);
           }}
         />
       )}
