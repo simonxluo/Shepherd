@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Volume2, Loader2, Settings2, ChevronDown, AlertCircle, Play, Upload, Trash2, Mic } from 'lucide-react';
+import { Volume2, Loader2, Settings2, ChevronDown, AlertCircle, Play, Upload, Trash2, Mic, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -72,6 +72,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
     model: selectedModel,
     matchedModels,
     onGenerate,
+    onCancel,
     isGenerating,
     streamState,
     onModelChange,
@@ -188,6 +189,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
 
   const handleDeleteVoice = useCallback(async (voiceName: string) => {
     if (!modelName) return;
+    if (!window.confirm(t('tts.voxcpm2.confirmDeleteVoice', 'Delete voice "{{name}}"?').replace('{{name}}', voiceName))) return;
     try {
       await deleteVoice(modelName, voiceName);
       toast.success(t('tts.voxcpm2.voiceDeleted', 'Voice deleted'));
@@ -311,6 +313,10 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
 
     if (selectedVoice) {
       payload.voice = selectedVoice;
+      // 当同时设置了 refAudio 时提示用户
+      if (refAudio) {
+        toast.info(t('tts.voxcpm2.voiceOverridesRefAudio', 'Voice is set — reference audio will be ignored.'));
+      }
     } else if (refAudio) {
       payload.ref_audio = refAudio;
     }
@@ -739,38 +745,44 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
       </Collapsible>
 
       {/* Generate button */}
-      <Button
-        onClick={handleGenerate}
-        disabled={isGenerating || !modelName || isModelLoading || isModelError}
-        className="w-full"
-      >
-        {isGenerating ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            {isStreamActive ? t('tts.streamingInProgress', 'Streaming...') : t('tts.generating', 'Generating...')}
-          </>
-        ) : isModelLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            {t('tts.modelLoading', 'Model is loading...')}
-          </>
-        ) : isModelStopped ? (
-          <>
-            <Volume2 className="w-4 h-4 mr-2" />
-            {t('tts.loadModelToGenerate', 'Load Model & Generate')}
-          </>
-        ) : isModelError ? (
-          <>
-            <AlertCircle className="w-4 h-4 mr-2" />
-            {t('tts.modelError', 'Model error')}
-          </>
-        ) : (
-          <>
-            <Volume2 className="w-4 h-4 mr-2" />
-            {t('tts.generate', 'Generate Speech')}
-          </>
-        )}
-      </Button>
+      {isGenerating ? (
+        <Button
+          onClick={onCancel}
+          variant="destructive"
+          className="w-full"
+        >
+          <X className="w-4 h-4 mr-2" />
+          {t('tts.cancel', 'Cancel')}
+        </Button>
+      ) : (
+        <Button
+          onClick={handleGenerate}
+          disabled={!modelName || isModelLoading || isModelError}
+          className="w-full"
+        >
+          {isModelLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              {t('tts.modelLoading', 'Model is loading...')}
+            </>
+          ) : isModelStopped ? (
+            <>
+              <Volume2 className="w-4 h-4 mr-2" />
+              {t('tts.loadModelToGenerate', 'Load Model & Generate')}
+            </>
+          ) : isModelError ? (
+            <>
+              <AlertCircle className="w-4 h-4 mr-2" />
+              {t('tts.modelError', 'Model error')}
+            </>
+          ) : (
+            <>
+              <Volume2 className="w-4 h-4 mr-2" />
+              {t('tts.generate', 'Generate Speech')}
+            </>
+          )}
+        </Button>
+      )}
 
       {/* Config management */}
       {modelName && (
