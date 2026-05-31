@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { v1Client } from '@/features/creative/hooks';
 import {
@@ -115,12 +116,22 @@ function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
 
 export function useTTSConfig(modelId: string) {
   const { data, isLoading } = useModelLoadConfig(modelId);
-  const saveConfig = useSaveModelLoadConfig();
+  const rawSaveConfig = useSaveModelLoadConfig();
   const deleteConfig = useDeleteModelLoadConfig();
 
   const ttsConfig = (data?.exists && data.config) ? extractTTSConfig(data.config.config as Record<string, unknown>) : null;
 
-  return { ttsConfig, isLoading, saveConfig, deleteConfig };
+  const saveTTSConfig = useCallback((config: TTSConfig) => {
+    if (!modelId) return;
+    rawSaveConfig.mutate({ modelId, config: config as unknown as import('@/types/model').LoadModelParams });
+  }, [modelId, rawSaveConfig]);
+
+  return {
+    ttsConfig,
+    isLoading,
+    saveConfig: { ...rawSaveConfig, mutate: saveTTSConfig },
+    deleteConfig,
+  };
 }
 
 // ---------------------------------------------------------------------------

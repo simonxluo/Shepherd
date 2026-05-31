@@ -261,7 +261,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
 
   const handleSaveToServer = useCallback(() => {
     if (!modelIdForConfig) return;
-    saveConfig.mutate({ modelId: modelIdForConfig, config: getCurrentConfig() as unknown as import('@/types/model').LoadModelParams });
+    saveConfig.mutate(getCurrentConfig());
   }, [modelIdForConfig, getCurrentConfig, saveConfig]);
 
   const handleDeleteFromServer = useCallback(() => {

@@ -129,8 +129,7 @@ export function GenericTTSPanel({
 
   const handleSaveToServer = useCallback(() => {
     if (!modelIdForConfig) return;
-    // TTS config is stored in the same model config endpoint - cast to expected type
-    saveConfig.mutate({ modelId: modelIdForConfig, config: getCurrentConfig() as unknown as import('@/types/model').LoadModelParams });
+    saveConfig.mutate(getCurrentConfig());
   }, [modelIdForConfig, getCurrentConfig, saveConfig]);
 
   const handleDeleteFromServer = useCallback(() => {
