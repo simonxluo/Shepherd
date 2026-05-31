@@ -96,59 +96,85 @@ func truncateString(s string, maxLen int) string {
 	return s[:maxLen-3] + "..."
 }
 
-// buildRequestSummary 从 JSON 请求体中提取关键字段构建简短摘要
+// buildRequestSummary extracts all fields from the JSON request body to build a concise log summary.
+// Iterates over all incoming fields to avoid missing new parameters from hardcoded lists.
 func buildRequestSummary(params map[string]interface{}) string {
-	parts := []string{}
-
-	// input 文本字段（TTS）
-	if v, ok := params["input"].(string); ok && v != "" {
-		parts = append(parts, fmt.Sprintf("input=%q", truncateString(v, 100)))
+	// fields that need truncation for long text
+	truncateKeys := map[string]int{
+		"input":     100,
+		"prompt":    100,
+		"ref_audio": 80,
+		"ref_text":  100,
 	}
 
-	// messages 数量（Chat）
-	if msgs, ok := params["messages"].([]interface{}); ok {
-		parts = append(parts, fmt.Sprintf("messages=%d", len(msgs)))
+	// emit common fields in a fixed order, then append remaining in alphabetical order
+	order := []string{"model", "input", "prompt", "stream", "voice", "language",
+		"instructions", "seed", "response_format", "speed", "temperature",
+		"ref_audio", "ref_text", "max_new_tokens"}
+
+	seen := make(map[string]bool, len(params))
+	parts := make([]string, 0, len(params))
+
+	// emit known fields in fixed order first
+	for _, k := range order {
+		v, ok := params[k]
+		if !ok {
+			continue
+		}
+		seen[k] = true
+		if s := formatParam(k, v, truncateKeys); s != "" {
+			parts = append(parts, s)
+		}
 	}
 
-	// prompt 文本
-	if v, ok := params["prompt"].(string); ok && v != "" {
-		parts = append(parts, fmt.Sprintf("prompt=%q", truncateString(v, 100)))
+	// append remaining fields in alphabetical order
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		if !seen[k] {
+			keys = append(keys, k)
+		}
 	}
-
-	// stream 标志
-	if v, ok := params["stream"].(bool); ok {
-		parts = append(parts, fmt.Sprintf("stream=%v", v))
-	}
-
-	// voice（语音名称）
-	if v, ok := params["voice"].(string); ok && v != "" {
-		parts = append(parts, fmt.Sprintf("voice=%q", v))
-	}
-
-	// ref_audio（参考音频，仅显示有无）
-	if v, ok := params["ref_audio"].(string); ok && v != "" {
-		parts = append(parts, fmt.Sprintf("ref_audio=%q", truncateString(v, 80)))
-	}
-
-	// ref_text（参考音频文本）
-	if v, ok := params["ref_text"].(string); ok && v != "" {
-		parts = append(parts, fmt.Sprintf("ref_text=%q", truncateString(v, 100)))
-	}
-
-	// temperature
-	if v, ok := params["temperature"].(float64); ok {
-		parts = append(parts, fmt.Sprintf("temperature=%.2f", v))
-	}
-
-	// language
-	if v, ok := params["language"].(string); ok && v != "" {
-		parts = append(parts, fmt.Sprintf("language=%q", v))
+	sort.Strings(keys)
+	for _, k := range keys {
+		if s := formatParam(k, params[k], truncateKeys); s != "" {
+			parts = append(parts, s)
+		}
 	}
 
 	if len(parts) == 0 {
 		return ""
 	}
 	return " " + strings.Join(parts, " ")
+}
+
+// formatParam formats a single parameter as a log string.
+func formatParam(key string, value interface{}, truncateKeys map[string]int) string {
+	switch v := value.(type) {
+	case string:
+		if v == "" {
+			return ""
+		}
+		if maxLen, ok := truncateKeys[key]; ok {
+			return fmt.Sprintf("%s=%q", key, truncateString(v, maxLen))
+		}
+		return fmt.Sprintf("%s=%q", key, truncateString(v, 200))
+	case bool:
+		return fmt.Sprintf("%s=%v", key, v)
+	case float64:
+		// print integer values (e.g. seed) without decimal point
+		if v == float64(int64(v)) {
+			return fmt.Sprintf("%s=%d", key, int64(v))
+		}
+		return fmt.Sprintf("%s=%.4g", key, v)
+	case []interface{}:
+		return fmt.Sprintf("%s=<%d items>", key, len(v))
+	case map[string]interface{}:
+		return fmt.Sprintf("%s=<object>", key)
+	case nil:
+		return ""
+	default:
+		return fmt.Sprintf("%s=%v", key, v)
+	}
 }
 
 // buildMultipartSummary 从 multipart 表单字段构建简短摘要
