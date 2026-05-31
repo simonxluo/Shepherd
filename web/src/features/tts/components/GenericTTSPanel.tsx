@@ -93,8 +93,16 @@ export function GenericTTSPanel({
       if (ttsConfig.seed !== undefined) setSeed(ttsConfig.seed);
       if (ttsConfig.maxNewTokens !== undefined) setMaxNewTokens(ttsConfig.maxNewTokens);
       if (ttsConfig.language !== undefined) setLanguage(ttsConfig.language);
+    } else {
+      // 模型切换后无 config 时清除残留状态
+      setVoice('');
+      setRefAudio('');
+      setRefText('');
+      setSeed('');
+      setMaxNewTokens('');
+      setLanguage('');
     }
-  }, [ttsConfig]);
+  }, [ttsConfig, modelIdForConfig]);
 
   // Sync external ref audio override from history panel
   useEffect(() => {
@@ -182,8 +190,10 @@ export function GenericTTSPanel({
       payload.ref_text = refText || undefined;
     }
 
-    if (seed) payload.seed = parseInt(seed, 10) || undefined;
-    if (maxNewTokens) payload.max_new_tokens = parseInt(maxNewTokens, 10) || undefined;
+    const parsedSeed = parseInt(seed, 10);
+    if (seed !== '' && !Number.isNaN(parsedSeed)) payload.seed = parsedSeed;
+    const parsedTokens = parseInt(maxNewTokens, 10);
+    if (maxNewTokens !== '' && !Number.isNaN(parsedTokens)) payload.max_new_tokens = parsedTokens;
     if (language) payload.language = language;
 
     onGenerate(payload);
@@ -222,6 +232,10 @@ export function GenericTTSPanel({
             onModelChange(v);
             setVoice('');
             setRefAudio('');
+            setRefText('');
+            setSeed('');
+            setMaxNewTokens('');
+            setLanguage('');
           }}
           placeholder={t('tts.selectModel', 'Select TTS model')}
           label={t('tts.modelLabel', 'TTS Model')}
