@@ -142,8 +142,6 @@ func (h *AudioHandler) HandleCreateSpeech(c *gin.Context) {
 
 	isStream, _ := payload["stream"].(bool)
 	if isStream {
-		modelName, _ := payload["model"].(string)
-		logger.Infof("TTS 流式请求: model=%s, port=%d", modelName, port)
 		h.ForwardStreamRequest(c, port, "/v1/audio/speech", actualModelID, payload)
 	} else {
 		h.ForwardBinaryRequest(c, port, "/v1/audio/speech", actualModelID, payload)

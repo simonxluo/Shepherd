@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -68,7 +69,7 @@ func (m *Manager) ensureScanned() {
 	}
 }
 
-// ListModels returns all models
+// ListModels returns all models sorted by name (alphabetical order).
 func (m *Manager) ListModels() []*Model {
 	m.ensureScanned()
 
@@ -80,6 +81,10 @@ func (m *Manager) ListModels() []*Model {
 		modelCopy := *model
 		models = append(models, &modelCopy)
 	}
+
+	sort.Slice(models, func(i, j int) bool {
+		return models[i].Name < models[j].Name
+	})
 
 	return models
 }

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -84,6 +85,111 @@ func replaceModelField(reqBody []byte, servedModelName string) []byte {
 	return reqBody
 }
 
+// truncateString 截断字符串到指定长度，超出部分用 "..." 表示
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return s[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// buildRequestSummary 从 JSON 请求体中提取关键字段构建简短摘要
+func buildRequestSummary(params map[string]interface{}) string {
+	parts := []string{}
+
+	// input 文本字段（TTS）
+	if v, ok := params["input"].(string); ok && v != "" {
+		parts = append(parts, fmt.Sprintf("input=%q", truncateString(v, 100)))
+	}
+
+	// messages 数量（Chat）
+	if msgs, ok := params["messages"].([]interface{}); ok {
+		parts = append(parts, fmt.Sprintf("messages=%d", len(msgs)))
+	}
+
+	// prompt 文本
+	if v, ok := params["prompt"].(string); ok && v != "" {
+		parts = append(parts, fmt.Sprintf("prompt=%q", truncateString(v, 100)))
+	}
+
+	// stream 标志
+	if v, ok := params["stream"].(bool); ok {
+		parts = append(parts, fmt.Sprintf("stream=%v", v))
+	}
+
+	// voice（语音名称）
+	if v, ok := params["voice"].(string); ok && v != "" {
+		parts = append(parts, fmt.Sprintf("voice=%q", v))
+	}
+
+	// ref_audio（参考音频，仅显示有无）
+	if v, ok := params["ref_audio"].(string); ok && v != "" {
+		parts = append(parts, fmt.Sprintf("ref_audio=%q", truncateString(v, 80)))
+	}
+
+	// ref_text（参考音频文本）
+	if v, ok := params["ref_text"].(string); ok && v != "" {
+		parts = append(parts, fmt.Sprintf("ref_text=%q", truncateString(v, 100)))
+	}
+
+	// temperature
+	if v, ok := params["temperature"].(float64); ok {
+		parts = append(parts, fmt.Sprintf("temperature=%.2f", v))
+	}
+
+	// language
+	if v, ok := params["language"].(string); ok && v != "" {
+		parts = append(parts, fmt.Sprintf("language=%q", v))
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+	return " " + strings.Join(parts, " ")
+}
+
+// buildMultipartSummary 从 multipart 表单字段构建简短摘要
+func buildMultipartSummary(formFields map[string]string) string {
+	parts := []string{}
+
+	keys := make([]string, 0, len(formFields))
+	for k := range formFields {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		v := formFields[k]
+		if k == "model" {
+			continue // model 已在外部日志中体现
+		}
+		parts = append(parts, fmt.Sprintf("%s=%q", k, truncateString(v, 100)))
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+	return " " + strings.Join(parts, " ")
+}
+
+// logForwardRequest 记录转发到后端的 JSON 请求日志
+func logForwardRequest(modelID string, port int, path string, reqBody []byte) {
+	var params map[string]interface{}
+	if json.Unmarshal(reqBody, &params) == nil {
+		summary := buildRequestSummary(params)
+		logger.Infof("转发请求 -> model=%s port=%d path=%s%s", modelID, port, path, summary)
+	}
+}
+
+// logForwardMultipart 记录转发到后端的 multipart 请求日志
+func logForwardMultipart(modelID string, port int, path string, formFields map[string]string) {
+	summary := buildMultipartSummary(formFields)
+	logger.Infof("转发请求 -> model=%s port=%d path=%s%s", modelID, port, path, summary)
+}
+
 func (b *BaseHandler) GetModelPort(modelID string) (int, error) {
 	return GetModelPort(b.ModelMgr, modelID)
 }
@@ -108,6 +214,8 @@ func (b *BaseHandler) ForwardRequest(c *gin.Context, port int, path string, mode
 	}
 
 	body = replaceModelField(body, b.GetServedModelName(modelID))
+
+	logForwardRequest(modelID, port, path, body)
 
 	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", url, bytes.NewReader(body))
 	if err != nil {
@@ -185,6 +293,7 @@ func (b *BaseHandler) ForwardStreamRequest(c *gin.Context, port int, path string
 			return
 		}
 		body = replaceModelField(body, b.GetServedModelName(modelID))
+		logForwardRequest(modelID, port, path, body)
 		c.Request.Body = io.NopCloser(bytes.NewReader(body))
 		c.Request.ContentLength = int64(len(body))
 		c.Request.Header.Set("Content-Type", "application/json")
@@ -204,6 +313,8 @@ func (b *BaseHandler) ForwardRequestRaw(c *gin.Context, port int, path string, m
 	}
 
 	url := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
+
+	logForwardRequest(modelID, port, path, body)
 
 	httpReq, err := http.NewRequestWithContext(c.Request.Context(), "POST", url, bytes.NewReader(body))
 	if err != nil {
@@ -334,6 +445,7 @@ func (b *BaseHandler) ForwardBinaryRequest(c *gin.Context, port int, path string
 			return
 		}
 		body = replaceModelField(body, b.GetServedModelName(modelID))
+		logForwardRequest(modelID, port, path, body)
 		bodyReader = bytes.NewReader(body)
 	}
 
@@ -382,6 +494,8 @@ func (b *BaseHandler) ForwardMultipartRequest(c *gin.Context, port int, path str
 	}
 
 	reqURL := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
+
+	logForwardMultipart(modelID, port, path, formFields)
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
