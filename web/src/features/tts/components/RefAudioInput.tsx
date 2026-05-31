@@ -35,8 +35,17 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
+    // 优先处理文件拖拽
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('audio/')) handleFile(file);
+    if (file && file.type.startsWith('audio/')) {
+      handleFile(file);
+      return;
+    }
+    // 处理 URL 拖拽（从 TTS 历史面板拖拽）
+    const url = e.dataTransfer.getData('text/plain');
+    if (url) {
+      onChange(url);
+    }
   };
 
   const toggleRecording = async () => {
@@ -208,11 +217,10 @@ function HistoryPicker({ onSelect, selectedUrl }: { onSelect: (item: TTSHistoryI
 }
 
 async function audioFileToBase64(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return `data:${file.type};base64,${btoa(binary)}`;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
