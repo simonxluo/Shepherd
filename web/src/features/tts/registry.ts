@@ -1,4 +1,5 @@
-import type { TTSPlugin, LoadedModel } from './types';
+import type { LoadedModel } from '@/features/creative/hooks';
+import type { TTSPlugin } from './types';
 
 /**
  * Registry for TTS plugins. Plugins register themselves on import,

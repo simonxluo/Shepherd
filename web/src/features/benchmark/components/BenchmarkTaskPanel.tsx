@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Loader2, CheckCircle2, XCircle, Clock, Ban, XCircle as CancelIcon } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Clock, Ban, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCancelBenchmarkTask } from '../hooks/useBenchmarkState';
 import type { BenchmarkTask, BenchmarkTaskStatus } from '@/types';
@@ -61,7 +61,7 @@ export function BenchmarkTaskPanel({ tasks }: BenchmarkTaskPanelProps) {
                 className="h-5 w-5 opacity-0 group-hover:opacity-100"
                 onClick={() => cancelTask.mutate(task.id)}
               >
-                <CancelIcon className="w-3 h-3" />
+                <X className="w-3 h-3" />
               </Button>
             )}
           </div>

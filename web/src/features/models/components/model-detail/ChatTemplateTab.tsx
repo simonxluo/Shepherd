@@ -7,6 +7,7 @@ import {
   deleteModelChatTemplate,
   getModelDefaultChatTemplate,
 } from '@/features/models/model-detail-api';
+import { useAlertDialog } from '@/providers/AlertDialog';
 
 interface ChatTemplateTabProps {
   modelId: string;
@@ -14,6 +15,7 @@ interface ChatTemplateTabProps {
 
 export function ChatTemplateTab({ modelId }: ChatTemplateTabProps) {
   const { t } = useTranslation();
+  const alertDialog = useAlertDialog();
   const [template, setTemplate] = useState('');
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
@@ -63,7 +65,12 @@ export function ChatTemplateTab({ modelId }: ChatTemplateTabProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirm(t('modelDetail.chatTemplate.confirmDelete', '确定要删除已保存的聊天模板吗？'))) return;
+    const confirmed = await alertDialog.confirm({
+      title: t('common.delete', '删除'),
+      description: t('modelDetail.chatTemplate.confirmDelete', '确定要删除已保存的聊天模板吗？'),
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     try {
       await deleteModelChatTemplate(modelId);
       setTemplate('');

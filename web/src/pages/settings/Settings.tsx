@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -81,7 +82,7 @@ export function SettingsPage() {
           {activeTab === 'general' && <GeneralSettingsPanel />}
           {activeTab === 'paths' && <PathsSettingsPanel />}
           {activeTab === 'benchmark' && <BenchmarkPanel />}
-          {activeTab === 'mcp' && <McpPanel />}
+          {activeTab === 'mcp' && <McpSettingsPanel />}
           {activeTab === 'about' && <AboutPanel />}
         </div>
       </div>
@@ -382,13 +383,6 @@ function BenchmarkPanel() {
 }
 
 /**
- * MCP management panel
- */
-function McpPanel() {
-  return <McpSettingsPanel />;
-}
-
-/**
  * About panel
  */
 function AboutPanel() {
@@ -463,11 +457,11 @@ function AboutPanel() {
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">
               <span className="text-sm text-muted-foreground">{t('settings.about.goVersion')}</span>
-              <span className="font-mono text-xs">1.25+</span>
+              <span className="font-mono text-xs">{serverInfo?.goVersion || t('settings.about.unknown')}</span>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">
               <span className="text-sm text-muted-foreground">{t('settings.about.reactVersion')}</span>
-              <span className="font-mono text-xs">19.x</span>
+              <span className="font-mono text-xs">{React.version}</span>
             </div>
             <div className="flex items-center justify-between py-1.5">
               <span className="text-sm text-muted-foreground">{t('settings.about.license')}</span>

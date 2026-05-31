@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { v1Client } from '@/features/creative/hooks';
+import { v1ApiClient } from '@/lib/api/client';
 
 export interface ASRRequest {
   model: string;
@@ -27,7 +27,7 @@ export function useASR() {
       if (params.response_format) formData.append('response_format', params.response_format);
       if (params.temperature !== undefined) formData.append('temperature', String(params.temperature));
 
-      const response = await fetch(`${v1Client.getBaseUrl()}/audio/transcriptions`, {
+      const response = await fetch(`${v1ApiClient.getBaseUrl()}/audio/transcriptions`, {
         method: 'POST',
         body: formData,
       });

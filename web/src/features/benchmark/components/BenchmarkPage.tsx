@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
@@ -44,6 +44,10 @@ export function BenchmarkPage() {
   const deleteHistoryFile = useDeleteHistoryFile();
   const createBenchmark = useCreateBenchmarkTask();
 
+  // Track one-time initializations
+  const urlParamInitDone = useRef(false);
+  const paramDefaultsInitDone = useRef(false);
+
   // Check if selected model is loaded
   const isModelLoaded = state.selectedModel?.isLoaded ?? false;
 
@@ -54,19 +58,23 @@ export function BenchmarkPage() {
 
   // Initialize from URL params
   useEffect(() => {
+    if (urlParamInitDone.current) return;
     const modelParam = searchParams.get('model');
     if (modelParam && models.length > 0) {
       const found = models.find(m => m.id === modelParam);
       if (found) {
         state.setSelectedModelId(found.id);
+        urlParamInitDone.current = true;
       }
     }
   }, [searchParams, models]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize param defaults when params load
   useEffect(() => {
-    if (benchmarkParams.length > 0 && Object.keys(state.enabledMap).length === 0) {
+    if (paramDefaultsInitDone.current) return;
+    if (benchmarkParams.length > 0) {
       state.initializeParamDefaults(benchmarkParams);
+      paramDefaultsInitDone.current = true;
     }
   }, [benchmarkParams]); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -8,6 +9,18 @@ import { useUIStore } from '@/stores/uiStore';
 
 export function MainLayout() {
   const { mobileMenuOpen, setMobileMenuOpen } = useUIStore();
+
+  // 移动端菜单打开时锁定背景滚动
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
 
   return (
     <div className="flex h-screen overflow-hidden">

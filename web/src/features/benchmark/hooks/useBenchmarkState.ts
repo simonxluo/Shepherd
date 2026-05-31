@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { benchmarksApi } from '@/lib/api/benchmarks';
+import { apiClient } from '@/lib/api/client';
 import type { BenchmarkParam, BenchmarkHistoryFile, BenchmarkTask, Model } from '@/types';
 import { getFieldName } from '../lib/commandBuilder';
 
@@ -181,10 +182,10 @@ export function useBenchmarkState(models: Model[]) {
   const loadDevices = useCallback(async (path: string) => {
     if (!path) return;
     try {
-      const response = await fetch(
-        `/api/model/device/list?llamaBinPath=${encodeURIComponent(path)}`
+      const data = await apiClient.get<{ success: boolean; data?: { devices?: string[] } }>(
+        '/model/device/list',
+        { llamaBinPath: path }
       );
-      const data = await response.json();
       if (data.success && data.data?.devices) {
         const devices = data.data.devices as string[];
         setAvailableDevices(devices);

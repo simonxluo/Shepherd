@@ -1,6 +1,4 @@
-import { ApiClient } from './client';
-
-const api = new ApiClient('/v1');
+import { v1ApiClient } from './client';
 
 export interface VoiceInfo {
   name: string;
@@ -19,7 +17,7 @@ export interface VoicesResponse {
 }
 
 export async function listVoices(model: string): Promise<VoicesResponse> {
-  return api.get<VoicesResponse>(`/audio/voices?model=${encodeURIComponent(model)}`);
+  return v1ApiClient.get<VoicesResponse>('/audio/voices', { model });
 }
 
 export async function uploadVoice(
@@ -36,7 +34,7 @@ export async function uploadVoice(
   if (options?.ref_text) form.append('ref_text', options.ref_text);
   if (options?.speaker_description) form.append('speaker_description', options.speaker_description);
 
-  const resp = await fetch('/v1/audio/voices', { method: 'POST', body: form });
+  const resp = await fetch(`${v1ApiClient.getBaseUrl()}/audio/voices`, { method: 'POST', body: form });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: { message: resp.statusText } }));
     throw new Error(err?.error?.message || `Upload failed: ${resp.status}`);
@@ -45,11 +43,5 @@ export async function uploadVoice(
 }
 
 export async function deleteVoice(model: string, name: string): Promise<void> {
-  const resp = await fetch(`/v1/audio/voices/${encodeURIComponent(name)}?model=${encodeURIComponent(model)}`, {
-    method: 'DELETE',
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ error: { message: resp.statusText } }));
-    throw new Error(err?.error?.message || `Delete failed: ${resp.status}`);
-  }
+  return v1ApiClient.delete(`/audio/voices/${encodeURIComponent(name)}?model=${encodeURIComponent(model)}`);
 }

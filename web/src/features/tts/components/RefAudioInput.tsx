@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Upload, Mic, MicOff, Link, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/useToast';
 import { useTTSHistory } from '../historyHooks';
 import { getTTSAudioUrl, type TTSHistoryItem } from '../api';
 
@@ -86,7 +87,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
         mediaRecorderRef.current = recorder;
         setRecording(true);
       } catch {
-        // Microphone permission denied
+        toast.error(t('tts.microphonePermissionDenied', '麦克风权限被拒绝，请在浏览器设置中允许访问'));
       }
     }
   };

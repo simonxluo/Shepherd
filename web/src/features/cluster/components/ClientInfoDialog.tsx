@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Cpu,
   HardDrive,
@@ -183,7 +184,7 @@ function HeaderStatCard({ icon: Icon, label, value, color }: HeaderStatCardProps
 /**
  * GPU detail card
  */
-function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
+function GPUCard({ gpu, index, t }: { gpu: GPUInfo; index: number; t: (key: string, options?: Record<string, unknown>) => string }) {
   const vramPercent = gpu.totalMemory > 0 ? (gpu.usedMemory / gpu.totalMemory) * 100 : 0;
   const tempColor = gpu.temperature > 80 ? 'text-red-500' : gpu.temperature > 60 ? 'text-amber-500' : 'text-emerald-500';
 
@@ -210,7 +211,7 @@ function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Gauge className="w-3 h-3" />
-                利用率
+                {t('cluster.info.utilization')}
               </span>
               <span className="font-medium">{gpu.utilization.toFixed(1)}%</span>
             </div>
@@ -221,7 +222,7 @@ function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Layers className="w-3 h-3" />
-                显存
+                {t('cluster.info.vram')}
               </span>
               <span className="font-medium">{vramPercent.toFixed(1)}%</span>
             </div>
@@ -254,7 +255,7 @@ function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
 
         <div className="mt-3 pt-3 border-t border-border/50">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>显存使用</span>
+            <span>{t('cluster.info.vramUsage')}</span>
             <span className="font-mono">
               {formatBytes(gpu.usedMemory)} / {formatBytes(gpu.totalMemory)}
             </span>
@@ -269,6 +270,7 @@ function GPUCard({ gpu, index }: { gpu: GPUInfo; index: number }) {
  * Client detail dialog with real-time system information
  */
 export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProps) {
+  const { t } = useTranslation();
   const { data: liveClient } = useClient(client?.id || '', {
     enabled: open && !!client?.id,
   });
@@ -320,25 +322,25 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
           <div className="relative z-10 grid grid-cols-4 gap-4 px-6 pb-6">
             <HeaderStatCard
               icon={Cpu}
-              label="CPU 核心"
+              label={t('cluster.info.cpuCores')}
               value={capabilities?.cpuCount || 0}
               color="blue"
             />
             <HeaderStatCard
               icon={HardDrive}
-              label="内存"
+              label={t('cluster.info.memory')}
               value={formatBytes(capabilities?.memory || 0)}
               color="green"
             />
             <HeaderStatCard
               icon={Microchip}
-              label="GPU"
+              label={t('cluster.info.gpu')}
               value={resources?.gpuInfo?.length || 0}
               color="purple"
             />
             <HeaderStatCard
               icon={Globe}
-              label="ROCm"
+              label={t('cluster.info.rocm')}
               value={resources?.rocmVersion || 'N/A'}
               color="amber"
             />
@@ -353,28 +355,28 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
                 className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary py-2.5 text-sm font-medium text-muted-foreground transition-all duration-200 ease-out hover:text-foreground data-[state=active]:hover:text-primary"
               >
                 <Activity className="w-4 h-4 mr-2" />
-                资源监控
+                {t('cluster.info.tabResources')}
               </TabsTrigger>
               <TabsTrigger
                 value="hardware"
                 className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary py-2.5 text-sm font-medium text-muted-foreground transition-all duration-200 ease-out hover:text-foreground data-[state=active]:hover:text-primary"
               >
                 <Monitor className="w-4 h-4 mr-2" />
-                硬件信息
+                {t('cluster.info.tabHardware')}
               </TabsTrigger>
               <TabsTrigger
                 value="metadata"
                 className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary py-2.5 text-sm font-medium text-muted-foreground transition-all duration-200 ease-out hover:text-foreground data-[state=active]:hover:text-primary"
               >
                 <Terminal className="w-4 h-4 mr-2" />
-                元数据
+                {t('cluster.info.tabMetadata')}
               </TabsTrigger>
               <TabsTrigger
                 value="config"
                 className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary py-2.5 text-sm font-medium text-muted-foreground transition-all duration-200 ease-out hover:text-foreground data-[state=active]:hover:text-primary"
               >
                 <Settings className="w-4 h-4 mr-2" />
-                配置
+                {t('cluster.info.tabConfig')}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -384,18 +386,18 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
               <CircularProgress
                 value={cpuPercent}
                 label="CPU"
-                subLabel={cpuPercent > 80 ? '高负载' : '正常'}
+                subLabel={cpuPercent > 80 ? t('cluster.info.highLoad') : t('cluster.info.normal')}
                 color={cpuPercent > 80 ? 'stroke-red-500' : cpuPercent > 50 ? 'stroke-amber-500' : 'stroke-blue-500'}
               />
               <CircularProgress
                 value={memoryPercent}
-                label="内存"
+                label={t('cluster.info.memory')}
                 subLabel={formatBytes(resources?.memoryUsed || 0)}
                 color={memoryPercent > 80 ? 'stroke-red-500' : memoryPercent > 50 ? 'stroke-amber-500' : 'stroke-emerald-500'}
               />
               <CircularProgress
                 value={diskPercent}
-                label="磁盘"
+                label={t('cluster.info.disk')}
                 subLabel={formatBytes(resources?.diskUsed || 0)}
                 color={diskPercent > 80 ? 'stroke-red-500' : diskPercent > 50 ? 'stroke-amber-500' : 'stroke-violet-500'}
               />
@@ -404,21 +406,21 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
             <div className="grid grid-cols-3 gap-4">
               <MetricCard
                 icon={Cpu}
-                title="CPU 使用率"
+                title={t('cluster.info.cpuUsage')}
                 value={`${cpuPercent.toFixed(1)}%`}
-                subValue={`${capabilities?.cpuCount || 0} 核心`}
+                subValue={t('cluster.info.coresCount', { count: capabilities?.cpuCount || 0 })}
                 colorClass={cpuPercent > 80 ? 'text-red-600' : cpuPercent > 50 ? 'text-amber-600' : 'text-blue-600'}
               />
               <MetricCard
                 icon={HardDrive}
-                title="内存使用"
+                title={t('cluster.info.memoryUsage')}
                 value={formatBytes(resources?.memoryUsed || 0)}
                 subValue={`/ ${formatBytes(resources?.memoryTotal || 0)} (${memoryPercent.toFixed(1)}%)`}
                 colorClass={memoryPercent > 80 ? 'text-red-600' : memoryPercent > 50 ? 'text-amber-600' : 'text-emerald-600'}
               />
               <MetricCard
                 icon={Layers}
-                title="磁盘使用"
+                title={t('cluster.info.diskUsage')}
                 value={formatBytes(resources?.diskUsed || 0)}
                 subValue={`/ ${formatBytes(resources?.diskTotal || 0)} (${diskPercent.toFixed(1)}%)`}
                 colorClass={diskPercent > 80 ? 'text-red-600' : diskPercent > 50 ? 'text-amber-600' : 'text-violet-600'}
@@ -429,12 +431,12 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Zap className="w-5 h-5 text-purple-500" />
-                  <h3 className="text-lg font-semibold">GPU 详情</h3>
-                  <Badge variant="secondary">{resources.gpuInfo.length} 个设备</Badge>
+                  <h3 className="text-lg font-semibold">{t('cluster.info.gpuDetails')}</h3>
+                  <Badge variant="secondary">{t('cluster.info.devices', { count: resources.gpuInfo.length })}</Badge>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {resources.gpuInfo.map((gpu, index) => (
-                    <GPUCard key={index} gpu={gpu} index={index} />
+                    <GPUCard key={index} gpu={gpu} index={index} t={t} />
                   ))}
                 </div>
               </div>
@@ -446,13 +448,13 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
               <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                 <div className="flex items-center gap-2 text-lg font-semibold">
                   <Monitor className="w-5 h-5 text-blue-500" />
-                  系统信息
+                  {t('cluster.info.systemInfo')}
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
                     <span className="text-muted-foreground flex items-center gap-2">
                       <Hash className="w-4 h-4" />
-                      内核版本
+                      {t('cluster.info.kernelVersion')}
                     </span>
                     <code className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">
                       {resources?.kernelVersion || 'N/A'}
@@ -461,7 +463,7 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
                     <span className="text-muted-foreground flex items-center gap-2">
                       <Globe className="w-4 h-4" />
-                      ROCm 版本
+                      {t('cluster.info.rocmVersion')}
                     </span>
                     <code className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">
                       {resources?.rocmVersion || 'N/A'}
@@ -470,11 +472,11 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
                     <span className="text-muted-foreground flex items-center gap-2">
                       <Clock className="w-4 h-4" />
-                      最后在线
+                      {t('cluster.info.lastOnline')}
                     </span>
                     <span className="text-sm">
                       {displayClient?.lastSeen
-                        ? new Date(displayClient.lastSeen).toLocaleString('zh-CN')
+                        ? new Date(displayClient.lastSeen).toLocaleString()
                         : 'N/A'}
                     </span>
                   </div>
@@ -484,34 +486,34 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
               <div className="rounded-xl border border-border bg-card p-5 space-y-4">
                 <div className="flex items-center gap-2 text-lg font-semibold">
                   <Server className="w-5 h-5 text-emerald-500" />
-                  硬件规格
+                  {t('cluster.info.hardwareSpecs')}
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
                     <span className="text-muted-foreground flex items-center gap-2">
                       <Cpu className="w-4 h-4" />
-                      CPU 核心数
+                      {t('cluster.info.cpuCoreCount')}
                     </span>
-                    <Badge variant="outline">{capabilities?.cpuCount || 0} 核</Badge>
+                    <Badge variant="outline">{t('cluster.info.coresCount', { count: capabilities?.cpuCount || 0 })}</Badge>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
                     <span className="text-muted-foreground flex items-center gap-2">
                       <HardDrive className="w-4 h-4" />
-                      总内存
+                      {t('cluster.info.totalMemory')}
                     </span>
                     <Badge variant="outline">{formatBytes(capabilities?.memory || 0)}</Badge>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
                     <span className="text-muted-foreground flex items-center gap-2">
                       <Microchip className="w-4 h-4" />
-                      GPU 数量
+                      {t('cluster.info.gpuCount')}
                     </span>
-                    <Badge variant="outline">{resources?.gpuInfo?.length || 0} 个</Badge>
+                    <Badge variant="outline">{t('cluster.info.countItems', { count: resources?.gpuInfo?.length || 0 })}</Badge>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
                     <span className="text-muted-foreground flex items-center gap-2">
                       <Layers className="w-4 h-4" />
-                      GPU 显存
+                      {t('cluster.info.gpuMemoryTotal')}
                     </span>
                     <Badge variant="outline">
                       {resources?.gpuInfo && resources.gpuInfo.length > 0
@@ -526,15 +528,15 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 text-lg font-semibold mb-4">
                 <Globe className="w-5 h-5 text-amber-500" />
-                网络配置
+                {t('cluster.info.networkConfig')}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50">
-                  <div className="text-xs text-muted-foreground mb-1">节点 ID</div>
+                  <div className="text-xs text-muted-foreground mb-1">{t('cluster.info.nodeId')}</div>
                   <code className="text-sm font-mono break-all">{displayClient?.id}</code>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50">
-                  <div className="text-xs text-muted-foreground mb-1">连接地址</div>
+                  <div className="text-xs text-muted-foreground mb-1">{t('cluster.info.connectionAddress')}</div>
                   <div className="text-sm font-medium">
                     {displayClient?.address}:{displayClient?.port}
                   </div>
@@ -548,9 +550,9 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
               <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-border flex items-center gap-2">
                   <Terminal className="w-4 h-4 text-slate-500" />
-                  <span className="font-medium text-sm">自定义元数据</span>
+                  <span className="font-medium text-sm">{t('cluster.info.customMetadata')}</span>
                   <Badge variant="secondary" className="ml-auto">
-                    {Object.keys(displayClient.metadata).length} 项
+                    {t('cluster.info.items', { count: Object.keys(displayClient.metadata).length })}
                   </Badge>
                 </div>
                 <div className="divide-y divide-border">
@@ -570,7 +572,7 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Terminal className="w-12 h-12 mb-4 opacity-20" />
-                <p>暂无元数据</p>
+                <p>{t('cluster.info.noMetadata')}</p>
               </div>
             )}
           </TabsContent>
@@ -582,7 +584,7 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
 
         <div className="flex justify-end gap-2 p-4 border-t border-border bg-slate-50/50 dark:bg-slate-900/20 flex-shrink-0">
           <Button onClick={onClose} variant="outline">
-            关闭
+            {t('cluster.info.close')}
           </Button>
         </div>
       </DialogContent>
@@ -595,6 +597,7 @@ export function ClientInfoDialog({ client, open, onClose }: ClientInfoDialogProp
  * Node configuration panel with llama.cpp testing
  */
 function NodeConfigPanel({ clientId }: { clientId: string }) {
+  const { t } = useTranslation();
   const { data: config, isLoading } = useNodeConfig(clientId, { enabled: !!clientId });
   const testLlamacpp = useTestNodeLlamacpp();
   const [testResult, setTestResult] = useState<LlamacppTestResult | null>(null);
@@ -604,12 +607,15 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
       const result = await testLlamacpp.mutateAsync(clientId);
       setTestResult(result);
       if (result.success) {
-        toast.success('测试成功', `llama.cpp 版本: ${result.version || '未知'}`);
+        toast.success(
+          t('cluster.info.testSuccessTitle'),
+          t('cluster.info.testSuccessDesc', { version: result.version || t('cluster.info.unknownError') })
+        );
       } else {
-        toast.error('测试失败', result.error || '未知错误');
+        toast.error(t('cluster.info.testFailedTitle'), result.error || t('cluster.info.unknownError'));
       }
     } catch (error) {
-      toast.error('测试失败', error instanceof Error ? error.message : '请求失败');
+      toast.error(t('cluster.info.testFailedTitle'), error instanceof Error ? error.message : t('cluster.info.requestFailed'));
     }
   };
 
@@ -625,7 +631,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <AlertTriangle className="w-12 h-12 mb-4" />
-        <p>无法获取节点配置信息</p>
+        <p>{t('cluster.info.cannotFetchConfig')}</p>
       </div>
     );
   }
@@ -638,8 +644,8 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
             <Terminal className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold">llama.cpp 测试</h3>
-            <p className="text-sm text-muted-foreground">测试节点上 llama.cpp 的可用性</p>
+            <h3 className="font-semibold">{t('cluster.info.llamacppTest')}</h3>
+            <p className="text-sm text-muted-foreground">{t('cluster.info.llamacppTestDesc')}</p>
           </div>
         </div>
         <Button
@@ -652,7 +658,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
           ) : (
             <Play className="w-4 h-4" />
           )}
-          开始测试
+          {t('cluster.info.startTest')}
         </Button>
       </div>
 
@@ -673,23 +679,23 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
             )}
             <div className="flex-1 min-w-0">
               <div className="font-medium">
-                {testResult.success ? '测试通过' : '测试失败'}
+                {testResult.success ? t('cluster.info.testPassed') : t('cluster.info.testFailed')}
               </div>
               {testResult.version && (
                 <div className="text-sm text-muted-foreground mt-1">
-                  版本: {testResult.version}
+                  {t('cluster.info.version', { version: testResult.version })}
                 </div>
               )}
               {testResult.error && (
                 <div className="text-sm text-destructive mt-1">
-                  错误: {testResult.error}
+                  {t('cluster.info.error', { error: testResult.error })}
                 </div>
               )}
               <div className="text-xs text-muted-foreground mt-2">
-                测试路径: {testResult.path}
+                {t('cluster.info.testPath', { path: testResult.path })}
               </div>
               <div className="text-xs text-muted-foreground">
-                耗时: {testResult.duration.toFixed(2)}ms · {new Date(testResult.testedAt).toLocaleString('zh-CN')}
+                {t('cluster.info.testDuration', { duration: testResult.duration.toFixed(2) })} · {new Date(testResult.testedAt).toLocaleString()}
               </div>
             </div>
           </div>
@@ -699,14 +705,14 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-border flex items-center gap-2">
           <FileCode className="w-4 h-4 text-primary" />
-          <span className="font-medium text-sm">llama.cpp 路径</span>
+          <span className="font-medium text-sm">{t('cluster.info.llamacppPaths')}</span>
           <Badge variant="secondary" className="ml-auto">
-            {config.llamaCppPaths.length} 个
+            {t('cluster.info.countItems', { count: config.llamaCppPaths.length })}
           </Badge>
         </div>
         <div className="divide-y divide-border">
           {config.llamaCppPaths.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-muted-foreground">暂无配置</div>
+            <div className="px-4 py-3 text-sm text-muted-foreground">{t('cluster.info.noConfig')}</div>
           ) : (
             config.llamaCppPaths.map((item, index) => (
               <div
@@ -721,7 +727,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
                   )}
                   <code className="text-xs font-mono truncate">{item.path}</code>
                   {item.isDefault && (
-                    <Badge variant="outline" className="text-xs flex-shrink-0">默认</Badge>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">{t('cluster.info.default')}</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -732,7 +738,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
                     variant={item.exists ? 'outline' : 'secondary'}
                     className="text-xs"
                   >
-                    {item.exists ? '可用' : '不可用'}
+                    {item.exists ? t('cluster.info.available') : t('cluster.info.unavailable')}
                   </Badge>
                 </div>
               </div>
@@ -744,14 +750,14 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-border flex items-center gap-2">
           <FolderOpen className="w-4 h-4 text-primary" />
-          <span className="font-medium text-sm">模型路径</span>
+          <span className="font-medium text-sm">{t('cluster.info.modelPaths')}</span>
           <Badge variant="secondary" className="ml-auto">
-            {config.modelPaths.length} 个
+            {t('cluster.info.countItems', { count: config.modelPaths.length })}
           </Badge>
         </div>
         <div className="divide-y divide-border">
           {config.modelPaths.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-muted-foreground">暂无配置</div>
+            <div className="px-4 py-3 text-sm text-muted-foreground">{t('cluster.info.noConfig')}</div>
           ) : (
             config.modelPaths.map((item, index) => (
               <div
@@ -768,13 +774,13 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {typeof item.modelCount === 'number' && (
-                    <Badge variant="secondary" className="text-xs">{item.modelCount} 个模型</Badge>
+                    <Badge variant="secondary" className="text-xs">{t('cluster.info.modelCount', { count: item.modelCount })}</Badge>
                   )}
                   <Badge
                     variant={item.exists ? 'outline' : 'secondary'}
                     className="text-xs"
                   >
-                    {item.exists ? '可用' : '不可用'}
+                    {item.exists ? t('cluster.info.available') : t('cluster.info.unavailable')}
                   </Badge>
                 </div>
               </div>
@@ -787,32 +793,32 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Globe className="w-4 h-4 text-primary" />
-            <span className="font-medium text-sm">系统环境</span>
+            <span className="font-medium text-sm">{t('cluster.info.systemEnvironment')}</span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">操作系统</span>
+              <span className="text-muted-foreground">{t('cluster.info.os')}</span>
               <span className="font-mono">{config.environment.os}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">架构</span>
+              <span className="text-muted-foreground">{t('cluster.info.architecture')}</span>
               <span className="font-mono">{config.environment.architecture}</span>
             </div>
             {config.environment.kernelVersion && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">内核版本</span>
+                <span className="text-muted-foreground">{t('cluster.info.kernel')}</span>
                 <span className="font-mono">{config.environment.kernelVersion}</span>
               </div>
             )}
             {config.environment.rocmVersion && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">ROCm 版本</span>
+                <span className="text-muted-foreground">{t('cluster.info.rocmVersion')}</span>
                 <span className="font-mono">{config.environment.rocmVersion}</span>
               </div>
             )}
             {config.environment.cudaVersion && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">CUDA 版本</span>
+                <span className="text-muted-foreground">{t('cluster.info.cudaVersion')}</span>
                 <span className="font-mono">{config.environment.cudaVersion}</span>
               </div>
             )}
@@ -822,28 +828,28 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-3">
             <FileCode className="w-4 h-4 text-primary" />
-            <span className="font-medium text-sm">运行时</span>
+            <span className="font-medium text-sm">{t('cluster.info.runtime')}</span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Go 版本</span>
+              <span className="text-muted-foreground">{t('cluster.info.goVersion')}</span>
               <span className="font-mono">{config.environment.goVersion}</span>
             </div>
             {config.environment.pythonVersion && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Python 版本</span>
+                <span className="text-muted-foreground">{t('cluster.info.pythonVersion')}</span>
                 <span className="font-mono">{config.environment.pythonVersion}</span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Python 路径</span>
+              <span className="text-muted-foreground">{t('cluster.info.pythonPath')}</span>
               <span className="font-mono truncate max-w-[150px]" title={config.executor.pythonPath}>
                 {config.executor.pythonPath}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">超时时间</span>
-              <span>{config.executor.timeout} 秒</span>
+              <span className="text-muted-foreground">{t('cluster.info.timeout')}</span>
+              <span>{t('cluster.info.timeoutSeconds', { seconds: config.executor.timeout })}</span>
             </div>
           </div>
         </div>
@@ -852,12 +858,12 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border-b border-border flex items-center gap-2">
           <Layers className="w-4 h-4 text-primary" />
-          <span className="font-medium text-sm">Conda 环境</span>
+          <span className="font-medium text-sm">{t('cluster.info.condaEnv')}</span>
           <Badge
             variant={config.conda.enabled ? 'outline' : 'secondary'}
             className="ml-auto"
           >
-            {config.conda.enabled ? '已启用' : '未启用'}
+            {config.conda.enabled ? t('cluster.info.condaEnabled') : t('cluster.info.condaDisabled')}
           </Badge>
         </div>
         {config.conda.enabled && config.conda.availableEnvs.length > 0 && (
@@ -870,7 +876,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
                   className="text-xs"
                 >
                   {env}
-                  {env === config.conda.defaultEnv && ' (默认)'}
+                  {env === config.conda.defaultEnv ? t('cluster.info.condaDefault') : ''}
                 </Badge>
               ))}
             </div>
@@ -879,7 +885,7 @@ function NodeConfigPanel({ clientId }: { clientId: string }) {
       </div>
 
       <div className="text-xs text-muted-foreground text-right">
-        配置收集时间: {new Date(config.collectedAt).toLocaleString('zh-CN')}
+        {t('cluster.info.configCollectedAt', { time: new Date(config.collectedAt).toLocaleString() })}
       </div>
     </div>
   );

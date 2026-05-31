@@ -1,4 +1,4 @@
-import type { TTSRequest } from '../hooks';
+import type { TTSRequest } from '../types';
 
 export interface TTSStreamMetrics {
   ttfp: number | null;              // 首包延迟 (ms)

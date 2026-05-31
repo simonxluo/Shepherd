@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { v1Client } from '@/features/creative/hooks';
+import { v1ApiClient } from '@/lib/api/client';
 
 export interface ImageGenerationRequest {
   model: string;
@@ -22,7 +22,7 @@ export interface ImageGenerationResponse {
 export function useImageGeneration() {
   return useMutation({
     mutationFn: async (params: ImageGenerationRequest) => {
-      return v1Client.post<ImageGenerationResponse>('/images/generations', params);
+      return v1ApiClient.post<ImageGenerationResponse>('/images/generations', params);
     },
   });
 }

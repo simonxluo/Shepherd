@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import {
   listSamplingConfigs,
   saveSamplingConfig,
   deleteSamplingConfig,
@@ -9,6 +19,7 @@ import {
   setModelSamplingSelection,
   type SamplingConfig,
 } from '@/features/models/model-detail-api';
+import { useAlertDialog } from '@/providers/AlertDialog';
 
 interface SamplingTabProps {
   modelId: string;
@@ -30,12 +41,40 @@ const SAMPLING_FIELDS = [
 
 export function SamplingTab({ modelId }: SamplingTabProps) {
   const { t } = useTranslation();
+  const alertDialog = useAlertDialog();
   const [configs, setConfigs] = useState<Record<string, SamplingConfig>>({});
   const [selectedName, setSelectedName] = useState('');
   const [currentConfig, setCurrentConfig] = useState<SamplingConfig>({});
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const currentConfigRef = useRef<SamplingConfig>(currentConfig);
+  currentConfigRef.current = currentConfig;
+
+  // Input dialog state for "add new config name"
+  const [inputDialogOpen, setInputDialogOpen] = useState(false);
+  const [inputDialogValue, setInputDialogValue] = useState('');
+  const inputDialogResolveRef = useRef<((value: string | null) => void) | null>(null);
+
+  const showInputDialog = (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      setInputDialogValue('');
+      setInputDialogOpen(true);
+      inputDialogResolveRef.current = resolve;
+    });
+  };
+
+  const handleInputDialogConfirm = () => {
+    setInputDialogOpen(false);
+    inputDialogResolveRef.current?.(inputDialogValue.trim() || null);
+    inputDialogResolveRef.current = null;
+  };
+
+  const handleInputDialogCancel = () => {
+    setInputDialogOpen(false);
+    inputDialogResolveRef.current?.(null);
+    inputDialogResolveRef.current = null;
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -73,13 +112,14 @@ export function SamplingTab({ modelId }: SamplingTabProps) {
   const scheduleAutoSave = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
+      const cfg = currentConfigRef.current;
       if (!selectedName) return;
       try {
-        await saveSamplingConfig(selectedName, currentConfig);
-        setConfigs(prev => ({ ...prev, [selectedName]: { ...currentConfig } }));
+        await saveSamplingConfig(selectedName, cfg);
+        setConfigs(prev => ({ ...prev, [selectedName]: { ...cfg } }));
       } catch { /* ignore */ }
     }, 400);
-  }, [selectedName, currentConfig]);
+  }, [selectedName]);
 
   const handleFieldChange = (key: string, value: string) => {
     const numVal = value === '' ? undefined : Number(value);
@@ -96,8 +136,8 @@ export function SamplingTab({ modelId }: SamplingTabProps) {
   };
 
   const handleAdd = async () => {
-    const name = prompt(t('modelDetail.sampling.newNamePrompt', '请输入新的采样配置名称'));
-    if (!name?.trim()) return;
+    const name = await showInputDialog();
+    if (!name) return;
     try {
       await saveSamplingConfig(name.trim(), currentConfig);
       setConfigs(prev => ({ ...prev, [name.trim()]: { ...currentConfig } }));
@@ -121,7 +161,12 @@ export function SamplingTab({ modelId }: SamplingTabProps) {
 
   const handleDelete = async () => {
     if (!selectedName) return;
-    if (!confirm(t('modelDetail.sampling.confirmDelete', '确定要删除此配置吗？') + `\n${selectedName}`)) return;
+    const confirmed = await alertDialog.confirm({
+      title: t('common.delete', '删除'),
+      description: t('modelDetail.sampling.confirmDelete', '确定要删除此配置吗？') + `\n${selectedName}`,
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
     try {
       await deleteSamplingConfig(selectedName);
       const next = { ...configs };
@@ -177,6 +222,31 @@ export function SamplingTab({ modelId }: SamplingTabProps) {
           ))}
         </div>
       )}
+
+      {/* Input dialog for new config name */}
+      <AlertDialog open={inputDialogOpen} onOpenChange={(open) => { if (!open) handleInputDialogCancel(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('modelDetail.sampling.newNamePrompt', '请输入新的采样配置名称')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              <input
+                type="text"
+                className="w-full mt-2 h-8 rounded-md border border-input bg-background px-3 text-sm"
+                value={inputDialogValue}
+                onChange={e => setInputDialogValue(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleInputDialogConfirm(); }}
+                autoFocus
+              />
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleInputDialogCancel}>{t('common.cancel', '取消')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleInputDialogConfirm} disabled={!inputDialogValue.trim()}>
+              {t('common.confirm', '确定')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

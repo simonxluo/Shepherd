@@ -19,13 +19,8 @@ export interface LaunchProfilesResponse {
 }
 
 export const launchProfilesApi = {
-  list: (params?: { backendType?: string; modelScope?: string }) => {
-    const query = new URLSearchParams();
-    if (params?.backendType) query.set('backendType', params.backendType);
-    if (params?.modelScope) query.set('modelScope', params.modelScope);
-    const suffix = query.toString() ? `?${query.toString()}` : '';
-    return apiClient.get<{ success: boolean; data: LaunchProfilesResponse }>(`/launch-profiles${suffix}`);
-  },
+  list: (params?: { backendType?: string; modelScope?: string }) =>
+    apiClient.get<{ success: boolean; data: LaunchProfilesResponse }>('/launch-profiles', params as Record<string, unknown>),
   get: (id: string) =>
     apiClient.get<{ success: boolean; data: { profile: LaunchProfile } }>(`/launch-profiles/${encodeURIComponent(id)}`),
   create: (profile: Omit<LaunchProfile, 'id'> & { id?: string }) =>

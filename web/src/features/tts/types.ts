@@ -111,4 +111,4 @@ export interface TTSPlugin {
   order?: number;
 }
 
-export type { StreamState, TTSStreamMetrics, LoadedModel };
+export type { StreamState, TTSStreamMetrics };

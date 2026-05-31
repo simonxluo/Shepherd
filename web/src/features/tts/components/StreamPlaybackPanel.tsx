@@ -32,7 +32,7 @@ export function StreamPlaybackPanel({
     a.href = url;
     a.download = `tts_stream_${Date.now()}.wav`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const statusColor = {

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Play, Loader2, Settings2, XCircle } from 'lucide-react';
+import { Play, Settings2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeviceSelectionPanel } from './DeviceSelectionPanel';
@@ -64,11 +64,7 @@ export function BenchmarkControlsPanel({
             disabled={isDisabled}
             className="min-w-[90px]"
           >
-            {isRunning ? (
-              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-            ) : (
-              <Play className="w-4 h-4 mr-1.5" />
-            )}
+            <Play className="w-4 h-4 mr-1.5" />
             {t('benchmark.run')}
           </Button>
         )}

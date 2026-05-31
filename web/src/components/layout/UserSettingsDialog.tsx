@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Settings,
@@ -6,10 +6,8 @@ import {
   Sun,
   Monitor,
   Bell,
-  Mail,
   Palette,
   Check,
-  Laptop,
   Globe
 } from 'lucide-react';
 import { useUserStore } from '@/stores/userStore';
@@ -69,6 +67,16 @@ export function UserSettingsDialog() {
   const [activeTab, setActiveTab] = useState('appearance');
   const [localSettings, setLocalSettings] = useState(settings);
   const [savedState, setSavedState] = useState<Record<string, boolean>>({});
+  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 组件卸载时清理 setTimeout
+  useEffect(() => {
+    return () => {
+      if (savedTimeoutRef.current) {
+        clearTimeout(savedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSettingChange = <K extends keyof typeof localSettings>(
     key: K, 
@@ -87,7 +95,10 @@ export function UserSettingsDialog() {
       i18n.changeLanguage(localSettings.language);
     }
     setSavedState({ ...savedState, [activeTab]: true });
-    setTimeout(() => {
+    if (savedTimeoutRef.current) {
+      clearTimeout(savedTimeoutRef.current);
+    }
+    savedTimeoutRef.current = setTimeout(() => {
       setSavedState(prev => ({ ...prev, [activeTab]: false }));
     }, 2000);
   };
@@ -251,27 +262,10 @@ export function UserSettingsDialog() {
                 <CardContent className="space-y-3">
                   <NotificationSetting
                     icon={Bell}
-                    title={t('settings.pushNotifications')}
-                    description={t('settings.pushNotificationsDesc')}
+                    title={t('settings.notifications')}
+                    description={t('settings.notificationsDescription')}
                     checked={localSettings.notifications}
                     onCheckedChange={(checked) => handleSettingChange('notifications', checked)}
-                  />
-                  
-                  <NotificationSetting
-                    icon={Laptop}
-                    title={t('settings.desktopNotifications')}
-                    description={t('settings.desktopNotificationsDesc')}
-                    checked={localSettings.notifications}
-                    onCheckedChange={(checked) => handleSettingChange('notifications', checked)}
-                  />
-                  
-                  <NotificationSetting
-                    icon={Mail}
-                    title={t('settings.emailNotifications')}
-                    description={t('settings.emailNotificationsDesc')}
-                    checked={false}
-                    onCheckedChange={() => {}}
-                    disabled
                   />
                 </CardContent>
               </Card>

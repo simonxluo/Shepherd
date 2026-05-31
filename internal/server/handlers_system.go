@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -34,6 +35,7 @@ func (s *Server) HandleServerInfo(c *gin.Context) {
 		"version":   s.config.Version,
 		"buildTime": s.config.BuildTime,
 		"gitCommit": s.config.GitCommit,
+		"goVersion": runtime.Version(),
 		"name":      "Shepherd",
 		"status":    "running",
 		"role":      s.config.ServerCfg.Node.Role,

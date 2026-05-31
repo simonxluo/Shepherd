@@ -1,13 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
-import { v1Client } from '@/features/creative/hooks';
+import { v1ApiClient } from '@/lib/api/client';
 import type { MusicGenRequest } from './types';
-
-export type { MusicGenRequest };
 
 export function useMusicGeneration() {
   return useMutation({
     mutationFn: async (params: MusicGenRequest) => {
-      const response = await fetch(`${v1Client.getBaseUrl()}/audio/music`, {
+      const response = await fetch(`${v1ApiClient.getBaseUrl()}/audio/music`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),

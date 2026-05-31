@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Server, Cpu, HardDrive, Clock, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn, formatBytes } from '@/lib/utils';
 import { ClientInfoDialog } from './ClientInfoDialog';
-import { STATUS_COLORS, STATUS_LABELS, getResourcePercentages } from '../utils';
+import { STATUS_COLORS, getStatusLabel, getResourcePercentages } from '../utils';
 import type { Client } from '@/types';
 
 interface ClientCardProps {
@@ -16,21 +17,22 @@ interface ClientCardProps {
 /**
  * Format last seen time
  */
-function formatLastSeen(timestamp: string): string {
+function formatLastSeen(timestamp: string, t: (key: string, options?: Record<string, unknown>) => string): string {
   const date = new Date(timestamp);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
 
-  if (diff < 60000) return '刚刚';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
-  return date.toLocaleDateString('zh-CN');
+  if (diff < 60000) return t('cluster.card.justNow');
+  if (diff < 3600000) return t('cluster.card.minutesAgo', { count: Math.floor(diff / 60000) });
+  if (diff < 86400000) return t('cluster.card.hoursAgo', { count: Math.floor(diff / 3600000) });
+  return date.toLocaleDateString();
 }
 
 export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
+  const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const statusColor = STATUS_COLORS[client.status];
-  const statusLabel = STATUS_LABELS[client.status];
+  const statusLabel = getStatusLabel(client.status, t);
   const isConnected = client.status === 'online' || client.status === 'busy';
 
   const { cpu: cpuPercent, memory: memoryPercent, gpu: gpuPercent, gpuMemory: gpuMemoryPercent } = getResourcePercentages(client.resources);
@@ -77,7 +79,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
           <div className="flex items-center gap-2 text-sm">
             <Cpu className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground">
-              {client.capabilities.cpuCount} 核心
+              {t('cluster.card.cores', { count: client.capabilities.cpuCount })}
             </span>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -142,7 +144,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
 
           <div>
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-              <span>内存</span>
+              <span>{t('cluster.card.memory')}</span>
               <span>
                 {formatBytes(client.resources.memoryUsed)} / {formatBytes(client.resources.memoryTotal)}
               </span>
@@ -182,7 +184,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
 
               <div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                  <span>GPU 内存</span>
+                  <span>{t('cluster.card.gpuMemory')}</span>
                   <span>
                     {formatBytes(client.resources.gpuMemoryUsed ?? 0)} / {formatBytes(client.resources.gpuMemoryTotal ?? 0)}
                   </span>
@@ -209,7 +211,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="w-3 h-3" />
-          <span>{formatLastSeen(client.lastSeen)}</span>
+          <span>{formatLastSeen(client.lastSeen, t)}</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -220,7 +222,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
             size="xs"
           >
             <Info className="w-3 h-3 mr-1" />
-            详情
+            {t('cluster.card.details')}
           </Button>
           {onDisconnect && isConnected && (
             <Button
@@ -228,7 +230,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
               variant="destructive"
               size="xs"
             >
-              断开
+              {t('cluster.card.disconnect')}
             </Button>
           )}
         </div>
@@ -237,7 +239,7 @@ export function ClientCard({ client, onDisconnect, actions }: ClientCardProps) {
       {Object.keys(client.metadata).length > 0 && (
         <Collapsible className="mt-3">
           <CollapsibleTrigger className="cursor-pointer text-xs text-muted-foreground">
-            元数据
+            {t('cluster.card.metadata')}
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="mt-2 p-2 bg-muted rounded text-xs">

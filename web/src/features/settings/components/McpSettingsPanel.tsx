@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, RefreshCw, Trash2, Server, Wrench, Settings2 } from 'lucide-react';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
   listMCPServers,
   addMCPServer,
   removeMCPServer,
@@ -368,9 +375,11 @@ function AddServerDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background border rounded-lg p-6 w-full max-w-md space-y-4">
-        <h3 className="text-lg font-semibold">{t('settings.mcp.addServer')}</h3>
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('settings.mcp.addServer')}</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="text-sm font-medium">ID</label>
@@ -415,7 +424,7 @@ function AddServerDialog({
               <option value="streamable-http">Streamable HTTP</option>
             </select>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <DialogFooter>
             <button
               type="button"
               onClick={onClose}
@@ -429,9 +438,9 @@ function AddServerDialog({
             >
               {t('settings.mcp.addServer')}
             </button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -71,7 +71,9 @@ export function TTSHistoryPanel({
     const a = document.createElement('a');
     a.href = getTTSAudioUrl(item.id);
     a.download = `tts_${item.id}.${item.format || 'mp3'}`;
+    document.body.appendChild(a);
     a.click();
+    setTimeout(() => document.body.removeChild(a), 1000);
   };
 
   const handleDelete = (id: string) => {

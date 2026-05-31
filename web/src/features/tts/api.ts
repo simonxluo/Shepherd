@@ -29,8 +29,8 @@ export interface TTSHistoryListParams {
 
 export async function fetchTTSHistory(params?: TTSHistoryListParams): Promise<TTSHistoryListResponse> {
   const query = new URLSearchParams();
-  if (params?.limit) query.set('limit', String(params.limit));
-  if (params?.offset) query.set('offset', String(params.offset));
+  if (params?.limit !== undefined) query.set('limit', String(params.limit));
+  if (params?.offset !== undefined) query.set('offset', String(params.offset));
   if (params?.favourite !== undefined) query.set('favourite', String(params.favourite));
 
   const qs = query.toString();

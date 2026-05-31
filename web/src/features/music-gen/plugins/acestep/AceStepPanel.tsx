@@ -12,11 +12,7 @@ import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import { useAvailableModels } from '@/features/creative/hooks';
 import { toast } from '@/hooks/useToast';
 import type { MusicPluginPanelProps, MusicGenRequest } from '../../types';
-
-const AUDIO_FORMATS = [
-  { value: 'wav', label: 'WAV' },
-  { value: 'mp3', label: 'MP3' },
-];
+import { AUDIO_FORMATS } from '../../constants';
 
 const VOCAL_LANGUAGES = [
   { value: 'en', label: 'English' },
@@ -30,7 +26,7 @@ const VOCAL_LANGUAGES = [
 ];
 
 const KEY_SCALES = [
-  { value: '', label: 'Auto' },
+  { value: '__auto', label: 'Auto' },
   { value: 'C major', label: 'C major' },
   { value: 'C minor', label: 'C minor' },
   { value: 'D major', label: 'D major' },
@@ -48,7 +44,7 @@ const KEY_SCALES = [
 ];
 
 const TIME_SIGNATURES = [
-  { value: '', label: 'Auto' },
+  { value: '__auto', label: 'Auto' },
   { value: '4/4', label: '4/4' },
   { value: '3/4', label: '3/4' },
   { value: '6/8', label: '6/8' },
@@ -87,8 +83,8 @@ export function AceStepPanel({
   // Advanced fields
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [bpm, setBpm] = useState('');
-  const [keyScale, setKeyScale] = useState('');
-  const [timeSignature, setTimeSignature] = useState('');
+  const [keyScale, setKeyScale] = useState('__auto');
+  const [timeSignature, setTimeSignature] = useState('__auto');
   const [inferenceSteps, setInferenceSteps] = useState(8);
   const [guidanceScale, setGuidanceScale] = useState(7.0);
   const [seed, setSeed] = useState('');
@@ -120,10 +116,10 @@ export function AceStepPanel({
     if (bpm) {
       payload.bpm = parseInt(bpm, 10) || undefined;
     }
-    if (keyScale) {
+    if (keyScale && keyScale !== '__auto') {
       payload.key_scale = keyScale;
     }
-    if (timeSignature) {
+    if (timeSignature && timeSignature !== '__auto') {
       payload.time_signature = timeSignature;
     }
     if (seed) {
@@ -329,7 +325,7 @@ export function AceStepPanel({
                 </SelectTrigger>
                 <SelectContent>
                   {KEY_SCALES.map((k) => (
-                    <SelectItem key={k.value || '__auto'} value={k.value || ' '}>{k.label}</SelectItem>
+                    <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -344,7 +340,7 @@ export function AceStepPanel({
                 </SelectTrigger>
                 <SelectContent>
                   {TIME_SIGNATURES.map((ts) => (
-                    <SelectItem key={ts.value || '__auto'} value={ts.value || ' '}>{ts.label}</SelectItem>
+                    <SelectItem key={ts.value} value={ts.value}>{ts.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

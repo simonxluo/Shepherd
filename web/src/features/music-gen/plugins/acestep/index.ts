@@ -12,19 +12,6 @@ const aceStepPlugin: MusicPlugin = {
     return nameLower.includes('acestep') || nameLower.includes('ace-step') || nameLower.includes('ace_step');
   },
   component: AceStepPanel,
-  features: {
-    supportsLyrics: true,
-    supportsBPM: true,
-    supportsKeyScale: true,
-    supportsTimeSignature: true,
-    supportsVocalLanguage: true,
-    supportsInferenceSteps: true,
-    supportsGuidanceScale: true,
-    supportsSeed: true,
-    supportsTaskType: true,
-    defaultDuration: 30,
-    defaultFormat: 'wav',
-  },
 };
 
 musicRegistry.register(aceStepPlugin);

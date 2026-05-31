@@ -24,7 +24,6 @@ export function ImageGenPage() {
 
   const [model, setModel] = useState('');
   const [prompt, setPrompt] = useState('');
-  const [negativePrompt, setNegativePrompt] = useState('');
   const [size, setSize] = useState('1024x1024');
   const [n, setN] = useState(1);
   const [quality, setQuality] = useState('standard');
@@ -66,13 +65,17 @@ export function ImageGenPage() {
     a.href = url;
     a.download = `image_${++downloadCounter.current}.png`;
     a.target = '_blank';
+    document.body.appendChild(a);
     a.click();
+    setTimeout(() => document.body.removeChild(a), 100);
   };
 
   const handleCopyPrompt = () => {
     if (lastPrompt) {
-      navigator.clipboard.writeText(lastPrompt);
-      toast.success(t('imageGen.promptCopied', '提示词已复制'));
+      navigator.clipboard.writeText(lastPrompt).then(
+        () => toast.success(t('imageGen.promptCopied', '提示词已复制')),
+        () => toast.error(t('imageGen.copyFailed', '复制失败，请手动复制'))
+      );
     }
   };
 
@@ -119,19 +122,6 @@ export function ImageGenPage() {
                     placeholder={t('imageGen.promptPlaceholder', '描述要生成的图像...')}
                     className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
                     rows={3}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    {t('imageGen.negativePromptLabel', '反向提示词 (可选)')}
-                  </label>
-                  <Textarea
-                    value={negativePrompt}
-                    onChange={(e) => setNegativePrompt(e.target.value)}
-                    placeholder={t('imageGen.negativePromptPlaceholder', '描述要从图像中排除的内容...')}
-                    className="w-full px-3 py-2 border rounded-md bg-background text-sm focus:ring-2 focus:ring-ring focus:border-transparent resize-none"
-                    rows={2}
                   />
                 </div>
 

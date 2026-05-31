@@ -49,10 +49,10 @@ function groupConversations(conversations: { id: string; title?: string; model: 
   ];
 
   for (const conv of conversations) {
-    const t = new Date(conv.updatedAt).getTime();
-    if (t >= today) {
+    const timestamp = new Date(conv.updatedAt).getTime();
+    if (timestamp >= today) {
       groups[0].items.push(conv);
-    } else if (t >= yesterday) {
+    } else if (timestamp >= yesterday) {
       groups[1].items.push(conv);
     } else {
       groups[2].items.push(conv);
@@ -101,6 +101,7 @@ export function ChatPage() {
   const [editTitle, setEditTitle] = useState('');
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const initialLoadDone = useRef(false);
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const streaming = useStreamingChat({
     onChunk: (text) => {
@@ -144,6 +145,13 @@ export function ChatPage() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, currentResponse]);
+
+  // Cleanup loading timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+    };
+  }, []);
 
   // Sync messagesRef
   useEffect(() => {
@@ -282,8 +290,8 @@ export function ChatPage() {
 
       sendMessages(newMessages);
 
-      const loadingTimeout = setTimeout(() => setModelLoading(false), 15_000);
-      return () => clearTimeout(loadingTimeout);
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = setTimeout(() => setModelLoading(false), 15_000);
     },
     [
       selectedModel,

@@ -147,7 +147,7 @@ export const chatApi = {
         if (repeatPenalty !== undefined) body.repeat_penalty = repeatPenalty;
         if (stop !== undefined) body.stop = stop;
 
-        const response = await fetch('/api/chat/completions', {
+        const response = await fetch(`${apiClient.getBaseUrl()}/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -168,12 +168,16 @@ export const chatApi = {
         let chunkCount = 0;
         const startTime = Date.now();
         let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined;
+        const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB 缓冲区上限，防止 [DONE] 丢失时内存无限增长
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
+          if (buffer.length > MAX_BUFFER_SIZE) {
+            throw new Error(`流式缓冲区超出 ${MAX_BUFFER_SIZE / 1024 / 1024}MB 限制，服务端未发送 [DONE]`);
+          }
           const lines = buffer.split('\n');
           buffer = lines.pop() ?? '';
 
@@ -238,6 +242,7 @@ export const chatApi = {
           : undefined;
         onComplete(fullText, stats);
       } catch (err: unknown) {
+        reader?.cancel().catch(() => {}); // Release ReadableStream to prevent connection leak
         if (signal?.aborted) return;
         onError(err instanceof Error ? err : new Error('Unknown error'));
       }

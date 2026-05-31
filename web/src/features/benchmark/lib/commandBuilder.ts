@@ -48,21 +48,13 @@ export function buildDeviceArg(
 ): string {
   const parts: string[] = [];
 
-  if (selectedIndices.length > 0 && selectedIndices.length < devices.length) {
-    // Only include selected devices
-    const selectedDeviceIds = selectedIndices.map(i => {
+  if (selectedIndices.length > 0) {
+    const deviceIds = selectedIndices.map(i => {
       const device = devices[i];
       const colonIdx = device.indexOf(':');
       return colonIdx >= 0 ? device.substring(0, colonIdx).trim() : device.trim();
     });
-    parts.push(`-dev ${selectedDeviceIds.join('/')}`);
-  } else if (selectedIndices.length > 0) {
-    // All devices selected - still include them explicitly
-    const allDeviceIds = devices.map(d => {
-      const colonIdx = d.indexOf(':');
-      return colonIdx >= 0 ? d.substring(0, colonIdx).trim() : d.trim();
-    });
-    parts.push(`-dev ${allDeviceIds.join('/')}`);
+    parts.push(`-dev ${deviceIds.join('/')}`);
   }
 
   if (mainGpu > 0) {

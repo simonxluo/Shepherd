@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Volume2, Settings2, ChevronDown, X, RefreshCw } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { Volume2, Settings2, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -43,7 +42,6 @@ export function GenericTTSPanel({
   refAudioOverride,
 }: TTSPluginPanelProps) {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const availableModels = useAvailableModels('tts');
 
   const modelName = selectedModel ? (selectedModel.alias || selectedModel.name) : '';
@@ -72,13 +70,6 @@ export function GenericTTSPanel({
   const backendLabel = selectedModel?.backendType
     ? BACKEND_LABELS[selectedModel.backendType] || selectedModel.backendType
     : '';
-
-  // Voice refresh handler
-  const handleRefreshVoices = useCallback(() => {
-    if (modelName) {
-      queryClient.invalidateQueries({ queryKey: ['voices', modelName] });
-    }
-  }, [queryClient, modelName]);
 
   // Restore config from server
   useEffect(() => {
@@ -407,7 +398,7 @@ export function GenericTTSPanel({
               <Input
                 value={maxNewTokens}
                 onChange={(e) => setMaxNewTokens(e.target.value)}
-                placeholder={t('tts.seedPlaceholder', 'Leave empty for random')}
+                placeholder={t('tts.maxNewTokensPlaceholder', 'Leave empty for default')}
                 type="number"
                 className="bg-background"
               />

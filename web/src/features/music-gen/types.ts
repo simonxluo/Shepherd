@@ -22,23 +22,6 @@ export interface MusicGenRequest {
 }
 
 /**
- * Feature capabilities declared by a music plugin.
- */
-export interface MusicModelFeatures {
-  supportsLyrics: boolean;
-  supportsBPM: boolean;
-  supportsKeyScale: boolean;
-  supportsTimeSignature: boolean;
-  supportsVocalLanguage: boolean;
-  supportsInferenceSteps: boolean;
-  supportsGuidanceScale: boolean;
-  supportsSeed: boolean;
-  supportsTaskType: boolean;
-  defaultDuration: number;
-  defaultFormat: string;
-}
-
-/**
  * Props passed to every Music plugin panel component.
  */
 export interface MusicPluginPanelProps {
@@ -50,8 +33,6 @@ export interface MusicPluginPanelProps {
   onGenerate: (payload: MusicGenRequest) => void;
   /** Whether generation is currently in progress */
   isGenerating: boolean;
-  /** Audio URL for playback */
-  audioUrl: string | null;
   /** Selected model change callback */
   onModelChange: (modelName: string) => void;
 }
@@ -70,8 +51,6 @@ export interface MusicPlugin {
   match: (model: LoadedModel) => boolean;
   /** The panel component to render for this plugin */
   component: React.ComponentType<MusicPluginPanelProps>;
-  /** Feature descriptor for this plugin's models */
-  features: MusicModelFeatures;
   /** Sort order for tab display (lower = leftmost/topmost) */
   order?: number;
 }

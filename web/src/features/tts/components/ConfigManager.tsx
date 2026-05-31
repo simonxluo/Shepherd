@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/useToast';
 import { cn } from '@/lib/utils';
-import type { TTSConfig } from '../hooks';
+import type { TTSConfig } from '../types';
 
 interface ConfigManagerProps {
   /** Model name used as localStorage key segment */
@@ -37,6 +37,7 @@ export function ConfigManager({
   const [configName, setConfigName] = useState('');
   const [selectedConfigName, setSelectedConfigName] = useState('');
   const [savedConfigs, setSavedConfigs] = useState<{ name: string; config: TTSConfig }[]>([]);
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const CONFIGS_STORAGE_KEY = modelName ? `shepherd:tts-configs:${modelName}` : '';
 
@@ -50,7 +51,13 @@ export function ConfigManager({
     }
   }, [CONFIGS_STORAGE_KEY]);
 
-  // Refresh configs when model changes
+  // Refresh configs when model changes; clean up pending timer on unmount
+  useEffect(() => {
+    return () => {
+      if (statusTimerRef.current !== null) clearTimeout(statusTimerRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSavedConfigs(getSavedConfigs());
@@ -89,11 +96,11 @@ export function ConfigManager({
       setSavedConfigs([...configs]);
       setSelectedConfigName(name);
       setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      statusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error) {
       console.error('Failed to save config:', error);
       setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      statusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
     }
   }, [CONFIGS_STORAGE_KEY, configName, getCurrentConfig, getSavedConfigs, t]);
 

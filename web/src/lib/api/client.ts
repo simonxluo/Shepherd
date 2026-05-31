@@ -18,13 +18,6 @@ export class APIError extends Error {
   }
 }
 
-/**
- * API request options
- */
-interface RequestInit extends globalThis.RequestInit {
-  signal?: AbortSignal
-}
-
 export class ApiClient {
   private baseUrl: string
   constructor(baseUrl: string) {
@@ -44,14 +37,18 @@ export class ApiClient {
    */
   private async fetchRequest<T>(
     url: string,
-    init: RequestInit = {}
+    init: globalThis.RequestInit = {}
   ): Promise<T> {
+    const headers: Record<string, string> = {
+      ...(init.headers as Record<string, string>),
+    };
+    // 仅在有 body 时设置 Content-Type，避免 GET/DELETE 请求携带无意义头部
+    if (init.body && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
     const res = await fetch(url, {
       ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...init.headers,
-      },
+      headers,
     })
 
     if (!res.ok) {
@@ -125,9 +122,18 @@ export class ApiClient {
 export const apiClient = new ApiClient('/api');
 
 /**
+ * v1 API client singleton for OpenAI-compatible endpoints (/v1/*).
+ * Proxied through Vite dev server alongside /api.
+ */
+export const v1ApiClient = new ApiClient('/v1');
+
+/**
  * Update the API client base URL.
- * @param baseUrl New base URL
+ * Updates both /api and /v1 client base paths so all endpoints work in standalone deployments.
+ * @param baseUrl New base URL (e.g., "http://host:9190/api")
  */
 export function updateApiClientUrl(baseUrl: string): void {
   apiClient.setBaseUrl(baseUrl);
+  // Derive /v1 path from /api, e.g. "http://host:9190/api" -> "http://host:9190/v1"
+  v1ApiClient.setBaseUrl(baseUrl.replace(/\/api$/, '/v1'));
 }

@@ -36,6 +36,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/v1': {
+        target: 'http://localhost:9190',
+        changeOrigin: true,
+        secure: false,
+      },
     },
     host: true, // 监听所有地址，方便局域网访问
   },

@@ -4,7 +4,8 @@ import { PanelLeftOpen } from 'lucide-react';
 import { useLoadedModels } from '@/features/creative/hooks';
 import { useModels } from '@/features/models';
 import { Button } from '@/components/ui/button';
-import { useTTS, getTTSModelFeatures, type TTSRequest } from '../hooks';
+import { useTTS, getTTSModelFeatures } from '../hooks';
+import type { TTSRequest } from '../types';
 import { StreamAudioPlayer, type StreamState, type TTSStreamMetrics } from '../lib/StreamAudioPlayer';
 import { ttsRegistry } from '../registry';
 import { VerticalTabBar } from './VerticalTabBar';
@@ -238,12 +239,6 @@ export function TTSPageShell() {
           setAudioUrlSafe(url);
           toast.success(t('tts.generateSuccess', 'Speech synthesis complete'));
 
-          // Auto-play if enabled
-          if (autoPlay) {
-            const audio = new Audio(url);
-            audio.play().catch(() => {});
-          }
-
           // Auto-save to history
           const format = payload.response_format || 'mp3';
           saveToHistory(typedBlob, payload, format);
@@ -257,7 +252,7 @@ export function TTSPageShell() {
         },
       });
     }
-  }, [currentFeatures.defaultSampleRate, tts, t, saveToHistory, setAudioUrlSafe, autoPlay]);
+  }, [currentFeatures.defaultSampleRate, tts, t, saveToHistory, setAudioUrlSafe]);
 
   const isStreamActive = streamState === 'streaming' || streamState === 'playing';
   const isGenerating = tts.isPending || isStreamActive;

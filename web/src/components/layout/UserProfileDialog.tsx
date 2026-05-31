@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   User,
@@ -35,6 +35,18 @@ export function UserProfileDialog() {
     email: user?.email || '',
   });
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false);
+
+  // 对话框打开时，从最新 user 数据重置 formData 和编辑状态
+  useEffect(() => {
+    if (showProfileDialog) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 对话框打开时同步重置表单状态是标准模式
+      setFormData({
+        displayName: user?.displayName || '',
+        email: user?.email || '',
+      });
+      setIsEditing(false);
+    }
+  }, [showProfileDialog, user]);
 
   if (!user) return null;
 

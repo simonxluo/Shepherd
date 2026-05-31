@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FolderOpen, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -34,12 +35,13 @@ export function PathEditDialog({
   onSave,
   onClose,
 }: PathEditDialogProps) {
+  const { t } = useTranslation();
   const isEdit = !!path;
-  const typeLabel = type === 'llamacpp' ? 'Llama.cpp'
-    : type === 'models' ? '模型'
-    : type === 'vllm' ? 'vLLM'
-    : type === 'vllm_omni' ? 'vLLM-Omni'
-    : '多模态模型';
+  const typeLabel = type === 'llamacpp' ? t('settings.pathEdit.typeLlamacpp')
+    : type === 'models' ? t('settings.pathEdit.typeModels')
+    : type === 'vllm' ? t('settings.pathEdit.typeVllm')
+    : type === 'vllm_omni' ? t('settings.pathEdit.typeVllmOmni')
+    : t('settings.pathEdit.typeMultimodal');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -90,13 +92,13 @@ export function PathEditDialog({
       setPathValidation({
         valid: false,
         checking: false,
-        message: '请输入绝对路径',
+        message: t('settings.pathEdit.enterAbsolutePath'),
       });
       return;
     }
 
     const validatePath = async () => {
-      setPathValidation({ valid: null, checking: true, message: '验证路径中...' });
+      setPathValidation({ valid: null, checking: true, message: t('settings.pathEdit.validatingPath') });
 
       try {
         let response;
@@ -111,7 +113,7 @@ export function PathEditDialog({
           setPathValidation({
             valid: true,
             checking: false,
-            message: '路径格式有效',
+            message: t('settings.pathEdit.pathFormatValid'),
           });
           return;
         }
@@ -120,13 +122,13 @@ export function PathEditDialog({
           setPathValidation({
             valid: true,
             checking: false,
-            message: response.data.message || '路径有效',
+            message: response.data.message || t('settings.pathEdit.pathValid'),
           });
         } else {
           setPathValidation({
             valid: false,
             checking: false,
-            message: response.data?.error || '路径无效',
+            message: response.data?.error || t('settings.pathEdit.pathInvalid'),
           });
         }
       } catch (error) {
@@ -134,7 +136,7 @@ export function PathEditDialog({
         setPathValidation({
           valid: null,
           checking: false,
-          message: '无法验证路径',
+          message: t('settings.pathEdit.cannotValidatePath'),
         });
       }
     };
@@ -147,7 +149,7 @@ export function PathEditDialog({
         clearTimeout(validationTimeoutRef.current);
       }
     };
-  }, [formData.path, type]);
+  }, [formData.path, type, t]);
 
   const handleDirectorySelect = (selectedPath: string) => {
     setFormData({ ...formData, path: selectedPath });
@@ -176,7 +178,7 @@ export function PathEditDialog({
     } catch (error) {
       console.error('Failed to save path:', error);
 
-      let errorMessage = '保存失败，请稍后重试';
+      let errorMessage = t('settings.pathEdit.saveFailedGeneric');
 
       if (error instanceof Error) {
         const errorText = error.message;
@@ -184,11 +186,11 @@ export function PathEditDialog({
         if (errorText.includes('path does not exist')) {
           const match = errorText.match(/path does not exist: (.+)/);
           const invalidPath = match ? match[1] : formData.path;
-          errorMessage = `路径不存在: ${invalidPath}`;
+          errorMessage = t('settings.pathEdit.pathNotExist', { path: invalidPath });
         } else if (errorText.includes('not a directory')) {
-          errorMessage = '路径不是一个目录';
+          errorMessage = t('settings.pathEdit.pathNotDirectory');
         } else if (errorText.includes('already exists')) {
-          errorMessage = '该路径已存在';
+          errorMessage = t('settings.pathEdit.pathAlreadyExists');
         } else if (errorText.includes('Invalid path')) {
           errorMessage = errorText.replace('Invalid path: ', '');
         } else {
@@ -199,11 +201,13 @@ export function PathEditDialog({
       }
 
       setSubmitError(errorMessage);
-      toast.error('保存失败', errorMessage);
+      toast.error(t('settings.pathEdit.saveFailedTitle'), errorMessage);
     } finally {
       setIsSaving(false);
     }
   };
+
+  const actionLabel = isEdit ? t('settings.pathEdit.actionEdit') : t('settings.pathEdit.actionAdd');
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -211,7 +215,7 @@ export function PathEditDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="text-base">
-              {isEdit ? '编辑' : '添加'} {typeLabel} 路径
+              {t('settings.pathEdit.dialogTitle', { action: actionLabel, type: typeLabel })}
             </DialogTitle>
           </DialogHeader>
 
@@ -220,7 +224,7 @@ export function PathEditDialog({
             {submitError && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertTitle>保存失败</AlertTitle>
+                <AlertTitle>{t('settings.pathEdit.saveFailedTitle')}</AlertTitle>
                 <AlertDescription>{submitError}</AlertDescription>
               </Alert>
             )}
@@ -229,7 +233,7 @@ export function PathEditDialog({
             <div className="space-y-2">
               <label htmlFor="path" className="text-xs font-medium flex items-center gap-1.5">
                 <FolderOpen size={12} className="text-muted-foreground" />
-                路径 <span className="text-destructive">*</span>
+                {t('settings.pathEdit.pathLabel')} <span className="text-destructive">*</span>
               </label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
@@ -241,11 +245,11 @@ export function PathEditDialog({
                       setFormData({ ...formData, path: e.target.value })
                     }
                     placeholder={
-                      type === 'llamacpp' ? '/path/to/llama-server 或 /path/to/llama.cpp/build/bin/'
-                      : type === 'models' ? '~/.cache/huggingface/hub'
-                      : type === 'multimodal' ? './models/multimodal'
-                      : type === 'vllm' ? '/path/to/vllm 或 /path/to/conda/envs/vllm/bin/'
-                      : '/path/to/vllm-omni 或 /path/to/conda/envs/vllm-omni/bin/'
+                      type === 'llamacpp' ? t('settings.pathEdit.placeholderLlamacpp')
+                      : type === 'models' ? t('settings.pathEdit.placeholderModels')
+                      : type === 'multimodal' ? t('settings.pathEdit.placeholderMultimodal')
+                      : type === 'vllm' ? t('settings.pathEdit.placeholderVllm')
+                      : t('settings.pathEdit.placeholderVllmOmni')
                     }
                     className={cn(
                       "w-full rounded-md border border-input bg-background px-3 py-2 pr-8 text-sm",
@@ -273,20 +277,20 @@ export function PathEditDialog({
                   className="h-9 px-3"
                 >
                   <FolderOpen className="w-4 h-4 mr-1" />
-                  浏览
+                  {t('settings.pathEdit.browse')}
                 </Button>
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-muted-foreground">
                   {type === 'llamacpp'
-                    ? '可直接指向 llama-server 可执行文件，或包含该文件的目录'
+                    ? t('settings.pathEdit.pathHintLlamacpp')
                     : type === 'multimodal'
-                    ? '包含 safetensors 多模态模型 (含 config.json) 的目录绝对路径'
+                    ? t('settings.pathEdit.pathHintMultimodal')
                     : type === 'models'
-                    ? '包含 GGUF 模型文件的目录绝对路径'
+                    ? t('settings.pathEdit.pathHintModels')
                     : type === 'vllm'
-                    ? '可直接指向 vllm 可执行文件，或包含该文件的目录'
-                    : '可直接指向 vllm-omni 可执行文件，或包含该文件的目录'}
+                    ? t('settings.pathEdit.pathHintVllm')
+                    : t('settings.pathEdit.pathHintVllmOmni')}
                 </p>
                 {pathValidation.message && (
                   <p className={cn(
@@ -304,7 +308,7 @@ export function PathEditDialog({
             {/* Name input (optional) */}
             <div className="space-y-2">
               <label htmlFor="name" className="text-xs font-medium">
-                名称 <span className="text-muted-foreground">（可选）</span>
+                {t('settings.pathEdit.nameLabel')} <span className="text-muted-foreground">{t('settings.pathEdit.optional')}</span>
               </label>
               <Input
                 id="name"
@@ -315,8 +319,8 @@ export function PathEditDialog({
                 }
                 placeholder={
                   type === 'llamacpp'
-                    ? '例如：主构建目录'
-                    : '例如：HuggingFace 缓存'
+                    ? t('settings.pathEdit.namePlaceholderLlamacpp')
+                    : t('settings.pathEdit.namePlaceholderModels')
                 }
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
               />
@@ -325,7 +329,7 @@ export function PathEditDialog({
             {/* Description input (optional) */}
             <div className="space-y-2">
               <label htmlFor="description" className="text-xs font-medium">
-                描述 <span className="text-muted-foreground">（可选）</span>
+                {t('settings.pathEdit.descriptionLabel')} <span className="text-muted-foreground">{t('settings.pathEdit.optional')}</span>
               </label>
               <Textarea
                 id="description"
@@ -333,7 +337,7 @@ export function PathEditDialog({
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="添加备注信息..."
+                placeholder={t('settings.pathEdit.descriptionPlaceholder')}
                 rows={2}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent resize-none transition-all"
               />
@@ -357,14 +361,14 @@ export function PathEditDialog({
               disabled={isSaving}
               className="h-8 px-3 text-xs"
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               disabled={isSaving || !formData.path.trim()}
               className="h-8 px-3 text-xs"
             >
-              {isSaving ? '保存中...' : '保存'}
+              {isSaving ? t('models.editAlias.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </form>

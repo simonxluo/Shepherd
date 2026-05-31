@@ -1,11 +1,9 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiClient, ApiClient } from '@/lib/api/client';
+import { apiClient } from '@/lib/api/client';
 import type { ModelCapabilities } from '@/types/model';
 import { useModels, useAllModelCapabilities } from '@/features/models';
 import type { Model } from '@/types/model';
-
-export const v1Client = new ApiClient('/v1');
 
 export interface LoadedModel {
   id: string;

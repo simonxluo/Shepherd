@@ -41,5 +41,3 @@ export interface ASRPlugin {
   /** Sort order for tab display (lower = leftmost/topmost) */
   order?: number;
 }
-
-export type { ASRRequest, ASRResponse, LoadedModel };

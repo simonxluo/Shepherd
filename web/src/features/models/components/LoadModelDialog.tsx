@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { X, Loader2, Info, Save, Wand2, ToggleRight, ToggleLeft, ArrowDownToLine, FileDown, FileUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,15 +42,17 @@ const NumberInput = ({
 }: NumberInputProps) => {
   const [inputValue, setInputValue] = useState(String(value ?? ''));
   const [error, setError] = useState('');
-  const [prevValue, setPrevValue] = useState(value);
+  const prevValueRef = useRef(value);
 
-  if (value !== prevValue) {
-    setPrevValue(value);
-    if (value !== undefined && String(value) !== inputValue) {
-      setInputValue(String(value));
-      setError('');
+  useEffect(() => {
+    if (value !== prevValueRef.current) {
+      prevValueRef.current = value;
+      if (value !== undefined) {
+        setInputValue(String(value));
+        setError('');
+      }
     }
-  }
+  }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -344,6 +346,64 @@ function getDefaultLoadModelParams(modelId: string): LoadModelParams {
   };
 }
 
+// Dropdown select using shadcn Select — defined outside LoadModelDialog to avoid remounting on every render
+interface SelectOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
+interface SelectOptionGroup {
+  label: string;
+  options: SelectOption[];
+}
+
+const SelectInput = ({
+  value,
+  onValueChange,
+  disabled,
+  options,
+  groups,
+  className = '',
+}: {
+  value: string | number | undefined;
+  onValueChange: (value: string) => void;
+  disabled?: boolean;
+  options?: SelectOption[];
+  groups?: SelectOptionGroup[];
+  className?: string;
+}) => (
+  <Select
+    value={String(value ?? '')}
+    onValueChange={onValueChange}
+    disabled={disabled}
+  >
+    <SelectTrigger className={cn("h-8 w-full text-sm", className)}>
+      <SelectValue />
+    </SelectTrigger>
+    <SelectContent position="popper" sideOffset={4}>
+      {groups ? (
+        groups.map((group) => (
+          <SelectGroup key={group.label}>
+            <SelectLabel>{group.label}</SelectLabel>
+            {group.options.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))
+      ) : (
+        options?.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+            {opt.label}
+          </SelectItem>
+        ))
+      )}
+    </SelectContent>
+  </Select>
+);
+
 export function LoadModelDialog({
   isOpen,
   onClose,
@@ -501,7 +561,7 @@ export function LoadModelDialog({
       hasLoadedDefaultConfig.current = false;
       autoDetectCapabilities.mutate(modelId);
     }
-  }, [isOpen]);
+  }, [isOpen, modelId]);
 
   const { data: gpuData } = useGPUs(params.llamaCppPath);
   const gpus = gpuData?.gpus || [];
@@ -548,67 +608,67 @@ export function LoadModelDialog({
     }
   }, [isOpen, loadConfigData, isLoadingConfig]);
 
-  const handleCapabilityChange = (key: string, value: boolean) => {
-    let newCaps: Record<string, boolean>;
-    let newReranking: boolean;
+  // 计算能力更新逻辑（纯函数，无副作用）
+  const computeCapabilityUpdate = useCallback((
+    prev: LoadModelParams, key: string, value: boolean
+  ): Pick<LoadModelParams, 'capabilities' | 'reranking'> => {
+    const currentCaps = prev.capabilities || {};
+    const currentReranking = prev.reranking || false;
+    const newCaps: Record<string, boolean> = { ...currentCaps, [key]: value };
+    let newReranking = currentReranking;
 
+    // 多模态能力与对话能力互斥
+    const multimodalKeys = ['tts', 'asr', 'imageGeneration', 'music'];
+    if (multimodalKeys.includes(key) && value) {
+      newCaps.thinking = false;
+      newCaps.tools = false;
+      for (const mk of multimodalKeys) {
+        if (mk !== key) newCaps[mk] = false;
+      }
+    }
+
+    if (key === 'embedding' && value) {
+      newReranking = false;
+      newCaps.thinking = false;
+      newCaps.tools = false;
+    } else if (key === 'reranking' && value) {
+      newCaps.embedding = false;
+      newCaps.thinking = false;
+      newCaps.tools = false;
+    }
+
+    if ((key === 'thinking' || key === 'tools') && value) {
+      newCaps.embedding = false;
+      newReranking = false;
+      for (const mk of multimodalKeys) {
+        newCaps[mk] = false;
+      }
+    }
+
+    return { capabilities: newCaps, reranking: newReranking };
+  }, []);
+
+  const handleCapabilityChange = useCallback((key: string, value: boolean) => {
+    let computed: Pick<LoadModelParams, 'capabilities' | 'reranking'>;
     setParams(prev => {
-      const currentCaps = prev.capabilities || {};
-      newCaps = { ...currentCaps, [key]: value };
-      newReranking = prev.reranking || false;
-
-      // Multimodal capabilities are mutually exclusive with chat capabilities
-      const multimodalKeys = ['tts', 'asr', 'imageGeneration', 'music'];
-      if (multimodalKeys.includes(key) && value) {
-        newCaps.thinking = false;
-        newCaps.tools = false;
-        // Also disable other multimodal keys
-        for (const mk of multimodalKeys) {
-          if (mk !== key) newCaps[mk] = false;
-        }
-      }
-
-      if (key === 'embedding' && value) {
-        newReranking = false;
-        newCaps.thinking = false;
-        newCaps.tools = false;
-      } else if (key === 'reranking' && value) {
-        newCaps.embedding = false;
-        newCaps.thinking = false;
-        newCaps.tools = false;
-      }
-
-      if ((key === 'thinking' || key === 'tools') && value) {
-        newCaps.embedding = false;
-        newReranking = false;
-        for (const mk of multimodalKeys) {
-          newCaps[mk] = false;
-        }
-      }
-
-      return {
-        ...prev,
-        capabilities: newCaps,
-        reranking: newReranking,
-      };
+      computed = computeCapabilityUpdate(prev, key, value);
+      return { ...prev, ...computed };
     });
-
-    setTimeout(() => {
-      setModelCapabilities.mutate({
-        modelId,
-        capabilities: {
-          thinking: newCaps!.thinking || false,
-          tools: newCaps!.tools || false,
-          rerank: newReranking!,
-          embedding: newCaps!.embedding || false,
-          tts: newCaps!.tts || false,
-          asr: newCaps!.asr || false,
-          imageGeneration: newCaps!.imageGeneration || false,
-          music: newCaps!.music || false,
-        },
-      });
-    }, 0);
-  };
+    // setState updater 同步执行，computed 此时可安全访问
+    setModelCapabilities.mutate({
+      modelId,
+      capabilities: {
+        thinking: computed!.capabilities.thinking || false,
+        tools: computed!.capabilities.tools || false,
+        rerank: computed!.reranking,
+        embedding: computed!.capabilities.embedding || false,
+        tts: computed!.capabilities.tts || false,
+        asr: computed!.capabilities.asr || false,
+        imageGeneration: computed!.capabilities.imageGeneration || false,
+        music: computed!.capabilities.music || false,
+      },
+    });
+  }, [modelId, setModelCapabilities, computeCapabilityUpdate]);
 
   if (!isOpen) return null;
 
@@ -722,64 +782,6 @@ export function LoadModelDialog({
     const filteredParams = filterEnabledParams(params);
     onConfirm(filteredParams);
   };
-
-  // Dropdown select using shadcn Select
-  interface SelectOption {
-    value: string;
-    label: string;
-    disabled?: boolean;
-  }
-
-  interface SelectOptionGroup {
-    label: string;
-    options: SelectOption[];
-  }
-
-  const SelectInput = ({
-    value,
-    onValueChange,
-    disabled,
-    options,
-    groups,
-    className = '',
-  }: {
-    value: string | number | undefined;
-    onValueChange: (value: string) => void;
-    disabled?: boolean;
-    options?: SelectOption[];
-    groups?: SelectOptionGroup[];
-    className?: string;
-  }) => (
-    <Select
-      value={String(value ?? '')}
-      onValueChange={onValueChange}
-      disabled={disabled}
-    >
-      <SelectTrigger className={cn("h-8 w-full text-sm", className)}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent position="popper" sideOffset={4}>
-        {groups ? (
-          groups.map((group) => (
-            <SelectGroup key={group.label}>
-              <SelectLabel>{group.label}</SelectLabel>
-              {group.options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          ))
-        ) : (
-          options?.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
-              {opt.label}
-            </SelectItem>
-          ))
-        )}
-      </SelectContent>
-    </Select>
-  );
 
   // 非 llama.cpp 后端使用 vLLM 参数对话框
   const [showAdvancedVllm, setShowAdvancedVllm] = useState(false);

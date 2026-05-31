@@ -45,10 +45,6 @@ export function DeviceSelectionPanel({
     onDeviceSelectionChange([]);
   };
 
-  const getDeviceLabel = (device: string): string => {
-    return device;
-  };
-
   const getDeviceId = (device: string): string => {
     const colonIdx = device.indexOf(':');
     return colonIdx >= 0 ? device.substring(0, colonIdx).trim() : device.trim();
@@ -85,7 +81,7 @@ export function DeviceSelectionPanel({
               onCheckedChange={() => handleToggleDevice(index)}
               className="h-3.5 w-3.5"
             />
-            <span title={getDeviceLabel(device)}>{getDeviceLabel(device)}</span>
+            <span title={device}>{device}</span>
           </label>
         ))}
       </div>

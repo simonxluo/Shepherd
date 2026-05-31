@@ -1,5 +1,5 @@
 import type { NodeResources, NodeStatus } from '@/types';
-import i18n from '@/lib/i18n';
+import type { TFunction } from 'react-i18next';
 
 /**
  * Resource percentage calculation result
@@ -50,36 +50,36 @@ export const STATUS_COLORS: Record<NodeStatus, string> = {
 /**
  * Status label keys for i18n
  */
-const STATUS_LABEL_KEYS = {
+const STATUS_LABEL_KEYS: Record<NodeStatus, string> = {
   online: 'cluster.status.online',
   offline: 'cluster.status.offline',
   busy: 'cluster.status.busy',
   error: 'cluster.status.error',
   degraded: 'cluster.status.degraded',
   disabled: 'cluster.status.disabled',
-} as const satisfies Record<NodeStatus, string>;
+};
 
 /**
- * Status labels (resolved at access time via i18n)
+ * Get the i18n label for a given node status.
+ * Replaces the former Proxy-based STATUS_LABELS to avoid calling
+ * i18n.t() on every property access.
  */
-export const STATUS_LABELS = new Proxy({} as Record<NodeStatus, string>, {
-  get(_target, prop: string) {
-    const key = STATUS_LABEL_KEYS[prop as NodeStatus];
-    return key ? i18n.t(key) : prop;
-  },
-});
+export function getStatusLabel(status: string, t: TFunction): string {
+  const key = STATUS_LABEL_KEYS[status as NodeStatus];
+  return key ? t(key) : status;
+}
 
 /**
  * Detailed status configuration for the info dialog
  */
-export function getStatusConfig(status: string) {
+export function getStatusConfig(status: string, t: TFunction) {
   switch (status) {
     case 'online':
       return {
         color: 'text-emerald-600 dark:text-emerald-400',
         bg: 'bg-emerald-50 dark:bg-emerald-950/30',
         border: 'border-emerald-200 dark:border-emerald-800',
-        label: i18n.t('cluster.status.online'),
+        label: t('cluster.status.online'),
         indicator: 'bg-emerald-500',
       };
     case 'busy':
@@ -87,7 +87,7 @@ export function getStatusConfig(status: string) {
         color: 'text-amber-600 dark:text-amber-400',
         bg: 'bg-amber-50 dark:bg-amber-950/30',
         border: 'border-amber-200 dark:border-amber-800',
-        label: i18n.t('cluster.status.busy'),
+        label: t('cluster.status.busy'),
         indicator: 'bg-amber-500',
       };
     case 'offline':
@@ -95,7 +95,7 @@ export function getStatusConfig(status: string) {
         color: 'text-slate-600 dark:text-slate-400',
         bg: 'bg-slate-50 dark:bg-slate-950/30',
         border: 'border-slate-200 dark:border-slate-800',
-        label: i18n.t('cluster.status.offline'),
+        label: t('cluster.status.offline'),
         indicator: 'bg-slate-500',
       };
     case 'error':
@@ -103,8 +103,24 @@ export function getStatusConfig(status: string) {
         color: 'text-red-600 dark:text-red-400',
         bg: 'bg-red-50 dark:bg-red-950/30',
         border: 'border-red-200 dark:border-red-800',
-        label: i18n.t('cluster.status.error'),
+        label: t('cluster.status.error'),
         indicator: 'bg-red-500',
+      };
+    case 'degraded':
+      return {
+        color: 'text-orange-600 dark:text-orange-400',
+        bg: 'bg-orange-50 dark:bg-orange-950/30',
+        border: 'border-orange-200 dark:border-orange-800',
+        label: t('cluster.status.degraded'),
+        indicator: 'bg-orange-500',
+      };
+    case 'disabled':
+      return {
+        color: 'text-slate-600 dark:text-slate-400',
+        bg: 'bg-slate-50 dark:bg-slate-950/30',
+        border: 'border-slate-200 dark:border-slate-800',
+        label: t('cluster.status.disabled'),
+        indicator: 'bg-slate-500',
       };
     default:
       return {

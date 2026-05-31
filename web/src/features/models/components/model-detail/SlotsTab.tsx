@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { getModelSlots, type SlotInfo } from '@/features/models/model-detail-api';
@@ -14,13 +14,15 @@ export function SlotsTab({ modelId, isLoaded }: SlotsTabProps) {
   const [selectedSlot, setSelectedSlot] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
+  const selectedSlotRef = useRef(selectedSlot);
+  selectedSlotRef.current = selectedSlot;
 
   const loadSlots = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getModelSlots(modelId);
       setSlots(data);
-      if (data.length > 0 && selectedSlot >= data.length) {
+      if (data.length > 0 && selectedSlotRef.current >= data.length) {
         setSelectedSlot(0);
       }
       setStatus('');
@@ -29,7 +31,7 @@ export function SlotsTab({ modelId, isLoaded }: SlotsTabProps) {
     } finally {
       setLoading(false);
     }
-  }, [modelId, selectedSlot, t]);
+  }, [modelId, t]);
 
   useEffect(() => {
     if (isLoaded) {

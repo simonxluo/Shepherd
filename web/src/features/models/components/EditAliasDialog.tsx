@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ export function EditAliasDialog({
   currentAlias,
   isLoading = false,
 }: EditAliasDialogProps) {
+  const { t } = useTranslation();
   const [alias, setAlias] = useState(currentAlias || '');
 
   useEffect(() => {
@@ -42,14 +44,14 @@ export function EditAliasDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Pencil className="w-5 h-5 text-blue-600" />
-            编辑模型别名
+            {t('models.editAlias.title')}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              模型名称
+              {t('models.editAlias.modelName')}
             </label>
             <div className="px-3 py-2 bg-muted rounded-md text-foreground text-sm">
               {modelName}
@@ -58,18 +60,18 @@ export function EditAliasDialog({
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              别名
+              {t('models.editAlias.alias')}
             </label>
             <Input
               type="text"
               value={alias}
               onChange={(e) => setAlias(e.target.value)}
-              placeholder="输入模型别名（可选）"
+              placeholder={t('models.editAlias.placeholder')}
               className="w-full px-3 py-2 border border-border rounded-md bg-input text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoFocus
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              设置别名后，模型将以别名显示在列表中
+              {t('models.editAlias.hint')}
             </p>
           </div>
 
@@ -80,13 +82,13 @@ export function EditAliasDialog({
               onClick={onClose}
               disabled={isLoading}
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               disabled={isLoading}
             >
-              {isLoading ? '保存中...' : '保存'}
+              {isLoading ? t('models.editAlias.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </form>

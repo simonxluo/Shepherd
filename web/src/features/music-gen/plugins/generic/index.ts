@@ -9,19 +9,6 @@ const genericMusicPlugin: MusicPlugin = {
   order: 0,
   match: () => true,
   component: GenericMusicPanel,
-  features: {
-    supportsLyrics: false,
-    supportsBPM: false,
-    supportsKeyScale: false,
-    supportsTimeSignature: false,
-    supportsVocalLanguage: false,
-    supportsInferenceSteps: false,
-    supportsGuidanceScale: false,
-    supportsSeed: false,
-    supportsTaskType: false,
-    defaultDuration: 30,
-    defaultFormat: 'wav',
-  },
 };
 
 musicRegistry.register(genericMusicPlugin);

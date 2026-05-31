@@ -1,13 +1,12 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Music, Play, Pause, Download, Clock, HardDrive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
 import { useLoadedModels } from '@/features/creative/hooks';
 import { useMusicGeneration } from '@/features/music-gen/hooks';
 import { musicRegistry } from '@/features/music-gen/registry';
 import { toast } from '@/hooks/useToast';
-import { formatBytes } from '@/lib/utils';
 import type { MusicGenRequest, MusicPluginPanelProps } from '@/features/music-gen/types';
 
 // Import plugins to register them
@@ -24,6 +23,7 @@ export function MusicGenPage() {
 
   const musicGen = useMusicGeneration();
   const audioRef = useRef<HTMLAudioElement>(null);
+  const prevAudioUrlRef = useRef<string | null>(null);
 
   // Plugin system
   const plugins = useMemo(() => musicRegistry.getAllPlugins(), []);
@@ -38,6 +38,16 @@ export function MusicGenPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [responseFormat, setResponseFormat] = useState('wav');
+
+  // 组件卸载时释放 blob URL，避免内存泄漏
+  useEffect(() => {
+    return () => {
+      if (prevAudioUrlRef.current) {
+        URL.revokeObjectURL(prevAudioUrlRef.current);
+        prevAudioUrlRef.current = null;
+      }
+    };
+  }, []);
 
   // Current plugin and matched models
   const activePlugin = useMemo(
@@ -64,10 +74,6 @@ export function MusicGenPage() {
   }, [activePluginId]);
 
   const handleGenerate = useCallback((payload: MusicGenRequest) => {
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-    }
-
     setResponseFormat(payload.response_format || 'wav');
     const startTime = Date.now();
 
@@ -78,7 +84,12 @@ export function MusicGenPage() {
         const typedBlob = new Blob([blob], { type: contentType });
         setAudioBlob(typedBlob);
         const url = URL.createObjectURL(typedBlob);
+        // 先设置新 URL，再释放旧的，避免 <audio> 引用已释放的 URL
         setAudioUrl(url);
+        if (prevAudioUrlRef.current && prevAudioUrlRef.current !== url) {
+          URL.revokeObjectURL(prevAudioUrlRef.current);
+        }
+        prevAudioUrlRef.current = url;
         setCurrentTime(0);
         toast.success(t('musicGen.generateSuccess', '音乐生成完成'));
       },
@@ -86,16 +97,18 @@ export function MusicGenPage() {
         toast.error(t('musicGen.generateFailed', '音乐生成失败'), error.message);
       },
     });
-  }, [audioUrl, musicGen, t]);
+  }, [musicGen, t]);
 
   const handlePlayPause = () => {
     if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play();
+      audioRef.current.play().catch(() => {
+        // 自动播放策略阻止时，onPause/onPlay 事件会同步状态
+      });
     }
-    setIsPlaying(!isPlaying);
+    // 不在这里设置 isPlaying，由 <audio> 的 onPlay/onPause 事件同步状态
   };
 
   const handleDownload = () => {
@@ -133,7 +146,6 @@ export function MusicGenPage() {
     matchedModels,
     onGenerate: handleGenerate,
     isGenerating: musicGen.isPending,
-    audioUrl,
     onModelChange: handleModelChange,
   };
 

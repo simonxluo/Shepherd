@@ -10,11 +10,7 @@ import { AvailableModelList } from '@/features/creative/AvailableModelList';
 import { useAvailableModels } from '@/features/creative/hooks';
 import { toast } from '@/hooks/useToast';
 import type { MusicPluginPanelProps } from '../../types';
-
-const AUDIO_FORMATS = [
-  { value: 'wav', label: 'WAV' },
-  { value: 'mp3', label: 'MP3' },
-];
+import { AUDIO_FORMATS } from '../../constants';
 
 export function GenericMusicPanel({
   model: selectedModel,

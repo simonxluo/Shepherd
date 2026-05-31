@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { v1Client } from '@/features/creative/hooks';
+import { v1ApiClient } from '@/lib/api/client';
 import {
   useModelLoadConfig,
   useSaveModelLoadConfig,
@@ -8,9 +8,8 @@ import {
 } from '@/features/models/config';
 import type { LoadedModel } from '@/features/creative/hooks';
 import type { TTSRequest, TTSConfig, TTSModelFeatures } from './types';
+import type { VoicesResponse } from '@/lib/api/voices';
 import { ttsRegistry } from './registry';
-
-export type { TTSRequest, TTSConfig, TTSModelFeatures };
 
 /** Default feature set returned when no plugin matches. */
 const DEFAULT_FEATURES: TTSModelFeatures = {
@@ -37,7 +36,7 @@ export function useTTS() {
   return useMutation({
     mutationFn: async (params: TTSRequest & { signal?: AbortSignal }) => {
       const { signal, ...body } = params;
-      const response = await fetch(`${v1Client.getBaseUrl()}/audio/speech`, {
+      const response = await fetch(`${v1ApiClient.getBaseUrl()}/audio/speech`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -62,21 +61,12 @@ export interface VoiceOption {
   isUploaded?: boolean;
 }
 
-interface VoicesResponse {
-  voices?: string[];
-  uploaded_voices?: Array<{
-    name: string;
-    speaker_description?: string;
-    ref_text?: string;
-  }>;
-}
-
 export function useVoices(model?: string) {
   return useQuery({
     queryKey: ['voices', model],
     queryFn: async () => {
       if (!model) return [];
-      const res = await v1Client.get<VoicesResponse>('/audio/voices', { model });
+      const res = await v1ApiClient.get<VoicesResponse>('/audio/voices', { model });
       // vLLM-Omni returns voices: string[] and uploaded_voices
       const presetVoices: VoiceOption[] = (res.voices ?? []).map(v => ({
         id: v,
@@ -96,8 +86,6 @@ export function useVoices(model?: string) {
   });
 }
 
-// TTSConfig is now defined in types.ts
-
 function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
   if (!raw) return null;
   return {
@@ -108,8 +96,8 @@ function extractTTSConfig(raw?: Record<string, unknown>): TTSConfig | null {
     instructions: (raw.instructions as string) || undefined,
     refAudio: (raw.refAudio as string) || undefined,
     refText: (raw.refText as string) || undefined,
-    seed: (raw.seed as string) || undefined,
-    maxNewTokens: (raw.maxNewTokens as string) || undefined,
+    seed: raw.seed !== undefined && raw.seed !== '' ? String(raw.seed) : undefined,
+    maxNewTokens: raw.maxNewTokens !== undefined && raw.maxNewTokens !== '' ? String(raw.maxNewTokens) : undefined,
     language: (raw.language as string) || undefined,
   };
 }
@@ -172,7 +160,7 @@ export function useAutoTranscribe() {
       formData.append('file', file);
       formData.append('model', asrModelName);
 
-      const response = await fetch(`${v1Client.getBaseUrl()}/audio/transcriptions`, {
+      const response = await fetch(`${v1ApiClient.getBaseUrl()}/audio/transcriptions`, {
         method: 'POST',
         body: formData,
       });

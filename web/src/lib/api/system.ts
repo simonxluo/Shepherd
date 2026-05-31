@@ -13,6 +13,7 @@ interface ServerInfoResponse {
     version: string;
     buildTime: string;
     gitCommit: string;
+    goVersion: string;
     name: string;
     status: string;
     role: string;

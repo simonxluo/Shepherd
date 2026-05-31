@@ -99,19 +99,23 @@ export interface UseStreamingChatOptions {
 
 export function useStreamingChat(opts?: UseStreamingChatOptions) {
   const abortControllerRef = useRef<AbortController | null>(null);
+  const optsRef = useRef(opts);
+  // eslint-disable-next-line react-hooks/refs
+  optsRef.current = opts;
 
   const send = useCallback((params: Omit<StreamingChatParams, 'onChunk' | 'onComplete' | 'onError' | 'signal'>) => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
+    const currentOpts = optsRef.current;
     chatApi.streamingChatCompletion({
       ...params,
       signal: abortControllerRef.current.signal,
-      onChunk: opts?.onChunk ?? (() => {}),
-      onComplete: opts?.onComplete ?? (() => {}),
-      onError: opts?.onError ?? (() => {}),
+      onChunk: currentOpts?.onChunk ?? (() => {}),
+      onComplete: currentOpts?.onComplete ?? (() => {}),
+      onError: currentOpts?.onError ?? (() => {}),
     });
-  }, [opts?.onChunk, opts?.onComplete, opts?.onError]);
+  }, []);
 
   const abort = useCallback(() => {
     abortControllerRef.current?.abort();
