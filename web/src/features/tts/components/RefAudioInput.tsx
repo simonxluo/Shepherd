@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Upload, Mic, MicOff, Link, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,18 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+
+  // 组件卸载时清理录音资源
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   const handleFile = useCallback(async (file: File) => {
     const base64 = await audioFileToBase64(file);
@@ -55,6 +66,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
     } else {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
         const recorder = new MediaRecorder(stream);
         chunksRef.current = [];
 
@@ -64,6 +76,7 @@ export function RefAudioInput({ value, onChange }: RefAudioInputProps) {
 
         recorder.onstop = async () => {
           stream.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
           const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
           const file = new File([blob], 'recording.webm', { type: 'audio/webm' });
           await handleFile(file);

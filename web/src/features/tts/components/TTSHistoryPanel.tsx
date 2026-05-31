@@ -60,7 +60,10 @@ export function TTSHistoryPanel({
     }
 
     audioRef.current.src = getTTSAudioUrl(item.id);
-    audioRef.current.play();
+    audioRef.current.play().catch(() => {
+      toast.error(t('tts.playbackFailed', 'Playback failed'));
+      setPlayingId(null);
+    });
     setPlayingId(item.id);
   };
 
@@ -130,6 +133,9 @@ export function TTSHistoryPanel({
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
+  // 拖拽状态
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -145,6 +151,9 @@ export function TTSHistoryPanel({
         ref={audioRef}
         onEnded={() => setPlayingId(null)}
         onPause={() => setPlayingId(null)}
+        onError={() => {
+          setPlayingId(null);
+        }}
       />
 
       {/* Header with filter tabs */}
@@ -174,6 +183,12 @@ export function TTSHistoryPanel({
         </div>
       </div>
 
+      {supportsRefAudio && onUseAsReference && items.length > 0 && (
+        <p className="text-xs text-muted-foreground px-4 py-1.5 border-b bg-muted/30">
+          {t('tts.dragToRefAudioHint', '💡 Drag audio to reference area')}
+        </p>
+      )}
+
       {/* History list */}
       {items.length === 0 ? (
         <div className="flex-1 flex items-center justify-center px-4">
@@ -193,7 +208,17 @@ export function TTSHistoryPanel({
               return (
                 <div
                   key={item.id}
-                  className="group rounded-md border border-transparent hover:border-border hover:bg-accent/50 transition-colors"
+                  draggable={supportsRefAudio && !!onUseAsReference}
+                  onDragStart={(e) => {
+                    if (!supportsRefAudio || !onUseAsReference) return;
+                    e.dataTransfer.setData('text/plain', getTTSAudioUrl(item.id));
+                    e.dataTransfer.effectAllowed = 'copy';
+                    setDraggingId(item.id);
+                  }}
+                  onDragEnd={() => setDraggingId(null)}
+                  className={`group rounded-md border border-transparent hover:border-border hover:bg-accent/50 transition-colors ${
+                    draggingId === item.id ? 'opacity-50' : ''
+                  } ${supportsRefAudio && onUseAsReference ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
                   {/* Row 1: Play button + text content + metadata */}
                   <div className="flex items-start gap-2 p-2">

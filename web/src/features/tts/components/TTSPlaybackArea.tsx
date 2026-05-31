@@ -42,16 +42,19 @@ export function TTSPlaybackArea({
 }: TTSPlaybackAreaProps) {
   const { t } = useTranslation();
   const audioRef = useRef<HTMLAudioElement>(null);
+  const prevAudioUrlRef = useRef<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
   const isStreamActive = streamState === 'streaming' || streamState === 'playing';
 
   // Auto-play non-stream audio when URL changes
   useEffect(() => {
-    if (audioUrl && autoPlay && audioRef.current) {
+    // 只在 audioUrl 变化时触发自动播放，不在 autoPlay 切换时触发
+    if (audioUrl && audioUrl !== prevAudioUrlRef.current && autoPlay && audioRef.current) {
       audioRef.current.load();
       audioRef.current.play().catch(() => {});
     }
+    prevAudioUrlRef.current = audioUrl;
   }, [audioUrl, autoPlay]);
 
   const handlePlayPause = () => {
