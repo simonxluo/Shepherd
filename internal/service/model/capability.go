@@ -3,9 +3,9 @@ package model
 import (
 	"strings"
 
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/infra/gguf"
 	"github.com/simonxluo/Shepherd/internal/infra/huggingface"
-	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
 // Capability detection keyword constants

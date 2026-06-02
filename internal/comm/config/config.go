@@ -23,18 +23,18 @@ const (
 
 // Config represents the complete application configuration
 type Config struct {
-	Server        ServerConfig          `mapstructure:"server" yaml:"server" json:"server"`
-	Model         ModelConfig           `mapstructure:"model" yaml:"model" json:"model"`
-	Llamacpp      LlamacppConfig        `mapstructure:"llamacpp" yaml:"llamacpp" json:"llamacpp"`
-	Download      DownloadConfig        `mapstructure:"download" yaml:"download" json:"download"`
-	ModelRepo     ModelRepoConfig       `mapstructure:"model_repo" yaml:"model_repo" json:"modelRepo"`
-	Security      SecurityConfig        `mapstructure:"security" yaml:"security" json:"security"`
-	Compatibility CompatibilityConfig   `mapstructure:"compatibility" yaml:"compatibility" json:"compatibility"`
-	MCP           MCPConfig             `mapstructure:"mcp" yaml:"mcp" json:"mcp"`
-	Log           LogConfig             `mapstructure:"log" yaml:"log" json:"log"`
-	Storage       storage.StorageConfig `mapstructure:"storage" yaml:"storage" json:"storage"`
-	Node          NodeConfig            `mapstructure:"node" yaml:"node" json:"node"`
-	Backends      BackendsConfig        `mapstructure:"backends" yaml:"backends" json:"backends"`
+	Server          ServerConfig          `mapstructure:"server" yaml:"server" json:"server"`
+	Model           ModelConfig           `mapstructure:"model" yaml:"model" json:"model"`
+	MultimodalPaths []MultimodalPath      `mapstructure:"multimodal_paths" yaml:"multimodal_paths" json:"multimodalPaths"`
+	Download        DownloadConfig        `mapstructure:"download" yaml:"download" json:"download"`
+	ModelRepo       ModelRepoConfig       `mapstructure:"model_repo" yaml:"model_repo" json:"modelRepo"`
+	Security        SecurityConfig        `mapstructure:"security" yaml:"security" json:"security"`
+	Compatibility   CompatibilityConfig   `mapstructure:"compatibility" yaml:"compatibility" json:"compatibility"`
+	MCP             MCPConfig             `mapstructure:"mcp" yaml:"mcp" json:"mcp"`
+	Log             LogConfig             `mapstructure:"log" yaml:"log" json:"log"`
+	Storage         storage.StorageConfig `mapstructure:"storage" yaml:"storage" json:"storage"`
+	Node            NodeConfig            `mapstructure:"node" yaml:"node" json:"node"`
+	Backends        map[string]any        `mapstructure:"backends" yaml:"backends" json:"backends"`
 }
 
 // ServerConfig contains HTTP server configuration
@@ -44,7 +44,7 @@ type ServerConfig struct {
 	Host          string `mapstructure:"host" yaml:"host" json:"host"`
 	ModelBindHost string `mapstructure:"model_bind_host" yaml:"model_bind_host" json:"modelBindHost"` // Bind address for model backend processes (0.0.0.0 or 127.0.0.1)
 	ReadTimeout   int    `mapstructure:"read_timeout" yaml:"read_timeout" json:"readTimeout"`         // seconds
-	WriteTimeout  int    `mapstructure:"write_timeout" yaml:"write_timeout" json:"writeTimeout"`       // seconds
+	WriteTimeout  int    `mapstructure:"write_timeout" yaml:"write_timeout" json:"writeTimeout"`      // seconds
 }
 
 // ModelConfig contains model scanning and management configuration
@@ -64,20 +64,6 @@ type ModelGroupDef struct {
 	Swap       bool     `mapstructure:"swap" yaml:"swap" json:"swap"`                   // If true, loading one unloads others in the group
 	Exclusive  bool     `mapstructure:"exclusive" yaml:"exclusive" json:"exclusive"`    // If true, also unloads models from other non-persistent groups
 	Persistent bool     `mapstructure:"persistent" yaml:"persistent" json:"persistent"` // If true, not affected by other exclusive groups
-}
-
-// LlamacppConfig contains llama.cpp binary paths configuration
-type LlamacppConfig struct {
-	Paths         []LlamacppPath         `mapstructure:"paths" yaml:"paths" json:"paths"`
-	Installations []LlamaCppInstallation `mapstructure:"installations" yaml:"installations" json:"installations"`
-}
-
-// LlamacppPath represents a llama.cpp binary path with metadata.
-// Deprecated: use LlamaCppInstallation for managed installation metadata.
-type LlamacppPath struct {
-	Path        string `mapstructure:"path" yaml:"path" json:"path"`
-	Name        string `mapstructure:"name" yaml:"name" json:"name"`
-	Description string `mapstructure:"description" yaml:"description" json:"description,omitempty"`
 }
 
 // LlamaCppInstallation represents a managed llama.cpp installation.
@@ -176,13 +162,6 @@ type MCPServerConfig struct {
 	ExposeChat bool `mapstructure:"expose_chat" yaml:"expose_chat" json:"exposeChat"`
 }
 
-// BackendsConfig contains backend configuration for different inference engines
-type BackendsConfig struct {
-	VLLM            *VLLMBackendConfig `mapstructure:"vllm" yaml:"vllm" json:"vllm,omitempty"`
-	VLLMOmni        *VLLMBackendConfig `mapstructure:"vllm_omni" yaml:"vllm_omni" json:"vllmOmni,omitempty"`
-	MultimodalPaths []MultimodalPath   `mapstructure:"multimodal_paths" yaml:"multimodal_paths" json:"multimodalPaths"`
-}
-
 // MultimodalPath represents a multimodal model path with metadata
 type MultimodalPath struct {
 	Path        string `mapstructure:"path" yaml:"path" json:"path"`
@@ -196,18 +175,6 @@ type BackendPath struct {
 	Path        string `mapstructure:"path" yaml:"path" json:"path"`
 	Name        string `mapstructure:"name" yaml:"name" json:"name"`
 	Description string `mapstructure:"description" yaml:"description" json:"description,omitempty"`
-}
-
-// VLLMBackendConfig contains vLLM/vLLM-omni specific configuration
-type VLLMBackendConfig struct {
-	Enabled     bool          `mapstructure:"enabled" yaml:"enabled" json:"enabled"`
-	CondaEnv    string        `mapstructure:"conda_env" yaml:"conda_env" json:"condaEnv"`
-	CondaPath   string        `mapstructure:"conda_path" yaml:"conda_path" json:"condaPath"`
-	ServeBin    string        `mapstructure:"serve_bin" yaml:"serve_bin" json:"serveBin"`
-	ExtraArgs   string        `mapstructure:"extra_args" yaml:"extra_args" json:"extraArgs"`
-	DefaultPort int           `mapstructure:"default_port" yaml:"default_port" json:"defaultPort"`
-	Paths       []BackendPath `mapstructure:"paths" yaml:"paths" json:"paths"`
-	Env         []string      `mapstructure:"env" yaml:"env" json:"env,omitempty"`
 }
 
 // SchedulerConfig contains task scheduler configuration
@@ -290,14 +257,7 @@ func DefaultConfig() *Config {
 			Paths:    modelPaths,
 			AutoScan: autoScan,
 		},
-		Llamacpp: LlamacppConfig{
-			Paths: []LlamacppPath{
-				{
-					Path: filepath.Join(cwd, "llama.cpp"),
-					Name: "Default",
-				},
-			},
-		},
+		MultimodalPaths: []MultimodalPath{},
 		Download: DownloadConfig{
 			Directory:     downloadDir,
 			MaxConcurrent: 4,
@@ -389,8 +349,12 @@ func DefaultConfig() *Config {
 				},
 			},
 		},
-		Backends: BackendsConfig{
-			MultimodalPaths: []MultimodalPath{},
+		Backends: map[string]any{
+			"llamacpp": map[string]any{
+				"paths": []map[string]any{
+					{"path": filepath.Join(cwd, "llama.cpp"), "name": "Default"},
+				},
+			},
 		},
 		ModelRepo: ModelRepoConfig{
 			Endpoint: "huggingface.co",

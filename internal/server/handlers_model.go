@@ -732,8 +732,7 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 	// Determine recommended backend based on capabilities + format + backend availability
 	caps := s.modelMgr.GetModelCapabilities(m.ID)
 	vllmOmniConfigured := s.config != nil && s.config.ServerCfg != nil &&
-		s.config.ServerCfg.Backends.VLLMOmni != nil &&
-		s.config.ServerCfg.Backends.VLLMOmni.Enabled
+		s.config.ServerCfg.BackendEnabled("vllmomni")
 	if caps != nil && (caps.TTS || caps.ASR) && vllmOmniConfigured {
 		dto.BackendType = string(backend.IDVLLMOmni)
 	} else if caps != nil && (caps.TTS || caps.ASR) && !vllmOmniConfigured {

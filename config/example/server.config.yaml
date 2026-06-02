@@ -13,12 +13,15 @@ model:
     auto_scan: true
     scan_interval: 300
     port_range: "8081-9000"
-llamacpp:
-    paths:
-        - path: /usr/local/bin/
-          name: Default
-          description: ""
+multimodal_paths:
+    - path: ./models/multimodal
+      name: Multimodal Models
+      description: "Safetensors model directory (TTS/ASR/Image Generation)"
 backends:
+    llamacpp:
+        paths:
+            - path: /usr/local/bin/
+              name: Default
     vllm:
         enabled: false
         conda_env: ""
@@ -30,8 +33,7 @@ backends:
         paths:
             - path: /usr/local/bin/
               name: Default
-              description: ""
-    vllm_omni:
+    vllmomni:
         enabled: false
         conda_env: ""
         conda_path: ""
@@ -42,11 +44,6 @@ backends:
         paths:
             - path: /usr/local/bin/
               name: Default
-              description: ""
-    multimodal_paths:
-        - path: ./models/multimodal
-          name: Multimodal Models
-          description: "Safetensors 模型目录 (TTS/ASR/Image Generation)"
 download:
     directory: ./downloads
     max_concurrent: 4

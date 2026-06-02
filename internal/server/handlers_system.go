@@ -74,13 +74,13 @@ func (s *Server) HandleGetGPUs(c *gin.Context) {
 	}
 
 	// 2. 从配置路径收集
-	if s.config != nil && s.config.ServerCfg != nil && len(s.config.ServerCfg.Llamacpp.Paths) > 0 {
-		for _, p := range s.config.ServerCfg.Llamacpp.Paths {
-			if fileInfo, err := os.Stat(p.Path); err == nil && fileInfo.IsDir() {
+	if s.config != nil && s.config.ServerCfg != nil {
+		for _, bp := range s.config.ServerCfg.BackendPaths("llamacpp") {
+			if fileInfo, err := os.Stat(bp.Path); err == nil && fileInfo.IsDir() {
 				benchPaths = append(benchPaths,
-					p.Path+"/llama-bench",
-					p.Path+"/build/bin/llama-bench",
-					p.Path+"/bin/llama-bench",
+					bp.Path+"/llama-bench",
+					bp.Path+"/build/bin/llama-bench",
+					bp.Path+"/bin/llama-bench",
 				)
 			}
 		}
@@ -191,14 +191,14 @@ func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 	inferenceBackends := []gin.H{}
 
 	if s.config != nil && s.config.ServerCfg != nil {
+		cfg := s.config.ServerCfg
+
 		// Llama.cpp backends (backward compatible)
-		paths := s.config.ServerCfg.Llamacpp.Paths
-		for _, p := range paths {
+		for _, p := range cfg.BackendPaths("llamacpp") {
 			available := false
 			if fileInfo, err := os.Stat(p.Path); err == nil {
 				available = fileInfo.IsDir()
 			}
-
 			backends = append(backends, gin.H{
 				"type":        "llamacpp",
 				"path":        p.Path,
@@ -208,27 +208,25 @@ func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 			})
 		}
 
-		// vLLM backend (separate array to avoid breaking frontend)
-		if s.config.ServerCfg.Backends.VLLM != nil {
-			vcfg := s.config.ServerCfg.Backends.VLLM
+		// Other backends as inferenceBackends.
+		for _, id := range []string{"vllm", "vllmomni"} {
+			raw := cfg.BackendRaw(id)
+			if raw == nil {
+				continue
+			}
+			plugin, ok := backend.Default().Get(backend.ID(id))
+			displayName := id
+			if ok {
+				displayName = plugin.DisplayName()
+			}
+			enabled := cfg.BackendEnabled(id)
+			condaEnv, _ := raw["conda_env"].(string)
 			inferenceBackends = append(inferenceBackends, gin.H{
-				"type":      "vllm",
-				"name":      "vLLM",
-				"condaEnv":  vcfg.CondaEnv,
-				"enabled":   vcfg.Enabled,
-				"available": vcfg.Enabled && vcfg.CondaEnv != "",
-			})
-		}
-
-		// vLLM-omni backend
-		if s.config.ServerCfg.Backends.VLLMOmni != nil {
-			ocfg := s.config.ServerCfg.Backends.VLLMOmni
-			inferenceBackends = append(inferenceBackends, gin.H{
-				"type":      "vllm_omni",
-				"name":      "vLLM-Omni",
-				"condaEnv":  ocfg.CondaEnv,
-				"enabled":   ocfg.Enabled,
-				"available": ocfg.Enabled && ocfg.CondaEnv != "",
+				"type":      id,
+				"name":      displayName,
+				"condaEnv":  condaEnv,
+				"enabled":   enabled,
+				"available": enabled && condaEnv != "",
 			})
 		}
 	}
@@ -368,9 +366,7 @@ func (s *Server) HandleGetConfig(c *gin.Context) {
 			"id":   cfg.Node.ID,
 			"name": cfg.Node.Name,
 		},
-		"llamacpp": gin.H{
-			"paths": cfg.Llamacpp.Paths,
-		},
+		"backends": cfg.Backends,
 	})
 }
 

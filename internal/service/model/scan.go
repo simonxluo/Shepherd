@@ -14,10 +14,10 @@ import (
 
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"github.com/simonxluo/Shepherd/internal/infra/gguf"
 	"github.com/simonxluo/Shepherd/internal/infra/huggingface"
-	"github.com/simonxluo/Shepherd/internal/comm/storage"
 )
 
 var (
@@ -582,16 +582,16 @@ func (m *Manager) getScanPaths() []string {
 		for _, pc := range cfg.Model.PathConfigs {
 			raw = append(raw, pc.Path)
 		}
-		for _, mp := range cfg.Backends.MultimodalPaths {
+		for _, mp := range cfg.MultimodalPaths {
 			raw = append(raw, mp.Path)
 		}
 		paths := expandAll(raw)
 		logger.Debugf("getScanPaths: returning paths from PathConfigs: count=%d, paths=%v", len(paths), paths)
 		return paths
 	}
-	raw := make([]string, 0, len(cfg.Model.Paths)+len(cfg.Backends.MultimodalPaths))
+	raw := make([]string, 0, len(cfg.Model.Paths)+len(cfg.MultimodalPaths))
 	raw = append(raw, cfg.Model.Paths...)
-	for _, mp := range cfg.Backends.MultimodalPaths {
+	for _, mp := range cfg.MultimodalPaths {
 		raw = append(raw, mp.Path)
 	}
 	paths := expandAll(raw)

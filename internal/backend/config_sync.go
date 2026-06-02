@@ -3,58 +3,71 @@ package backend
 import "github.com/simonxluo/Shepherd/internal/comm/config"
 
 // SyncFromConfig populates the registry's Config entries from the application
-// config.Config. This bridges the current YAML layout (top-level llamacpp +
-// backends.vllm/vllm_omni) with the plugin-based Config model.
+// config.Config. Iterates cfg.Backends generically — no per-plugin hardcoding.
 func (r *Registry) SyncFromConfig(cfg *config.Config) {
 	bindHost := cfg.Server.ModelBindHost
 	if bindHost == "" {
 		bindHost = "0.0.0.0"
 	}
 
-	// llamacpp
-	llamaCfg := &Config{
-		ID:          IDLlamaCpp,
-		DisplayName: "llama.cpp",
-		BindHost:    bindHost,
-	}
-	if len(cfg.Llamacpp.Paths) > 0 {
-		llamaCfg.BinPaths = make([]string, 0, len(cfg.Llamacpp.Paths))
-		for _, p := range cfg.Llamacpp.Paths {
-			llamaCfg.BinPaths = append(llamaCfg.BinPaths, p.Path)
+	for idStr, rawVal := range cfg.Backends {
+		id := ID(idStr)
+		plugin, ok := r.Get(id)
+		if !ok {
+			continue
 		}
-	}
-	r.Configure(IDLlamaCpp, llamaCfg)
 
-	// vllm
-	if cfg.Backends.VLLM != nil && cfg.Backends.VLLM.Enabled {
-		r.Configure(IDVLLM, vllmConfigFromYAML(IDVLLM, "vLLM", cfg.Backends.VLLM, bindHost))
-	}
+		raw, _ := rawVal.(map[string]any)
 
-	// vllmomni
-	if cfg.Backends.VLLMOmni != nil && cfg.Backends.VLLMOmni.Enabled {
-		r.Configure(IDVLLMOmni, vllmConfigFromYAML(IDVLLMOmni, "vLLM-Omni", cfg.Backends.VLLMOmni, bindHost))
+		// Skip disabled backends.
+		if v, ok := raw["enabled"]; ok {
+			if b, _ := v.(bool); !b {
+				continue
+			}
+		}
+
+		backendCfg := &Config{
+			ID:          id,
+			DisplayName: plugin.DisplayName(),
+			BindHost:    bindHost,
+			Raw:         raw,
+		}
+
+		// Extract bin paths from the "paths" field.
+		if pathsVal, ok := raw["paths"]; ok {
+			backendCfg.BinPaths = extractBinPaths(pathsVal)
+		}
+
+		// Let plugin decode its typed config if it implements PluginConfigDecoder.
+		if decoder, ok := plugin.(PluginConfigDecoder); ok {
+			decoded, err := decoder.DecodeConfig(raw)
+			if err == nil {
+				backendCfg.Decoded = decoded
+			}
+		}
+
+		r.Configure(id, backendCfg)
 	}
 }
 
-// vllmConfigFromYAML converts a VLLMBackendConfig into a backend.Config.
-func vllmConfigFromYAML(id ID, displayName string, vc *config.VLLMBackendConfig, bindHost string) *Config {
-	c := &Config{
-		ID:          id,
-		DisplayName: displayName,
-		BindHost:    bindHost,
-		Raw: map[string]any{
-			"conda_env":  vc.CondaEnv,
-			"conda_path": vc.CondaPath,
-			"serve_bin":  vc.ServeBin,
-			"extra_args": vc.ExtraArgs,
-			"env":        vc.Env,
-		},
+// extractBinPaths pulls path strings from a raw "paths" YAML value.
+func extractBinPaths(v any) []string {
+	items, ok := v.([]any)
+	if !ok {
+		return nil
 	}
-	if len(vc.Paths) > 0 {
-		c.BinPaths = make([]string, 0, len(vc.Paths))
-		for _, p := range vc.Paths {
-			c.BinPaths = append(c.BinPaths, p.Path)
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		switch val := item.(type) {
+		case map[string]any:
+			if p, _ := val["path"].(string); p != "" {
+				out = append(out, p)
+			}
+		case string:
+			if val != "" {
+				out = append(out, val)
+			}
 		}
 	}
-	return c
+	return out
 }

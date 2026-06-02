@@ -23,7 +23,7 @@ type samplingStore struct {
 
 var (
 	samplingStoreInstance *samplingStore
-	samplingStoreOnce    sync.Once
+	samplingStoreOnce     sync.Once
 )
 
 func getSamplingStore() *samplingStore {

@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	api "github.com/simonxluo/Shepherd/internal/handler"
 	"github.com/simonxluo/Shepherd/internal/infra/download"
-	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/router"
 	"github.com/simonxluo/Shepherd/internal/service/model"
 )
@@ -126,9 +126,7 @@ func (s *testServerHandlers) HandleGetConfig(c *gin.Context) {
 			"id":   cfg.Node.ID,
 			"name": cfg.Node.Name,
 		},
-		"llamacpp": gin.H{
-			"paths": cfg.Llamacpp.Paths,
-		},
+		"backends": cfg.Backends,
 	})
 }
 

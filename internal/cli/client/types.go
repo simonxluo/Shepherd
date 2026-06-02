@@ -21,12 +21,12 @@ type PortsInfo struct {
 
 // ConfigResponse represents the response from GET /api/config.
 type ConfigResponse struct {
-	Role    string       `json:"role"`
-	Server  ServerConfig `json:"server"`
-	Storage StorageInfo  `json:"storage"`
-	Models  ModelsConfig `json:"models"`
-	Node    NodeConfig   `json:"node"`
-	Llamacpp LlamacppConfig `json:"llamacpp"`
+	Role     string         `json:"role"`
+	Server   ServerConfig   `json:"server"`
+	Storage  StorageInfo    `json:"storage"`
+	Models   ModelsConfig   `json:"models"`
+	Node     NodeConfig     `json:"node"`
+	Backends map[string]any `json:"backends"`
 }
 
 type ServerConfig struct {
@@ -49,16 +49,6 @@ type NodeConfig struct {
 	Role string `json:"role"`
 	ID   string `json:"id"`
 	Name string `json:"name"`
-}
-
-type LlamacppConfig struct {
-	Paths []LlamacppPath `json:"paths"`
-}
-
-type LlamacppPath struct {
-	Path        string `json:"path"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
 }
 
 // ModelItem represents a model in the list response.
@@ -126,31 +116,31 @@ type BackendInfo struct {
 
 // ResourcesResponse represents the response from GET /api/system/resources.
 type ResourcesResponse struct {
-	CPU     CPUResources     `json:"cpu"`
-	Memory  MemoryResources  `json:"memory"`
-	Disk    DiskResources    `json:"disk"`
-	GPU     []GPUResource    `json:"gpu,omitempty"`
-	Load    []float64        `json:"loadAverage,omitempty"`
-	Uptime  int64            `json:"uptime"`
-	Kernel  string           `json:"kernelVersion,omitempty"`
-	ROCm    string           `json:"rocmVersion,omitempty"`
+	CPU    CPUResources    `json:"cpu"`
+	Memory MemoryResources `json:"memory"`
+	Disk   DiskResources   `json:"disk"`
+	GPU    []GPUResource   `json:"gpu,omitempty"`
+	Load   []float64       `json:"loadAverage,omitempty"`
+	Uptime int64           `json:"uptime"`
+	Kernel string          `json:"kernelVersion,omitempty"`
+	ROCm   string          `json:"rocmVersion,omitempty"`
 }
 
 type CPUResources struct {
-	Used    int64   `json:"used"`    // millicores
-	Total   int64   `json:"total"`   // millicores
+	Used    int64   `json:"used"`  // millicores
+	Total   int64   `json:"total"` // millicores
 	Percent float64 `json:"percent"`
 }
 
 type MemoryResources struct {
-	Used    int64   `json:"used"`    // bytes
-	Total   int64   `json:"total"`   // bytes
+	Used    int64   `json:"used"`  // bytes
+	Total   int64   `json:"total"` // bytes
 	Percent float64 `json:"percent"`
 }
 
 type DiskResources struct {
-	Used    int64   `json:"used"`    // bytes
-	Total   int64   `json:"total"`   // bytes
+	Used    int64   `json:"used"`  // bytes
+	Total   int64   `json:"total"` // bytes
 	Percent float64 `json:"percent"`
 }
 
@@ -164,6 +154,6 @@ type GPUResource struct {
 
 // ModelLoadConfig represents a named load configuration.
 type ModelLoadConfig struct {
-	Name    string                 `json:"name"`
-	Config  map[string]interface{} `json:"config"`
+	Name   string                 `json:"name"`
+	Config map[string]interface{} `json:"config"`
 }
