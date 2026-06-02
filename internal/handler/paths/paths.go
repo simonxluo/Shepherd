@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/simonxluo/Shepherd/internal/backend/plugins/llamacpp"
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	"github.com/simonxluo/Shepherd/internal/handler"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // pathCRUD provides generic CRUD operations for path configuration slices.
@@ -297,7 +297,7 @@ func (h *Handler) TestLlamaCppPath(c *gin.Context) {
 		handler.Success(c, gin.H{"valid": false, "error": err.Error()})
 		return
 	}
-	probe, err := backend.ProbeLlamaCppInstallation(normalizedPath)
+	probe, err := llamacpp.ProbeInstallation(normalizedPath)
 	if err != nil {
 		handler.Success(c, gin.H{
 			"valid":    false,

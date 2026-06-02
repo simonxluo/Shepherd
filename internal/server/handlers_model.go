@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,13 +11,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/simonxluo/Shepherd/internal/backend"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	api "github.com/simonxluo/Shepherd/internal/handler"
 	"github.com/simonxluo/Shepherd/internal/infra/gguf"
-	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/service/model"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // loadedModelInfo is used for /api/models/loaded response payload
@@ -171,41 +172,22 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	// logic (validation, spec-decoding, defaults) into a single block.
 	// This avoids scattering backend-type checks across the handler and
 	// prevents llama.cpp parameters from leaking into vLLM/vLLM-Omni.
-	isLlamaCpp := req.BackendType == "" || req.BackendType == string(backend.BackendLlamaCpp)
-	if isLlamaCpp {
-		// -- Validate llama.cpp parameters --
-		validation := backend.ValidateLlamaCppParamMap(map[string]any{
-			"ctxSize":        req.CtxSize,
-			"batchSize":      req.BatchSize,
-			"threads":        req.Threads,
-			"gpuLayers":      req.GPULayers,
-			"devices":        req.Devices,
-			"mainGpu":        req.MainGPU,
-			"splitMode":      req.SplitMode,
-			"tensorSplit":    req.TensorSplit,
-			"kvCacheTypeK":   req.KVCacheTypeK,
-			"kvCacheTypeV":   req.KVCacheTypeV,
-			"parallelSlots":  req.ParallelSlots,
-			"threadsHttp":    req.ThreadsHTTP,
-			"timeout":        req.Timeout,
-			"temperature":    req.Temperature,
-			"topP":           req.TopP,
-			"topK":           req.TopK,
-			"minP":           req.MinP,
-			"repeatPenalty":  req.RepeatPenalty,
-			"seed":           req.Seed,
-			"nPredict":       req.NPredict,
-			"mmprojPath":     req.MmprojPath,
-			"flashAttention": req.FlashAttention,
-			"noMmap":         req.NoMmap,
-			"lockMemory":     req.LockMemory,
-		})
+	// Validate backend-specific parameters via the plugin.
+	pluginID := backend.ID(req.BackendType)
+	if pluginID == "" {
+		pluginID = backend.IDLlamaCpp
+	}
+	if plugin, ok := backend.Default().Get(pluginID); ok {
+		rawParams := loadRequestToRawParams(&req)
+		validation := plugin.ValidateParams(rawParams)
 		if !validation.Valid {
-			api.ErrorWithDetails(c, types.ErrInvalidRequest, "无效的 llama.cpp 参数", strings.Join(validation.Errors, "; "))
+			api.ErrorWithDetails(c, types.ErrInvalidRequest, "invalid parameters", strings.Join(validation.Errors, "; "))
 			return
 		}
+	}
 
-		// -- Validate speculative decoding draft model --
+	// Spec-decoding draft model validation (llamacpp-specific).
+	if pluginID == backend.IDLlamaCpp {
 		if req.SpecDecoding != nil && (req.SpecDecoding.SpecType == "draft" || req.SpecDecoding.SpecType == "eagle3") && req.SpecDecoding.SpecDraftModelID != "" {
 			if req.SpecDecoding.SpecDraftModelID == id {
 				api.BadRequest(c, "Draft模型不能与主模型相同")
@@ -247,8 +229,7 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 			logger.Infof("draft model resolved: modelId=%s, draftModelId=%s, draftPath=%s, arch=%s", id, req.SpecDecoding.SpecDraftModelID, draftPath, draftArch)
 		}
 
-		// -- Apply llama.cpp-specific defaults --
-		// Must run after validation; zero values mean "not set, use default".
+		// Apply llama.cpp-specific defaults (zero values mean "not set").
 		if req.CtxSize == 0 {
 			req.CtxSize = 512
 		}
@@ -754,14 +735,14 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 		s.config.ServerCfg.Backends.VLLMOmni != nil &&
 		s.config.ServerCfg.Backends.VLLMOmni.Enabled
 	if caps != nil && (caps.TTS || caps.ASR) && vllmOmniConfigured {
-		dto.BackendType = "vllm_omni"
+		dto.BackendType = string(backend.IDVLLMOmni)
 	} else if caps != nil && (caps.TTS || caps.ASR) && !vllmOmniConfigured {
-		// vllm_omni not configured, GGUF TTS/ASR models fall back to llama.cpp
-		dto.BackendType = "llamacpp"
+		// vllmomni not configured, GGUF TTS/ASR models fall back to llama.cpp
+		dto.BackendType = string(backend.IDLlamaCpp)
 	} else if backend.IsSafeTensorsModel(modelPath) || filepath.Ext(modelPath) == "" {
-		dto.BackendType = "vllm"
+		dto.BackendType = string(backend.IDVLLM)
 	} else {
-		dto.BackendType = "llamacpp"
+		dto.BackendType = string(backend.IDLlamaCpp)
 	}
 
 	if m.Metadata != nil {
@@ -817,4 +798,18 @@ func getArchitecture(modelPath string) string {
 	}
 	defer func() { _ = parser.Close() }()
 	return parser.GetArchitecture()
+}
+
+// loadRequestToRawParams converts a flat model.LoadRequest into backend.RawParams
+// via JSON round-trip for plugin.ValidateParams/DecodeParams.
+func loadRequestToRawParams(req *model.LoadRequest) backend.RawParams {
+	data, err := json.Marshal(req)
+	if err != nil {
+		return backend.RawParams{}
+	}
+	var raw backend.RawParams
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return backend.RawParams{}
+	}
+	return raw
 }

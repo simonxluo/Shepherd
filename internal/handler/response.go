@@ -1,5 +1,4 @@
-// Package api provides unified response building utilities for API handlers
-// 这个包提供统一的响应构建工具，用于 API 处理器
+// Package handler provides unified response building utilities for API handlers.
 package handler
 
 import (

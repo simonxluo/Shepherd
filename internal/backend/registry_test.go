@@ -16,12 +16,16 @@ type stubPlugin struct {
 	servedModelName func(ModelRef) string
 }
 
-func (s *stubPlugin) ID() ID                                                    { return s.id }
-func (s *stubPlugin) DisplayName() string                                       { return s.displayName }
-func (s *stubPlugin) Discover(*Config) (*Info, error)                           { return &Info{ID: s.id, Available: true}, nil }
-func (s *stubPlugin) BuildStartConfig(*Info, *LoadRequest) (*StartConfig, error){ return &StartConfig{PluginID: s.id}, nil }
-func (s *stubPlugin) IsLoadComplete(string) bool                                { return false }
-func (s *stubPlugin) CheckHealth(int) (*HealthResult, error)                    { return &HealthResult{Healthy: true}, nil }
+func (s *stubPlugin) ID() ID                          { return s.id }
+func (s *stubPlugin) DisplayName() string             { return s.displayName }
+func (s *stubPlugin) Discover(*Config) (*Info, error) { return &Info{ID: s.id, Available: true}, nil }
+func (s *stubPlugin) BuildStartConfig(*Info, *LoadRequest) (*StartConfig, error) {
+	return &StartConfig{PluginID: s.id}, nil
+}
+func (s *stubPlugin) IsLoadComplete(string) bool { return false }
+func (s *stubPlugin) CheckHealth(int) (*HealthResult, error) {
+	return &HealthResult{Healthy: true}, nil
+}
 func (s *stubPlugin) SupportsModel(p string) bool {
 	if s.supports == nil {
 		return true
@@ -182,7 +186,7 @@ func TestResolve_CapabilityHint_PrefersVLLMOmni(t *testing.T) {
 	r := NewRegistry()
 	r.Register(newStub(IDLlamaCpp))
 	omni := &stubPlugin{
-		id: IDVLLMOmni,
+		id:       IDVLLMOmni,
 		supports: func(p string) bool { return true },
 	}
 	r.Register(omni)
@@ -266,8 +270,7 @@ func TestResolve_NoSuitableBackend_NonGGUFNoConfig(t *testing.T) {
 
 func TestResolve_ExplicitUnregistered_FallsThrough(t *testing.T) {
 	// ExplicitIDRule deliberately fails-soft so an unknown ID does not short
-	// the chain: subsequent rules can still pick a default. The legacy
-	// resolver had the same behaviour.
+	// the chain: subsequent rules can still pick a default.
 	r := NewRegistry()
 	r.Register(newStub(IDLlamaCpp))
 
@@ -334,9 +337,10 @@ func TestLoadRequest_Validate(t *testing.T) {
 		wantErr bool
 	}{
 		{"nil", nil, true},
-		{"empty path", &LoadRequest{Port: 8080}, true},
-		{"zero port", &LoadRequest{ModelPath: "/models/x"}, true},
-		{"ok", &LoadRequest{ModelPath: "/models/x", Port: 8080}, false},
+		{"empty path", &LoadRequest{Port: 8080, BindHost: "127.0.0.1"}, true},
+		{"zero port", &LoadRequest{ModelPath: "/models/x", BindHost: "127.0.0.1"}, true},
+		{"empty bind host", &LoadRequest{ModelPath: "/models/x", Port: 8080}, true},
+		{"ok", &LoadRequest{ModelPath: "/models/x", Port: 8080, BindHost: "127.0.0.1"}, false},
 	}
 	for _, tc := range cases {
 		err := tc.req.Validate()

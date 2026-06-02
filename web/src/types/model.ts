@@ -81,7 +81,7 @@ export interface Model {
   mmprojPath?: string;
   scannedAt: string;
   sourceType?: string;
-  backendType?: string; // 推荐后端类型 (llamacpp/vllm/vllm_omni)
+  backendType?: string; // Recommended backend plugin ID (llamacpp/vllm/vllmomni)
 }
 
 /**
@@ -162,7 +162,7 @@ export interface LoadModelParams {
   // Backend config
   llamaCppPath?: string;      // llama.cpp executable path
   mainGpu?: number | string;  // Primary GPU selection
-  backendType?: string;       // Explicit backend type (llamacpp/vllm/vllm_omni)
+  backendType?: string;       // Plugin ID (llamacpp/vllm/vllmomni)
 
   // Capability toggles
   capabilities?: ModelCapabilities & {
@@ -332,7 +332,7 @@ export interface LoadModelParams {
   videoPruningRate?: number;           // Video token pruning rate (0-1)
   mmTensorIPC?: boolean;               // Multimodal tensor IPC
 
-  // 环境变量配置（适用于 vllm/vllm_omni 后端）
+  // Environment variables (for vllm/vllmomni backends)
   envVars?: string[];                  // 附加环境变量，格式: "KEY=VALUE"
 
   // Parameter enable flags: false = use llama-server defaults

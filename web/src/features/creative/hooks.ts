@@ -28,7 +28,7 @@ interface LoadedModelsResponse {
 export const BACKEND_LABELS: Record<string, string> = {
   llamacpp: 'llama.cpp',
   vllm: 'vLLM',
-  vllm_omni: 'vLLM-Omni',
+  vllmomni: 'vLLM-Omni',
 };
 
 export function useLoadedModels() {

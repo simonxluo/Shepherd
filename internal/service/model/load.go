@@ -1,35 +1,26 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/simonxluo/Shepherd/internal/backend"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 	"github.com/simonxluo/Shepherd/internal/infra/process"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
-// prepareAndStartProcess contains the shared preparation logic for both Load and LoadAsync.
-// It resolves the appropriate backend, discovers it, allocates a port, builds the command,
-// starts the process, and sets up the output handler.
-// On error, it updates status to StateError and releases any allocated port.
-func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status *ModelStatus) (*process.Process, int, backend.Backend, error) {
-	// Resolve which backend to use
+// prepareAndStartProcess resolves the backend plugin, discovers it, allocates
+// a port, builds the command, starts the process, and sets up the output handler.
+func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status *ModelStatus) (*process.Process, int, backend.Plugin, error) {
 	modelPath := model.Path
 	if len(model.ShardFiles) > 0 {
 		modelPath = model.ShardFiles[0]
 		logger.Infof("using shard model primary file: modelId=%s, path=%s, shardCount=%d", req.ModelID, modelPath, len(model.ShardFiles))
 	}
 
-	bt, parseErr := backend.ParseBackendType(req.BackendType)
-	if parseErr != nil {
-		status.transitionTo(StateError)
-		status.Error = parseErr
-		return nil, 0, nil, parseErr
-	}
-
-	// Build capability hint from stored model capabilities for smart backend routing
+	// Build capability hint for smart backend routing.
 	var capHint *backend.CapabilityHint
 	if caps := m.GetModelCapabilities(req.ModelID); caps != nil {
 		capHint = &backend.CapabilityHint{
@@ -39,22 +30,22 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 		}
 	}
 
-	b, bcfg, err := m.backendRegistry.Resolve(modelPath, bt, capHint)
+	pluginID := backend.ID(req.BackendType)
+	plugin, cfg, err := m.backendRegistry.Resolve(modelPath, pluginID, capHint)
 	if err != nil {
 		status.transitionTo(StateError)
 		status.Error = err
 		return nil, 0, nil, err
 	}
 
-	// Discover/validate backend
-	info, err := b.Discover(bcfg)
+	info, err := plugin.Discover(cfg)
 	if err != nil {
 		status.transitionTo(StateError)
 		status.Error = err
 		return nil, 0, nil, err
 	}
 	if !info.Available {
-		err := fmt.Errorf("backend %s is not available", b.Type())
+		err := fmt.Errorf("backend %s is not available", plugin.ID())
 		status.transitionTo(StateError)
 		status.Error = err
 		return nil, 0, nil, err
@@ -68,9 +59,9 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 		return nil, 0, nil, wrappedErr
 	}
 
-	// Build command via backend interface
-	backendReq := m.toBackendLoadRequest(req, modelPath, allocatedPort, bcfg)
-	startCfg, err := b.BuildStartConfig(info, backendReq)
+	// Convert flat LoadRequest → RawParams → plugin.DecodeParams
+	rawParams := loadRequestToRawParams(req)
+	params, err := plugin.DecodeParams(rawParams)
 	if err != nil {
 		m.portAllocator.Release(allocatedPort)
 		status.transitionTo(StateError)
@@ -78,17 +69,58 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 		return nil, 0, nil, err
 	}
 
-	// 合并环境变量：StartConfig 自带 + 全局后端配置 + 模型级别配置
-	// 优先级从低到高：startCfg.EnvVars < bcfg.EnvVars < req.EnvVars
-	envVars := make([]string, 0, len(startCfg.EnvVars)+len(bcfg.EnvVars)+len(req.EnvVars))
+	bindHost := "0.0.0.0"
+	if cfg != nil && cfg.BindHost != "" {
+		bindHost = cfg.BindHost
+	}
+
+	backendReq := &backend.LoadRequest{
+		ModelPath: modelPath,
+		Port:      allocatedPort,
+		Devices:   req.Devices,
+		BindHost:  bindHost,
+		Params:    params,
+		EnvVars:   req.EnvVars,
+		ExtraArgs: req.ExtraParams,
+	}
+
+	startCfg, err := plugin.BuildStartConfig(info, backendReq)
+	if err != nil {
+		m.portAllocator.Release(allocatedPort)
+		status.transitionTo(StateError)
+		status.Error = err
+		return nil, 0, nil, err
+	}
+
+	// Merge env vars: StartConfig < global backend config < model-level
+	var cfgEnvVars []string
+	if cfg != nil {
+		if envRaw, ok := cfg.Raw["env"]; ok {
+			switch v := envRaw.(type) {
+			case []string:
+				cfgEnvVars = v
+			case []any:
+				for _, item := range v {
+					if s, ok := item.(string); ok {
+						cfgEnvVars = append(cfgEnvVars, s)
+					}
+				}
+			}
+		}
+	}
+	envVars := make([]string, 0, len(startCfg.EnvVars)+len(cfgEnvVars)+len(req.EnvVars))
 	envVars = append(envVars, startCfg.EnvVars...)
-	envVars = append(envVars, bcfg.EnvVars...)
+	envVars = append(envVars, cfgEnvVars...)
 	envVars = append(envVars, req.EnvVars...)
 	if len(envVars) > 0 {
 		startCfg.EnvVars = envVars
 	}
 
-	proc, err := m.processMgr.Start(req.ModelID, model.Name, startCfg.Command, startCfg.BinPath, startCfg.SkipLDLibraryPath, startCfg.EnvVars)
+	cmdLine := ""
+	if startCfg.CommandSpec != nil {
+		cmdLine = startCfg.CommandSpec.CommandLine()
+	}
+	proc, err := m.processMgr.Start(req.ModelID, model.Name, cmdLine, startCfg.BinPath, startCfg.SkipLDLibraryPath, startCfg.EnvVars)
 	if err != nil {
 		m.portAllocator.Release(allocatedPort)
 		status.transitionTo(StateError)
@@ -96,7 +128,7 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 		return nil, 0, nil, err
 	}
 
-	return proc, allocatedPort, b, nil
+	return proc, allocatedPort, plugin, nil
 }
 
 // LoadAsync loads a model asynchronously (returns immediately, loads in background).
@@ -202,7 +234,7 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 
 	// 获取 PID
 	pid := proc.GetPID()
-	logger.Infof("异步模型加载: 进程已启动: modelId=%s, pid=%d, port=%d, backend=%s", req.ModelID, pid, port, b.Type())
+	logger.Infof("异步模型加载: 进程已启动: modelId=%s, pid=%d, port=%d, backend=%s", req.ModelID, pid, port, b.ID())
 
 	// 等待加载完成（监控进程输出）
 	loadCompleted := make(chan bool, 1)
@@ -282,19 +314,19 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		status.ProcessID = proc.ID
 		status.Port = port
 		status.LoadedAt = time.Now()
-		status.BackendType = b.Type().String()
+		status.BackendType = string(b.ID())
 		if inst := m.instances[req.InstanceID]; inst != nil {
 			inst.ProcessID = proc.ID
 			inst.Port = port
 			inst.State = StateLoaded.String()
-			inst.BackendType = b.Type().String()
+			inst.BackendType = string(b.ID())
 			inst.UpdatedAt = time.Now()
 		}
 		m.bumpVersion()
 		m.mu.Unlock()
 		status.LoadWait.Done()
 		duration := time.Since(startTime)
-		logger.Infof("异步模型加载成功: modelId=%s, port=%d, duration=%s, backend=%s", req.ModelID, port, duration.String(), b.Type())
+		logger.Infof("异步模型加载成功: modelId=%s, port=%d, duration=%s, backend=%s", req.ModelID, port, duration.String(), b.ID())
 
 	case err := <-loadError:
 		close(stopHealthCheck)
@@ -394,181 +426,18 @@ func (m *Manager) Unload(modelID string) error {
 	return nil
 }
 
-// toBackendLoadRequest converts model.LoadRequest to backend.LoadRequest
-func (m *Manager) toBackendLoadRequest(req *LoadRequest, modelPath string, port int, bcfg *backend.BackendConfig) *backend.LoadRequest {
-	// Resolve bind host from backend config
-	bindHost := "0.0.0.0"
-	if bcfg != nil && bcfg.BindHost != "" {
-		bindHost = bcfg.BindHost
+// loadRequestToRawParams converts a flat model.LoadRequest into a backend.RawParams
+// map suitable for plugin.DecodeParams. Uses JSON round-trip for simplicity.
+func loadRequestToRawParams(req *LoadRequest) backend.RawParams {
+	data, err := json.Marshal(req)
+	if err != nil {
+		return backend.RawParams{}
 	}
-
-	br := &backend.LoadRequest{
-		ModelPath:    modelPath,
-		Port:         port,
-		CtxSize:      req.CtxSize,
-		GPULayers:    req.GPULayers,
-		Threads:      req.Threads,
-		Devices:      req.Devices,
-		BindHost:     bindHost,
-		SpecDecoding: req.SpecDecoding.ToBackend(),
+	var raw backend.RawParams
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return backend.RawParams{}
 	}
-
-	// Map all fields to the appropriate backend params based on the backend type
-	bt, _ := backend.ParseBackendType(req.BackendType)
-	switch bt {
-	case backend.BackendVLLM:
-		br.VLLMParams = m.buildVLLMParams(req)
-	case backend.BackendVLLMOmni:
-		br.VLLOmniParams = &backend.VLLOmniLoadParams{
-			VLLMLoadParams:   *m.buildVLLMParams(req),
-			Omni:             req.Omni,
-			VideoPruningRate: req.VideoPruningRate,
-			MMTensorIPC:      req.MMTensorIPC,
-		}
-	default:
-		// Default: map to llama.cpp params (backward compatible)
-		br.LlamacppParams = &backend.LlamacppLoadParams{
-			BatchSize:        req.BatchSize,
-			Temperature:      req.Temperature,
-			TopP:             req.TopP,
-			TopK:             req.TopK,
-			MinP:             req.MinP,
-			TopNSigma:        req.TopNSigma,
-			TypicalP:         req.TypicalP,
-			RepeatPenalty:    req.RepeatPenalty,
-			RepeatLastN:      req.RepeatLastN,
-			PresencePenalty:  req.PresencePenalty,
-			FrequencyPenalty: req.FrequencyPenalty,
-			IgnoreEOS:        req.IgnoreEOS,
-			Seed:             req.Seed,
-			NPredict:         req.NPredict,
-			Samplers:         req.Samplers,
-			// DRY sampling
-			DryMultiplier:       req.DryMultiplier,
-			DryBase:             req.DryBase,
-			DryAllowedLength:    req.DryAllowedLength,
-			DryPenaltyLastN:     req.DryPenaltyLastN,
-			DrySequenceBreakers: req.DrySequenceBreakers,
-			// Mirostat
-			Mirostat:    req.Mirostat,
-			MirostatLR:  req.MirostatLR,
-			MirostatEnt: req.MirostatEnt,
-			// Dynamic temperature
-			DynaTempRange: req.DynaTempRange,
-			DynaTempExp:   req.DynaTempExp,
-			// XTC
-			XTCProbability: req.XTCProbability,
-			XTCThreshold:   req.XTCThreshold,
-			// GPU
-			MainGPU:     req.MainGPU,
-			SplitMode:   req.SplitMode,
-			TensorSplit: req.TensorSplit,
-			CpuMoe:      req.CpuMoe,
-			NCpuMoe:     req.NCpuMoe,
-			// CPU affinity & NUMA
-			CpuMask:      req.CpuMask,
-			CpuRange:     req.CpuRange,
-			Priority:     req.Priority,
-			NumaStrategy: req.NumaStrategy,
-			// Memory
-			NoMmap:     req.NoMmap,
-			LockMemory: req.LockMemory,
-			DirectIO:   req.DirectIo,
-			// Flash attention
-			FlashAttention: req.FlashAttention,
-			// KV cache
-			KVCacheTypeK:         req.KVCacheTypeK,
-			KVCacheTypeV:         req.KVCacheTypeV,
-			KVCacheUnified:       req.KVCacheUnified,
-			KVOffload:            req.KVOffload,
-			CacheIdleSlots:       req.CacheIdleSlots,
-			CacheReuse:           req.CacheReuse,
-			CtxCheckpoints:       req.CtxCheckpoints,
-			CheckpointMinStep:    req.CheckpointMinStep,
-			SlotPromptSimilarity: req.SlotPromptSimilarity,
-			// Batch & parallelism
-			UBatchSize:    req.UBatchSize,
-			ParallelSlots: req.ParallelSlots,
-			ContBatching:  req.ContBatching,
-			CachePrompt:   req.CachePrompt,
-			// Threads
-			ThreadsBatch: req.ThreadsBatch,
-			ThreadsHTTP:  req.ThreadsHTTP,
-			// Server operation
-			NoWebUI:          req.NoWebUI,
-			EnableMetrics:    req.EnableMetrics,
-			SlotSavePath:     req.SlotSavePath,
-			CacheRAM:         req.CacheRAM,
-			ReusePort:        req.ReusePort,
-			SleepIdleSeconds: req.SleepIdleSeconds,
-			Timeout:          req.Timeout,
-			Alias:            req.Alias,
-			// Reasoning
-			Reasoning:       req.Reasoning,
-			ReasoningFormat: req.ReasoningFormat,
-			ReasoningBudget: req.ReasoningBudget,
-			// Embedding / reranking
-			LogitsAll:     req.LogitsAll,
-			Reranking:     req.Reranking,
-			Pooling:       req.Pooling,
-			EmbdNormalize: req.EmbdNormalize,
-			// Multimodal
-			MmprojPath:    req.MmprojPath,
-			EnableVision:  req.EnableVision,
-			MmprojOffload: req.MmprojOffload,
-			// Chat template
-			ChatTemplateFile:   req.ChatTemplateFile,
-			ChatTemplate:       req.ChatTemplate,
-			ChatTemplateKwargs: req.ChatTemplateKwargs,
-			DisableJinja:       req.DisableJinja,
-			ContextShift:       req.ContextShift,
-			// RoPE
-			RopeScaling:   req.RopeScaling,
-			RopeScale:     req.RopeScale,
-			RopeFreqBase:  req.RopeFreqBase,
-			RopeFreqScale: req.RopeFreqScale,
-			// YaRN
-			YarnOrigCtx:    req.YarnOrigCtx,
-			YarnExtFactor:  req.YarnExtFactor,
-			YarnAttnFactor: req.YarnAttnFactor,
-			YarnBetaSlow:   req.YarnBetaSlow,
-			YarnBetaFast:   req.YarnBetaFast,
-			// Structured generation
-			Grammar:        req.Grammar,
-			GrammarFile:    req.GrammarFile,
-			JSONSchema:     req.JSONSchema,
-			JSONSchemaFile: req.JSONSchemaFile,
-			// LoRA
-			Lora:       req.Lora,
-			LoraScaled: req.LoraScaled,
-			// Escape hatch
-			CustomCmd:   req.CustomCmd,
-			ExtraParams: req.ExtraParams,
-		}
-	}
-
-	return br
-}
-
-// buildVLLMParams constructs VLLMLoadParams from a LoadRequest.
-func (m *Manager) buildVLLMParams(req *LoadRequest) *backend.VLLMLoadParams {
-	return &backend.VLLMLoadParams{
-		DataType:             req.DataType,
-		MaxModelLen:          req.MaxModelLen,
-		GPUMemoryUtilization: req.GPUMemoryUtilization,
-		TensorParallelSize:   req.TensorParallelSize,
-		PipelineParallelSize: req.PipelineParallelSize,
-		TrustRemoteCode:      req.TrustRemoteCode,
-		ServedModelName:      req.ServedModelName,
-		Quantization:         req.Quantization,
-		MaxNumSeqs:           req.MaxNumSeqs,
-		MaxNumBatchedTokens:  req.MaxNumBatchedTokens,
-		EnablePrefixCaching:  req.EnablePrefixCaching,
-		EnableChunkedPrefill: req.EnableChunkedPrefill,
-		DisableLogRequests:   req.DisableLogRequests,
-		EnforceEager:         req.EnforceEager,
-		ExtraArgs:            req.ExtraParams,
-	}
+	return raw
 }
 
 // ListRuntimeInstances returns all known runtime instances.

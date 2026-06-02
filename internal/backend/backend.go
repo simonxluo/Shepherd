@@ -12,8 +12,8 @@
 //     request body's "model" field (ServedModelName);
 //   - declare a typed parameter / config schema for UI and validation.
 //
-// Plugins live in subpackages under internal/backend/plugins/<id>/ and register
-// themselves at process start via init() blank imports from
+// Plugins live in subpackages under internal/backend/plugins/<id>/ and
+// register themselves at process start via init() blank imports from
 // cmd/shepherd/plugins.go.
 //
 // All plugin-typed parameters travel through LoadRequest.Params as an opaque
@@ -103,7 +103,7 @@ type Plugin interface {
 	ConfigSchema() ConfigSchema
 
 	// ParamSchema describes the per-load parameters the user can tune (UI
-	// surface and validation). Replaces the legacy LlamaCppParamRegistry().
+	// surface and validation).
 	ParamSchema() ParamSchema
 
 	// DecodeParams converts an untyped JSON parameter map (as received from
@@ -124,45 +124,51 @@ type ModelRef struct {
 }
 
 // Params is the marker interface implemented by every plugin's typed
-// parameter struct. The marker keeps the Plugin contract free of generics
-// while preventing arbitrary types from being smuggled into LoadRequest.
-//
-// Implementations should add an unexported pluginParams() method whose body
-// is empty.
+// parameter struct. Plugin subpackages embed ParamsBase to satisfy it.
 type Params interface {
 	pluginParams()
 }
+
+// ParamsBase is embedded by plugin Params structs to satisfy the Params
+// interface across package boundaries.
+type ParamsBase struct{}
+
+func (ParamsBase) pluginParams() {}
 
 // RawParams is the on-the-wire JSON shape of plugin parameters: an untyped
 // map[string]any. Decoded into a plugin's typed Params via Plugin.DecodeParams.
 type RawParams map[string]any
 
-// LoadRequest is the plugin-agnostic input to BuildStartConfig. Fields above
-// the line are common to every backend; Params is the plugin-typed payload.
+// LoadRequest is the plugin-agnostic input to BuildStartConfig. Only fields
+// truly common to every engine live here; anything engine-specific (GPU
+// layers, threads, ctx size, speculative decoding) belongs on Params.
 type LoadRequest struct {
-	ModelPath    string
-	Port         int
-	CtxSize      int
-	GPULayers    int
-	Threads      int
-	Devices      []string
-	BindHost     string
-	SpecDecoding *SpecDecodingParams
+	// ModelPath is the on-disk path to the model artifact.
+	ModelPath string
 
-	// Params carries the plugin-specific parameters. Plugins type-assert
-	// inside BuildStartConfig.
+	// Port is the local TCP port the spawned process binds to.
+	Port int
+
+	// Devices is an opaque list of device selectors; each plugin parses its
+	// own expected format.
+	Devices []string
+
+	// BindHost is the listen address (e.g. "0.0.0.0", "127.0.0.1").
+	// Required: callers must resolve it from plugin Config before validating.
+	BindHost string
+
+	// Params carries plugin-specific parameters. Plugins type-assert inside
+	// BuildStartConfig.
 	Params Params
 
-	// EnvVars are model-level environment variable overrides applied on top
-	// of the global plugin Config.Env entries.
+	// EnvVars are model-level env overrides on top of plugin Config.Env.
 	EnvVars []string
 
-	// ExtraArgs is a raw passthrough appended to the constructed command line
-	// (model-level). Global passthrough lives on Info.GlobalExtraArgs.
+	// ExtraArgs is a raw passthrough appended to the command line.
 	ExtraArgs string
 }
 
-// Validate enforces invariants Common to every plugin. Plugin-specific
+// Validate enforces invariants common to every plugin. Plugin-specific
 // invariants live on the plugin's typed Params struct.
 func (r *LoadRequest) Validate() error {
 	if r == nil {
@@ -173,6 +179,9 @@ func (r *LoadRequest) Validate() error {
 	}
 	if r.Port <= 0 {
 		return ErrInvalidLoadRequest("Port must be positive")
+	}
+	if r.BindHost == "" {
+		return ErrInvalidLoadRequest("BindHost is required")
 	}
 	return nil
 }
@@ -189,24 +198,27 @@ type Info struct {
 	GlobalExtraArgs string
 }
 
-// Config is the plugin-agnostic configuration shape stored in the Registry.
-// The Raw map carries the plugin-specific YAML decoded as a generic map; each
-// plugin walks Raw inside its Discover and BuildStartConfig.
+// Config is the plugin-agnostic configuration stored in the Registry.
+// Plugins read their slice via Raw (untyped YAML) or Decoded (typed value
+// from PluginConfigDecoder.DecodeConfig).
 type Config struct {
 	ID          ID
 	DisplayName string
 	BinPaths    []string
 	BindHost    string
 
-	// Raw is the unmarshalled form of the YAML node under
-	// `backends.<id>:`. Plugin code reads keys it cares about.
+	// Raw is the unmarshalled YAML node under `backends.<id>:`.
 	Raw map[string]any
+
+	// Decoded is the typed value from PluginConfigDecoder.DecodeConfig,
+	// or nil if the plugin does not implement that interface.
+	Decoded any
 }
 
-// StartConfig is what the process supervisor receives. It mirrors the legacy
-// shape but renames BackendType -> PluginID for terminology consistency.
+// StartConfig is what the process supervisor receives. The supervisor reads
+// CommandSpec.Binary + Args directly (no shell interpretation); use
+// CommandSpec.CommandLine() to render a quoted string for logs or previews.
 type StartConfig struct {
-	Command           string
 	CommandSpec       *CommandSpec
 	BinPath           string
 	PluginID          ID
@@ -235,21 +247,6 @@ func (h *CapabilityHint) NeedsMultimodal() bool {
 		return false
 	}
 	return h.TTS || h.ASR || h.ImageGeneration
-}
-
-// SpecDecodingParams describes speculative decoding configuration. Only
-// llama.cpp uses these today, but the type lives here because it is shared
-// between the user-facing model.LoadRequest and backend.LoadRequest.
-type SpecDecodingParams struct {
-	Enabled bool
-	// DraftModel is the draft model path (must already be loaded as a model).
-	DraftModel string
-	NDraft     int
-	NMax       int
-	NMin       int
-	PMin       float64
-	// SplitMode and other fine-grained knobs may be added later as
-	// optional fields without breaking the contract.
 }
 
 // ConfigField describes a single key under `backends.<id>:` for documentation

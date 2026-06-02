@@ -32,9 +32,9 @@ func (ExplicitIDRule) Apply(ctx ResolveCtx) (Plugin, *Config, bool) {
 	}
 	p, ok := ctx.Plugins[ctx.Explicit]
 	if !ok {
-		// Explicit but unregistered: still "decisive" — surface as no-config
-		// hit so callers can return PluginNotFoundError above. Returning ok=false
-		// here would let later rules pick something else, which is wrong.
+		// Unknown explicit ID: fall through soft so later rules can still
+		// pick a default. Callers wanting a hard error should pre-check
+		// with Registry.Get.
 		return nil, nil, false
 	}
 	cfg := ctx.Configs[ctx.Explicit]
@@ -108,8 +108,8 @@ func (FormatAutoDetectRule) Apply(ctx ResolveCtx) (Plugin, *Config, bool) {
 }
 
 // DefaultForGGUFRule returns llamacpp for GGUF files when nothing more
-// specific has matched. llamacpp does not require a Config to function (the
-// binary path can come from the legacy global default).
+// specific has matched. llamacpp does not require a Config to function: a
+// global binary path is acceptable.
 type DefaultForGGUFRule struct {
 	LlamaCppID ID
 }

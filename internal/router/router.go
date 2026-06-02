@@ -193,9 +193,12 @@ func registerRoutes(
 	{
 		apiGroup.GET("/info", sh.HandleServerInfo)
 		apiGroup.GET("/system/gpus", sh.HandleGetGPUs)
-		apiGroup.GET("/system/llamacpp-backends", sh.HandleGetLlamacppBackends)
-		apiGroup.GET("/backends/llamacpp/schema", sh.HandleGetLlamacppParamSchema)
-		apiGroup.POST("/backends/llamacpp/preview", sh.HandlePreviewLlamacppCommand)
+		apiGroup.GET("/system/llamacpp-backends", sh.HandleGetLlamacppBackends) // kept for backward compat
+		apiGroup.GET("/system/inference-backends", sh.HandleGetLlamacppBackends)
+		apiGroup.GET("/backends/llamacpp/schema", sh.HandleGetLlamacppParamSchema) // kept for backward compat
+		apiGroup.GET("/backends/:id/param-schema", sh.HandleGetLlamacppParamSchema)
+		apiGroup.POST("/backends/llamacpp/preview", sh.HandlePreviewLlamacppCommand) // kept for backward compat
+		apiGroup.POST("/backends/:id/preview", sh.HandlePreviewLlamacppCommand)
 		apiGroup.GET("/system/resources", sh.HandleGetResources)
 		apiGroup.GET("/system/model-stats", sh.HandleGetModelStatistics)
 

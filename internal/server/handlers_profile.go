@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/simonxluo/Shepherd/internal/backend"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	api "github.com/simonxluo/Shepherd/internal/handler"
-	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/service/model"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 func applyLaunchProfileToLoadRequest(req *model.LoadRequest, profile *storage.LaunchProfile) {
@@ -131,15 +131,15 @@ func (s *Server) HandleCreateLaunchProfile(c *gin.Context) {
 		return
 	}
 	if profile.BackendType == "" {
-		profile.BackendType = backend.BackendLlamaCpp.String()
+		profile.BackendType = string(backend.IDLlamaCpp)
 	}
 	if profile.Params == nil {
 		profile.Params = map[string]interface{}{}
 	}
-	if profile.BackendType == backend.BackendLlamaCpp.String() {
-		validation := backend.ValidateLlamaCppParamMap(profile.Params)
+	if plugin, ok := backend.Default().Get(backend.ID(profile.BackendType)); ok {
+		validation := plugin.ValidateParams(backend.RawParams(profile.Params))
 		if !validation.Valid {
-			api.ErrorWithDetails(c, types.ErrInvalidRequest, "Invalid llama.cpp profile params", strings.Join(validation.Errors, "; "))
+			api.ErrorWithDetails(c, types.ErrInvalidRequest, "Invalid profile params", strings.Join(validation.Errors, "; "))
 			return
 		}
 	}
@@ -173,15 +173,15 @@ func (s *Server) HandleUpdateLaunchProfile(c *gin.Context) {
 		return
 	}
 	if profile.BackendType == "" {
-		profile.BackendType = backend.BackendLlamaCpp.String()
+		profile.BackendType = string(backend.IDLlamaCpp)
 	}
 	if profile.Params == nil {
 		profile.Params = map[string]interface{}{}
 	}
-	if profile.BackendType == backend.BackendLlamaCpp.String() {
-		validation := backend.ValidateLlamaCppParamMap(profile.Params)
+	if plugin, ok := backend.Default().Get(backend.ID(profile.BackendType)); ok {
+		validation := plugin.ValidateParams(backend.RawParams(profile.Params))
 		if !validation.Valid {
-			api.ErrorWithDetails(c, types.ErrInvalidRequest, "Invalid llama.cpp profile params", strings.Join(validation.Errors, "; "))
+			api.ErrorWithDetails(c, types.ErrInvalidRequest, "Invalid profile params", strings.Join(validation.Errors, "; "))
 			return
 		}
 	}

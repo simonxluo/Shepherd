@@ -137,7 +137,7 @@ interface LoadModelDialogProps {
   modelName: string;
   modelPath?: string;
   isLoading?: boolean;
-  backendType?: string; // 推荐后端类型 (llamacpp/vllm/vllm_omni)
+  backendType?: string; // Recommended backend plugin ID (llamacpp/vllm/vllmomni)
 }
 
 // Parameter help descriptions
@@ -673,7 +673,7 @@ export function LoadModelDialog({
   if (!isOpen) return null;
 
   const isLlamaCpp = !backendType || backendType === 'llamacpp';
-  const isVllmOmni = backendType === 'vllm_omni';
+  const isVllmOmni = backendType === 'vllmomni' || backendType === 'vllm_omni';
   const backendLabel = isVllmOmni ? 'vLLM-Omni' : backendType === 'vllm' ? 'vLLM' : 'llama.cpp';
 
   const filterEnabledParams = (allParams: LoadModelParams): Partial<LoadModelParams> => {

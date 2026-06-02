@@ -14,7 +14,7 @@ const voxcpm2Plugin: TTSPlugin = {
     if (nameLower.includes('voxcpm')) return true;
     if (nameLower.includes('qwen3-tts') || nameLower.includes('qwen3tts') || nameLower.includes('qwen3_tts')) return false;
     if (nameLower.includes('cosyvoice') || nameLower.includes('omnivoice')) return false;
-    return model.backendType === 'vllm_omni';
+    return model.backendType === 'vllmomni' || model.backendType === 'vllm_omni';
   },
   component: VoxCPM2Panel,
   features: {

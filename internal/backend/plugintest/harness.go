@@ -25,19 +25,19 @@ func NewIsolatedRegistry(plugins ...backend.Plugin) *backend.Registry {
 // callable returns a value supplied via the corresponding field; absent
 // values yield reasonable defaults.
 type FakePlugin struct {
-	IDValue                ID
-	DisplayNameValue       string
-	DiscoverFn             func(cfg *Config) (*Info, error)
-	BuildStartConfigFn     func(info *Info, req *LoadRequest) (*StartConfig, error)
-	IsLoadCompleteFn       func(line string) bool
-	CheckHealthFn          func(port int) (*HealthResult, error)
-	SupportsModelFn        func(path string) bool
-	SupportedEndpointsMap  map[string]bool
-	ServedModelNameFn      func(m ModelRef) string
-	ConfigSchemaValue      ConfigSchema
-	ParamSchemaValue       ParamSchema
-	DecodeParamsFn         func(raw RawParams) (Params, error)
-	ValidateParamsFn       func(raw RawParams) ValidationResult
+	IDValue               ID
+	DisplayNameValue      string
+	DiscoverFn            func(cfg *Config) (*Info, error)
+	BuildStartConfigFn    func(info *Info, req *LoadRequest) (*StartConfig, error)
+	IsLoadCompleteFn      func(line string) bool
+	CheckHealthFn         func(port int) (*HealthResult, error)
+	SupportsModelFn       func(path string) bool
+	SupportedEndpointsMap map[string]bool
+	ServedModelNameFn     func(m ModelRef) string
+	ConfigSchemaValue     ConfigSchema
+	ParamSchemaValue      ParamSchema
+	DecodeParamsFn        func(raw RawParams) (Params, error)
+	ValidateParamsFn      func(raw RawParams) ValidationResult
 }
 
 // Aliases so the test file does not have to repeat backend.* qualifiers.

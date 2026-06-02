@@ -73,7 +73,7 @@ func (h *MusicHandler) HandleCreateMusic(c *gin.Context) {
 		endpoints := b.SupportedEndpoints()
 		if supported, ok := endpoints["/v1/audio/music"]; !ok || !supported {
 			h.SendOpenAIError(c, http.StatusBadRequest, "backend_not_supported",
-				fmt.Sprintf("Backend %q does not support the music generation endpoint", b.Type()), "model")
+				fmt.Sprintf("Backend %q does not support the music generation endpoint", b.ID()), "model")
 			return
 		}
 	}

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/simonxluo/Shepherd/internal/infra/gguf"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // Model represents a discovered GGUF model with HuggingFace-style management
@@ -192,20 +191,38 @@ type ScanError struct {
 	Error string
 }
 
-// SpecDecodingParams extends backend.SpecDecodingParams with API-level fields.
-// The SpecDraftModelID is resolved to SpecDraftModelPath by the handler.
+// SpecDecodingParams holds speculative decoding configuration at the API level.
+// SpecDraftModelID is resolved to a file path by the handler before loading.
 type SpecDecodingParams struct {
-	backend.SpecDecodingParams
-	SpecDraftModelID string `json:"specDraftModelId"` // Model ID for draft model, resolved to path by handler
-}
+	SpecType           string  `json:"specType"`
+	SpecDraftModelID   string  `json:"specDraftModelId"`
+	SpecDraftModelPath string  `json:"-"`
+	SpecDraftNMax      int     `json:"specDraftNMax"`
+	SpecDraftNMin      int     `json:"specDraftNMin"`
+	SpecDraftPSplit    float64 `json:"specDraftPSplit"`
+	SpecDraftPMin      float64 `json:"specDraftPMin"`
+	SpecDraftCtxSize   int     `json:"specDraftCtxSize"`
+	SpecDraftNGL       int     `json:"specDraftNgl"`
+	SpecDraftDevice    string  `json:"specDraftDevice"`
 
-// ToBackend converts API-level SpecDecodingParams to backend.SpecDecodingParams
-func (p *SpecDecodingParams) ToBackend() *backend.SpecDecodingParams {
-	if p == nil {
-		return nil
-	}
-	cp := p.SpecDecodingParams
-	return &cp
+	SpecNgramModNMin   int `json:"specNgramModNMin"`
+	SpecNgramModNMax   int `json:"specNgramModNMax"`
+	SpecNgramModNMatch int `json:"specNgramModNMatch"`
+
+	SpecNgramSimpleSizeN   int `json:"specNgramSimpleSizeN"`
+	SpecNgramSimpleSizeM   int `json:"specNgramSimpleSizeM"`
+	SpecNgramSimpleMinHits int `json:"specNgramSimpleMinHits"`
+
+	SpecNgramMapKSizeN   int `json:"specNgramMapKSizeN"`
+	SpecNgramMapKSizeM   int `json:"specNgramMapKSizeM"`
+	SpecNgramMapKMinHits int `json:"specNgramMapKMinHits"`
+
+	SpecNgramMapK4VSizeN   int `json:"specNgramMapK4VSizeN"`
+	SpecNgramMapK4VSizeM   int `json:"specNgramMapK4VSizeM"`
+	SpecNgramMapK4VMinHits int `json:"specNgramMapK4VMinHits"`
+
+	LookupCacheStatic  string `json:"lookupCacheStatic"`
+	LookupCacheDynamic string `json:"lookupCacheDynamic"`
 }
 
 // LoadRequest contains parameters for loading a model

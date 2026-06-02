@@ -1,18 +1,11 @@
 package backend
 
-// PluginConfigDecoder is implemented by plugins that want to decode their own
-// per-plugin slice of server.config.yaml. It is consulted by Registry.SyncFromConfig
-// (PR3) when the operator's YAML carries a `backends.<id>:` block.
-//
-// PR1 ships only the contract; the resolver and registry plumbing land in
-// PR1, and the YAML loader migration that calls DecodeConfig lands in PR3.
+// PluginConfigDecoder lets a plugin decode its own `backends.<id>:` YAML
+// slice. Registry.SyncFromConfig calls DecodeConfig and stashes the result
+// on Config.Decoded.
 type PluginConfigDecoder interface {
-	// DecodeConfig consumes the raw map decoded from a YAML node and
-	// returns a typed config struct. The returned value is opaque to the
-	// registry; the plugin reads it back from Config.Raw[pluginInternalKey]
-	// when needed.
-	//
-	// Implementations should accept nil/empty maps as "use defaults".
+	// DecodeConfig converts a raw YAML map into a plugin-specific typed
+	// value, stored on Config.Decoded. nil/empty input means "use defaults".
 	DecodeConfig(raw map[string]any) (any, error)
 }
 

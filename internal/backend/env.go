@@ -10,9 +10,6 @@ import (
 //
 // Empty strings and entries without '=' are skipped (with no error — they are
 // typically operator typos in YAML and should not block startup).
-//
-// The legacy implementation did the same, scoped to the backend package.
-// Exposed here for plugin subpackages to reuse.
 func BuildEnvWithVars(envVars []string) []string {
 	if len(envVars) == 0 {
 		// Cheap path: caller likely wants the inherited env unchanged.

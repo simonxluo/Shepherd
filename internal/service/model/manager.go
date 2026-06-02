@@ -6,12 +6,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/simonxluo/Shepherd/internal/backend"
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/infra/port"
 	"github.com/simonxluo/Shepherd/internal/infra/process"
-	"github.com/simonxluo/Shepherd/internal/comm/storage"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // Manager is the central model manager responsible for scanning, loading,
@@ -70,8 +70,8 @@ type ScanStatus struct {
 func NewManager(cfg *config.Config, cfgMgr *config.Manager, procMgr *process.Manager, portAllocator *port.PortAllocator, storageMgr *storage.Manager) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Initialize backend registry
-	backendRegistry := backend.NewRegistry()
+	// Initialize backend registry (plugins self-register via init())
+	backendRegistry := backend.Default()
 	backendRegistry.SyncFromConfig(cfg)
 
 	m := &Manager{
@@ -155,21 +155,17 @@ func (m *Manager) GetModelCapabilities(modelID string) *storage.Capabilities {
 	return meta.Capabilities
 }
 
-// GetBackendForModel returns the backend instance for a loaded model based on its backend type.
-func (m *Manager) GetBackendForModel(modelID string) backend.Backend {
+// GetBackendForModel returns the plugin for a loaded model based on its backend type.
+func (m *Manager) GetBackendForModel(modelID string) backend.Plugin {
 	m.mu.RLock()
 	status, exists := m.statuses[modelID]
 	m.mu.RUnlock()
 	if !exists || status.BackendType == "" {
 		return nil
 	}
-	bt, err := backend.ParseBackendType(status.BackendType)
-	if err != nil {
+	p, ok := m.backendRegistry.Get(backend.ID(status.BackendType))
+	if !ok {
 		return nil
 	}
-	b, _, err := m.backendRegistry.Resolve("", bt)
-	if err != nil {
-		return nil
-	}
-	return b
+	return p
 }

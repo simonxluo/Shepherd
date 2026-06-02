@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/simonxluo/Shepherd/internal/backend"
 	"github.com/simonxluo/Shepherd/internal/comm/gpu"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	api "github.com/simonxluo/Shepherd/internal/handler"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // gpuMemRe is a pre-compiled regex for GPU memory info, avoiding recompilation per request
@@ -240,53 +240,91 @@ func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 	})
 }
 
-// HandleGetLlamacppParamSchema returns the llama.cpp launch parameter schema.
-// @Summary      Get llama.cpp parameter schema
-// @Description  Returns schema metadata used to validate and render llama.cpp launch parameters
-// @Tags         System
-// @Produce      json
-// @Success      200 {object} map[string]interface{}
-// @Router       /api/backends/llamacpp/schema [get]
+// HandleGetLlamacppParamSchema returns the parameter schema for a backend plugin.
+// Supports both /api/backends/llamacpp/schema (legacy) and /api/backends/:id/param-schema.
 func (s *Server) HandleGetLlamacppParamSchema(c *gin.Context) {
-	api.Success(c, backend.LlamaCppParamRegistry())
+	id := c.Param("id")
+	if id == "" {
+		id = "llamacpp"
+	}
+	plugin, ok := backend.Default().Get(backend.ID(id))
+	if !ok {
+		api.NotFound(c, "Backend plugin")
+		return
+	}
+	api.Success(c, plugin.ParamSchema())
 }
 
-// HandlePreviewLlamacppCommand returns the resolved llama.cpp launch command without starting a process.
-// @Summary      Preview llama.cpp command
-// @Description  Builds and returns the llama.cpp command line for a request without launching it
-// @Tags         System
-// @Accept       json
-// @Produce      json
-// @Success      200 {object} map[string]interface{}
-// @Router       /api/backends/llamacpp/preview [post]
+// HandlePreviewLlamacppCommand returns the resolved launch command without starting a process.
+// Supports both /api/backends/llamacpp/preview (legacy) and /api/backends/:id/preview.
 func (s *Server) HandlePreviewLlamacppCommand(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		id = "llamacpp"
+	}
+	plugin, ok := backend.Default().Get(backend.ID(id))
+	if !ok {
+		api.NotFound(c, "Backend plugin")
+		return
+	}
+
 	var req struct {
-		BinPath string `json:"binPath"`
-		backend.LoadRequest
+		BinPath   string         `json:"binPath"`
+		ModelPath string         `json:"modelPath"`
+		Port      int            `json:"port"`
+		BindHost  string         `json:"bindHost"`
+		Devices   []string       `json:"devices"`
+		Params    map[string]any `json:"params"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		api.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	binPath := req.BinPath
-	if binPath == "" && s.config != nil && s.config.ServerCfg != nil && len(s.config.ServerCfg.Llamacpp.Paths) > 0 {
-		binPath = s.config.ServerCfg.Llamacpp.Paths[0].Path
-	}
-	if binPath == "" {
-		api.BadRequest(c, "llama.cpp binary path is required")
+	params, err := plugin.DecodeParams(backend.RawParams(req.Params))
+	if err != nil {
+		api.ErrorWithDetails(c, types.ErrInvalidRequest, "Failed to decode params", err.Error())
 		return
 	}
 
-	info := &backend.BackendInfo{Type: backend.BackendLlamaCpp, Name: "LlamaCpp", BinPath: binPath, Available: true}
-	startCfg, err := backend.NewLlamaCppBackend().BuildStartConfig(info, &req.LoadRequest)
+	bindHost := req.BindHost
+	if bindHost == "" {
+		bindHost = "0.0.0.0"
+	}
+
+	// Discover to get binary path if not provided.
+	binPath := req.BinPath
+	if binPath == "" {
+		cfg, _ := backend.Default().GetConfig(backend.ID(id))
+		if cfg != nil {
+			info, err := plugin.Discover(cfg)
+			if err == nil && info.Available {
+				binPath = info.BinPath
+			}
+		}
+	}
+
+	info := &backend.Info{ID: backend.ID(id), DisplayName: plugin.DisplayName(), BinPath: binPath, Available: true}
+	backendReq := &backend.LoadRequest{
+		ModelPath: req.ModelPath,
+		Port:      req.Port,
+		Devices:   req.Devices,
+		BindHost:  bindHost,
+		Params:    params,
+	}
+
+	startCfg, err := plugin.BuildStartConfig(info, backendReq)
 	if err != nil {
 		api.ErrorWithDetails(c, types.ErrInvalidRequest, "Failed to build command", err.Error())
 		return
 	}
 
+	cmdLine := ""
+	if startCfg.CommandSpec != nil {
+		cmdLine = startCfg.CommandSpec.CommandLine()
+	}
 	api.Success(c, gin.H{
-		"command": startCfg.Command,
+		"command": cmdLine,
 		"spec":    startCfg.CommandSpec,
 	})
 }

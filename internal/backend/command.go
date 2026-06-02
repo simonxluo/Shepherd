@@ -47,8 +47,8 @@ func (s CommandSpec) AppendRaw(raw string) CommandSpec {
 		return s
 	}
 	// Split on whitespace; quoted args inside extra_args remain a TODO if
-	// users ever pass spaces inside a single arg. The legacy implementation
-	// never split here either — callers had to be careful. Keep parity.
+	// users ever pass spaces inside a single arg. Callers must escape such
+	// args themselves.
 	extra := strings.Fields(raw)
 	out := s
 	out.Args = append(append([]string{}, s.Args...), extra...)

@@ -50,10 +50,10 @@ func TestFakePlugin_Defaults(t *testing.T) {
 
 func TestFakePlugin_Overrides(t *testing.T) {
 	f := &plugintest.FakePlugin{
-		IDValue:                "custom",
-		DiscoverFn:             func(*backend.Config) (*backend.Info, error) { return &backend.Info{Available: false}, nil },
-		SupportsModelFn:        func(string) bool { return false },
-		SupportedEndpointsMap:  map[string]bool{"/v1/chat/completions": true},
+		IDValue:               "custom",
+		DiscoverFn:            func(*backend.Config) (*backend.Info, error) { return &backend.Info{Available: false}, nil },
+		SupportsModelFn:       func(string) bool { return false },
+		SupportedEndpointsMap: map[string]bool{"/v1/chat/completions": true},
 	}
 	info, _ := f.Discover(nil)
 	if info.Available {
