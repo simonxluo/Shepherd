@@ -30,7 +30,7 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 		}
 	}
 
-	pluginID := backend.ID(req.BackendType)
+	pluginID := backend.ID(req.PluginID)
 	plugin, cfg, err := m.backendRegistry.Resolve(modelPath, pluginID, capHint)
 	if err != nil {
 		status.transitionTo(StateError)
@@ -314,12 +314,12 @@ func (m *Manager) loadModelAsync(req *LoadRequest, status *ModelStatus, model *M
 		status.ProcessID = proc.ID
 		status.Port = port
 		status.LoadedAt = time.Now()
-		status.BackendType = string(b.ID())
+		status.PluginID = string(b.ID())
 		if inst := m.instances[req.InstanceID]; inst != nil {
 			inst.ProcessID = proc.ID
 			inst.Port = port
 			inst.State = StateLoaded.String()
-			inst.BackendType = string(b.ID())
+			inst.PluginID = string(b.ID())
 			inst.UpdatedAt = time.Now()
 		}
 		m.bumpVersion()

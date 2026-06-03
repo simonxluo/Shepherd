@@ -439,7 +439,7 @@ func copyModelStatus(s *ModelStatus) *ModelStatus {
 		Port:                  s.Port,
 		CtxSize:               s.CtxSize,
 		LoadedAt:              s.LoadedAt,
-		BackendType:           s.BackendType,
+		PluginID:              s.PluginID,
 		Error:                 s.Error,
 		LastRequestTime:       s.LastRequestTime,
 		ConcurrencyLimit:      s.ConcurrencyLimit,

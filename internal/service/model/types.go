@@ -64,16 +64,16 @@ type Model struct {
 //   - tokenMu: independently protects token statistics to avoid contention with mu
 //   - InflightCount/InflightWg: atomic ops + WaitGroup, lock-free
 type ModelStatus struct {
-	ID          string
-	InstanceID  string
-	Name        string
-	State       LoadState
-	ProcessID   string
-	Port        int
-	CtxSize     int
-	LoadedAt    time.Time
-	BackendType string // 加载时使用的后端类型 (llamacpp/vllm/vllm_omni)
-	Error       error
+	ID         string
+	InstanceID string
+	Name       string
+	State      LoadState
+	ProcessID  string
+	Port       int
+	CtxSize    int
+	LoadedAt   time.Time
+	PluginID   string // Backend plugin ID used for loading (llamacpp/vllm/vllmomni)
+	Error      error
 
 	mu sync.Mutex
 
@@ -168,7 +168,7 @@ type RuntimeInstance struct {
 	ProcessID      string    `json:"processId,omitempty"`
 	Port           int       `json:"port,omitempty"`
 	State          string    `json:"state"`
-	BackendType    string    `json:"backendType,omitempty"`
+	PluginID       string    `json:"pluginId,omitempty"`
 	CommandPreview string    `json:"commandPreview,omitempty"`
 	LastError      string    `json:"lastError,omitempty"`
 	CreatedAt      time.Time `json:"createdAt"`
@@ -245,8 +245,8 @@ type LoadRequest struct {
 	MainGPU int      `json:"mainGpu"` // -mg flag (main GPU index)
 
 	// Backend selection
-	BackendType string `json:"backendType,omitempty"` // Explicit backend: "llamacpp", "vllm", "vllm_omni"
-	ProfileID   string `json:"profileId,omitempty"`   // Reusable launch profile ID
+	PluginID  string `json:"pluginId,omitempty"`  // Explicit backend plugin: "llamacpp", "vllm", "vllmomni"
+	ProfileID string `json:"profileId,omitempty"` // Reusable launch profile ID
 
 	// Custom command configuration
 	CustomCmd   string `json:"llamaCppPath"` // Custom llama.cpp binary path override (frontend uses llamaCppPath)

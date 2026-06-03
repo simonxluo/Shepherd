@@ -35,7 +35,7 @@ type ModelStatistics struct {
 	ModelName             string  `json:"modelName"`
 	InstanceID            string  `json:"instanceId"`
 	State                 string  `json:"state"`
-	BackendType           string  `json:"backendType"`
+	PluginID              string  `json:"pluginId"`
 	Port                  int     `json:"port"`
 	LoadedAt              int64   `json:"loadedAt"` // unix timestamp
 	UptimeSeconds         int64   `json:"uptimeSeconds"`
@@ -75,7 +75,7 @@ func (m *Manager) GetModelStatistics() []ModelStatistics {
 			ModelName:             status.Name,
 			InstanceID:            status.InstanceID,
 			State:                 status.State.String(),
-			BackendType:           status.BackendType,
+			PluginID:              status.PluginID,
 			Port:                  status.Port,
 			LoadedAt:              status.LoadedAt.Unix(),
 			UptimeSeconds:         int64(now.Sub(status.LoadedAt).Seconds()),

@@ -29,7 +29,7 @@ type loadedModelInfo struct {
 	ProcessID    string                `json:"processId"`
 	Port         int                   `json:"port"`
 	CtxSize      int                   `json:"ctxSize"`
-	BackendType  string                `json:"backendType,omitempty"`
+	PluginID     string                `json:"pluginId,omitempty"`
 	LoadedAt     string                `json:"loadedAt,omitempty"`
 	Capabilities *storage.Capabilities `json:"capabilities,omitempty"`
 }
@@ -72,13 +72,13 @@ func (s *Server) HandleListLoadedModels(c *gin.Context) {
 	for id, st := range statuses {
 		if st.State == model.StateLoaded || st.State == model.StateLoading {
 			info := loadedModelInfo{
-				ID:          id,
-				Name:        st.Name,
-				State:       st.State.String(),
-				ProcessID:   st.ProcessID,
-				Port:        st.Port,
-				CtxSize:     st.CtxSize,
-				BackendType: st.BackendType,
+				ID:        id,
+				Name:      st.Name,
+				State:     st.State.String(),
+				ProcessID: st.ProcessID,
+				Port:      st.Port,
+				CtxSize:   st.CtxSize,
+				PluginID:  st.PluginID,
 			}
 			if !st.LoadedAt.IsZero() {
 				info.LoadedAt = st.LoadedAt.Format(time.RFC3339)
@@ -173,7 +173,7 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	// This avoids scattering backend-type checks across the handler and
 	// prevents llama.cpp parameters from leaking into vLLM/vLLM-Omni.
 	// Validate backend-specific parameters via the plugin.
-	pluginID := backend.ID(req.BackendType)
+	pluginID := backend.ID(req.PluginID)
 	if pluginID == "" {
 		pluginID = backend.IDLlamaCpp
 	}
@@ -256,7 +256,7 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	// No longer force vllm_omni backend — let Resolve's capability-aware routing handle it:
 	// - If vllm_omni is configured, capability-aware routing will prefer it
 	// - If not configured, GGUF models fall back to llama.cpp
-	// Explicit BackendType from frontend is still respected
+	// Explicit PluginID from frontend is still respected
 
 	result, err := s.modelMgr.LoadAsync(&req)
 	if err != nil {
@@ -734,14 +734,14 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 	vllmOmniConfigured := s.config != nil && s.config.ServerCfg != nil &&
 		s.config.ServerCfg.BackendEnabled("vllmomni")
 	if caps != nil && (caps.TTS || caps.ASR) && vllmOmniConfigured {
-		dto.BackendType = string(backend.IDVLLMOmni)
+		dto.PluginID = string(backend.IDVLLMOmni)
 	} else if caps != nil && (caps.TTS || caps.ASR) && !vllmOmniConfigured {
 		// vllmomni not configured, GGUF TTS/ASR models fall back to llama.cpp
-		dto.BackendType = string(backend.IDLlamaCpp)
+		dto.PluginID = string(backend.IDLlamaCpp)
 	} else if backend.IsSafeTensorsModel(modelPath) || filepath.Ext(modelPath) == "" {
-		dto.BackendType = string(backend.IDVLLM)
+		dto.PluginID = string(backend.IDVLLM)
 	} else {
-		dto.BackendType = string(backend.IDLlamaCpp)
+		dto.PluginID = string(backend.IDLlamaCpp)
 	}
 
 	if m.Metadata != nil {

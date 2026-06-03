@@ -62,7 +62,7 @@ func (b *BaseHandler) GetServedModelName(modelID string) string {
 	if m, ok := b.ModelMgr.GetModel(modelID); ok && m != nil {
 		status, exists := b.ModelMgr.GetStatus(modelID)
 		if exists {
-			if p, ok := backend.Default().Get(backend.ID(status.BackendType)); ok {
+			if p, ok := backend.Default().Get(backend.ID(status.PluginID)); ok {
 				return p.ServedModelName(backend.ModelRef{
 					ID:   m.ID,
 					Name: m.Name,

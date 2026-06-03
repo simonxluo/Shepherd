@@ -517,7 +517,7 @@ func (s *MemoryStore) ListLaunchProfiles(ctx context.Context, backendType, model
 
 	result := []*LaunchProfile{}
 	for _, profile := range s.launchProfiles {
-		if backendType != "" && profile.BackendType != backendType {
+		if backendType != "" && profile.PluginID != backendType {
 			continue
 		}
 		if modelScope != "" && profile.ModelScope != "" && profile.ModelScope != modelScope {

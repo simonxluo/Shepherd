@@ -55,8 +55,8 @@ type ModelDTO struct {
 	Status      string                 `json:"status"`
 	IsLoaded    bool                   `json:"isLoaded"`
 	Port        int                    `json:"port,omitempty"`
-	ScannedAt   string                 `json:"scannedAt,omitempty"`   // Scan time (ISO 8601 format)
-	BackendType string                 `json:"backendType,omitempty"` // Recommended backend type (llamacpp/vllm/vllm_omni)
+	ScannedAt   string                 `json:"scannedAt,omitempty"` // Scan time (ISO 8601 format)
+	PluginID    string                 `json:"pluginId,omitempty"`  // Recommended backend plugin ID
 }
 
 // Server represents the HTTP server

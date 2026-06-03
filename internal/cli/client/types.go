@@ -66,21 +66,21 @@ type ModelItem struct {
 	Status      string                 `json:"status"`
 	IsLoaded    bool                   `json:"isLoaded"`
 	Port        int                    `json:"port,omitempty"`
-	BackendType string                 `json:"backendType,omitempty"`
+	PluginID    string                 `json:"pluginId,omitempty"`
 	ScannedAt   string                 `json:"scannedAt,omitempty"`
 }
 
 // LoadedModelItem represents a loaded model.
 type LoadedModelItem struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Alias       string `json:"alias,omitempty"`
-	State       string `json:"state"`
-	ProcessID   string `json:"processId"`
-	Port        int    `json:"port"`
-	CtxSize     int    `json:"ctxSize"`
-	BackendType string `json:"backendType,omitempty"`
-	LoadedAt    string `json:"loadedAt,omitempty"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Alias     string `json:"alias,omitempty"`
+	State     string `json:"state"`
+	ProcessID string `json:"processId"`
+	Port      int    `json:"port"`
+	CtxSize   int    `json:"ctxSize"`
+	PluginID  string `json:"pluginId,omitempty"`
+	LoadedAt  string `json:"loadedAt,omitempty"`
 }
 
 // ProcessInfo represents a running process.

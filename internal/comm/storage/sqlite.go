@@ -114,7 +114,7 @@ func (s *SQLiteStore) CreateLaunchProfile(ctx context.Context, profile *LaunchPr
 	_, err = s.db.ExecContext(ctx, `
 		INSERT INTO launch_profiles (id, name, backend_type, installation_id, model_scope, params, env, extra_args, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, profile.ID, profile.Name, profile.BackendType, toNullString(profile.InstallationID),
+	`, profile.ID, profile.Name, profile.PluginID, toNullString(profile.InstallationID),
 		toNullString(profile.ModelScope), string(paramsJSON), toNullString(string(envJSON)),
 		toNullString(profile.ExtraArgs), profile.CreatedAt.Unix(), profile.UpdatedAt.Unix())
 	return err
@@ -134,7 +134,7 @@ func (s *SQLiteStore) GetLaunchProfile(ctx context.Context, id string) (*LaunchP
 	var paramsStr string
 	var createdAt, updatedAt int64
 
-	err := row.Scan(&p.ID, &p.Name, &p.BackendType, &installationID, &modelScope,
+	err := row.Scan(&p.ID, &p.Name, &p.PluginID, &installationID, &modelScope,
 		&paramsStr, &env, &extraArgs, &createdAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, ErrModelLoadConfigNotFound
@@ -186,7 +186,7 @@ func (s *SQLiteStore) ListLaunchProfiles(ctx context.Context, backendType, model
 		var paramsStr string
 		var createdAt, updatedAt int64
 
-		if err := rows.Scan(&p.ID, &p.Name, &p.BackendType, &installationID, &modelScopeVal,
+		if err := rows.Scan(&p.ID, &p.Name, &p.PluginID, &installationID, &modelScopeVal,
 			&paramsStr, &env, &extraArgs, &createdAt, &updatedAt); err != nil {
 			return nil, err
 		}
@@ -231,7 +231,7 @@ func (s *SQLiteStore) UpdateLaunchProfile(ctx context.Context, profile *LaunchPr
 		UPDATE launch_profiles
 		SET name = ?, backend_type = ?, installation_id = ?, model_scope = ?, params = ?, env = ?, extra_args = ?, updated_at = ?
 		WHERE id = ?
-	`, profile.Name, profile.BackendType, profile.InstallationID, profile.ModelScope, string(paramsJSON), string(envJSON), profile.ExtraArgs, profile.UpdatedAt.Unix(), profile.ID)
+	`, profile.Name, profile.PluginID, profile.InstallationID, profile.ModelScope, string(paramsJSON), string(envJSON), profile.ExtraArgs, profile.UpdatedAt.Unix(), profile.ID)
 	if err != nil {
 		return err
 	}

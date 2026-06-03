@@ -160,10 +160,10 @@ func (m *Manager) GetBackendForModel(modelID string) backend.Plugin {
 	m.mu.RLock()
 	status, exists := m.statuses[modelID]
 	m.mu.RUnlock()
-	if !exists || status.BackendType == "" {
+	if !exists || status.PluginID == "" {
 		return nil
 	}
-	p, ok := m.backendRegistry.Get(backend.ID(status.BackendType))
+	p, ok := m.backendRegistry.Get(backend.ID(status.PluginID))
 	if !ok {
 		return nil
 	}

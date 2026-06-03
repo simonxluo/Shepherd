@@ -16,8 +16,8 @@ func applyLaunchProfileToLoadRequest(req *model.LoadRequest, profile *storage.La
 	if profile == nil {
 		return
 	}
-	if req.BackendType == "" {
-		req.BackendType = profile.BackendType
+	if req.PluginID == "" {
+		req.PluginID = profile.PluginID
 	}
 	if req.ExtraParams == "" {
 		req.ExtraParams = profile.ExtraArgs
@@ -130,13 +130,13 @@ func (s *Server) HandleCreateLaunchProfile(c *gin.Context) {
 		api.BadRequest(c, "Profile name is required")
 		return
 	}
-	if profile.BackendType == "" {
-		profile.BackendType = string(backend.IDLlamaCpp)
+	if profile.PluginID == "" {
+		profile.PluginID = string(backend.IDLlamaCpp)
 	}
 	if profile.Params == nil {
 		profile.Params = map[string]interface{}{}
 	}
-	if plugin, ok := backend.Default().Get(backend.ID(profile.BackendType)); ok {
+	if plugin, ok := backend.Default().Get(backend.ID(profile.PluginID)); ok {
 		validation := plugin.ValidateParams(backend.RawParams(profile.Params))
 		if !validation.Valid {
 			api.ErrorWithDetails(c, types.ErrInvalidRequest, "Invalid profile params", strings.Join(validation.Errors, "; "))
@@ -172,13 +172,13 @@ func (s *Server) HandleUpdateLaunchProfile(c *gin.Context) {
 		api.BadRequest(c, "Profile name is required")
 		return
 	}
-	if profile.BackendType == "" {
-		profile.BackendType = string(backend.IDLlamaCpp)
+	if profile.PluginID == "" {
+		profile.PluginID = string(backend.IDLlamaCpp)
 	}
 	if profile.Params == nil {
 		profile.Params = map[string]interface{}{}
 	}
-	if plugin, ok := backend.Default().Get(backend.ID(profile.BackendType)); ok {
+	if plugin, ok := backend.Default().Get(backend.ID(profile.PluginID)); ok {
 		validation := plugin.ValidateParams(backend.RawParams(profile.Params))
 		if !validation.Valid {
 			api.ErrorWithDetails(c, types.ErrInvalidRequest, "Invalid profile params", strings.Join(validation.Errors, "; "))
