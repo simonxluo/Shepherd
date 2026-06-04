@@ -81,7 +81,7 @@ export interface Model {
   mmprojPath?: string;
   scannedAt: string;
   sourceType?: string;
-  backendType?: string; // Recommended backend plugin ID (llamacpp/vllm/vllmomni)
+  pluginId?: string; // Recommended backend plugin ID (llamacpp/vllm/vllmomni)
 }
 
 /**
@@ -162,7 +162,7 @@ export interface LoadModelParams {
   // Backend config
   llamaCppPath?: string;      // llama.cpp executable path
   mainGpu?: number | string;  // Primary GPU selection
-  backendType?: string;       // Plugin ID (llamacpp/vllm/vllmomni)
+  pluginId?: string;       // Plugin ID (llamacpp/vllm/vllmomni)
 
   // Capability toggles
   capabilities?: ModelCapabilities & {

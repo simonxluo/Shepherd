@@ -179,21 +179,21 @@ func (s *Server) HandleGetGPUs(c *gin.Context) {
 	})
 }
 
-// HandleGetLlamacppBackends returns the list of available inference backends.
-// @Summary      Get available llama.cpp backends
+// HandleGetInferenceBackends returns the list of available inference backends.
+// @Summary      Get available inference backends
 // @Description  Returns available inference backends including llama.cpp paths and other backends (vLLM, vLLM-Omni)
 // @Tags         System
 // @Produce      json
 // @Success      200 {object} map[string]interface{}
-// @Router       /api/system/llamacpp-backends [get]
-func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
+// @Router       /api/system/inference-backends [get]
+func (s *Server) HandleGetInferenceBackends(c *gin.Context) {
 	backends := []gin.H{}
 	inferenceBackends := []gin.H{}
 
 	if s.config != nil && s.config.ServerCfg != nil {
 		cfg := s.config.ServerCfg
 
-		// Llama.cpp backends (backward compatible)
+		// Llama.cpp backends (path-based discovery)
 		for _, p := range cfg.BackendPaths("llamacpp") {
 			available := false
 			if fileInfo, err := os.Stat(p.Path); err == nil {
@@ -238,13 +238,32 @@ func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 	})
 }
 
-// HandleGetLlamacppParamSchema returns the parameter schema for a backend plugin.
-// Supports both /api/backends/llamacpp/schema (legacy) and /api/backends/:id/param-schema.
-func (s *Server) HandleGetLlamacppParamSchema(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		id = "llamacpp"
+// HandleListBackends returns the list of all registered backend plugins.
+// @Summary      List registered backend plugins
+// @Description  Returns plugin id + display name for every backend registered in the plugin registry
+// @Tags         System
+// @Produce      json
+// @Success      200 {object} map[string]interface{}
+// @Router       /api/backends [get]
+func (s *Server) HandleListBackends(c *gin.Context) {
+	plugins := backend.Default().List()
+	items := make([]gin.H, 0, len(plugins))
+	for _, p := range plugins {
+		items = append(items, gin.H{
+			"id":          string(p.ID()),
+			"displayName": p.DisplayName(),
+		})
 	}
+	api.Success(c, gin.H{
+		"backends": items,
+		"count":    len(items),
+	})
+}
+
+// HandleGetBackendParamSchema returns the parameter schema for a backend plugin.
+// Path: /api/backends/:id/param-schema.
+func (s *Server) HandleGetBackendParamSchema(c *gin.Context) {
+	id := c.Param("id")
 	plugin, ok := backend.Default().Get(backend.ID(id))
 	if !ok {
 		api.NotFound(c, "Backend plugin")
@@ -253,13 +272,10 @@ func (s *Server) HandleGetLlamacppParamSchema(c *gin.Context) {
 	api.Success(c, plugin.ParamSchema())
 }
 
-// HandlePreviewLlamacppCommand returns the resolved launch command without starting a process.
-// Supports both /api/backends/llamacpp/preview (legacy) and /api/backends/:id/preview.
-func (s *Server) HandlePreviewLlamacppCommand(c *gin.Context) {
+// HandlePreviewBackendCommand returns the resolved launch command without starting a process.
+// Path: /api/backends/:id/preview.
+func (s *Server) HandlePreviewBackendCommand(c *gin.Context) {
 	id := c.Param("id")
-	if id == "" {
-		id = "llamacpp"
-	}
 	plugin, ok := backend.Default().Get(backend.ID(id))
 	if !ok {
 		api.NotFound(c, "Backend plugin")

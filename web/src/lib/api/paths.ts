@@ -127,17 +127,17 @@ export const vllmPathsApi = {
 
 export const vllmOmniPathsApi = {
   list: () =>
-    apiClient.get<PathListResponse<BackendPathConfig>>('/config/vllm_omni/paths'),
+    apiClient.get<PathListResponse<BackendPathConfig>>('/config/vllmomni/paths'),
   add: (data: BackendPathConfig) =>
-    apiClient.post<PathMutationResponse>('/config/vllm_omni/paths', data),
+    apiClient.post<PathMutationResponse>('/config/vllmomni/paths', data),
   update: (data: BackendPathConfig) =>
-    apiClient.put<PathMutationResponse>('/config/vllm_omni/paths', data),
+    apiClient.put<PathMutationResponse>('/config/vllmomni/paths', data),
   remove: (path: string) =>
     apiClient.delete<PathMutationResponse>(
-      `/config/vllm_omni/paths?path=${encodeURIComponent(path)}`
+      `/config/vllmomni/paths?path=${encodeURIComponent(path)}`
     ),
   test: (path: string) =>
-    apiClient.post<PathTestResponse>('/config/vllm_omni/paths/test', { path }),
+    apiClient.post<PathTestResponse>('/config/vllmomni/paths/test', { path }),
 };
 
 export const multimodalPathsApi = {

@@ -20,7 +20,7 @@ import type {
 import { toast } from '@/hooks/useToast';
 import { useAlertDialog } from '@/providers/AlertDialog';
 
-type PathType = 'llamacpp' | 'models' | 'vllm' | 'vllm_omni' | 'multimodal';
+type PathType = 'llamacpp' | 'models' | 'vllm' | 'vllmomni' | 'multimodal';
 type AnyPathConfig = LlamaCppPathConfig | ModelPathConfig | BackendPathConfig | MultimodalPathConfig;
 
 /**
@@ -40,7 +40,7 @@ const PATH_API_MAP: Record<PathType, PathApi> = {
   llamacpp: llamacppPathsApi as unknown as PathApi,
   models: modelPathsApi as unknown as PathApi,
   vllm: vllmPathsApi as unknown as PathApi,
-  vllm_omni: vllmOmniPathsApi as unknown as PathApi,
+  vllmomni: vllmOmniPathsApi as unknown as PathApi,
   multimodal: multimodalPathsApi as unknown as PathApi,
 };
 
@@ -61,9 +61,9 @@ const PATH_META_KEYS = {
     titleKey: 'settings.pathConfig.vllm.title',
     descriptionKey: 'settings.pathConfig.vllm.description',
   },
-  vllm_omni: {
-    titleKey: 'settings.pathConfig.vllm_omni.title',
-    descriptionKey: 'settings.pathConfig.vllm_omni.description',
+  vllmomni: {
+    titleKey: 'settings.pathConfig.vllmomni.title',
+    descriptionKey: 'settings.pathConfig.vllmomni.description',
   },
   multimodal: {
     titleKey: 'settings.pathConfig.multimodal.title',
@@ -156,7 +156,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
   };
 
   const handleTest = async (path: AnyPathConfig) => {
-    if (type !== 'llamacpp' && type !== 'vllm' && type !== 'vllm_omni') return;
+    if (type !== 'llamacpp' && type !== 'vllm' && type !== 'vllmomni') return;
 
     try {
       let response;
@@ -227,7 +227,7 @@ export function PathConfigPanel({ type }: PathConfigPanelProps) {
               path={path}
               onEdit={() => handleOpenEditDialog(path)}
               onRemove={() => handleRemove(path)}
-              onTest={(type === 'llamacpp' || type === 'vllm' || type === 'vllm_omni') ? () => handleTest(path) : undefined}
+              onTest={(type === 'llamacpp' || type === 'vllm' || type === 'vllmomni') ? () => handleTest(path) : undefined}
             />
           ))}
         </div>

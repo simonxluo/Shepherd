@@ -49,7 +49,7 @@ export interface ModelStats {
   modelName: string;
   instanceId: string;
   state: string;
-  backendType: string;
+  pluginId: string;
   port: number;
   loadedAt: number;
   uptimeSeconds: number;

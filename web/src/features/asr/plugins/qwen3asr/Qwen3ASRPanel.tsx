@@ -91,8 +91,8 @@ export function Qwen3ASRPanel({
   const [temperature, setTemperature] = useState(0);
   const [copied, setCopied] = useState(false);
 
-  const backendLabel = selectedModel?.backendType
-    ? BACKEND_LABELS[selectedModel.backendType] || selectedModel.backendType
+  const backendLabel = selectedModel?.pluginId
+    ? BACKEND_LABELS[selectedModel.pluginId] || selectedModel.pluginId
     : '';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -428,7 +428,7 @@ export function Qwen3ASRPanel({
         <LoadModelDialog
           modelId={fullModelId}
           modelName={modelName}
-          backendType={selectedModel?.backendType}
+          pluginId={selectedModel?.pluginId}
           isOpen={showLoadDialog}
           onClose={() => setShowLoadDialog(false)}
           onConfirm={(params) => {

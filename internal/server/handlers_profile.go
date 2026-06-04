@@ -111,7 +111,7 @@ func floatValue(value interface{}) float64 {
 
 // HandleListLaunchProfiles lists reusable launch profiles.
 func (s *Server) HandleListLaunchProfiles(c *gin.Context) {
-	profiles, err := s.storageMgr.GetStore().ListLaunchProfiles(context.Background(), c.Query("backendType"), c.Query("modelScope"))
+	profiles, err := s.storageMgr.GetStore().ListLaunchProfiles(context.Background(), c.Query("pluginId"), c.Query("modelScope"))
 	if err != nil {
 		api.ErrorWithDetails(c, types.ErrInternalError, "Failed to list launch profiles", err.Error())
 		return

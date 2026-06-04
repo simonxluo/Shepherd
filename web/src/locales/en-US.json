@@ -833,7 +833,7 @@
         "title": "vLLM Paths",
         "description": "Configure directories containing vLLM executables"
       },
-      "vllm_omni": {
+      "vllmomni": {
         "title": "vLLM-Omni Paths",
         "description": "Configure directories containing vLLM-Omni (multimodal vLLM) executables"
       },

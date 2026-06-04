@@ -9,7 +9,7 @@ export interface LoadedModel {
   id: string;
   name: string;
   alias?: string;
-  backendType?: string;
+  pluginId?: string;
   capabilities?: ModelCapabilities;
 }
 

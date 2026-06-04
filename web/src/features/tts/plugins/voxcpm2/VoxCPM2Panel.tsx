@@ -212,8 +212,8 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
 
   const { ttsConfig, saveConfig, deleteConfig } = useTTSConfig(modelIdForConfig);
 
-  const backendLabel = selectedModel?.backendType
-    ? BACKEND_LABELS[selectedModel.backendType] || selectedModel.backendType
+  const backendLabel = selectedModel?.pluginId
+    ? BACKEND_LABELS[selectedModel.pluginId] || selectedModel.pluginId
     : '';
 
   // --- Config restore ---
@@ -802,7 +802,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
         <LoadModelDialog
           modelId={fullModelId}
           modelName={modelName}
-          backendType={selectedModel?.backendType}
+          pluginId={selectedModel?.pluginId}
           isOpen={showLoadDialog}
           onClose={() => setShowLoadDialog(false)}
           onConfirm={(params) => {
@@ -818,7 +818,7 @@ export function VoxCPM2Panel(props: TTSPluginPanelProps) {
           modelId={selectedAsrModel.id}
           modelName={selectedAsrModel.alias || selectedAsrModel.displayName || selectedAsrModel.name}
           modelPath={selectedAsrModel.path}
-          backendType={selectedAsrModel.backendType}
+          pluginId={selectedAsrModel.pluginId}
           isOpen={showAsrLoadDialog}
           onClose={() => setShowAsrLoadDialog(false)}
           onConfirm={(params) => {

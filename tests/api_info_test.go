@@ -55,10 +55,10 @@ func TestAPIGetGPUs(t *testing.T) {
 	}
 }
 
-func TestAPIGetLlamacppBackends(t *testing.T) {
+func TestAPIGetInferenceBackends(t *testing.T) {
 	env := SetupTestServer(t)
 
-	w := DoRequest(env.Engine, http.MethodGet, "/api/system/llamacpp-backends", nil)
+	w := DoRequest(env.Engine, http.MethodGet, "/api/system/inference-backends", nil)
 	resp := AssertSuccess(t, w)
 
 	if resp.Data["backends"] == nil {
@@ -66,5 +66,19 @@ func TestAPIGetLlamacppBackends(t *testing.T) {
 	}
 	if resp.Data["inferenceBackends"] == nil {
 		t.Error("expected inferenceBackends field")
+	}
+}
+
+func TestAPIListBackends(t *testing.T) {
+	env := SetupTestServer(t)
+
+	w := DoRequest(env.Engine, http.MethodGet, "/api/backends", nil)
+	resp := AssertSuccess(t, w)
+
+	if resp.Data["backends"] == nil {
+		t.Error("expected backends field")
+	}
+	if _, ok := resp.Data["count"].(float64); !ok {
+		t.Error("expected count field as number")
 	}
 }

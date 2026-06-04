@@ -143,7 +143,7 @@ export function OverviewTab({ model }: OverviewTabProps) {
       <Section title={t('modelDetail.sections.status', '状态')}>
         <DetailRow label={t('modelDetail.fields.status', '状态')} value={statusText} />
         {model.port ? <DetailRow label={t('modelDetail.fields.port', '端口')} value={model.port} /> : null}
-        {model.backendType && <DetailRow label={t('modelDetail.fields.backendType', '后端')} value={model.backendType} />}
+        {model.pluginId && <DetailRow label={t('modelDetail.fields.pluginId', '后端')} value={model.pluginId} />}
         <DetailRow label={t('modelDetail.fields.scannedAt', '扫描时间')} value={new Date(model.scannedAt).toLocaleString('zh-CN')} />
       </Section>
 

@@ -67,8 +67,8 @@ export function GenericTTSPanel({
   const { ttsConfig, saveConfig, deleteConfig } = useTTSConfig(modelIdForConfig);
   const { data: voices = [] } = useVoices(modelName);
 
-  const backendLabel = selectedModel?.backendType
-    ? BACKEND_LABELS[selectedModel.backendType] || selectedModel.backendType
+  const backendLabel = selectedModel?.pluginId
+    ? BACKEND_LABELS[selectedModel.pluginId] || selectedModel.pluginId
     : '';
 
   // Restore config from server
