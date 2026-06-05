@@ -3,11 +3,13 @@ package llamacpp
 import (
 	"fmt"
 	"strconv"
+
+	"github.com/simonxluo/Shepherd/internal/backend"
 )
 
 // appendSpecDecodingArgs appends speculative decoding CLI flags based on the
 // spec type. Returns the arg slice unchanged if spec is nil or "none".
-func appendSpecDecodingArgs(args []string, spec *SpecDecodingParams) []string {
+func appendSpecDecodingArgs(args []string, spec *backend.SpecDecodingParams) []string {
 	if spec == nil || spec.SpecType == "" || spec.SpecType == "none" {
 		return args
 	}

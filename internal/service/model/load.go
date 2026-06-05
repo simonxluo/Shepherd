@@ -60,7 +60,7 @@ func (m *Manager) prepareAndStartProcess(req *LoadRequest, model *Model, status 
 	}
 
 	// Convert flat LoadRequest → RawParams → plugin.DecodeParams
-	rawParams := loadRequestToRawParams(req)
+	rawParams := LoadRequestToRawParams(req)
 	params, err := plugin.DecodeParams(rawParams)
 	if err != nil {
 		m.portAllocator.Release(allocatedPort)
@@ -426,9 +426,14 @@ func (m *Manager) Unload(modelID string) error {
 	return nil
 }
 
-// loadRequestToRawParams converts a flat model.LoadRequest into a backend.RawParams
-// map suitable for plugin.DecodeParams. Uses JSON round-trip for simplicity.
-func loadRequestToRawParams(req *LoadRequest) backend.RawParams {
+// LoadRequestToRawParams converts a flat model.LoadRequest into a
+// backend.RawParams map suitable for plugin.ValidateParams /
+// plugin.DecodeParams. Uses JSON round-trip so plugin params (which embed
+// arbitrary JSON-tagged subsets of LoadRequest) deserialize uniformly.
+//
+// Returns an empty RawParams if marshalling fails — plugins must treat that
+// case as "no params provided" and fall back to defaults.
+func LoadRequestToRawParams(req *LoadRequest) backend.RawParams {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return backend.RawParams{}

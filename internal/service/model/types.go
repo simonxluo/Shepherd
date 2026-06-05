@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/simonxluo/Shepherd/internal/backend"
 	"github.com/simonxluo/Shepherd/internal/infra/gguf"
 )
 
@@ -191,39 +192,10 @@ type ScanError struct {
 	Error string
 }
 
-// SpecDecodingParams holds speculative decoding configuration at the API level.
-// SpecDraftModelID is resolved to a file path by the handler before loading.
-type SpecDecodingParams struct {
-	SpecType           string  `json:"specType"`
-	SpecDraftModelID   string  `json:"specDraftModelId"`
-	SpecDraftModelPath string  `json:"-"`
-	SpecDraftNMax      int     `json:"specDraftNMax"`
-	SpecDraftNMin      int     `json:"specDraftNMin"`
-	SpecDraftPSplit    float64 `json:"specDraftPSplit"`
-	SpecDraftPMin      float64 `json:"specDraftPMin"`
-	SpecDraftCtxSize   int     `json:"specDraftCtxSize"`
-	SpecDraftNGL       int     `json:"specDraftNgl"`
-	SpecDraftDevice    string  `json:"specDraftDevice"`
-
-	SpecNgramModNMin   int `json:"specNgramModNMin"`
-	SpecNgramModNMax   int `json:"specNgramModNMax"`
-	SpecNgramModNMatch int `json:"specNgramModNMatch"`
-
-	SpecNgramSimpleSizeN   int `json:"specNgramSimpleSizeN"`
-	SpecNgramSimpleSizeM   int `json:"specNgramSimpleSizeM"`
-	SpecNgramSimpleMinHits int `json:"specNgramSimpleMinHits"`
-
-	SpecNgramMapKSizeN   int `json:"specNgramMapKSizeN"`
-	SpecNgramMapKSizeM   int `json:"specNgramMapKSizeM"`
-	SpecNgramMapKMinHits int `json:"specNgramMapKMinHits"`
-
-	SpecNgramMapK4VSizeN   int `json:"specNgramMapK4VSizeN"`
-	SpecNgramMapK4VSizeM   int `json:"specNgramMapK4VSizeM"`
-	SpecNgramMapK4VMinHits int `json:"specNgramMapK4VMinHits"`
-
-	LookupCacheStatic  string `json:"lookupCacheStatic"`
-	LookupCacheDynamic string `json:"lookupCacheDynamic"`
-}
+// SpecDecodingParams is an alias for backend.SpecDecodingParams kept for
+// callers that import the model package. The canonical definition lives in
+// internal/backend so plugin code can reference the same type.
+type SpecDecodingParams = backend.SpecDecodingParams
 
 // LoadRequest contains parameters for loading a model
 type LoadRequest struct {

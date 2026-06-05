@@ -208,22 +208,22 @@ func (s *Server) HandleGetInferenceBackends(c *gin.Context) {
 			})
 		}
 
-		// Other backends as inferenceBackends.
-		for _, id := range []string{"vllm", "vllmomni"} {
+		// Other backends as inferenceBackends — iterate every registered
+		// plugin except llamacpp (which is reported above as path-based).
+		for _, plugin := range backend.Default().List() {
+			id := string(plugin.ID())
+			if plugin.ID() == backend.IDLlamaCpp {
+				continue
+			}
 			raw := cfg.BackendRaw(id)
 			if raw == nil {
 				continue
-			}
-			plugin, ok := backend.Default().Get(backend.ID(id))
-			displayName := id
-			if ok {
-				displayName = plugin.DisplayName()
 			}
 			enabled := cfg.BackendEnabled(id)
 			condaEnv, _ := raw["conda_env"].(string)
 			inferenceBackends = append(inferenceBackends, gin.H{
 				"type":      id,
-				"name":      displayName,
+				"name":      plugin.DisplayName(),
 				"condaEnv":  condaEnv,
 				"enabled":   enabled,
 				"available": enabled && condaEnv != "",

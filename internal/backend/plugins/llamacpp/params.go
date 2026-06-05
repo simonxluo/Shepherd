@@ -152,46 +152,7 @@ type Params struct {
 	ExtraParams string `json:"extraParams"`
 
 	// Speculative decoding (llamacpp-specific)
-	SpecDecoding *SpecDecodingParams `json:"specDecoding,omitempty"`
+	SpecDecoding *backend.SpecDecodingParams `json:"specDecoding,omitempty"`
 }
 
 var _ backend.Params = (*Params)(nil)
-
-// SpecDecodingParams holds speculative decoding configuration.
-type SpecDecodingParams struct {
-	SpecType string `json:"specType"`
-
-	// draft / eagle3
-	SpecDraftModelPath string  `json:"specDraftModelPath"`
-	SpecDraftNMax      int     `json:"specDraftNMax"`
-	SpecDraftNMin      int     `json:"specDraftNMin"`
-	SpecDraftPSplit    float64 `json:"specDraftPSplit"`
-	SpecDraftPMin      float64 `json:"specDraftPMin"`
-	SpecDraftCtxSize   int     `json:"specDraftCtxSize"`
-	SpecDraftNGL       int     `json:"specDraftNgl"`
-	SpecDraftDevice    string  `json:"specDraftDevice"`
-
-	// ngram-mod
-	SpecNgramModNMin   int `json:"specNgramModNMin"`
-	SpecNgramModNMax   int `json:"specNgramModNMax"`
-	SpecNgramModNMatch int `json:"specNgramModNMatch"`
-
-	// ngram-simple
-	SpecNgramSimpleSizeN   int `json:"specNgramSimpleSizeN"`
-	SpecNgramSimpleSizeM   int `json:"specNgramSimpleSizeM"`
-	SpecNgramSimpleMinHits int `json:"specNgramSimpleMinHits"`
-
-	// ngram-map-k
-	SpecNgramMapKSizeN   int `json:"specNgramMapKSizeN"`
-	SpecNgramMapKSizeM   int `json:"specNgramMapKSizeM"`
-	SpecNgramMapKMinHits int `json:"specNgramMapKMinHits"`
-
-	// ngram-map-k4v
-	SpecNgramMapK4VSizeN   int `json:"specNgramMapK4VSizeN"`
-	SpecNgramMapK4VSizeM   int `json:"specNgramMapK4VSizeM"`
-	SpecNgramMapK4VMinHits int `json:"specNgramMapK4VMinHits"`
-
-	// ngram-cache
-	LookupCacheStatic  string `json:"lookupCacheStatic"`
-	LookupCacheDynamic string `json:"lookupCacheDynamic"`
-}

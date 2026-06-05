@@ -2,10 +2,8 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -178,7 +176,7 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 		pluginID = backend.IDLlamaCpp
 	}
 	if plugin, ok := backend.Default().Get(pluginID); ok {
-		rawParams := loadRequestToRawParams(&req)
+		rawParams := model.LoadRequestToRawParams(&req)
 		validation := plugin.ValidateParams(rawParams)
 		if !validation.Valid {
 			api.ErrorWithDetails(c, types.ErrInvalidRequest, "invalid parameters", strings.Join(validation.Errors, "; "))
@@ -729,17 +727,19 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 	if len(m.ShardFiles) > 0 {
 		modelPath = m.ShardFiles[0]
 	}
-	// Determine recommended backend based on capabilities + format + backend availability
-	caps := s.modelMgr.GetModelCapabilities(m.ID)
-	vllmOmniConfigured := s.config != nil && s.config.ServerCfg != nil &&
-		s.config.ServerCfg.BackendEnabled("vllmomni")
-	if caps != nil && (caps.TTS || caps.ASR) && vllmOmniConfigured {
-		dto.PluginID = string(backend.IDVLLMOmni)
-	} else if caps != nil && (caps.TTS || caps.ASR) && !vllmOmniConfigured {
-		// vllmomni not configured, GGUF TTS/ASR models fall back to llama.cpp
-		dto.PluginID = string(backend.IDLlamaCpp)
-	} else if backend.IsSafeTensorsModel(modelPath) || filepath.Ext(modelPath) == "" {
-		dto.PluginID = string(backend.IDVLLM)
+	// Delegate to the backend registry's resolution chain so the rules
+	// (CapabilityHint → FormatAutoDetect → DefaultForGGUF) drive the
+	// recommendation. Falls back to llamacpp when no rule matches.
+	var capHint *backend.CapabilityHint
+	if caps := s.modelMgr.GetModelCapabilities(m.ID); caps != nil {
+		capHint = &backend.CapabilityHint{
+			TTS:             caps.TTS,
+			ASR:             caps.ASR,
+			ImageGeneration: caps.ImageGeneration,
+		}
+	}
+	if plugin, _, err := backend.Default().Resolve(modelPath, "", capHint); err == nil && plugin != nil {
+		dto.PluginID = string(plugin.ID())
 	} else {
 		dto.PluginID = string(backend.IDLlamaCpp)
 	}
@@ -797,18 +797,4 @@ func getArchitecture(modelPath string) string {
 	}
 	defer func() { _ = parser.Close() }()
 	return parser.GetArchitecture()
-}
-
-// loadRequestToRawParams converts a flat model.LoadRequest into backend.RawParams
-// via JSON round-trip for plugin.ValidateParams/DecodeParams.
-func loadRequestToRawParams(req *model.LoadRequest) backend.RawParams {
-	data, err := json.Marshal(req)
-	if err != nil {
-		return backend.RawParams{}
-	}
-	var raw backend.RawParams
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return backend.RawParams{}
-	}
-	return raw
 }
