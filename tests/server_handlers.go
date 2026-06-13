@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/simonxluo/Shepherd/internal/comm/config"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	api "github.com/simonxluo/Shepherd/internal/handler"
 	"github.com/simonxluo/Shepherd/internal/infra/download"
-	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/router"
 	"github.com/simonxluo/Shepherd/internal/service/model"
 )
@@ -86,7 +86,7 @@ func (s *testServerHandlers) HandleGetGPUs(c *gin.Context) {
 	})
 }
 
-func (s *testServerHandlers) HandleGetLlamacppBackends(c *gin.Context) {
+func (s *testServerHandlers) HandleGetInferenceBackends(c *gin.Context) {
 	api.Success(c, gin.H{
 		"backends":          []gin.H{},
 		"inferenceBackends": []gin.H{},
@@ -94,11 +94,18 @@ func (s *testServerHandlers) HandleGetLlamacppBackends(c *gin.Context) {
 	})
 }
 
-func (s *testServerHandlers) HandleGetLlamacppParamSchema(c *gin.Context) {
+func (s *testServerHandlers) HandleListBackends(c *gin.Context) {
+	api.Success(c, gin.H{
+		"backends": []gin.H{},
+		"count":    0,
+	})
+}
+
+func (s *testServerHandlers) HandleGetBackendParamSchema(c *gin.Context) {
 	api.Success(c, gin.H{"backend": "llamacpp", "params": []interface{}{}})
 }
 
-func (s *testServerHandlers) HandlePreviewLlamacppCommand(c *gin.Context) {
+func (s *testServerHandlers) HandlePreviewBackendCommand(c *gin.Context) {
 	api.Success(c, gin.H{"command": "", "spec": nil})
 }
 
@@ -126,9 +133,7 @@ func (s *testServerHandlers) HandleGetConfig(c *gin.Context) {
 			"id":   cfg.Node.ID,
 			"name": cfg.Node.Name,
 		},
-		"llamacpp": gin.H{
-			"paths": cfg.Llamacpp.Paths,
-		},
+		"backends": cfg.Backends,
 	})
 }
 

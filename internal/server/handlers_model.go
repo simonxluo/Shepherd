@@ -4,19 +4,18 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/simonxluo/Shepherd/internal/backend"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	api "github.com/simonxluo/Shepherd/internal/handler"
 	"github.com/simonxluo/Shepherd/internal/infra/gguf"
-	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/service/model"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // loadedModelInfo is used for /api/models/loaded response payload
@@ -28,7 +27,7 @@ type loadedModelInfo struct {
 	ProcessID    string                `json:"processId"`
 	Port         int                   `json:"port"`
 	CtxSize      int                   `json:"ctxSize"`
-	BackendType  string                `json:"backendType,omitempty"`
+	PluginID     string                `json:"pluginId,omitempty"`
 	LoadedAt     string                `json:"loadedAt,omitempty"`
 	Capabilities *storage.Capabilities `json:"capabilities,omitempty"`
 }
@@ -71,13 +70,13 @@ func (s *Server) HandleListLoadedModels(c *gin.Context) {
 	for id, st := range statuses {
 		if st.State == model.StateLoaded || st.State == model.StateLoading {
 			info := loadedModelInfo{
-				ID:          id,
-				Name:        st.Name,
-				State:       st.State.String(),
-				ProcessID:   st.ProcessID,
-				Port:        st.Port,
-				CtxSize:     st.CtxSize,
-				BackendType: st.BackendType,
+				ID:        id,
+				Name:      st.Name,
+				State:     st.State.String(),
+				ProcessID: st.ProcessID,
+				Port:      st.Port,
+				CtxSize:   st.CtxSize,
+				PluginID:  st.PluginID,
 			}
 			if !st.LoadedAt.IsZero() {
 				info.LoadedAt = st.LoadedAt.Format(time.RFC3339)
@@ -171,41 +170,22 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	// logic (validation, spec-decoding, defaults) into a single block.
 	// This avoids scattering backend-type checks across the handler and
 	// prevents llama.cpp parameters from leaking into vLLM/vLLM-Omni.
-	isLlamaCpp := req.BackendType == "" || req.BackendType == string(backend.BackendLlamaCpp)
-	if isLlamaCpp {
-		// -- Validate llama.cpp parameters --
-		validation := backend.ValidateLlamaCppParamMap(map[string]any{
-			"ctxSize":        req.CtxSize,
-			"batchSize":      req.BatchSize,
-			"threads":        req.Threads,
-			"gpuLayers":      req.GPULayers,
-			"devices":        req.Devices,
-			"mainGpu":        req.MainGPU,
-			"splitMode":      req.SplitMode,
-			"tensorSplit":    req.TensorSplit,
-			"kvCacheTypeK":   req.KVCacheTypeK,
-			"kvCacheTypeV":   req.KVCacheTypeV,
-			"parallelSlots":  req.ParallelSlots,
-			"threadsHttp":    req.ThreadsHTTP,
-			"timeout":        req.Timeout,
-			"temperature":    req.Temperature,
-			"topP":           req.TopP,
-			"topK":           req.TopK,
-			"minP":           req.MinP,
-			"repeatPenalty":  req.RepeatPenalty,
-			"seed":           req.Seed,
-			"nPredict":       req.NPredict,
-			"mmprojPath":     req.MmprojPath,
-			"flashAttention": req.FlashAttention,
-			"noMmap":         req.NoMmap,
-			"lockMemory":     req.LockMemory,
-		})
+	// Validate backend-specific parameters via the plugin.
+	pluginID := backend.ID(req.PluginID)
+	if pluginID == "" {
+		pluginID = backend.IDLlamaCpp
+	}
+	if plugin, ok := backend.Default().Get(pluginID); ok {
+		rawParams := model.LoadRequestToRawParams(&req)
+		validation := plugin.ValidateParams(rawParams)
 		if !validation.Valid {
-			api.ErrorWithDetails(c, types.ErrInvalidRequest, "无效的 llama.cpp 参数", strings.Join(validation.Errors, "; "))
+			api.ErrorWithDetails(c, types.ErrInvalidRequest, "invalid parameters", strings.Join(validation.Errors, "; "))
 			return
 		}
+	}
 
-		// -- Validate speculative decoding draft model --
+	// Spec-decoding draft model validation (llamacpp-specific).
+	if pluginID == backend.IDLlamaCpp {
 		if req.SpecDecoding != nil && (req.SpecDecoding.SpecType == "draft" || req.SpecDecoding.SpecType == "eagle3") && req.SpecDecoding.SpecDraftModelID != "" {
 			if req.SpecDecoding.SpecDraftModelID == id {
 				api.BadRequest(c, "Draft模型不能与主模型相同")
@@ -247,8 +227,7 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 			logger.Infof("draft model resolved: modelId=%s, draftModelId=%s, draftPath=%s, arch=%s", id, req.SpecDecoding.SpecDraftModelID, draftPath, draftArch)
 		}
 
-		// -- Apply llama.cpp-specific defaults --
-		// Must run after validation; zero values mean "not set, use default".
+		// Apply llama.cpp-specific defaults (zero values mean "not set").
 		if req.CtxSize == 0 {
 			req.CtxSize = 512
 		}
@@ -275,7 +254,7 @@ func (s *Server) HandleLoadModel(c *gin.Context) {
 	// No longer force vllm_omni backend — let Resolve's capability-aware routing handle it:
 	// - If vllm_omni is configured, capability-aware routing will prefer it
 	// - If not configured, GGUF models fall back to llama.cpp
-	// Explicit BackendType from frontend is still respected
+	// Explicit PluginID from frontend is still respected
 
 	result, err := s.modelMgr.LoadAsync(&req)
 	if err != nil {
@@ -748,20 +727,21 @@ func (s *Server) toModelDTO(m *model.Model, statuses map[string]*model.ModelStat
 	if len(m.ShardFiles) > 0 {
 		modelPath = m.ShardFiles[0]
 	}
-	// Determine recommended backend based on capabilities + format + backend availability
-	caps := s.modelMgr.GetModelCapabilities(m.ID)
-	vllmOmniConfigured := s.config != nil && s.config.ServerCfg != nil &&
-		s.config.ServerCfg.Backends.VLLMOmni != nil &&
-		s.config.ServerCfg.Backends.VLLMOmni.Enabled
-	if caps != nil && (caps.TTS || caps.ASR) && vllmOmniConfigured {
-		dto.BackendType = "vllm_omni"
-	} else if caps != nil && (caps.TTS || caps.ASR) && !vllmOmniConfigured {
-		// vllm_omni not configured, GGUF TTS/ASR models fall back to llama.cpp
-		dto.BackendType = "llamacpp"
-	} else if backend.IsSafeTensorsModel(modelPath) || filepath.Ext(modelPath) == "" {
-		dto.BackendType = "vllm"
+	// Delegate to the backend registry's resolution chain so the rules
+	// (CapabilityHint → FormatAutoDetect → DefaultForGGUF) drive the
+	// recommendation. Falls back to llamacpp when no rule matches.
+	var capHint *backend.CapabilityHint
+	if caps := s.modelMgr.GetModelCapabilities(m.ID); caps != nil {
+		capHint = &backend.CapabilityHint{
+			TTS:             caps.TTS,
+			ASR:             caps.ASR,
+			ImageGeneration: caps.ImageGeneration,
+		}
+	}
+	if plugin, _, err := backend.Default().Resolve(modelPath, "", capHint); err == nil && plugin != nil {
+		dto.PluginID = string(plugin.ID())
 	} else {
-		dto.BackendType = "llamacpp"
+		dto.PluginID = string(backend.IDLlamaCpp)
 	}
 
 	if m.Metadata != nil {

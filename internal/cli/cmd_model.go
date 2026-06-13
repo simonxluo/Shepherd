@@ -38,7 +38,7 @@ var modelListCmd = &cobra.Command{
 
 		var resp struct {
 			Models []client.ModelItem `json:"models"`
-			Total  int               `json:"total"`
+			Total  int                `json:"total"`
 		}
 		if err := json.Unmarshal(data, &resp); err != nil {
 			return fmt.Errorf("failed to parse models: %w", err)
@@ -60,7 +60,7 @@ var modelListCmd = &cobra.Command{
 			if m.IsLoaded {
 				status = "loaded"
 			}
-			backend := m.BackendType
+			backend := m.PluginID
 			if backend == "" {
 				backend = "-"
 			}
@@ -116,7 +116,7 @@ var modelLoadedCmd = &cobra.Command{
 		headers := []string{"ID", "NAME", "STATE", "PORT", "CTX", "BACKEND", "LOADED AT"}
 		rows := make([][]string, 0, len(resp.Models))
 		for _, m := range resp.Models {
-			backend := m.BackendType
+			backend := m.PluginID
 			if backend == "" {
 				backend = "-"
 			}

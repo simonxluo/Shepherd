@@ -109,8 +109,8 @@ export function Qwen3TTSPanel({
   const { data: voices = [] } = useVoices(modelName);
   const { ttsConfig, saveConfig, deleteConfig } = useTTSConfig(modelIdForConfig);
 
-  const backendLabel = selectedModel?.backendType
-    ? BACKEND_LABELS[selectedModel.backendType] || selectedModel.backendType
+  const backendLabel = selectedModel?.pluginId
+    ? BACKEND_LABELS[selectedModel.pluginId] || selectedModel.pluginId
     : '';
 
   // Restore config
@@ -634,7 +634,7 @@ export function Qwen3TTSPanel({
         <LoadModelDialog
           modelId={fullModelId}
           modelName={modelName}
-          backendType={selectedModel?.backendType}
+          pluginId={selectedModel?.pluginId}
           isOpen={showLoadDialog}
           onClose={() => setShowLoadDialog(false)}
           onConfirm={(params) => {

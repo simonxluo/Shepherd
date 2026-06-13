@@ -349,7 +349,7 @@ export function ModelsPage() {
           modelName={dialogModel.alias || dialogModel.name}
           modelPath={dialogModel.path}
           isLoading={loadModel.isPending}
-          backendType={dialogModel.backendType}
+          pluginId={dialogModel.pluginId}
         />
       )}
 

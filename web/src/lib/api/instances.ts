@@ -9,7 +9,7 @@ export interface RuntimeInstance {
   processId?: string;
   port?: number;
   state: string;
-  backendType?: string;
+  pluginId?: string;
   commandPreview?: string;
   lastError?: string;
   createdAt: string;

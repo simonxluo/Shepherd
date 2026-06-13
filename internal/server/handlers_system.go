@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/simonxluo/Shepherd/internal/backend"
 	"github.com/simonxluo/Shepherd/internal/comm/gpu"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	api "github.com/simonxluo/Shepherd/internal/handler"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // gpuMemRe is a pre-compiled regex for GPU memory info, avoiding recompilation per request
@@ -74,13 +74,13 @@ func (s *Server) HandleGetGPUs(c *gin.Context) {
 	}
 
 	// 2. 从配置路径收集
-	if s.config != nil && s.config.ServerCfg != nil && len(s.config.ServerCfg.Llamacpp.Paths) > 0 {
-		for _, p := range s.config.ServerCfg.Llamacpp.Paths {
-			if fileInfo, err := os.Stat(p.Path); err == nil && fileInfo.IsDir() {
+	if s.config != nil && s.config.ServerCfg != nil {
+		for _, bp := range s.config.ServerCfg.BackendPaths("llamacpp") {
+			if fileInfo, err := os.Stat(bp.Path); err == nil && fileInfo.IsDir() {
 				benchPaths = append(benchPaths,
-					p.Path+"/llama-bench",
-					p.Path+"/build/bin/llama-bench",
-					p.Path+"/bin/llama-bench",
+					bp.Path+"/llama-bench",
+					bp.Path+"/build/bin/llama-bench",
+					bp.Path+"/bin/llama-bench",
 				)
 			}
 		}
@@ -179,26 +179,26 @@ func (s *Server) HandleGetGPUs(c *gin.Context) {
 	})
 }
 
-// HandleGetLlamacppBackends returns the list of available inference backends.
-// @Summary      Get available llama.cpp backends
+// HandleGetInferenceBackends returns the list of available inference backends.
+// @Summary      Get available inference backends
 // @Description  Returns available inference backends including llama.cpp paths and other backends (vLLM, vLLM-Omni)
 // @Tags         System
 // @Produce      json
 // @Success      200 {object} map[string]interface{}
-// @Router       /api/system/llamacpp-backends [get]
-func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
+// @Router       /api/system/inference-backends [get]
+func (s *Server) HandleGetInferenceBackends(c *gin.Context) {
 	backends := []gin.H{}
 	inferenceBackends := []gin.H{}
 
 	if s.config != nil && s.config.ServerCfg != nil {
-		// Llama.cpp backends (backward compatible)
-		paths := s.config.ServerCfg.Llamacpp.Paths
-		for _, p := range paths {
+		cfg := s.config.ServerCfg
+
+		// Llama.cpp backends (path-based discovery)
+		for _, p := range cfg.BackendPaths("llamacpp") {
 			available := false
 			if fileInfo, err := os.Stat(p.Path); err == nil {
 				available = fileInfo.IsDir()
 			}
-
 			backends = append(backends, gin.H{
 				"type":        "llamacpp",
 				"path":        p.Path,
@@ -208,27 +208,25 @@ func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 			})
 		}
 
-		// vLLM backend (separate array to avoid breaking frontend)
-		if s.config.ServerCfg.Backends.VLLM != nil {
-			vcfg := s.config.ServerCfg.Backends.VLLM
+		// Other backends as inferenceBackends — iterate every registered
+		// plugin except llamacpp (which is reported above as path-based).
+		for _, plugin := range backend.Default().List() {
+			id := string(plugin.ID())
+			if plugin.ID() == backend.IDLlamaCpp {
+				continue
+			}
+			raw := cfg.BackendRaw(id)
+			if raw == nil {
+				continue
+			}
+			enabled := cfg.BackendEnabled(id)
+			condaEnv, _ := raw["conda_env"].(string)
 			inferenceBackends = append(inferenceBackends, gin.H{
-				"type":      "vllm",
-				"name":      "vLLM",
-				"condaEnv":  vcfg.CondaEnv,
-				"enabled":   vcfg.Enabled,
-				"available": vcfg.Enabled && vcfg.CondaEnv != "",
-			})
-		}
-
-		// vLLM-omni backend
-		if s.config.ServerCfg.Backends.VLLMOmni != nil {
-			ocfg := s.config.ServerCfg.Backends.VLLMOmni
-			inferenceBackends = append(inferenceBackends, gin.H{
-				"type":      "vllm_omni",
-				"name":      "vLLM-Omni",
-				"condaEnv":  ocfg.CondaEnv,
-				"enabled":   ocfg.Enabled,
-				"available": ocfg.Enabled && ocfg.CondaEnv != "",
+				"type":      id,
+				"name":      plugin.DisplayName(),
+				"condaEnv":  condaEnv,
+				"enabled":   enabled,
+				"available": enabled && condaEnv != "",
 			})
 		}
 	}
@@ -240,53 +238,107 @@ func (s *Server) HandleGetLlamacppBackends(c *gin.Context) {
 	})
 }
 
-// HandleGetLlamacppParamSchema returns the llama.cpp launch parameter schema.
-// @Summary      Get llama.cpp parameter schema
-// @Description  Returns schema metadata used to validate and render llama.cpp launch parameters
+// HandleListBackends returns the list of all registered backend plugins.
+// @Summary      List registered backend plugins
+// @Description  Returns plugin id + display name for every backend registered in the plugin registry
 // @Tags         System
 // @Produce      json
 // @Success      200 {object} map[string]interface{}
-// @Router       /api/backends/llamacpp/schema [get]
-func (s *Server) HandleGetLlamacppParamSchema(c *gin.Context) {
-	api.Success(c, backend.LlamaCppParamRegistry())
+// @Router       /api/backends [get]
+func (s *Server) HandleListBackends(c *gin.Context) {
+	plugins := backend.Default().List()
+	items := make([]gin.H, 0, len(plugins))
+	for _, p := range plugins {
+		items = append(items, gin.H{
+			"id":          string(p.ID()),
+			"displayName": p.DisplayName(),
+		})
+	}
+	api.Success(c, gin.H{
+		"backends": items,
+		"count":    len(items),
+	})
 }
 
-// HandlePreviewLlamacppCommand returns the resolved llama.cpp launch command without starting a process.
-// @Summary      Preview llama.cpp command
-// @Description  Builds and returns the llama.cpp command line for a request without launching it
-// @Tags         System
-// @Accept       json
-// @Produce      json
-// @Success      200 {object} map[string]interface{}
-// @Router       /api/backends/llamacpp/preview [post]
-func (s *Server) HandlePreviewLlamacppCommand(c *gin.Context) {
+// HandleGetBackendParamSchema returns the parameter schema for a backend plugin.
+// Path: /api/backends/:id/param-schema.
+func (s *Server) HandleGetBackendParamSchema(c *gin.Context) {
+	id := c.Param("id")
+	plugin, ok := backend.Default().Get(backend.ID(id))
+	if !ok {
+		api.NotFound(c, "Backend plugin")
+		return
+	}
+	api.Success(c, plugin.ParamSchema())
+}
+
+// HandlePreviewBackendCommand returns the resolved launch command without starting a process.
+// Path: /api/backends/:id/preview.
+func (s *Server) HandlePreviewBackendCommand(c *gin.Context) {
+	id := c.Param("id")
+	plugin, ok := backend.Default().Get(backend.ID(id))
+	if !ok {
+		api.NotFound(c, "Backend plugin")
+		return
+	}
+
 	var req struct {
-		BinPath string `json:"binPath"`
-		backend.LoadRequest
+		BinPath   string         `json:"binPath"`
+		ModelPath string         `json:"modelPath"`
+		Port      int            `json:"port"`
+		BindHost  string         `json:"bindHost"`
+		Devices   []string       `json:"devices"`
+		Params    map[string]any `json:"params"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		api.BadRequest(c, "Invalid request body")
 		return
 	}
 
-	binPath := req.BinPath
-	if binPath == "" && s.config != nil && s.config.ServerCfg != nil && len(s.config.ServerCfg.Llamacpp.Paths) > 0 {
-		binPath = s.config.ServerCfg.Llamacpp.Paths[0].Path
-	}
-	if binPath == "" {
-		api.BadRequest(c, "llama.cpp binary path is required")
+	params, err := plugin.DecodeParams(backend.RawParams(req.Params))
+	if err != nil {
+		api.ErrorWithDetails(c, types.ErrInvalidRequest, "Failed to decode params", err.Error())
 		return
 	}
 
-	info := &backend.BackendInfo{Type: backend.BackendLlamaCpp, Name: "LlamaCpp", BinPath: binPath, Available: true}
-	startCfg, err := backend.NewLlamaCppBackend().BuildStartConfig(info, &req.LoadRequest)
+	bindHost := req.BindHost
+	if bindHost == "" {
+		bindHost = "0.0.0.0"
+	}
+
+	// Discover to get binary path if not provided.
+	binPath := req.BinPath
+	if binPath == "" {
+		cfg, _ := backend.Default().GetConfig(backend.ID(id))
+		if cfg != nil {
+			info, err := plugin.Discover(cfg)
+			if err == nil && info.Available {
+				binPath = info.BinPath
+			}
+		}
+	}
+
+	info := &backend.Info{ID: backend.ID(id), DisplayName: plugin.DisplayName(), BinPath: binPath, Available: true}
+	backendReq := &backend.LoadRequest{
+		ModelPath: req.ModelPath,
+		Port:      req.Port,
+		Devices:   req.Devices,
+		BindHost:  bindHost,
+		Params:    params,
+	}
+
+	startCfg, err := plugin.BuildStartConfig(info, backendReq)
 	if err != nil {
 		api.ErrorWithDetails(c, types.ErrInvalidRequest, "Failed to build command", err.Error())
 		return
 	}
 
+	cmdLine := ""
+	if startCfg.CommandSpec != nil {
+		cmdLine = startCfg.CommandSpec.CommandLine()
+	}
 	api.Success(c, gin.H{
-		"command": startCfg.Command,
+		"command": cmdLine,
 		"spec":    startCfg.CommandSpec,
 	})
 }
@@ -330,9 +382,7 @@ func (s *Server) HandleGetConfig(c *gin.Context) {
 			"id":   cfg.Node.ID,
 			"name": cfg.Node.Name,
 		},
-		"llamacpp": gin.H{
-			"paths": cfg.Llamacpp.Paths,
-		},
+		"backends": cfg.Backends,
 	})
 }
 

@@ -35,9 +35,9 @@ export function ModelSelect({
           {models.map((m) => (
             <SelectItem key={m.id} value={m.alias || m.name}>
               {m.alias || m.name}
-              {showBackend && m.backendType && (
+              {showBackend && m.pluginId && (
                 <span className="ml-2 text-xs text-muted-foreground">
-                  ({BACKEND_LABELS[m.backendType] || m.backendType})
+                  ({BACKEND_LABELS[m.pluginId] || m.pluginId})
                 </span>
               )}
             </SelectItem>

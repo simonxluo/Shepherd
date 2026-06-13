@@ -89,7 +89,7 @@ var systemBackendsCmd = &cobra.Command{
 		c := client.NewClient(flagHost, flagPort)
 		printer := client.NewPrinter(flagJSON)
 
-		data, err := c.Get("/api/system/llamacpp-backends")
+		data, err := c.Get("/api/system/inference-backends")
 		if err != nil {
 			return err
 		}

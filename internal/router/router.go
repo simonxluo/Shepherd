@@ -55,9 +55,10 @@ type ServerHandlers interface {
 	HandleWebSocket(c *gin.Context)
 	HandleServerInfo(c *gin.Context)
 	HandleGetGPUs(c *gin.Context)
-	HandleGetLlamacppBackends(c *gin.Context)
-	HandleGetLlamacppParamSchema(c *gin.Context)
-	HandlePreviewLlamacppCommand(c *gin.Context)
+	HandleGetInferenceBackends(c *gin.Context)
+	HandleListBackends(c *gin.Context)
+	HandleGetBackendParamSchema(c *gin.Context)
+	HandlePreviewBackendCommand(c *gin.Context)
 	HandleGetResources(c *gin.Context)
 	HandleGetModelStatistics(c *gin.Context)
 	HandleGetConfig(c *gin.Context)
@@ -193,9 +194,10 @@ func registerRoutes(
 	{
 		apiGroup.GET("/info", sh.HandleServerInfo)
 		apiGroup.GET("/system/gpus", sh.HandleGetGPUs)
-		apiGroup.GET("/system/llamacpp-backends", sh.HandleGetLlamacppBackends)
-		apiGroup.GET("/backends/llamacpp/schema", sh.HandleGetLlamacppParamSchema)
-		apiGroup.POST("/backends/llamacpp/preview", sh.HandlePreviewLlamacppCommand)
+		apiGroup.GET("/system/inference-backends", sh.HandleGetInferenceBackends)
+		apiGroup.GET("/backends", sh.HandleListBackends)
+		apiGroup.GET("/backends/:id/param-schema", sh.HandleGetBackendParamSchema)
+		apiGroup.POST("/backends/:id/preview", sh.HandlePreviewBackendCommand)
 		apiGroup.GET("/system/resources", sh.HandleGetResources)
 		apiGroup.GET("/system/model-stats", sh.HandleGetModelStatistics)
 
@@ -275,7 +277,7 @@ func registerConfigRoutes(apiGroup *gin.RouterGroup, h *Handlers, sh ServerHandl
 			vllm.POST("/test", h.Paths.TestVLLMPath)
 		}
 
-		vllmOmni := config.Group("/vllm_omni/paths")
+		vllmOmni := config.Group("/vllmomni/paths")
 		{
 			vllmOmni.GET("", h.Paths.GetVLLMOmniPaths)
 			vllmOmni.POST("", h.Paths.AddVLLMOmniPath)

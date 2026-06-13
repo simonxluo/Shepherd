@@ -13,6 +13,7 @@ import (
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/event"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
+	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	api "github.com/simonxluo/Shepherd/internal/handler"
 	"github.com/simonxluo/Shepherd/internal/handler/anthropic"
@@ -29,7 +30,6 @@ import (
 	ttsapi "github.com/simonxluo/Shepherd/internal/handler/tts"
 	"github.com/simonxluo/Shepherd/internal/infra/download"
 	modelrepoclient "github.com/simonxluo/Shepherd/internal/infra/modelrepo"
-	"github.com/simonxluo/Shepherd/internal/comm/storage"
 	"github.com/simonxluo/Shepherd/internal/infra/taskmanager"
 	"github.com/simonxluo/Shepherd/internal/router"
 	"github.com/simonxluo/Shepherd/internal/service/mcp"
@@ -55,8 +55,8 @@ type ModelDTO struct {
 	Status      string                 `json:"status"`
 	IsLoaded    bool                   `json:"isLoaded"`
 	Port        int                    `json:"port,omitempty"`
-	ScannedAt   string                 `json:"scannedAt,omitempty"`   // Scan time (ISO 8601 format)
-	BackendType string                 `json:"backendType,omitempty"` // Recommended backend type (llamacpp/vllm/vllm_omni)
+	ScannedAt   string                 `json:"scannedAt,omitempty"` // Scan time (ISO 8601 format)
+	PluginID    string                 `json:"pluginId,omitempty"`  // Recommended backend plugin ID
 }
 
 // Server represents the HTTP server

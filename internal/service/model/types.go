@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/simonxluo/Shepherd/internal/backend"
 	"github.com/simonxluo/Shepherd/internal/infra/gguf"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // Model represents a discovered GGUF model with HuggingFace-style management
@@ -65,16 +65,16 @@ type Model struct {
 //   - tokenMu: independently protects token statistics to avoid contention with mu
 //   - InflightCount/InflightWg: atomic ops + WaitGroup, lock-free
 type ModelStatus struct {
-	ID          string
-	InstanceID  string
-	Name        string
-	State       LoadState
-	ProcessID   string
-	Port        int
-	CtxSize     int
-	LoadedAt    time.Time
-	BackendType string // 加载时使用的后端类型 (llamacpp/vllm/vllm_omni)
-	Error       error
+	ID         string
+	InstanceID string
+	Name       string
+	State      LoadState
+	ProcessID  string
+	Port       int
+	CtxSize    int
+	LoadedAt   time.Time
+	PluginID   string // Backend plugin ID used for loading (llamacpp/vllm/vllmomni)
+	Error      error
 
 	mu sync.Mutex
 
@@ -169,7 +169,7 @@ type RuntimeInstance struct {
 	ProcessID      string    `json:"processId,omitempty"`
 	Port           int       `json:"port,omitempty"`
 	State          string    `json:"state"`
-	BackendType    string    `json:"backendType,omitempty"`
+	PluginID       string    `json:"pluginId,omitempty"`
 	CommandPreview string    `json:"commandPreview,omitempty"`
 	LastError      string    `json:"lastError,omitempty"`
 	CreatedAt      time.Time `json:"createdAt"`
@@ -192,21 +192,10 @@ type ScanError struct {
 	Error string
 }
 
-// SpecDecodingParams extends backend.SpecDecodingParams with API-level fields.
-// The SpecDraftModelID is resolved to SpecDraftModelPath by the handler.
-type SpecDecodingParams struct {
-	backend.SpecDecodingParams
-	SpecDraftModelID string `json:"specDraftModelId"` // Model ID for draft model, resolved to path by handler
-}
-
-// ToBackend converts API-level SpecDecodingParams to backend.SpecDecodingParams
-func (p *SpecDecodingParams) ToBackend() *backend.SpecDecodingParams {
-	if p == nil {
-		return nil
-	}
-	cp := p.SpecDecodingParams
-	return &cp
-}
+// SpecDecodingParams is an alias for backend.SpecDecodingParams kept for
+// callers that import the model package. The canonical definition lives in
+// internal/backend so plugin code can reference the same type.
+type SpecDecodingParams = backend.SpecDecodingParams
 
 // LoadRequest contains parameters for loading a model
 type LoadRequest struct {
@@ -228,8 +217,8 @@ type LoadRequest struct {
 	MainGPU int      `json:"mainGpu"` // -mg flag (main GPU index)
 
 	// Backend selection
-	BackendType string `json:"backendType,omitempty"` // Explicit backend: "llamacpp", "vllm", "vllm_omni"
-	ProfileID   string `json:"profileId,omitempty"`   // Reusable launch profile ID
+	PluginID  string `json:"pluginId,omitempty"`  // Explicit backend plugin: "llamacpp", "vllm", "vllmomni"
+	ProfileID string `json:"profileId,omitempty"` // Reusable launch profile ID
 
 	// Custom command configuration
 	CustomCmd   string `json:"llamaCppPath"` // Custom llama.cpp binary path override (frontend uses llamaCppPath)

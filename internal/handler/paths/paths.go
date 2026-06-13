@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/simonxluo/Shepherd/internal/backend/plugins/llamacpp"
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/types"
 	"github.com/simonxluo/Shepherd/internal/handler"
-	"github.com/simonxluo/Shepherd/internal/service/model/backend"
 )
 
 // pathCRUD provides generic CRUD operations for path configuration slices.
@@ -116,7 +116,7 @@ func (pc *pathCRUD[T]) remove(c *gin.Context, validate func(string) (string, err
 // Handler handles path configuration requests
 type Handler struct {
 	configManager *config.Manager
-	llamacpp      *pathCRUD[config.LlamacppPath]
+	llamacpp      *pathCRUD[config.BackendPath]
 	model         *pathCRUD[config.ModelPath]
 	multimodal    *pathCRUD[config.MultimodalPath]
 	vllm          *pathCRUD[config.BackendPath]
@@ -128,11 +128,11 @@ func NewHandler(configManager *config.Manager) *Handler {
 	h := &Handler{
 		configManager: configManager,
 	}
-	h.llamacpp = &pathCRUD[config.LlamacppPath]{
+	h.llamacpp = &pathCRUD[config.BackendPath]{
 		configMgr: configManager,
-		getter:    func(cfg *config.Config) []config.LlamacppPath { return cfg.Llamacpp.Paths },
-		setter:    func(cfg *config.Config, v []config.LlamacppPath) { cfg.Llamacpp.Paths = v },
-		getPath:   func(p *config.LlamacppPath) string { return p.Path },
+		getter:    func(cfg *config.Config) []config.BackendPath { return cfg.BackendPaths("llamacpp") },
+		setter:    func(cfg *config.Config, v []config.BackendPath) { cfg.SetBackendPaths("llamacpp", v) },
+		getPath:   func(p *config.BackendPath) string { return p.Path },
 		name:      "Llama.cpp",
 	}
 	h.model = &pathCRUD[config.ModelPath]{
@@ -144,48 +144,24 @@ func NewHandler(configManager *config.Manager) *Handler {
 	}
 	h.multimodal = &pathCRUD[config.MultimodalPath]{
 		configMgr: configManager,
-		getter: func(cfg *config.Config) []config.MultimodalPath {
-			return cfg.Backends.MultimodalPaths
-		},
-		setter: func(cfg *config.Config, v []config.MultimodalPath) {
-			cfg.Backends.MultimodalPaths = v
-		},
-		getPath: func(p *config.MultimodalPath) string { return p.Path },
-		name:    "Multimodal",
+		getter:    func(cfg *config.Config) []config.MultimodalPath { return cfg.MultimodalPaths },
+		setter:    func(cfg *config.Config, v []config.MultimodalPath) { cfg.MultimodalPaths = v },
+		getPath:   func(p *config.MultimodalPath) string { return p.Path },
+		name:      "Multimodal",
 	}
 	h.vllm = &pathCRUD[config.BackendPath]{
 		configMgr: configManager,
-		getter: func(cfg *config.Config) []config.BackendPath {
-			if cfg.Backends.VLLM == nil {
-				return nil
-			}
-			return cfg.Backends.VLLM.Paths
-		},
-		setter: func(cfg *config.Config, v []config.BackendPath) {
-			if cfg.Backends.VLLM == nil {
-				cfg.Backends.VLLM = &config.VLLMBackendConfig{Enabled: true}
-			}
-			cfg.Backends.VLLM.Paths = v
-		},
-		getPath: func(p *config.BackendPath) string { return p.Path },
-		name:    "vLLM",
+		getter:    func(cfg *config.Config) []config.BackendPath { return cfg.BackendPaths("vllm") },
+		setter:    func(cfg *config.Config, v []config.BackendPath) { cfg.SetBackendPaths("vllm", v) },
+		getPath:   func(p *config.BackendPath) string { return p.Path },
+		name:      "vLLM",
 	}
 	h.vllmOmni = &pathCRUD[config.BackendPath]{
 		configMgr: configManager,
-		getter: func(cfg *config.Config) []config.BackendPath {
-			if cfg.Backends.VLLMOmni == nil {
-				return nil
-			}
-			return cfg.Backends.VLLMOmni.Paths
-		},
-		setter: func(cfg *config.Config, v []config.BackendPath) {
-			if cfg.Backends.VLLMOmni == nil {
-				cfg.Backends.VLLMOmni = &config.VLLMBackendConfig{Enabled: true}
-			}
-			cfg.Backends.VLLMOmni.Paths = v
-		},
-		getPath: func(p *config.BackendPath) string { return p.Path },
-		name:    "vLLM-Omni",
+		getter:    func(cfg *config.Config) []config.BackendPath { return cfg.BackendPaths("vllmomni") },
+		setter:    func(cfg *config.Config, v []config.BackendPath) { cfg.SetBackendPaths("vllmomni", v) },
+		getPath:   func(p *config.BackendPath) string { return p.Path },
+		name:      "vLLM-Omni",
 	}
 	return h
 }
@@ -198,7 +174,7 @@ func (h *Handler) RemoveLlamaCppPath(c *gin.Context) {
 }
 
 func (h *Handler) AddLlamaCppPath(c *gin.Context) {
-	var req config.LlamacppPath
+	var req config.BackendPath
 	if err := c.ShouldBindJSON(&req); err != nil {
 		handler.BadRequest(c, "Invalid request body")
 		return
@@ -246,9 +222,10 @@ func (h *Handler) UpdateLlamaCppPath(c *gin.Context) {
 	}
 
 	cfg := h.configManager.Get()
+	paths := cfg.BackendPaths("llamacpp")
 	found := false
 	updatedIndex := -1
-	for i, p := range cfg.Llamacpp.Paths {
+	for i, p := range paths {
 		normalizedExistingPath, _ := h.validateAndNormalizeBinaryPath(p.Path)
 		if normalizedExistingPath == "" {
 			normalizedExistingPath = p.Path
@@ -273,14 +250,15 @@ func (h *Handler) UpdateLlamaCppPath(c *gin.Context) {
 		handler.NotFound(c, "Path not found")
 		return
 	}
-	cfg.Llamacpp.Paths[updatedIndex] = config.LlamacppPath{
+	paths[updatedIndex] = config.BackendPath{
 		Path: normalizedPath, Name: req.Name, Description: req.Description,
 	}
+	cfg.SetBackendPaths("llamacpp", paths)
 	if err := h.configManager.Save(cfg); err != nil {
 		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
 		return
 	}
-	handler.Success(c, gin.H{"message": "Llama.cpp path updated successfully", "updated": cfg.Llamacpp.Paths})
+	handler.Success(c, gin.H{"message": "Llama.cpp path updated successfully", "updated": paths})
 }
 
 // TestLlamaCppPath tests if a llama.cpp path is valid and contains the required binary.
@@ -297,7 +275,7 @@ func (h *Handler) TestLlamaCppPath(c *gin.Context) {
 		handler.Success(c, gin.H{"valid": false, "error": err.Error()})
 		return
 	}
-	probe, err := backend.ProbeLlamaCppInstallation(normalizedPath)
+	probe, err := llamacpp.ProbeInstallation(normalizedPath)
 	if err != nil {
 		handler.Success(c, gin.H{
 			"valid":    false,
@@ -462,7 +440,7 @@ func (h *Handler) UpdateMultimodalPath(c *gin.Context) {
 	cfg := h.configManager.Get()
 	found := false
 	updatedIndex := -1
-	for i, p := range cfg.Backends.MultimodalPaths {
+	for i, p := range cfg.MultimodalPaths {
 		if req.OriginalPath != "" && p.Path == req.OriginalPath {
 			updatedIndex = i
 			found = true
@@ -478,14 +456,14 @@ func (h *Handler) UpdateMultimodalPath(c *gin.Context) {
 		handler.NotFound(c, "Path not found")
 		return
 	}
-	cfg.Backends.MultimodalPaths[updatedIndex] = config.MultimodalPath{
+	cfg.MultimodalPaths[updatedIndex] = config.MultimodalPath{
 		Path: normalizedPath, Name: req.Name, Description: req.Description, Backend: req.Backend,
 	}
 	if err := h.configManager.Save(cfg); err != nil {
 		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
 		return
 	}
-	handler.Success(c, gin.H{"message": "Multimodal path updated successfully", "updated": cfg.Backends.MultimodalPaths[updatedIndex]})
+	handler.Success(c, gin.H{"message": "Multimodal path updated successfully", "updated": cfg.MultimodalPaths[updatedIndex]})
 }
 
 // vLLM paths
@@ -532,13 +510,14 @@ func (h *Handler) UpdateVLLMPath(c *gin.Context) {
 	}
 
 	cfg := h.configManager.Get()
-	if cfg.Backends.VLLM == nil {
+	paths := cfg.BackendPaths("vllm")
+	if paths == nil {
 		handler.NotFound(c, "vLLM not configured")
 		return
 	}
 	found := false
 	updatedIndex := -1
-	for i, p := range cfg.Backends.VLLM.Paths {
+	for i, p := range paths {
 		if req.OriginalPath != "" && p.Path == req.OriginalPath {
 			updatedIndex = i
 			found = true
@@ -554,14 +533,15 @@ func (h *Handler) UpdateVLLMPath(c *gin.Context) {
 		handler.NotFound(c, "Path not found")
 		return
 	}
-	cfg.Backends.VLLM.Paths[updatedIndex] = config.BackendPath{
+	paths[updatedIndex] = config.BackendPath{
 		Path: normalizedPath, Name: req.Name, Description: req.Description,
 	}
+	cfg.SetBackendPaths("vllm", paths)
 	if err := h.configManager.Save(cfg); err != nil {
 		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
 		return
 	}
-	handler.Success(c, gin.H{"message": "vLLM path updated successfully", "updated": cfg.Backends.VLLM.Paths[updatedIndex]})
+	handler.Success(c, gin.H{"message": "vLLM path updated successfully", "updated": paths[updatedIndex]})
 }
 
 // TestVLLMPath tests if a vLLM path is valid and contains the vllm binary.
@@ -637,13 +617,14 @@ func (h *Handler) UpdateVLLMOmniPath(c *gin.Context) {
 	}
 
 	cfg := h.configManager.Get()
-	if cfg.Backends.VLLMOmni == nil {
+	paths := cfg.BackendPaths("vllmomni")
+	if paths == nil {
 		handler.NotFound(c, "vLLM-Omni not configured")
 		return
 	}
 	found := false
 	updatedIndex := -1
-	for i, p := range cfg.Backends.VLLMOmni.Paths {
+	for i, p := range paths {
 		if req.OriginalPath != "" && p.Path == req.OriginalPath {
 			updatedIndex = i
 			found = true
@@ -659,14 +640,15 @@ func (h *Handler) UpdateVLLMOmniPath(c *gin.Context) {
 		handler.NotFound(c, "Path not found")
 		return
 	}
-	cfg.Backends.VLLMOmni.Paths[updatedIndex] = config.BackendPath{
+	paths[updatedIndex] = config.BackendPath{
 		Path: normalizedPath, Name: req.Name, Description: req.Description,
 	}
+	cfg.SetBackendPaths("vllmomni", paths)
 	if err := h.configManager.Save(cfg); err != nil {
 		handler.ErrorWithDetails(c, types.ErrInternalError, "Failed to save config", err.Error())
 		return
 	}
-	handler.Success(c, gin.H{"message": "vLLM-Omni path updated successfully", "updated": cfg.Backends.VLLMOmni.Paths[updatedIndex]})
+	handler.Success(c, gin.H{"message": "vLLM-Omni path updated successfully", "updated": paths[updatedIndex]})
 }
 
 // TestVLLMOmniPath tests if a vLLM-Omni path is valid and contains the vllm-omni binary.

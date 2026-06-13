@@ -72,14 +72,28 @@ var configShowCmd = &cobra.Command{
 			{Key: "Type", Value: cfg.Storage.Type},
 		})
 
-		if len(cfg.Llamacpp.Paths) > 0 {
-			fmt.Println("\n[Llama.cpp]")
-			for _, p := range cfg.Llamacpp.Paths {
-				name := p.Name
-				if name == "" {
-					name = "(unnamed)"
+		if cfg.Backends != nil {
+			fmt.Println("\n[Backends]")
+			for id, raw := range cfg.Backends {
+				m, _ := raw.(map[string]any)
+				if m == nil {
+					continue
 				}
-				fmt.Printf("  %s: %s\n", name, p.Path)
+				fmt.Printf("  %s:\n", id)
+				if paths, ok := m["paths"].([]any); ok {
+					for _, p := range paths {
+						pm, _ := p.(map[string]any)
+						if pm == nil {
+							continue
+						}
+						name, _ := pm["name"].(string)
+						path, _ := pm["path"].(string)
+						if name == "" {
+							name = "(unnamed)"
+						}
+						fmt.Printf("    %s: %s\n", name, path)
+					}
+				}
 			}
 		}
 

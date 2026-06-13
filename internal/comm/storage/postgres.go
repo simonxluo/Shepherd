@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	pgdb "github.com/simonxluo/Shepherd/internal/comm/storage/sqlc/postgres/db"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // PostgreSQLStore implements Store interface with PostgreSQL backend
@@ -590,7 +590,7 @@ func (s *PostgreSQLStore) CreateLaunchProfile(ctx context.Context, profile *Laun
 	return s.queries.CreateLaunchProfile(ctx, pgdb.CreateLaunchProfileParams{
 		ID:             profile.ID,
 		Name:           profile.Name,
-		BackendType:    profile.BackendType,
+		BackendType:    profile.PluginID,
 		InstallationID: toNullString(profile.InstallationID),
 		ModelScope:     toNullString(profile.ModelScope),
 		Params:         string(paramsJSON),
@@ -648,7 +648,7 @@ func (s *PostgreSQLStore) UpdateLaunchProfile(ctx context.Context, profile *Laun
 		UPDATE launch_profiles
 		SET name = $1, backend_type = $2, installation_id = $3, model_scope = $4, params = $5, env = $6, extra_args = $7, updated_at = $8
 		WHERE id = $9
-	`, profile.Name, profile.BackendType, profile.InstallationID, profile.ModelScope, string(paramsJSON), string(envJSON), profile.ExtraArgs, profile.UpdatedAt.Unix(), profile.ID)
+	`, profile.Name, profile.PluginID, profile.InstallationID, profile.ModelScope, string(paramsJSON), string(envJSON), profile.ExtraArgs, profile.UpdatedAt.Unix(), profile.ID)
 	if err != nil {
 		return err
 	}
@@ -1105,7 +1105,7 @@ func pgLaunchProfileFromRow(row pgdb.LaunchProfile) (*LaunchProfile, error) {
 	p := &LaunchProfile{
 		ID:             row.ID,
 		Name:           row.Name,
-		BackendType:    row.BackendType,
+		PluginID:       row.BackendType,
 		InstallationID: row.InstallationID.String,
 		ModelScope:     row.ModelScope.String,
 		ExtraArgs:      row.ExtraArgs.String,

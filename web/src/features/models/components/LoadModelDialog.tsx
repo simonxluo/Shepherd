@@ -137,7 +137,7 @@ interface LoadModelDialogProps {
   modelName: string;
   modelPath?: string;
   isLoading?: boolean;
-  backendType?: string; // 推荐后端类型 (llamacpp/vllm/vllm_omni)
+  pluginId?: string; // Recommended backend plugin ID (llamacpp/vllm/vllmomni)
 }
 
 // Parameter help descriptions
@@ -412,7 +412,7 @@ export function LoadModelDialog({
   modelName,
   modelPath,
   isLoading = false,
-  backendType,
+  pluginId,
 }: LoadModelDialogProps) {
   const { data: onlineNodes = [] } = useOnlineNodes();
 
@@ -676,9 +676,9 @@ export function LoadModelDialog({
 
   if (!isOpen) return null;
 
-  const isLlamaCpp = !backendType || backendType === 'llamacpp';
-  const isVllmOmni = backendType === 'vllm_omni';
-  const backendLabel = isVllmOmni ? 'vLLM-Omni' : backendType === 'vllm' ? 'vLLM' : 'llama.cpp';
+  const isLlamaCpp = !pluginId || pluginId === 'llamacpp';
+  const isVllmOmni = pluginId === 'vllmomni';
+  const backendLabel = isVllmOmni ? 'vLLM-Omni' : pluginId === 'vllm' ? 'vLLM' : 'llama.cpp';
 
   const filterEnabledParams = (allParams: LoadModelParams): Partial<LoadModelParams> => {
     const enabled = allParams.enabled;
@@ -721,7 +721,7 @@ export function LoadModelDialog({
         filtered.envVars = allParams.envVars;
       }
 
-      filtered.backendType = backendType;
+      filtered.pluginId = pluginId;
       return filtered;
     }
 
@@ -765,8 +765,8 @@ export function LoadModelDialog({
     }
 
     // 传递后端类型
-    if (backendType && backendType !== 'llamacpp') {
-      filtered.backendType = backendType;
+    if (pluginId && pluginId !== 'llamacpp') {
+      filtered.pluginId = pluginId;
     }
 
     return filtered;

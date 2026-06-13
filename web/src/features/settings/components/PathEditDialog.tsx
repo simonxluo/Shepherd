@@ -22,7 +22,7 @@ type AnyPathConfig = LlamaCppPathConfig | ModelPathConfig | BackendPathConfig | 
 
 interface PathEditDialogProps {
   open: boolean;
-  type: 'llamacpp' | 'models' | 'vllm' | 'vllm_omni' | 'multimodal';
+  type: 'llamacpp' | 'models' | 'vllm' | 'vllmomni' | 'multimodal';
   path?: AnyPathConfig;
   onSave: (path: AnyPathConfig) => Promise<void>;
   onClose: () => void;
@@ -40,7 +40,7 @@ export function PathEditDialog({
   const typeLabel = type === 'llamacpp' ? t('settings.pathEdit.typeLlamacpp')
     : type === 'models' ? t('settings.pathEdit.typeModels')
     : type === 'vllm' ? t('settings.pathEdit.typeVllm')
-    : type === 'vllm_omni' ? t('settings.pathEdit.typeVllmOmni')
+    : type === 'vllmomni' ? t('settings.pathEdit.typeVllmOmni')
     : t('settings.pathEdit.typeMultimodal');
 
   const [formData, setFormData] = useState({
@@ -106,7 +106,7 @@ export function PathEditDialog({
           response = await llamacppPathsApi.test(formData.path);
         } else if (type === 'vllm') {
           response = await vllmPathsApi.test(formData.path);
-        } else if (type === 'vllm_omni') {
+        } else if (type === 'vllmomni') {
           response = await vllmOmniPathsApi.test(formData.path);
         } else {
           // Model and multimodal paths are directories - basic format check is enough
@@ -348,7 +348,7 @@ export function PathEditDialog({
           <DirectoryBrowser
             open={isBrowserOpen}
             initialPath={formData.path}
-            allowFileSelection={type === 'llamacpp' || type === 'vllm' || type === 'vllm_omni'}
+            allowFileSelection={type === 'llamacpp' || type === 'vllm' || type === 'vllmomni'}
             onSelect={handleDirectorySelect}
             onClose={() => setIsBrowserOpen(false)}
           />

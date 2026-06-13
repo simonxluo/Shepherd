@@ -140,7 +140,7 @@ func (h *AudioHandler) prepareTTSRequest(c *gin.Context) (map[string]interface{}
 		endpoints := b.SupportedEndpoints()
 		if supported, ok := endpoints["/v1/audio/speech"]; !ok || !supported {
 			h.SendOpenAIError(c, http.StatusBadRequest, "backend_not_supported",
-				fmt.Sprintf("当前后端 %q 不支持 TTS 端点，请使用 vLLM-Omni 后端加载模型", b.Type()), "model")
+				fmt.Sprintf("当前后端 %q 不支持 TTS 端点，请使用 vLLM-Omni 后端加载模型", b.ID()), "model")
 			return nil, "", false
 		}
 	}

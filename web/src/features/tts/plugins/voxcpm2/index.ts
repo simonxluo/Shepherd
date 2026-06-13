@@ -10,11 +10,11 @@ const voxcpm2Plugin: TTSPlugin = {
   order: 10,
   match: (model: LoadedModel) => {
     const nameLower = model.name.toLowerCase();
-    // Match VoxCPM models, or vllm_omni models that aren't claimed by other specific plugins
+    // Match VoxCPM models, or vllmomni models that aren't claimed by other specific plugins
     if (nameLower.includes('voxcpm')) return true;
     if (nameLower.includes('qwen3-tts') || nameLower.includes('qwen3tts') || nameLower.includes('qwen3_tts')) return false;
     if (nameLower.includes('cosyvoice') || nameLower.includes('omnivoice')) return false;
-    return model.backendType === 'vllm_omni';
+    return model.pluginId === 'vllmomni';
   },
   component: VoxCPM2Panel,
   features: {

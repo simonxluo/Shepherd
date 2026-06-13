@@ -3,7 +3,7 @@ import { apiClient } from './client';
 export interface LaunchProfile {
   id: string;
   name: string;
-  backendType: string;
+  pluginId: string;
   installationId?: string;
   modelScope?: string;
   params: Record<string, unknown>;
@@ -19,7 +19,7 @@ export interface LaunchProfilesResponse {
 }
 
 export const launchProfilesApi = {
-  list: (params?: { backendType?: string; modelScope?: string }) =>
+  list: (params?: { pluginId?: string; modelScope?: string }) =>
     apiClient.get<{ success: boolean; data: LaunchProfilesResponse }>('/launch-profiles', params as Record<string, unknown>),
   get: (id: string) =>
     apiClient.get<{ success: boolean; data: { profile: LaunchProfile } }>(`/launch-profiles/${encodeURIComponent(id)}`),

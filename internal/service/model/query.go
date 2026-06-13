@@ -11,8 +11,8 @@ import (
 
 	"github.com/simonxluo/Shepherd/internal/comm/config"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
-	"github.com/simonxluo/Shepherd/internal/infra/huggingface"
 	"github.com/simonxluo/Shepherd/internal/comm/storage"
+	"github.com/simonxluo/Shepherd/internal/infra/huggingface"
 )
 
 // GetModel returns a model by ID
@@ -439,7 +439,7 @@ func copyModelStatus(s *ModelStatus) *ModelStatus {
 		Port:                  s.Port,
 		CtxSize:               s.CtxSize,
 		LoadedAt:              s.LoadedAt,
-		BackendType:           s.BackendType,
+		PluginID:              s.PluginID,
 		Error:                 s.Error,
 		LastRequestTime:       s.LastRequestTime,
 		ConcurrencyLimit:      s.ConcurrencyLimit,

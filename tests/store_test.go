@@ -281,10 +281,10 @@ func testModelLoadConfigCRUD(t *testing.T, ctx context.Context, store storage.St
 
 func testLaunchProfileCRUD(t *testing.T, ctx context.Context, store storage.Store) {
 	profile := &storage.LaunchProfile{
-		Name:        "test-profile",
-		BackendType: "llamacpp",
-		Params:      map[string]interface{}{"threads": 8},
-		Env:         []string{"CUDA_VISIBLE_DEVICES=0"},
+		Name:     "test-profile",
+		PluginID: "llamacpp",
+		Params:   map[string]interface{}{"threads": 8},
+		Env:      []string{"CUDA_VISIBLE_DEVICES=0"},
 	}
 
 	err := store.CreateLaunchProfile(ctx, profile)

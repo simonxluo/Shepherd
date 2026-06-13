@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	mysqldb "github.com/simonxluo/Shepherd/internal/comm/storage/sqlc/mysql/db"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
-	_ "github.com/go-sql-driver/mysql"
 )
 
 // MySQLStore implements Store interface with MySQL backend
@@ -590,7 +590,7 @@ func (s *MySQLStore) CreateLaunchProfile(ctx context.Context, profile *LaunchPro
 	return s.queries.CreateLaunchProfile(ctx, mysqldb.CreateLaunchProfileParams{
 		ID:             profile.ID,
 		Name:           profile.Name,
-		BackendType:    profile.BackendType,
+		BackendType:    profile.PluginID,
 		InstallationID: toNullString(profile.InstallationID),
 		ModelScope:     toNullString(profile.ModelScope),
 		Params:         string(paramsJSON),
@@ -648,7 +648,7 @@ func (s *MySQLStore) UpdateLaunchProfile(ctx context.Context, profile *LaunchPro
 		UPDATE launch_profiles
 		SET name = ?, backend_type = ?, installation_id = ?, model_scope = ?, params = ?, env = ?, extra_args = ?, updated_at = ?
 		WHERE id = ?
-	`, profile.Name, profile.BackendType, profile.InstallationID, profile.ModelScope, string(paramsJSON), string(envJSON), profile.ExtraArgs, profile.UpdatedAt.Unix(), profile.ID)
+	`, profile.Name, profile.PluginID, profile.InstallationID, profile.ModelScope, string(paramsJSON), string(envJSON), profile.ExtraArgs, profile.UpdatedAt.Unix(), profile.ID)
 	if err != nil {
 		return err
 	}
@@ -1105,7 +1105,7 @@ func myLaunchProfileFromRow(row mysqldb.LaunchProfile) (*LaunchProfile, error) {
 	p := &LaunchProfile{
 		ID:             row.ID,
 		Name:           row.Name,
-		BackendType:    row.BackendType,
+		PluginID:       row.BackendType,
 		InstallationID: row.InstallationID.String,
 		ModelScope:     row.ModelScope.String,
 		ExtraArgs:      row.ExtraArgs.String,

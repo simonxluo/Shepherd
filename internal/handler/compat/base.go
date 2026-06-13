@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/simonxluo/Shepherd/internal/backend"
 	"github.com/simonxluo/Shepherd/internal/comm/logger"
 	"github.com/simonxluo/Shepherd/internal/comm/utils"
 	"github.com/simonxluo/Shepherd/internal/service/model"
@@ -56,12 +57,18 @@ func (b *BaseHandler) FindModel(modelName string) (string, error) {
 }
 
 // GetServedModelName returns the model name recognized by the backend service.
-// vLLM backends use the model path as identifier, llama.cpp uses the model name.
+// Delegates to the plugin's ServedModelName method.
 func (b *BaseHandler) GetServedModelName(modelID string) string {
 	if m, ok := b.ModelMgr.GetModel(modelID); ok && m != nil {
 		status, exists := b.ModelMgr.GetStatus(modelID)
-		if exists && (status.BackendType == "vllm" || status.BackendType == "vllm_omni") {
-			return m.Path
+		if exists {
+			if p, ok := backend.Default().Get(backend.ID(status.PluginID)); ok {
+				return p.ServedModelName(backend.ModelRef{
+					ID:   m.ID,
+					Name: m.Name,
+					Path: m.Path,
+				})
+			}
 		}
 		return m.Name
 	}

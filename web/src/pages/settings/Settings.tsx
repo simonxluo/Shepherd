@@ -524,7 +524,7 @@ function PathsSettingsPanel() {
 
       {/* vLLM-Omni path config */}
       <div className="rounded-lg border bg-card p-4">
-        <PathConfigPanel type="vllm_omni" />
+        <PathConfigPanel type="vllmomni" />
       </div>
     </div>
   );

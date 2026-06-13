@@ -90,7 +90,7 @@ export function ModelStatsTable({ models }: ModelStatsTableProps) {
                 <td className="py-2 pr-4">
                   <StatusBadge state={model.state} />
                 </td>
-                <td className="py-2 pr-4 text-muted-foreground">{model.backendType || '-'}</td>
+                <td className="py-2 pr-4 text-muted-foreground">{model.pluginId || '-'}</td>
                 <td className="py-2 pr-4 font-mono text-muted-foreground">{model.port || '-'}</td>
                 <td className="py-2 pr-4 text-muted-foreground">{formatDuration(model.uptimeSeconds)}</td>
                 <td className="py-2 pr-4">

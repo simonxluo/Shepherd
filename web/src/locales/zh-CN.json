@@ -849,7 +849,7 @@
         "title": "vLLM 路径",
         "description": "配置 vLLM 可执行文件所在的目录"
       },
-      "vllm_omni": {
+      "vllmomni": {
         "title": "vLLM-Omni 路径",
         "description": "配置 vLLM-Omni (多模态 vLLM) 可执行文件所在的目录"
       },

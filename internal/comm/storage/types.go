@@ -175,7 +175,7 @@ type ModelLoadConfig struct {
 type LaunchProfile struct {
 	ID             string                 `json:"id" db:"id"`
 	Name           string                 `json:"name" db:"name"`
-	BackendType    string                 `json:"backendType" db:"backend_type"`
+	PluginID       string                 `json:"pluginId" db:"backend_type"`
 	InstallationID string                 `json:"installationId,omitempty" db:"installation_id"`
 	ModelScope     string                 `json:"modelScope,omitempty" db:"model_scope"`
 	Params         map[string]interface{} `json:"params" db:"params"`
@@ -247,10 +247,10 @@ type MCPServer struct {
 	Name        string    `json:"name" db:"name"`
 	Description string    `json:"description,omitempty" db:"description"`
 	URL         string    `json:"url" db:"url"`
-	Type        string    `json:"type" db:"type"`                         // "sse" or "streamable-http"
+	Type        string    `json:"type" db:"type"` // "sse" or "streamable-http"
 	IsActive    bool      `json:"isActive" db:"is_active"`
-	Headers     string    `json:"headers,omitempty" db:"headers"`         // JSON-encoded map[string]string
-	Status      string    `json:"status,omitempty" db:"status"`           // "connected", "error", "inactive"
+	Headers     string    `json:"headers,omitempty" db:"headers"` // JSON-encoded map[string]string
+	Status      string    `json:"status,omitempty" db:"status"`   // "connected", "error", "inactive"
 	Error       string    `json:"error,omitempty" db:"error"`
 	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`

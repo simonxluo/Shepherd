@@ -45,8 +45,8 @@ export function AvailableModelList({ models, emptyText, emptyHint }: AvailableMo
               </p>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                 <span>{formatBytes(model.totalSize || model.size)}</span>
-                {model.backendType && (
-                  <span>{BACKEND_LABELS[model.backendType] || model.backendType}</span>
+                {model.pluginId && (
+                  <span>{BACKEND_LABELS[model.pluginId] || model.pluginId}</span>
                 )}
                 {model.metadata?.architecture && (
                   <span>{model.metadata.architecture}</span>
@@ -79,7 +79,7 @@ export function AvailableModelList({ models, emptyText, emptyHint }: AvailableMo
           modelName={dialogModel.alias || dialogModel.displayName || dialogModel.name}
           modelPath={dialogModel.path}
           isLoading={loadModel.isPending}
-          backendType={dialogModel.backendType}
+          pluginId={dialogModel.pluginId}
         />
       )}
     </div>
